@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Quantifiers and Logic - The Kleis Manual</title>
+        <title>ODE Solver - The Kleis Manual</title>
 
 
         <!-- Custom HTML head -->
@@ -154,7 +154,7 @@
                         <a href="https://github.com/eatikrh/kleis" title="Git repository" aria-label="Git repository">
                             <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
                         </a>
-                        <a href="https://github.com/eatikrh/kleis/edit/main/docs/manual/src/chapters/07-quantifiers-logic.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                        <a href="https://github.com/eatikrh/kleis/edit/main/docs/manual/src/appendix/ode-solver.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
                             <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
                         </a>
 
@@ -188,176 +188,207 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="quantifiers-and-logic"><a class="header" href="#quantifiers-and-logic">Quantifiers and Logic</a></h1>
-<h2 id="universal-quantifier-"><a class="header" href="#universal-quantifier-">Universal Quantifier (∀)</a></h2>
-<p>The universal quantifier expresses “for all”:</p>
-<pre><code class="language-kleis example">// Quantified propositions (used inside axioms)
-axiom reflexivity : ∀(x : ℝ). x = x
-axiom additive_identity : ∀(x : ℝ). x + 0 = x
-axiom commutative : ∀(x : ℝ)(y : ℝ). x + y = y + x
+                        <h1 id="appendix-ode-solver"><a class="header" href="#appendix-ode-solver">Appendix: ODE Solver</a></h1>
+<p>Kleis provides numerical integration of ordinary differential equations through the <code>ode45</code> function. This implements the Dormand-Prince 5(4) adaptive step-size method, suitable for non-stiff initial value problems.</p>
+<blockquote>
+<p><strong>Note:</strong> The ODE solver is available when Kleis is compiled with the <code>numerical</code> feature.</p>
+</blockquote>
+<h2 id="basic-usage"><a class="header" href="#basic-usage">Basic Usage</a></h2>
+<pre><code class="language-kleis">ode45(dynamics, y0, t_span, dt)
 </code></pre>
-<p>ASCII alternative: <code>forall x . ...</code></p>
-<h2 id="existential-quantifier-"><a class="header" href="#existential-quantifier-">Existential Quantifier (∃)</a></h2>
-<p>The existential quantifier expresses “there exists”:</p>
-<pre><code class="language-kleis example">// Existential quantifiers
-axiom positive_exists : ∃(x : ℝ). x &gt; 0
-axiom sqrt2_exists : ∃(y : ℝ). y * y = 2
-axiom distinct_exists : ∃(x : ℝ)(y : ℝ). x ≠ y
-</code></pre>
-<p>ASCII alternative: <code>exists x . ...</code></p>
-<h2 id="combining-quantifiers"><a class="header" href="#combining-quantifiers">Combining Quantifiers</a></h2>
-<p>Build complex statements:</p>
-<pre><code class="language-kleis example">// Every number has a successor
-axiom successor : ∀(n : ℕ). ∃(m : ℕ). m = n + 1
-
-// Density of rationals: between any two reals is a rational
-axiom density : ∀(x : ℝ)(y : ℝ). x &lt; y → ∃(q : ℚ). x &lt; q ∧ q &lt; y
-</code></pre>
-<h2 id="logical-connectives"><a class="header" href="#logical-connectives">Logical Connectives</a></h2>
-<h3 id="conjunction---and"><a class="header" href="#conjunction---and">Conjunction (∧ / and)</a></h3>
-<pre><code class="language-kleis">define in_range(x) = x &gt; 0 ∧ x &lt; 10     // x is between 0 and 10
-define false_example = True ∧ False     // False
-</code></pre>
-<h3 id="disjunction---or"><a class="header" href="#disjunction---or">Disjunction (∨ / or)</a></h3>
-<pre><code class="language-kleis">define is_binary(x) = x = 0 ∨ x = 1    // x is 0 or 1
-define true_example = True ∨ False     // True
-</code></pre>
-<h3 id="implication---implies"><a class="header" href="#implication---implies">Implication (→ / implies)</a></h3>
-<pre><code class="language-kleis">define positive_square(x) = x &gt; 0 → x * x &gt; 0   // If positive, square is positive
-define implication(P, Q) = P → Q                // If P then Q
-</code></pre>
-<h3 id="negation---not"><a class="header" href="#negation---not">Negation (¬ / not)</a></h3>
-<pre><code class="language-kleis">define nonzero(x) = ¬(x = 0)     // x is not zero
-define not_true = ¬True          // False
-</code></pre>
-<h3 id="biconditional---iff"><a class="header" href="#biconditional---iff">Biconditional (↔ / iff)</a></h3>
-<pre><code class="language-kleis">define zero_iff_square_zero(x) = x = 0 ↔ x * x = 0  // x is zero iff x² is zero
-</code></pre>
-<h2 id="type-constraints-in-quantifiers"><a class="header" href="#type-constraints-in-quantifiers">Type Constraints in Quantifiers</a></h2>
-<p>Restrict the domain:</p>
-<pre><code class="language-kleis example">axiom naturals_nonneg : ∀(x : ℕ). x ≥ 0
-axiom det_inverse : ∀(M : Matrix(n, n)). det(M * M⁻¹) = 1
-</code></pre>
-<h2 id="the-where-clause"><a class="header" href="#the-where-clause">The <code>where</code> Clause</a></h2>
-<p>Add conditions to quantified variables using the <code>where</code> keyword:</p>
-<pre><code class="language-kleis">structure Field(F) {
-    element zero : F
-    element one : F
-    operation inverse : F → F
-    
-    // Multiplicative inverse only for non-zero elements
-    axiom multiplicative_inverse:
-        ∀(x : F) where x ≠ zero. inverse(x) * x = one
-}
-</code></pre>
-<p>The <code>where</code> clause restricts the domain before the quantified body is evaluated. This is essential for axioms that don’t apply universally.</p>
-<p><strong>More examples:</strong></p>
-<pre><code class="language-kleis">structure Analysis {
-    // Division only defined for non-zero denominator
-    axiom division: ∀(a : ℝ)(b : ℝ) where b ≠ 0. a / b * b = a
-    
-    // Logarithm only for positive numbers
-    axiom log_exp: ∀(x : ℝ) where x &gt; 0. exp(log(x)) = x
-}
-</code></pre>
-<h2 id="using-quantifiers-in-axioms"><a class="header" href="#using-quantifiers-in-axioms">Using Quantifiers in Axioms</a></h2>
-<p>Quantifiers are essential in structure axioms:</p>
-<pre><code class="language-kleis">structure Group(G) {
-    e : G                      // Identity element
-    operation mul : G × G → G
-    operation inv : G → G
-    
-    axiom identity : ∀(x : G). mul(e, x) = x ∧ mul(x, e) = x
-    axiom inverse : ∀(x : G). mul(x, inv(x)) = e
-    axiom associative : ∀(x : G)(y : G)(z : G).
-        mul(mul(x, y), z) = mul(x, mul(y, z))
-}
-</code></pre>
-<h2 id="nested-quantifiers-grammar-v09"><a class="header" href="#nested-quantifiers-grammar-v09">Nested Quantifiers (Grammar v0.9)</a></h2>
-<p>Quantifiers can appear inside logical expressions:</p>
-<pre><code class="language-kleis">structure Analysis {
-    // Quantifier inside conjunction
-    axiom bounded_positive: (x &gt; 0) ∧ (∀(y : ℝ). abs(y) &lt;= x)
-    
-    // Quantifier inside implication
-    axiom dense_rationals: ∀(a b : ℝ). a &lt; b → (∃(q : ℚ). a &lt; q ∧ q &lt; b)
-    
-    // Deeply nested quantifiers
-    axiom limit_def: ∀(L : ℝ, ε : ℝ). ε &gt; 0 → 
-        (∃(δ : ℝ). δ &gt; 0 ∧ (∀(x : ℝ). abs(x) &lt; δ → abs(f(x) - L) &lt; ε))
-}
-</code></pre>
-<h3 id="epsilon-delta-limit-definition"><a class="header" href="#epsilon-delta-limit-definition">Epsilon-Delta Limit Definition</a></h3>
-<p>The classic analysis definition now parses correctly:</p>
-<pre><code class="language-kleis">structure Limits {
-    axiom epsilon_delta: ∀(f : ℝ → ℝ, L a : ℝ). 
-        has_limit(f, a, L) ↔ 
-        (∀(ε : ℝ). ε &gt; 0 → (∃(δ : ℝ). δ &gt; 0 ∧ 
-            (∀(x : ℝ). abs(x - a) &lt; δ → abs(f(x) - L) &lt; ε)))
-}
-</code></pre>
-<h2 id="function-types-in-quantifiers-grammar-v09"><a class="header" href="#function-types-in-quantifiers-grammar-v09">Function Types in Quantifiers (Grammar v0.9)</a></h2>
-<p>Quantify over functions using the arrow type:</p>
-<pre><code class="language-kleis">structure FunctionProperties {
-    // Quantify over a function ℝ → ℝ
-    axiom continuous: ∀(f : ℝ → ℝ, x : ℝ). 
-        is_continuous(f, x)
-    
-    // Quantify over multiple functions
-    axiom composition: ∀(f : ℝ → ℝ, g : ℝ → ℝ). 
-        compose(f, g) = λ x . f(g(x))
-    
-    // Higher-order function types
-    axiom curried: ∀(f : ℝ → ℝ → ℝ, a b : ℝ). 
-        f = f
-}
-</code></pre>
-<h3 id="topology-with-function-types"><a class="header" href="#topology-with-function-types">Topology with Function Types</a></h3>
-<pre><code class="language-kleis">structure Topology {
-    axiom continuity: ∀(f : X → Y, V : Set(Y)). 
-        is_open(V) → is_open(preimage(f, V))
-    
-    axiom homeomorphism: ∀(f : X → Y, g : Y → X). 
-        (∀(x : X). g(f(x)) = x) ∧ (∀(y : Y). f(g(y)) = y) → 
-        bijective(f)
-}
-</code></pre>
-<h2 id="verification-with-z3"><a class="header" href="#verification-with-z3">Verification with Z3</a></h2>
-<p>Kleis uses Z3 to check quantified statements:</p>
-<pre><code class="language-kleis example">// Z3 can verify this is always true:
-axiom add_zero : ∀(x : ℝ). x + 0 = x
-
-// Z3 can find a counterexample for this:
-axiom all_positive : ∀(x : ℝ). x &gt; 0
-// Z3 finds counterexample: x = -1
-</code></pre>
-<h2 id="truth-tables"><a class="header" href="#truth-tables">Truth Tables</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>P</th><th>Q</th><th>P ∧ Q</th><th>P ∨ Q</th><th>P → Q</th><th>¬P</th></tr>
+<tr><th>Argument</th><th>Type</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td>T</td><td>T</td><td>T</td><td>T</td><td>T</td><td>F</td></tr>
-<tr><td>T</td><td>F</td><td>F</td><td>T</td><td>F</td><td>F</td></tr>
-<tr><td>F</td><td>T</td><td>F</td><td>T</td><td>T</td><td>T</td></tr>
-<tr><td>F</td><td>F</td><td>F</td><td>F</td><td>T</td><td>T</td></tr>
+<tr><td><code>dynamics</code></td><td>Lambda</td><td>System dynamics function (see below)</td></tr>
+<tr><td><code>y0</code></td><td>List</td><td>Initial state vector</td></tr>
+<tr><td><code>t_span</code></td><td><code>[t0, t1]</code></td><td>Time interval</td></tr>
+<tr><td><code>dt</code></td><td>Number</td><td>Output time step (optional, default 0.1)</td></tr>
 </tbody>
 </table>
 </div>
-<h2 id="whats-next"><a class="header" href="#whats-next">What’s Next?</a></h2>
-<p>Learn about conditional expressions!</p>
-<p>→ <a href="./08-conditionals.html">Next: Conditionals</a></p>
+<h3 id="the-dynamics-function"><a class="header" href="#the-dynamics-function">The Dynamics Function</a></h3>
+<p>The <code>dynamics</code> argument is a lambda of the form:</p>
+<pre><code class="language-kleis">lambda t y . [dy0/dt, dy1/dt, ...]
+</code></pre>
+<p>where:</p>
+<ul>
+<li><code>t</code> is the current time (scalar)</li>
+<li><code>y</code> is the current state vector <code>[y0, y1, ...]</code></li>
+<li>The return value is a list of derivatives, same length as <code>y</code></li>
+</ul>
+<p><strong>For higher-order ODEs</strong>, convert to a system of first-order equations by introducing auxiliary state variables:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Original Equation</th><th>State Vector</th><th>Dynamics Return</th></tr>
+</thead>
+<tbody>
+<tr><td>y’ = f(t, y)</td><td><code>[y]</code></td><td><code>[f(t, y)]</code></td></tr>
+<tr><td>y’’ = f(t, y, y’)</td><td><code>[y, y']</code></td><td><code>[y', f(t, y, y')]</code></td></tr>
+<tr><td>y’‘’ = f(t, y, y’, y’’)</td><td><code>[y, y', y'']</code></td><td><code>[y', y'', f(...)]</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Example</strong>: The second-order equation y’’ + y = 0 becomes:</p>
+<ul>
+<li>State: <code>[y, v]</code> where v = y’</li>
+<li>Dynamics: <code>[v, -y]</code> since y’ = v and v’ = -y</li>
+</ul>
+<h3 id="accessing-state-components"><a class="header" href="#accessing-state-components">Accessing State Components</a></h3>
+<p>Use <code>nth(list, index)</code> to extract elements from the state vector (0-indexed):</p>
+<pre><code class="language-kleis">lambda t y .
+  let x = nth(y, 0) in    // first component
+  let v = nth(y, 1) in    // second component
+  [v, negate(x)]          // return [dx/dt, dv/dt]
+</code></pre>
+<h3 id="returns"><a class="header" href="#returns">Returns</a></h3>
+<p>A list of <code>[t, [y0, y1, ...]]</code> pairs representing the trajectory.</p>
+<h2 id="simple-example-exponential-decay"><a class="header" href="#simple-example-exponential-decay">Simple Example: Exponential Decay</a></h2>
+<p>The equation dy/dt = -y with y(0) = 1 has the solution y(t) = e^(-t).</p>
+<pre><code class="language-kleis">let decay = lambda t y . [negate(nth(y, 0))] in
+let traj = ode45(decay, [1.0], [0, 3], 0.5) in
+traj
+// → [[0, [1.0]], [0.5, [0.606...]], [1.0, [0.367...]], ...]
+</code></pre>
+<h2 id="harmonic-oscillator"><a class="header" href="#harmonic-oscillator">Harmonic Oscillator</a></h2>
+<p>A second-order ODE like x’’ = -x is converted to a first-order system:</p>
+<ul>
+<li>State: <code>[x, v]</code> where v = x’</li>
+<li>Dynamics: <code>[x', v'] = [v, -x]</code></li>
+</ul>
+<pre><code class="language-kleis">let oscillator = lambda t y .
+  let x = nth(y, 0) in
+  let v = nth(y, 1) in
+  [v, negate(x)]
+in
+ode45(oscillator, [1, 0], [0, 6.28], 0.1)
+// Completes one period, returns to [1, 0]
+</code></pre>
+<hr>
+<h2 id="control-systems-inverted-pendulum-with-lqr"><a class="header" href="#control-systems-inverted-pendulum-with-lqr">Control Systems: Inverted Pendulum with LQR</a></h2>
+<p>This example demonstrates a complete control system workflow:</p>
+<ol>
+<li><strong>System modeling</strong> - Nonlinear pendulum dynamics</li>
+<li><strong>LQR design</strong> - Optimal feedback gains via CARE</li>
+<li><strong>Simulation</strong> - Closed-loop response with <code>ode45</code></li>
+<li><strong>Visualization</strong> - State and control trajectories</li>
+</ol>
+<h3 id="problem-setup"><a class="header" href="#problem-setup">Problem Setup</a></h3>
+<p>An inverted pendulum on an acceleration-controlled cart:</p>
+<ul>
+<li><strong>State</strong>: <code>[θ, ω]</code> where θ is angle from vertical, ω is angular velocity</li>
+<li><strong>Control</strong>: u = cart acceleration (m/s²)</li>
+<li><strong>Dynamics</strong>: θ’’ = (g/L)·sin(θ) + (u/L)·cos(θ)</li>
+</ul>
+<h3 id="linearized-system"><a class="header" href="#linearized-system">Linearized System</a></h3>
+<p>Around the upright equilibrium (θ = 0):</p>
+<pre><code>A = [0,    1  ]     B = [0  ]
+    [g/L,  0  ]         [1/L]
+</code></pre>
+<p>With L = 0.5m and g = 9.81 m/s², the open-loop eigenvalues are ±4.43 — one unstable pole.</p>
+<h3 id="complete-example"><a class="header" href="#complete-example">Complete Example</a></h3>
+<pre><code class="language-kleis">// Physical parameters
+define ell = 0.5        // pendulum length (m)
+define grav = 9.81      // gravity (m/s²)
+
+// Linearized system matrices
+define a_matrix = [[0, 1], [grav / ell, 0]]
+define b_matrix = [[0], [1 / ell]]
+
+// LQR cost weights
+define q_matrix = [[10, 0], [0, 1]]  // Penalize angle more than velocity
+define r_matrix = [[1]]
+
+// Helper functions
+define get_time(pt) = nth(pt, 0)
+define get_theta(pt) = nth(nth(pt, 1), 0)
+define get_omega(pt) = nth(nth(pt, 1), 1)
+
+example "LQR pendulum stabilization" {
+  // Compute optimal LQR gains by solving CARE
+  let result = lqr(a_matrix, b_matrix, q_matrix, r_matrix) in
+  let k1 = nth(nth(nth(result, 0), 0), 0) in
+  let k2 = nth(nth(nth(result, 0), 0), 1) in
+  
+  out("LQR gains: k1, k2 =")
+  out(k1)  // ≈ 20.12
+  out(k2)  // ≈ 4.60
+  
+  out("Open-loop eigenvalues (unstable):")
+  out(eigenvalues(a_matrix))  // [4.43, -4.43]
+  
+  // Nonlinear dynamics with LQR feedback: u = -K·x
+  let dyn = lambda t y .
+    let th = nth(y, 0) in
+    let om = nth(y, 1) in
+    let u = negate(k1*th + k2*om) in
+    [om, (grav/ell)*sin(th) + (u/ell)*cos(th)]
+  in
+  
+  // Simulate from 17° initial tilt
+  let traj = ode45(dyn, [0.3, 0], [0, 5], 0.05) in
+  
+  // Extract time series
+  let times = list_map(lambda p . get_time(p), traj) in
+  let thetas = list_map(lambda p . get_theta(p), traj) in
+  let omegas = list_map(lambda p . get_omega(p), traj) in
+  let controls = list_map(lambda p . 
+    negate(20.12*get_theta(p) + 4.60*get_omega(p)), traj) in
+  
+  // Plot state and control
+  diagram(
+    plot(times, thetas, color = "red", label = "theta (rad)"),
+    plot(times, omegas, color = "blue", label = "omega (rad/s)"),
+    plot(times, controls, color = "green", label = "u (m/s^2)"),
+    title = "Inverted Pendulum - LQR Stabilization",
+    xlabel = "Time (s)",
+    ylabel = "State / Control",
+    legend = "right + bottom",
+    width = 16,
+    height = 10
+  )
+}
+</code></pre>
+<h3 id="result"><a class="header" href="#result">Result</a></h3>
+<p><img src="../images/inverted-pendulum-lqr.png" alt="Inverted Pendulum LQR Stabilization"></p>
+<p>The plot shows:</p>
+<ul>
+<li><strong>θ (red)</strong>: Angle smoothly decays from 0.3 rad to 0</li>
+<li><strong>ω (blue)</strong>: Angular velocity with brief negative swing, then settles</li>
+<li><strong>u (green)</strong>: Initial -6 m/s² control effort (cart accelerates backward to catch falling pendulum), then decays to zero</li>
+</ul>
+<p>The LQR controller stabilizes the pendulum in approximately 2 seconds with no overshoot — optimal behavior for the given Q and R weights.</p>
+<hr>
+<h2 id="technical-notes"><a class="header" href="#technical-notes">Technical Notes</a></h2>
+<h3 id="adaptive-step-size"><a class="header" href="#adaptive-step-size">Adaptive Step Size</a></h3>
+<p>The Dormand-Prince 5(4) method adapts its internal step size for accuracy while outputting at the requested <code>dt</code> intervals. This handles stiff transients automatically.</p>
+<h3 id="lambda-closures"><a class="header" href="#lambda-closures">Lambda Closures</a></h3>
+<p>The dynamics lambda can capture variables from the enclosing scope:</p>
+<pre><code class="language-kleis">let k = 2.0 in
+let dyn = lambda t y . [negate(k * nth(y, 0))] in
+ode45(dyn, [1], [0, 1], 0.1)
+// k is captured in the closure
+</code></pre>
+<hr>
+<h2 id="see-also"><a class="header" href="#see-also">See Also</a></h2>
+<ul>
+<li><a href="./lapack.html">LAPACK Functions</a> - Matrix decompositions, <code>lqr()</code>, <code>eigenvalues()</code></li>
+<li><a href="../chapters/21-jupyter-notebook.html">Jupyter Notebook</a> - Interactive plotting</li>
+<li><a href="./builtin-functions.html">Built-in Functions</a> - <code>list_map</code>, <code>nth</code>, etc.</li>
+</ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../chapters/06-let-bindings.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../appendix/lapack.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../chapters/08-conditionals.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../appendix/stdlib.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -367,11 +398,11 @@ axiom all_positive : ∀(x : ℝ). x &gt; 0
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../chapters/06-let-bindings.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../appendix/lapack.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../chapters/08-conditionals.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../appendix/stdlib.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>
