@@ -47,6 +47,7 @@ ndarray = { version = "0.16", optional = true }
 ndarray-linalg = { version = "0.17", optional = true }
 nalgebra = { version = "0.33", optional = true }  # For pure-Rust Schur (dev/testing)
 lapack = { version = "0.19", optional = true }    # For LAPACK dgees (production Schur)
+ode_solvers = "0.6.1"
 
 [features]
 # Default features (enabled by default)

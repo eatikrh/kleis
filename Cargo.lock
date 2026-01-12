@@ -1813,6 +1813,7 @@ dependencies = [
  "nalgebra",
  "ndarray",
  "ndarray-linalg",
+ "ode_solvers",
  "regex",
  "ropey",
  "roxmltree",
@@ -2342,6 +2343,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a6a622008b6e321afc04970976f62ee297fdbaa6f95318ca343e3eebb9648441"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "ode_solvers"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f6dded742520a47ff6e4d61c9e88f3a437657221216f7b328c94bc282feca7a"
+dependencies = [
+ "nalgebra",
+ "num-traits",
+ "serde",
+ "simba",
+ "thiserror 2.0.17",
 ]
 
 [[package]]

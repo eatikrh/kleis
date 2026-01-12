@@ -136,6 +136,54 @@ pub struct Evaluator {
     debug_hook: RefCell<Option<Box<dyn DebugHook + Send>>>,
 }
 
+// =============================================================================
+// Free functions for numeric evaluation (used by ODE solver and as_number)
+// =============================================================================
+
+/// Evaluate an expression to a numeric value (no evaluator state needed).
+///
+/// Handles: constants, arithmetic (+, -, *, /), power, trig (sin, cos),
+/// exp, sqrt, negation. Returns None for symbolic/unevaluable expressions.
+///
+/// This is a pure function - it doesn't need Evaluator state, so it can be
+/// called from closures (like the ODE solver dynamics function).
+pub fn eval_numeric(expr: &Expression) -> Option<f64> {
+    match expr {
+        Expression::Const(s) => s.parse().ok(),
+        Expression::Operation { name, args, .. } => {
+            let vals: Option<Vec<f64>> = args.iter().map(eval_numeric).collect();
+            let vals = vals?;
+            match name.as_str() {
+                "plus" | "add" => Some(vals.iter().sum()),
+                "minus" | "sub" => match vals.len() {
+                    1 => Some(-vals[0]),
+                    2 => Some(vals[0] - vals[1]),
+                    _ => None,
+                },
+                "times" | "mul" => Some(vals.iter().product()),
+                "div" | "divide" => {
+                    if vals.len() == 2 && vals[1] != 0.0 {
+                        Some(vals[0] / vals[1])
+                    } else {
+                        None
+                    }
+                }
+                "pow" | "power" => vals.get(0).zip(vals.get(1)).map(|(a, b)| a.powf(*b)),
+                "sin" => vals.first().map(|v| v.sin()),
+                "cos" => vals.first().map(|v| v.cos()),
+                "tan" => vals.first().map(|v| v.tan()),
+                "exp" => vals.first().map(|v| v.exp()),
+                "ln" | "log" => vals.first().map(|v| v.ln()),
+                "sqrt" => vals.first().map(|v| v.sqrt()),
+                "abs" => vals.first().map(|v| v.abs()),
+                "neg" | "negate" => vals.first().map(|v| -v),
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
 impl Evaluator {
     /// Create a new evaluator
     pub fn new() -> Self {
@@ -5040,6 +5088,12 @@ impl Evaluator {
                 }
             }
 
+            // === ODE Solver ===
+            // For now, ode45 takes explicit derivative expressions
+            // Example: ode45([v, -x], [x, v], [1, 0], [0, 10], 0.1)
+            //          dynamics,    vars,   y0,     t_span, dt
+            "ode45" | "integrate" => self.builtin_ode45(args),
+
             "mpow" | "matrix_pow" => {
                 // Matrix power A^k for integer k
                 if args.len() != 2 {
@@ -5952,6 +6006,170 @@ impl Evaluator {
             Ok(Some(Expression::Object("true".to_string())))
         } else {
             Ok(Some(Expression::Object("false".to_string())))
+        }
+    }
+
+    /// ODE solver using Dormand-Prince 5(4) method
+    ///
+    /// Usage: ode45(f, y0, t_span, dt?)
+    ///   f: dynamics function (t, y) -> [dy/dt...]
+    ///   y0: initial state, e.g., [1, 0]
+    ///   t_span: [t0, t1]
+    ///   dt: initial step (optional, default 0.1)
+    ///
+    /// Example:
+    ///   // Harmonic oscillator: x'' = -x
+    ///   let f = (t, y) => [y[1], neg(y[0])]
+    ///   ode45(f, [1, 0], [0, 10], 0.1)
+    ///
+    /// Returns: list of [t, [y0, y1, ...]] pairs
+    fn builtin_ode45(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+        if args.len() < 3 || args.len() > 4 {
+            return Err(
+                "ode45 requires 3-4 arguments: f, y0, t_span, dt?\n\
+                 Example: ode45((t, y) => [y[1], neg(y[0])], [1, 0], [0, 10])"
+                    .to_string(),
+            );
+        }
+
+        // args[0] should be a lambda: (t, y) => ...
+        let f_lambda = &args[0];
+
+        // Extract initial state y0
+        let y0: Vec<f64> = if let Expression::List(elems) = &args[1] {
+            elems
+                .iter()
+                .map(|e| {
+                    self.as_number(e)
+                        .ok_or_else(|| "y0 must be numeric".to_string())
+                })
+                .collect::<Result<Vec<_>, _>>()?
+        } else {
+            return Err("y0 must be a list".to_string());
+        };
+
+        // Extract time span [t0, t1]
+        let (t0, t1) = if let Expression::List(elems) = &args[2] {
+            if elems.len() != 2 {
+                return Err("t_span must be [t0, t1]".to_string());
+            }
+            let t0 = self
+                .as_number(&elems[0])
+                .ok_or_else(|| "t0 must be numeric".to_string())?;
+            let t1 = self
+                .as_number(&elems[1])
+                .ok_or_else(|| "t1 must be numeric".to_string())?;
+            (t0, t1)
+        } else {
+            return Err("t_span must be [t0, t1]".to_string());
+        };
+
+        // Extract dt (optional)
+        let dt = if args.len() == 4 {
+            self.as_number(&args[3])
+                .ok_or_else(|| "dt must be numeric".to_string())?
+        } else {
+            0.1
+        };
+
+        let dim = y0.len();
+        let f_clone = f_lambda.clone();
+
+        // Create dynamics function that calls the lambda
+        let dynamics = |t: f64, y: &[f64]| -> Vec<f64> {
+            // Build: f(t, [y0, y1, ...])
+            let t_expr = Expression::Const(format!("{}", t));
+            let y_expr = Expression::List(
+                y.iter()
+                    .map(|&v| Expression::Const(format!("{}", v)))
+                    .collect(),
+            );
+
+            // Apply lambda: substitute params with args and evaluate body
+            if let Expression::Lambda { params, body, .. } = &f_clone {
+                if params.len() >= 2 {
+                    let mut subst = std::collections::HashMap::new();
+                    subst.insert(params[0].name.clone(), t_expr);
+                    subst.insert(params[1].name.clone(), y_expr);
+
+                    // Substitute and evaluate
+                    let substituted = Self::substitute_simple(body, &subst);
+                    if let Some(result) = Self::eval_numeric_expr(&substituted) {
+                        return result;
+                    }
+                }
+            }
+            vec![0.0; dim]
+        };
+
+        // Integrate
+        let result = crate::ode::integrate_dopri5(dynamics, &y0, (t0, t1), dt)
+            .map_err(|e| e.to_string())?;
+
+        // Convert to Kleis list of [t, [y...]]
+        let trajectory: Vec<Expression> = result
+            .into_iter()
+            .map(|(t, y)| {
+                Expression::List(vec![
+                    Expression::Const(format!("{}", t)),
+                    Expression::List(
+                        y.into_iter()
+                            .map(|v| Expression::Const(format!("{}", v)))
+                            .collect(),
+                    ),
+                ])
+            })
+            .collect();
+
+        Ok(Some(Expression::List(trajectory)))
+    }
+
+    /// Simple substitution for ODE evaluation (doesn't need full evaluator)
+    fn substitute_simple(
+        expr: &Expression,
+        subst: &std::collections::HashMap<String, Expression>,
+    ) -> Expression {
+        match expr {
+            Expression::Object(name) => subst.get(name).cloned().unwrap_or_else(|| expr.clone()),
+            Expression::Operation { name, args, span } => {
+                // Check if operation name is a variable (like indexing)
+                if name == "index" && args.len() == 2 {
+                    // Handle y[i] => get element from list
+                    let arr = Self::substitute_simple(&args[0], subst);
+                    let idx_expr = Self::substitute_simple(&args[1], subst);
+                    if let (Expression::List(elems), Expression::Const(idx_str)) = (&arr, &idx_expr)
+                    {
+                        if let Ok(idx) = idx_str.parse::<usize>() {
+                            if idx < elems.len() {
+                                return elems[idx].clone();
+                            }
+                        }
+                    }
+                }
+                Expression::Operation {
+                    name: name.clone(),
+                    args: args
+                        .iter()
+                        .map(|a| Self::substitute_simple(a, subst))
+                        .collect(),
+                    span: span.clone(),
+                }
+            }
+            Expression::List(elems) => Expression::List(
+                elems
+                    .iter()
+                    .map(|e| Self::substitute_simple(e, subst))
+                    .collect(),
+            ),
+            _ => expr.clone(),
+        }
+    }
+
+    /// Evaluate expression to numeric vector (for ODE)
+    fn eval_numeric_expr(expr: &Expression) -> Option<Vec<f64>> {
+        match expr {
+            Expression::List(elems) => elems.iter().map(eval_numeric).collect(),
+            _ => None,
         }
     }
 
@@ -7268,42 +7486,8 @@ impl Evaluator {
     }
 
     fn as_number(&self, expr: &Expression) -> Option<f64> {
-        match expr {
-            Expression::Const(s) => s.parse().ok(),
-            // Handle negate(x) -> -x
-            Expression::Operation { name, args, .. } if name == "negate" && args.len() == 1 => {
-                self.as_number(&args[0]).map(|n| -n)
-            }
-            // Handle minus(a, b) -> a - b
-            Expression::Operation { name, args, .. } if name == "minus" && args.len() == 2 => {
-                let a = self.as_number(&args[0])?;
-                let b = self.as_number(&args[1])?;
-                Some(a - b)
-            }
-            // Handle plus(a, b) -> a + b
-            Expression::Operation { name, args, .. } if name == "plus" && args.len() == 2 => {
-                let a = self.as_number(&args[0])?;
-                let b = self.as_number(&args[1])?;
-                Some(a + b)
-            }
-            // Handle times(a, b) -> a * b
-            Expression::Operation { name, args, .. } if name == "times" && args.len() == 2 => {
-                let a = self.as_number(&args[0])?;
-                let b = self.as_number(&args[1])?;
-                Some(a * b)
-            }
-            // Handle divide(a, b) -> a / b
-            Expression::Operation { name, args, .. } if name == "divide" && args.len() == 2 => {
-                let a = self.as_number(&args[0])?;
-                let b = self.as_number(&args[1])?;
-                if b != 0.0 {
-                    Some(a / b)
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        }
+        // Delegate to the free function - DRY principle
+        eval_numeric(expr)
     }
 
     fn as_integer(&self, expr: &Expression) -> Option<i64> {
