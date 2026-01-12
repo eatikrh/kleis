@@ -2453,6 +2453,15 @@ impl Evaluator {
                     return self.eval_concrete(&applied);
                 }
 
+                // Check if name refers to a lambda in bindings
+                if let Some(bound_value) = self.bindings.get(name) {
+                    if let Expression::Lambda { .. } = bound_value {
+                        // Apply the lambda to the arguments
+                        let reduced = self.beta_reduce_multi(bound_value, &eval_args)?;
+                        return self.eval_concrete(&reduced);
+                    }
+                }
+
                 // Unknown operation - return as-is with evaluated args
                 Ok(Expression::Operation {
                     name: name.clone(),
@@ -3135,6 +3144,34 @@ impl Evaluator {
                         acc = self.eval_concrete(&reduced)?;
                     }
                     return Ok(Some(acc));
+                }
+                Ok(None)
+            }
+            "list_flatmap" | "flatmap" | "concat_map" => {
+                // list_flatmap(f, [a, b, c]) → flatten(map(f, [a, b, c]))
+                // f should return a list, results are concatenated
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                let func = &args[0];
+
+                // Evaluate the list argument first
+                let evaluated_list = self.eval_concrete(&args[1])?;
+
+                if let Expression::List(elements) = &evaluated_list {
+                    let mut result = Vec::new();
+                    for elem in elements {
+                        // Apply function to element
+                        let reduced = self.beta_reduce_multi(func, &[elem.clone()])?;
+                        let mapped = self.eval_concrete(&reduced)?;
+                        // Flatten: if result is a list, extend; otherwise push
+                        if let Expression::List(inner) = mapped {
+                            result.extend(inner);
+                        } else {
+                            result.push(mapped);
+                        }
+                    }
+                    return Ok(Some(Expression::List(result)));
                 }
                 Ok(None)
             }

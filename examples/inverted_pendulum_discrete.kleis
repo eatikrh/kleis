@@ -1,0 +1,120 @@
+// =============================================================================
+// Inverted Pendulum - Digital Control with Zero-Order Hold
+// =============================================================================
+//
+// Same system as inverted_pendulum.kleis, but with discrete-time control.
+// Control is computed at sample times and held constant (ZOH) between samples.
+//
+// Sample rate: 20 Hz (Ts = 0.05s)
+// Uses DARE/dlqr for discrete-time optimal control design.
+
+define ell = 0.5        // pendulum length (m)
+define grav = 9.81      // gravity (m/s^2)
+define ts = 0.05        // sample time (s) - 20 Hz
+
+// Continuous-time linearized system
+define a_cont = [[0, 1], [grav / ell, 0]]
+define b_cont = [[0], [1 / ell]]
+
+// Discretize using matrix exponential (exact for linear systems)
+// Ad = expm(A * Ts)
+// For Bd, we use first-order approximation: Bd ≈ B * Ts
+// (More accurate: Bd = inv(A) * (Ad - I) * B, but this works for demo)
+define a_disc = expm(scalar_matrix_mul(ts, a_cont))
+define b_disc = scalar_matrix_mul(ts, b_cont)
+
+// LQR weights (same as continuous case)
+define q_matrix = [[10, 0], [0, 1]]
+define r_matrix = [[1]]
+
+// Discrete-time simulation: x[k+1] = Ad*x[k] + Bd*u[k]
+// Returns list of [time, state, control] tuples
+define simulate_discrete(x0, k_gain, n_steps) =
+  let k1 = nth(nth(k_gain, 0), 0) in
+  let k2 = nth(nth(k_gain, 0), 1) in
+  let step = lambda acc i .
+    let prev = nth(acc, length(acc) - 1) in
+    let t_prev = nth(prev, 0) in
+    let x_prev = nth(prev, 1) in
+    let th = nth(x_prev, 0) in
+    let om = nth(x_prev, 1) in
+    // Control: u = -K*x (ZOH - constant until next sample)
+    let u = negate(k1*th + k2*om) in
+    // Nonlinear dynamics integration (simple Euler for one Ts)
+    let th_ddot = (grav/ell)*sin(th) + (u/ell)*cos(th) in
+    let th_new = th + om*ts in
+    let om_new = om + th_ddot*ts in
+    list_append(acc, [[t_prev + ts, [th_new, om_new], u]])
+  in
+  let init_u = negate(k1*nth(x0, 0) + k2*nth(x0, 1)) in
+  list_fold(step, [[0, x0, init_u]], range(0, n_steps))
+
+// Helpers for extracting data
+define get_time(pt) = nth(pt, 0)
+define get_theta(pt) = nth(nth(pt, 1), 0)
+define get_omega(pt) = nth(nth(pt, 1), 1)
+define get_control(pt) = nth(pt, 2)
+
+example "Digital LQR with Zero-Order Hold" {
+  out("=== Discrete-Time Inverted Pendulum Control ===")
+  out("Sample time Ts =")
+  out(ts)
+  
+  out("Discretized A matrix:")
+  out(a_disc)
+  
+  // Compute discrete LQR gains using DARE
+  let result = dlqr(a_disc, b_disc, q_matrix, r_matrix) in
+  let k_matrix = nth(result, 0) in
+  
+  out("Discrete LQR gains K:")
+  out(k_matrix)
+  
+  // Check closed-loop stability (eigenvalues inside unit circle)
+  // A_cl = Ad - Bd*K
+  let bk = matmul(b_disc, k_matrix) in
+  let a_cl = matrix_sub(a_disc, bk) in
+  
+  out("Closed-loop A matrix:")
+  out(a_cl)
+  out("Closed-loop eigenvalues (should be |z| < 1):")
+  out(eigenvalues(a_cl))
+  
+  // Extract gains for simulation
+  let k1 = nth(nth(k_matrix, 0), 0) in
+  let k2 = nth(nth(k_matrix, 0), 1) in
+  out("k1 =")
+  out(k1)
+  out("k2 =")
+  out(k2)
+  
+  // Simulate for 5 seconds = 100 samples at 20 Hz
+  let n_steps = 100 in
+  let x0 = [0.3, 0] in  // 17 deg initial tilt
+  let traj = simulate_discrete(x0, k_matrix, n_steps) in
+  
+  out("Initial state [theta, omega]:")
+  out(x0)
+  out("Final state [theta, omega]:")
+  out(nth(nth(traj, length(traj) - 1), 1))
+  
+  // Extract time series
+  let times = list_map(lambda p . get_time(p), traj) in
+  let thetas = list_map(lambda p . get_theta(p), traj) in
+  let omegas = list_map(lambda p . get_omega(p), traj) in
+  let controls = list_map(lambda p . get_control(p), traj) in
+  
+  // Bar chart shows ZOH naturally - each bar is control held for one sample period
+  diagram(
+    plot(times, thetas, color = "red", label = "theta (rad)"),
+    plot(times, omegas, color = "blue", label = "omega (rad/s)"),
+    bar(times, controls, color = "green", label = "u ZOH (m/s^2)", opacity = 0.3),
+    title = "Digital Control - Zero Order Hold (20 Hz)",
+    xlabel = "Time (s)",
+    ylabel = "State / Control",
+    legend = "right + bottom",
+    width = 16,
+    height = 10
+  )
+}
+
