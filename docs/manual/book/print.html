@@ -44,10 +44,10 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-fbfd4bca.js";
+            window.path_to_searchindex_js = "searchindex-21bb5f9a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-5619aea8.js"></script>
+        <script src="toc-309fc3c5.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -8397,6 +8397,198 @@ out(inv(A))
 <li><a href="#jupyter-notebook">Jupyter Notebook</a> - Using numerical Kleis</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="appendix-ode-solver"><a class="header" href="#appendix-ode-solver">Appendix: ODE Solver</a></h1>
+<p>Kleis provides numerical integration of ordinary differential equations through the <code>ode45</code> function. This implements the Dormand-Prince 5(4) adaptive step-size method, suitable for non-stiff initial value problems.</p>
+<blockquote>
+<p><strong>Note:</strong> The ODE solver is available when Kleis is compiled with the <code>numerical</code> feature.</p>
+</blockquote>
+<h2 id="basic-usage-1"><a class="header" href="#basic-usage-1">Basic Usage</a></h2>
+<pre><code class="language-kleis">ode45(dynamics, y0, t_span, dt)
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Argument</th><th>Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>dynamics</code></td><td>Lambda</td><td>System dynamics function (see below)</td></tr>
+<tr><td><code>y0</code></td><td>List</td><td>Initial state vector</td></tr>
+<tr><td><code>t_span</code></td><td><code>[t0, t1]</code></td><td>Time interval</td></tr>
+<tr><td><code>dt</code></td><td>Number</td><td>Output time step (optional, default 0.1)</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="the-dynamics-function"><a class="header" href="#the-dynamics-function">The Dynamics Function</a></h3>
+<p>The <code>dynamics</code> argument is a lambda of the form:</p>
+<pre><code class="language-kleis">lambda t y . [dy0/dt, dy1/dt, ...]
+</code></pre>
+<p>where:</p>
+<ul>
+<li><code>t</code> is the current time (scalar)</li>
+<li><code>y</code> is the current state vector <code>[y0, y1, ...]</code></li>
+<li>The return value is a list of derivatives, same length as <code>y</code></li>
+</ul>
+<p><strong>For higher-order ODEs</strong>, convert to a system of first-order equations by introducing auxiliary state variables:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Original Equation</th><th>State Vector</th><th>Dynamics Return</th></tr>
+</thead>
+<tbody>
+<tr><td>y’ = f(t, y)</td><td><code>[y]</code></td><td><code>[f(t, y)]</code></td></tr>
+<tr><td>y’’ = f(t, y, y’)</td><td><code>[y, y']</code></td><td><code>[y', f(t, y, y')]</code></td></tr>
+<tr><td>y’‘’ = f(t, y, y’, y’’)</td><td><code>[y, y', y'']</code></td><td><code>[y', y'', f(...)]</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Example</strong>: The second-order equation y’’ + y = 0 becomes:</p>
+<ul>
+<li>State: <code>[y, v]</code> where v = y’</li>
+<li>Dynamics: <code>[v, -y]</code> since y’ = v and v’ = -y</li>
+</ul>
+<h3 id="accessing-state-components"><a class="header" href="#accessing-state-components">Accessing State Components</a></h3>
+<p>Use <code>nth(list, index)</code> to extract elements from the state vector (0-indexed):</p>
+<pre><code class="language-kleis">lambda t y .
+  let x = nth(y, 0) in    // first component
+  let v = nth(y, 1) in    // second component
+  [v, negate(x)]          // return [dx/dt, dv/dt]
+</code></pre>
+<h3 id="returns"><a class="header" href="#returns">Returns</a></h3>
+<p>A list of <code>[t, [y0, y1, ...]]</code> pairs representing the trajectory.</p>
+<h2 id="simple-example-exponential-decay"><a class="header" href="#simple-example-exponential-decay">Simple Example: Exponential Decay</a></h2>
+<p>The equation dy/dt = -y with y(0) = 1 has the solution y(t) = e^(-t).</p>
+<pre><code class="language-kleis">let decay = lambda t y . [negate(nth(y, 0))] in
+let traj = ode45(decay, [1.0], [0, 3], 0.5) in
+traj
+// → [[0, [1.0]], [0.5, [0.606...]], [1.0, [0.367...]], ...]
+</code></pre>
+<h2 id="harmonic-oscillator"><a class="header" href="#harmonic-oscillator">Harmonic Oscillator</a></h2>
+<p>A second-order ODE like x’’ = -x is converted to a first-order system:</p>
+<ul>
+<li>State: <code>[x, v]</code> where v = x’</li>
+<li>Dynamics: <code>[x', v'] = [v, -x]</code></li>
+</ul>
+<pre><code class="language-kleis">let oscillator = lambda t y .
+  let x = nth(y, 0) in
+  let v = nth(y, 1) in
+  [v, negate(x)]
+in
+ode45(oscillator, [1, 0], [0, 6.28], 0.1)
+// Completes one period, returns to [1, 0]
+</code></pre>
+<hr>
+<h2 id="control-systems-inverted-pendulum-with-lqr"><a class="header" href="#control-systems-inverted-pendulum-with-lqr">Control Systems: Inverted Pendulum with LQR</a></h2>
+<p>This example demonstrates a complete control system workflow:</p>
+<ol>
+<li><strong>System modeling</strong> - Nonlinear pendulum dynamics</li>
+<li><strong>LQR design</strong> - Optimal feedback gains via CARE</li>
+<li><strong>Simulation</strong> - Closed-loop response with <code>ode45</code></li>
+<li><strong>Visualization</strong> - State and control trajectories</li>
+</ol>
+<h3 id="problem-setup"><a class="header" href="#problem-setup">Problem Setup</a></h3>
+<p>An inverted pendulum on an acceleration-controlled cart:</p>
+<ul>
+<li><strong>State</strong>: <code>[θ, ω]</code> where θ is angle from vertical, ω is angular velocity</li>
+<li><strong>Control</strong>: u = cart acceleration (m/s²)</li>
+<li><strong>Dynamics</strong>: θ’’ = (g/L)·sin(θ) + (u/L)·cos(θ)</li>
+</ul>
+<h3 id="linearized-system"><a class="header" href="#linearized-system">Linearized System</a></h3>
+<p>Around the upright equilibrium (θ = 0):</p>
+<pre><code>A = [0,    1  ]     B = [0  ]
+    [g/L,  0  ]         [1/L]
+</code></pre>
+<p>With L = 0.5m and g = 9.81 m/s², the open-loop eigenvalues are ±4.43 — one unstable pole.</p>
+<h3 id="complete-example"><a class="header" href="#complete-example">Complete Example</a></h3>
+<pre><code class="language-kleis">// Physical parameters
+define ell = 0.5        // pendulum length (m)
+define grav = 9.81      // gravity (m/s²)
+
+// Linearized system matrices
+define a_matrix = [[0, 1], [grav / ell, 0]]
+define b_matrix = [[0], [1 / ell]]
+
+// LQR cost weights
+define q_matrix = [[10, 0], [0, 1]]  // Penalize angle more than velocity
+define r_matrix = [[1]]
+
+// Helper functions
+define get_time(pt) = nth(pt, 0)
+define get_theta(pt) = nth(nth(pt, 1), 0)
+define get_omega(pt) = nth(nth(pt, 1), 1)
+
+example "LQR pendulum stabilization" {
+  // Compute optimal LQR gains by solving CARE
+  let result = lqr(a_matrix, b_matrix, q_matrix, r_matrix) in
+  let k1 = nth(nth(nth(result, 0), 0), 0) in
+  let k2 = nth(nth(nth(result, 0), 0), 1) in
+  
+  out("LQR gains: k1, k2 =")
+  out(k1)  // ≈ 20.12
+  out(k2)  // ≈ 4.60
+  
+  out("Open-loop eigenvalues (unstable):")
+  out(eigenvalues(a_matrix))  // [4.43, -4.43]
+  
+  // Nonlinear dynamics with LQR feedback: u = -K·x
+  let dyn = lambda t y .
+    let th = nth(y, 0) in
+    let om = nth(y, 1) in
+    let u = negate(k1*th + k2*om) in
+    [om, (grav/ell)*sin(th) + (u/ell)*cos(th)]
+  in
+  
+  // Simulate from 17° initial tilt
+  let traj = ode45(dyn, [0.3, 0], [0, 5], 0.05) in
+  
+  // Extract time series
+  let times = list_map(lambda p . get_time(p), traj) in
+  let thetas = list_map(lambda p . get_theta(p), traj) in
+  let omegas = list_map(lambda p . get_omega(p), traj) in
+  let controls = list_map(lambda p . 
+    negate(20.12*get_theta(p) + 4.60*get_omega(p)), traj) in
+  
+  // Plot state and control
+  diagram(
+    plot(times, thetas, color = "red", label = "theta (rad)"),
+    plot(times, omegas, color = "blue", label = "omega (rad/s)"),
+    plot(times, controls, color = "green", label = "u (m/s^2)"),
+    title = "Inverted Pendulum - LQR Stabilization",
+    xlabel = "Time (s)",
+    ylabel = "State / Control",
+    legend = "right + bottom",
+    width = 16,
+    height = 10
+  )
+}
+</code></pre>
+<h3 id="result"><a class="header" href="#result">Result</a></h3>
+<p><img src="images/inverted-pendulum-lqr.png" alt="Inverted Pendulum LQR Stabilization"></p>
+<p>The plot shows:</p>
+<ul>
+<li><strong>θ (red)</strong>: Angle smoothly decays from 0.3 rad to 0</li>
+<li><strong>ω (blue)</strong>: Angular velocity with brief negative swing, then settles</li>
+<li><strong>u (green)</strong>: Initial -6 m/s² control effort (cart accelerates backward to catch falling pendulum), then decays to zero</li>
+</ul>
+<p>The LQR controller stabilizes the pendulum in approximately 2 seconds with no overshoot — optimal behavior for the given Q and R weights.</p>
+<hr>
+<h2 id="technical-notes"><a class="header" href="#technical-notes">Technical Notes</a></h2>
+<h3 id="adaptive-step-size"><a class="header" href="#adaptive-step-size">Adaptive Step Size</a></h3>
+<p>The Dormand-Prince 5(4) method adapts its internal step size for accuracy while outputting at the requested <code>dt</code> intervals. This handles stiff transients automatically.</p>
+<h3 id="lambda-closures"><a class="header" href="#lambda-closures">Lambda Closures</a></h3>
+<p>The dynamics lambda can capture variables from the enclosing scope:</p>
+<pre><code class="language-kleis">let k = 2.0 in
+let dyn = lambda t y . [negate(k * nth(y, 0))] in
+ode45(dyn, [1], [0, 1], 0.1)
+// k is captured in the closure
+</code></pre>
+<hr>
+<h2 id="see-also-5"><a class="header" href="#see-also-5">See Also</a></h2>
+<ul>
+<li><a href="#appendix-lapack-functions">LAPACK Functions</a> - Matrix decompositions, <code>lqr()</code>, <code>eigenvalues()</code></li>
+<li><a href="#jupyter-notebook">Jupyter Notebook</a> - Interactive plotting</li>
+<li><a href="#appendix-built-in-functions">Built-in Functions</a> - <code>list_map</code>, <code>nth</code>, etc.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="appendix-c-standard-library"><a class="header" href="#appendix-c-standard-library">Appendix C: Standard Library</a></h1>
 <p>The Kleis standard library provides foundational types, structures, and operations.</p>
 <h2 id="core-types-1"><a class="header" href="#core-types-1">Core Types</a></h2>
@@ -8597,7 +8789,7 @@ define unwrap_or(opt, default) =
         None =&gt; default
     }
 </code></pre>
-<h3 id="result"><a class="header" href="#result">Result</a></h3>
+<h3 id="result-1"><a class="header" href="#result-1">Result</a></h3>
 <pre><code class="language-kleis">data Result(T, E) = Ok(value : T) | Err(error : E)
 
 // Operations
@@ -9650,7 +9842,7 @@ example "symbolic verification" {
 <li><strong>Think symbolically</strong> — Variables hold AST, not computed values</li>
 <li><strong>Use Z3 for verification</strong> — Let <code>assert()</code> prove symbolic claims</li>
 </ol>
-<h2 id="see-also-5"><a class="header" href="#see-also-5">See Also</a></h2>
+<h2 id="see-also-6"><a class="header" href="#see-also-6">See Also</a></h2>
 <ul>
 <li><a href="#example-blocks-v093">Example Blocks</a> — How to write debuggable code</li>
 <li><a href="#the-repl-1">The REPL</a> — Interactive exploration</li>
@@ -9929,6 +10121,22 @@ axiom bianchi : ∀ R λ ρ σ μ ν .
         <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
         <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
 
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
 
 
         <script>

@@ -3017,7 +3017,7 @@ impl Evaluator {
                 }
                 let lambda = &args[0];
                 let call_args = &args[1..];
-                
+
                 // Apply the lambda using beta reduction
                 if let Expression::Lambda { .. } = lambda {
                     let reduced = self.beta_reduce_multi(lambda, call_args)?;
@@ -6082,11 +6082,9 @@ impl Evaluator {
     /// Returns: list of [t, [y0, y1, ...]] pairs
     fn builtin_ode45(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
         if args.len() < 3 || args.len() > 4 {
-            return Err(
-                "ode45 requires 3-4 arguments: f, y0, t_span, dt?\n\
+            return Err("ode45 requires 3-4 arguments: f, y0, t_span, dt?\n\
                  Example: ode45((t, y) => [y[1], neg(y[0])], [1, 0], [0, 10])"
-                    .to_string(),
-            );
+                .to_string());
         }
 
         // args[0] should be a lambda: (t, y) => ...
@@ -6154,13 +6152,14 @@ impl Evaluator {
                 if params.len() >= 2 {
                     // SAFETY: eval_ptr points to self which is valid for this function's duration
                     let evaluator = unsafe { &*eval_ptr };
-                    
+
                     // Use beta reduction to apply lambda: (λ t y . body)(t_val, y_val)
                     if let Ok(reduced) = evaluator.beta_reduce_multi(&f_clone, &[t_expr, y_expr]) {
                         // Evaluate the reduced expression
                         if let Ok(result) = evaluator.eval_concrete(&reduced) {
                             if let Expression::List(elems) = result {
-                                let nums: Option<Vec<f64>> = elems.iter().map(eval_numeric).collect();
+                                let nums: Option<Vec<f64>> =
+                                    elems.iter().map(eval_numeric).collect();
                                 if let Some(v) = nums {
                                     return v;
                                 }
@@ -6173,8 +6172,8 @@ impl Evaluator {
         };
 
         // Integrate
-        let result = crate::ode::integrate_dopri5(dynamics, &y0, (t0, t1), dt)
-            .map_err(|e| e.to_string())?;
+        let result =
+            crate::ode::integrate_dopri5(dynamics, &y0, (t0, t1), dt).map_err(|e| e.to_string())?;
 
         // Convert to Kleis list of [t, [y...]]
         let trajectory: Vec<Expression> = result
@@ -8653,13 +8652,17 @@ impl Evaluator {
         }
 
         // Extract matrices
-        let (na, ma, a_elems) = self.extract_matrix(&args[0])
+        let (na, ma, a_elems) = self
+            .extract_matrix(&args[0])
             .ok_or("care: A must be a matrix")?;
-        let (nb, mb, b_elems) = self.extract_matrix(&args[1])
+        let (nb, mb, b_elems) = self
+            .extract_matrix(&args[1])
             .ok_or("care: B must be a matrix")?;
-        let (nq, mq, q_elems) = self.extract_matrix(&args[2])
+        let (nq, mq, q_elems) = self
+            .extract_matrix(&args[2])
             .ok_or("care: Q must be a matrix")?;
-        let (nr, mr, r_elems) = self.extract_matrix(&args[3])
+        let (nr, mr, r_elems) = self
+            .extract_matrix(&args[3])
             .ok_or("care: R must be a matrix")?;
 
         // Dimension checks
@@ -8679,16 +8682,20 @@ impl Evaluator {
         }
 
         // Convert to f64 vectors (column-major)
-        let a: Vec<f64> = a_elems.iter()
+        let a: Vec<f64> = a_elems
+            .iter()
             .map(|e| self.as_number(e).ok_or("care: A must be numeric"))
             .collect::<Result<_, _>>()?;
-        let b: Vec<f64> = b_elems.iter()
+        let b: Vec<f64> = b_elems
+            .iter()
             .map(|e| self.as_number(e).ok_or("care: B must be numeric"))
             .collect::<Result<_, _>>()?;
-        let q: Vec<f64> = q_elems.iter()
+        let q: Vec<f64> = q_elems
+            .iter()
             .map(|e| self.as_number(e).ok_or("care: Q must be numeric"))
             .collect::<Result<_, _>>()?;
-        let r: Vec<f64> = r_elems.iter()
+        let r: Vec<f64> = r_elems
+            .iter()
             .map(|e| self.as_number(e).ok_or("care: R must be numeric"))
             .collect::<Result<_, _>>()?;
 
@@ -8696,7 +8703,8 @@ impl Evaluator {
         let p = numerical::care(&a, &b, &q, &r, n, m).map_err(|e| e.to_string())?;
 
         // Return P as matrix
-        let p_exprs: Vec<Expression> = p.iter()
+        let p_exprs: Vec<Expression> = p
+            .iter()
             .map(|&x| Expression::Const(format!("{}", x)))
             .collect();
         Ok(Some(self.make_matrix(n, n, p_exprs)))
@@ -8717,13 +8725,17 @@ impl Evaluator {
         }
 
         // Extract matrices (same as care)
-        let (na, ma, a_elems) = self.extract_matrix(&args[0])
+        let (na, ma, a_elems) = self
+            .extract_matrix(&args[0])
             .ok_or("lqr: A must be a matrix")?;
-        let (nb, mb, b_elems) = self.extract_matrix(&args[1])
+        let (nb, mb, b_elems) = self
+            .extract_matrix(&args[1])
             .ok_or("lqr: B must be a matrix")?;
-        let (nq, mq, q_elems) = self.extract_matrix(&args[2])
+        let (nq, mq, q_elems) = self
+            .extract_matrix(&args[2])
             .ok_or("lqr: Q must be a matrix")?;
-        let (nr, mr, r_elems) = self.extract_matrix(&args[3])
+        let (nr, mr, r_elems) = self
+            .extract_matrix(&args[3])
             .ok_or("lqr: R must be a matrix")?;
 
         let n = na;
@@ -8741,16 +8753,20 @@ impl Evaluator {
             return Err(format!("lqr: R must be {}×{}, got {}×{}", m, m, nr, mr));
         }
 
-        let a: Vec<f64> = a_elems.iter()
+        let a: Vec<f64> = a_elems
+            .iter()
             .map(|e| self.as_number(e).ok_or("lqr: A must be numeric"))
             .collect::<Result<_, _>>()?;
-        let b: Vec<f64> = b_elems.iter()
+        let b: Vec<f64> = b_elems
+            .iter()
             .map(|e| self.as_number(e).ok_or("lqr: B must be numeric"))
             .collect::<Result<_, _>>()?;
-        let q: Vec<f64> = q_elems.iter()
+        let q: Vec<f64> = q_elems
+            .iter()
             .map(|e| self.as_number(e).ok_or("lqr: Q must be numeric"))
             .collect::<Result<_, _>>()?;
-        let r: Vec<f64> = r_elems.iter()
+        let r: Vec<f64> = r_elems
+            .iter()
             .map(|e| self.as_number(e).ok_or("lqr: R must be numeric"))
             .collect::<Result<_, _>>()?;
 
@@ -8769,7 +8785,7 @@ impl Evaluator {
                 .collect();
             k_rows.push(Expression::List(row));
         }
-        
+
         let mut p_rows: Vec<Expression> = Vec::new();
         for i in 0..n {
             let row: Vec<Expression> = (0..n)
