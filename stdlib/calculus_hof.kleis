@@ -1,0 +1,211 @@
+// ============================================
+// Kleis Standard Library - Calculus (HOF Version)
+// ============================================
+//
+// Derivative as a higher-order function over a Field:
+//   D : (F → F) → F → F
+//
+// D takes a function and a point, returns the derivative at that point.
+// Generic over Field F (ℝ, ℂ, etc.) for mathematical correctness.
+// Evaluator defaults to ℝ for performance.
+//
+// Grammar: v0.98
+// Version: 0.4.0
+// ============================================
+
+// ============================================
+// DERIVATIVE OVER A FIELD (Generic)
+// ============================================
+//
+// D : (F → F) → F → F
+//
+// D(f, x) = "the derivative of f, evaluated at x"
+//
+// Mathematically equivalent to:
+//   D(f)(x) where D : (F → F) → (F → F)
+//
+// But D(f, x) works with current syntax!
+//
+// ============================================
+
+structure Derivative(F : Field) {
+    // The derivative operator
+    // D(f, x) = f'(x)
+    operation D : (F → F) → F → F
+    
+    // ============================================
+    // LINEARITY
+    // ============================================
+    
+    axiom D_additive: ∀(f : (F → F))(g : (F → F))(x : F). 
+        D(plus_fn(f, g), x) = D(f, x) + D(g, x)
+    
+    axiom D_scalar: ∀(c : F)(f : (F → F))(x : F). 
+        D(scale_fn(c, f), x) = c * D(f, x)
+    
+    // ============================================
+    // FUNDAMENTAL DERIVATIVES
+    // ============================================
+    
+    axiom D_const: ∀(c : F)(x : F). 
+        D(const_fn(c), x) = zero(F)
+    
+    axiom D_id: ∀(x : F).
+        D(id_fn, x) = one(F)
+    
+    // ============================================
+    // PRODUCT AND QUOTIENT RULES
+    // ============================================
+    
+    axiom D_product: ∀(f : (F → F))(g : (F → F))(x : F). 
+        D(times_fn(f, g), x) = D(f, x) * g(x) + f(x) * D(g, x)
+    
+    axiom D_quotient: ∀(f : (F → F))(g : (F → F))(x : F).
+        g(x) ≠ zero(F) →
+            D(div_fn(f, g), x) = (D(f, x) * g(x) - f(x) * D(g, x)) / (g(x) * g(x))
+    
+    // ============================================
+    // CHAIN RULE
+    // ============================================
+    
+    axiom D_chain: ∀(f : (F → F))(g : (F → F))(x : F). 
+        D(compose(f, g), x) = D(f, g(x)) * D(g, x)
+    
+    // ============================================
+    // POWER RULE
+    // ============================================
+    
+    axiom D_power: ∀(n : ℕ)(x : F). 
+        D(power_fn(n), x) = n * power(x, n - 1)
+}
+
+// ============================================
+// REAL DERIVATIVES (Default, Fast Path)
+// ============================================
+
+implements Derivative(ℝ) {
+    operation D = builtin_derivative_real
+}
+
+// ============================================
+// COMPLEX DERIVATIVES (When Needed)
+// ============================================
+
+implements Derivative(ℂ) {
+    operation D = builtin_derivative_complex
+}
+
+// Additional constraint for complex differentiability
+structure HolomorphicDerivative extends Derivative(ℂ) {
+    operation is_holomorphic : (ℂ → ℂ) → ℂ → Bool
+    
+    // Complex differentiability requires Cauchy-Riemann
+    axiom holomorphic_iff_cauchy_riemann: ∀(f : (ℂ → ℂ))(z : ℂ).
+        is_holomorphic(f, z) ↔ cauchy_riemann_satisfied(f, z)
+    
+    // Holomorphic functions are infinitely differentiable
+    axiom holomorphic_smooth: ∀(f : (ℂ → ℂ))(z : ℂ).
+        is_holomorphic(f, z) → is_holomorphic(lambda w. D(f, w), z)
+}
+
+// ============================================
+// HELPER FUNCTIONS (Pointwise Operations)
+// ============================================
+
+define plus_fn(f, g) = lambda x. f(x) + g(x)
+define times_fn(f, g) = lambda x. f(x) * g(x)
+define div_fn(f, g) = lambda x. f(x) / g(x)
+define scale_fn(c, f) = lambda x. c * f(x)
+define const_fn(c) = lambda x. c
+define id_fn = lambda x. x
+define power_fn(n) = lambda x. power(x, n)
+define compose(f, g) = lambda x. f(g(x))
+
+define zero(F) = 0
+define one(F) = 1
+
+// ============================================
+// TRANSCENDENTAL DERIVATIVES (Real)
+// ============================================
+
+structure TranscendentalDerivativesReal extends Derivative(ℝ) {
+    axiom D_sin: ∀(x : ℝ). D(sin, x) = cos(x)
+    axiom D_cos: ∀(x : ℝ). D(cos, x) = negate(sin(x))
+    axiom D_exp: ∀(x : ℝ). D(exp, x) = exp(x)
+    axiom D_ln: ∀(x : ℝ). x > 0 → D(ln, x) = 1 / x
+    axiom D_sqrt: ∀(x : ℝ). x > 0 → D(sqrt, x) = 1 / (2 * sqrt(x))
+    axiom D_tan: ∀(x : ℝ). cos(x) ≠ 0 → D(tan, x) = 1 / (cos(x) * cos(x))
+    axiom D_arcsin: ∀(x : ℝ). x > negate(1) ∧ x < 1 → D(arcsin, x) = 1 / sqrt(1 - x * x)
+    axiom D_arctan: ∀(x : ℝ). D(arctan, x) = 1 / (1 + x * x)
+}
+
+// ============================================
+// TRANSCENDENTAL DERIVATIVES (Complex)
+// ============================================
+
+structure TranscendentalDerivativesComplex extends Derivative(ℂ) {
+    axiom D_exp_complex: ∀(z : ℂ). D(exp, z) = exp(z)
+    axiom D_sin_complex: ∀(z : ℂ). D(sin, z) = cos(z)
+    axiom D_cos_complex: ∀(z : ℂ). D(cos, z) = negate(sin(z))
+    axiom D_ln_complex: ∀(z : ℂ). z ≠ complex(0, 0) → D(ln, z) = complex_inverse(z)
+}
+
+// ============================================
+// HIGHER DERIVATIVES
+// ============================================
+
+structure HigherDerivatives(F : Field) extends Derivative(F) {
+    // Second derivative: D²(f, x) = D(D(f, ·), x)
+    // We need a way to express "the function y ↦ D(f, y)"
+    
+    // Define D as a function-returning operation for composition
+    define D_fn(f) = lambda y. D(f, y)
+    
+    // Then D²(f, x) = D(D_fn(f), x)
+    axiom D2_def: ∀(f : (F → F))(x : F).
+        D(D_fn(f), x) = D(lambda y. D(f, y), x)
+}
+
+// ============================================
+// INTEGRATION
+// ============================================
+
+structure Integral(F : Field) extends Derivative(F) {
+    // Antiderivative evaluated at a point
+    // I(f, x) = (∫f)(x) = the antiderivative of f, evaluated at x
+    operation I : (F → F) → F → F
+    
+    // Fundamental Theorem: D(I(f, ·), x) = f(x)
+    // The derivative of the antiderivative is the original function
+    axiom FTC: ∀(f : (F → F))(x : F). D(lambda y. I(f, y), x) = f(x)
+    
+    axiom I_additive: ∀(f : (F → F))(g : (F → F))(x : F).
+        I(plus_fn(f, g), x) = I(f, x) + I(g, x)
+    
+    axiom I_scalar: ∀(c : F)(f : (F → F))(x : F).
+        I(scale_fn(c, f), x) = c * I(f, x)
+}
+
+// ============================================
+// LIMIT DEFINITION
+// ============================================
+
+structure LimitDefinition(F : Field) extends Derivative(F) {
+    operation lim : (F → F) → F → F
+    
+    // D(f, x) = lim_{h→0} (f(x+h) - f(x)) / h
+    axiom D_as_limit: ∀(f : (F → F))(x : F).
+        D(f, x) = lim(lambda h. (f(x + h) - f(x)) / h, zero(F))
+}
+
+// ============================================
+// PERFORMANCE NOTES
+// ============================================
+//
+// Z3 Verification: Field type doesn't affect solving time
+// Evaluator: Defaults to ℝ (fast), ℂ only when needed
+//
+// For physics (GR, fluids, solids): Use ℝ
+// For quantum, Fourier: Use ℂ when needed
+//
+// ============================================

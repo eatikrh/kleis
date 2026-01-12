@@ -1,313 +1,282 @@
-// Symbolic Differentiation in Pure Kleis
-// =======================================
+// ============================================
+// Kleis Standard Library - Symbolic Differentiation
+// ============================================
 //
-// This module implements computational symbolic differentiation using
-// pattern matching on expression trees. Unlike the axiomatic D(f,x) in
-// calculus.kleis (which declares properties for Z3 verification), this
-// module COMPUTES actual derivatives.
+// Computational differentiation using the Expression AST.
+// D : Expression → String → Expression
 //
-// Usage:
-//   let expr = Mul(Var("x"), Var("x")) in  // x²
-//   diff(expr, "x")                         // → Add(Mul(Const(1), Var("x")), Mul(Var("x"), Const(1)))
-//                                           //   which simplifies to 2x
+// This operates on Expression values (code as data), not opaque lambdas.
+// Consistent with kleis_in_kleis.kleis meta-programming approach.
 //
-// See also: stdlib/calculus.kleis for D(f,x) axioms used in Z3 verification
+// Grammar: v0.98
+// Version: 1.0.0
+// ============================================
 
-// =============================================================================
-// Expression AST
-// =============================================================================
+// ============================================
+// Expression AST (from kleis_in_kleis.kleis)
+// ============================================
 
-data Expr = 
-    Const(value : ℝ)
-  | Var(name : String)
-  | Add(left : Expr, right : Expr)
-  | Sub(left : Expr, right : Expr)
-  | Mul(left : Expr, right : Expr)
-  | Div(numer : Expr, denom : Expr)
-  | Pow(base : Expr, exp : Expr)
-  | Neg(arg : Expr)
-  | Sin(arg : Expr)
-  | Cos(arg : Expr)
-  | Tan(arg : Expr)
-  | Exp(arg : Expr)
-  | Ln(arg : Expr)
-  | Sqrt(arg : Expr)
+data Expression =
+    ENumber(value : ℝ)
+  | EVariable(name : String)
+  | EOperation(name : String, args : List(Expression))
 
-// =============================================================================
-// Symbolic Differentiation
-// =============================================================================
+// Note: Full Expression in kleis_in_kleis.kleis also has ELambda, ELet, etc.
+// For differentiation, we only need the above three.
 
-// diff(e, x) - Compute the derivative of expression e with respect to variable x
+// ============================================
+// Constructor Helpers (for cleaner code)
+// ============================================
+// Note: We prefix with 'e_' to avoid conflict with Kleis builtins
+// (e.g., 'pow' would be interpreted as built-in power)
+
+define num(n) = ENumber(n)
+define var(x) = EVariable(x)
+define e_op(name, args) = EOperation(name, args)
+
+// Binary operations (e_ prefix for Expression constructors)
+define e_add(a, b) = e_op("plus", Cons(a, Cons(b, Nil)))
+define e_sub(a, b) = e_op("minus", Cons(a, Cons(b, Nil)))
+define e_mul(a, b) = e_op("times", Cons(a, Cons(b, Nil)))
+define e_div(a, b) = e_op("divide", Cons(a, Cons(b, Nil)))
+define e_pow(a, b) = e_op("power", Cons(a, Cons(b, Nil)))
+
+// Unary operations
+define e_neg(a) = e_op("negate", Cons(a, Nil))
+define e_sin(a) = e_op("sin", Cons(a, Nil))
+define e_cos(a) = e_op("cos", Cons(a, Nil))
+define e_tan(a) = e_op("tan", Cons(a, Nil))
+define e_exp(a) = e_op("exp", Cons(a, Nil))
+define e_ln(a) = e_op("ln", Cons(a, Nil))
+define e_sqrt(a) = e_op("sqrt", Cons(a, Nil))
+
+// ============================================
+// Symbolic Differentiation: D(e, x)
+// ============================================
 //
-// Implements standard derivative rules:
-//   - Constant rule: d/dx(c) = 0
-//   - Variable rule: d/dx(x) = 1, d/dx(y) = 0 if y ≠ x
-//   - Sum rule: d/dx(f + g) = f' + g'
-//   - Difference rule: d/dx(f - g) = f' - g'
-//   - Product rule: d/dx(f · g) = f' · g + f · g'
-//   - Quotient rule: d/dx(f / g) = (f' · g - f · g') / g²
-//   - Power rule: d/dx(f^n) = n · f^(n-1) · f'
-//   - Chain rule: d/dx(sin(f)) = cos(f) · f', etc.
+// diff : Expression → String → Expression
+//
+// Computes the derivative of expression e with respect to variable x.
+// Returns a new Expression representing the derivative.
+//
+// Note: We use lowercase 'diff' because uppercase names in Kleis
+// are reserved for data constructors.
+//
 
-// Coordinate-specific derivative helpers
-// These avoid conditionals by knowing which variable they're differentiating
-define diff_wrt_t(e) = diff_core(e, "t", is_t)
-define diff_wrt_r(e) = diff_core(e, "r", is_r)
-define diff_wrt_theta(e) = diff_core(e, "theta", is_theta)
-define diff_wrt_phi(e) = diff_core(e, "phi", is_phi)
+define diff(e, var_name) = match e {
+    // Constant rule: d/dx(c) = 0
+    ENumber(_) => num(0)
+    
+    // Variable rule: d/dx(x) = 1, d/dx(y) = 0 if y ≠ x
+    // Note: We use str_eq() for concrete string comparison
+    EVariable(name) => if str_eq(name, var_name) then num(1) else num(0)
+    
+    // Operation rules
+    EOperation(op_name, args) => diff_op(op_name, args, var_name)
+}
 
-// Check if a variable name matches a coordinate (returns Expr: Const(1) or Const(0))
-define is_t(name) = match name { "t" => Const(1) | _ => Const(0) }
-define is_r(name) = match name { "r" => Const(1) | _ => Const(0) }
-define is_theta(name) = match name { "theta" => Const(1) | _ => Const(0) }
-define is_phi(name) = match name { "phi" => Const(1) | _ => Const(0) }
-
-// Generic variable checker (fallback - may create conditionals)
-define is_var(name, x) = if name = x then Const(1) else Const(0)
-
-// Core diff with variable checker function
-define diff_core(e, x, var_check) =
-    match e {
-        Const(_) => Const(0)
-        Var(name) => var_check(name)
-        Neg(f) => Neg(diff_core(f, x, var_check))
-        Add(f, g) => Add(diff_core(f, x, var_check), diff_core(g, x, var_check))
-        Sub(f, g) => Sub(diff_core(f, x, var_check), diff_core(g, x, var_check))
-        Mul(f, g) => Add(Mul(diff_core(f, x, var_check), g), Mul(f, diff_core(g, x, var_check)))
-        Div(f, g) => Div(Sub(Mul(diff_core(f, x, var_check), g), Mul(f, diff_core(g, x, var_check))), Pow(g, Const(2)))
-        Pow(f, Const(n)) => Mul(Mul(Const(n), Pow(f, Const(n - 1))), diff_core(f, x, var_check))
-        Pow(f, g) => Mul(Pow(f, g), Add(Mul(diff_core(g, x, var_check), Ln(f)), Mul(g, Div(diff_core(f, x, var_check), f))))
-        Sin(f) => Mul(Cos(f), diff_core(f, x, var_check))
-        Cos(f) => Mul(Neg(Sin(f)), diff_core(f, x, var_check))
-        Tan(f) => Mul(Div(Const(1), Pow(Cos(f), Const(2))), diff_core(f, x, var_check))
-        Exp(f) => Mul(Exp(f), diff_core(f, x, var_check))
-        Ln(f) => Mul(Div(Const(1), f), diff_core(f, x, var_check))
-        Sqrt(f) => Div(diff_core(f, x, var_check), Mul(Const(2), Sqrt(f)))
-        _ => Const(0)
+// Differentiate operations by name
+define diff_op(op_name, args, var_name) = match op_name {
+    // Unary operations
+    "negate" => match args { Cons(f, Nil) => e_neg(diff(f, var_name)) | _ => num(0) }
+    
+    "sin" => match args { 
+        Cons(f, Nil) => e_mul(e_cos(f), diff(f, var_name))  // Chain rule
+        | _ => num(0) 
     }
-
-// Original diff function (may create conditionals for arbitrary variable names)
-define diff(e, x) =
-    match e {
-        // Constants have zero derivative
-        Const(_) => Const(0)
-        
-        // Variable: 1 if same as x, 0 otherwise
-        // Note: This creates a conditional for non-standard variables
-        Var(name) => is_var(name, x)
-        
-        // Negation: d/dx(-f) = -f'
-        Neg(f) => Neg(diff(f, x))
-        
-        // Sum rule: d/dx(f + g) = f' + g'
-        Add(f, g) => Add(diff(f, x), diff(g, x))
-        
-        // Difference rule: d/dx(f - g) = f' - g'
-        Sub(f, g) => Sub(diff(f, x), diff(g, x))
-        
-        // Product rule: d/dx(f · g) = f' · g + f · g'
-        Mul(f, g) => 
-            Add(Mul(diff(f, x), g), Mul(f, diff(g, x)))
-        
-        // Quotient rule: d/dx(f/g) = (f'g - fg') / g²
-        Div(f, g) =>
-            Div(
-                Sub(Mul(diff(f, x), g), Mul(f, diff(g, x))),
-                Pow(g, Const(2))
-            )
-        
-        // Power rule: d/dx(f^n) = n · f^(n-1) · f'
-        // Note: This handles f^(constant) case
-        Pow(f, Const(n)) =>
-            Mul(
-                Mul(Const(n), Pow(f, Const(n - 1))),
-                diff(f, x)
-            )
-        
-        // General power rule: d/dx(f^g) = f^g · (g' · ln(f) + g · f'/f)
-        // For non-constant exponents
-        Pow(f, g) =>
-            Mul(
-                Pow(f, g),
-                Add(
-                    Mul(diff(g, x), Ln(f)),
-                    Mul(g, Div(diff(f, x), f))
-                )
-            )
-        
-        // Trigonometric derivatives (chain rule applied)
-        Sin(f) => Mul(Cos(f), diff(f, x))
-        Cos(f) => Mul(Neg(Sin(f)), diff(f, x))
-        Tan(f) => Mul(Div(Const(1), Pow(Cos(f), Const(2))), diff(f, x))
-        
-        // Exponential and logarithm
-        Exp(f) => Mul(Exp(f), diff(f, x))
-        Ln(f) => Mul(Div(Const(1), f), diff(f, x))
-        
-        // Square root: √f = f^(1/2), so d/dx(√f) = (1/2) * f^(-1/2) * f' = f'/(2√f)
-        // This is a special case of the power rule, but we keep it for clarity
-        // and because Sqrt is a separate constructor in our AST.
-        // If you represent √x as Pow(x, Const(0.5)), the power rule handles it.
-        Sqrt(f) => Div(diff(f, x), Mul(Const(2), Sqrt(f)))
-        
-        // Fallback for unhandled cases
-        _ => Const(0)
+    
+    "cos" => match args { 
+        Cons(f, Nil) => e_neg(e_mul(e_sin(f), diff(f, var_name)))
+        | _ => num(0) 
     }
+    
+    "tan" => match args {
+        Cons(f, Nil) => e_mul(e_div(num(1), e_pow(e_cos(f), num(2))), diff(f, var_name))
+        | _ => num(0)
+    }
+    
+    "exp" => match args { 
+        Cons(f, Nil) => e_mul(e_exp(f), diff(f, var_name))
+        | _ => num(0) 
+    }
+    
+    "ln" => match args { 
+        Cons(f, Nil) => e_mul(e_div(num(1), f), diff(f, var_name))
+        | _ => num(0) 
+    }
+    
+    "sqrt" => match args {
+        Cons(f, Nil) => e_div(diff(f, var_name), e_mul(num(2), e_sqrt(f)))
+        | _ => num(0)
+    }
+    
+    // Binary operations
+    "plus" => match args {
+        Cons(f, Cons(g, Nil)) => e_add(diff(f, var_name), diff(g, var_name))
+        | _ => num(0)
+    }
+    
+    "minus" => match args {
+        Cons(f, Cons(g, Nil)) => e_sub(diff(f, var_name), diff(g, var_name))
+        | _ => num(0)
+    }
+    
+    "times" => match args {
+        // Product rule: d/dx(f * g) = f' * g + f * g'
+        Cons(f, Cons(g, Nil)) => e_add(e_mul(diff(f, var_name), g), e_mul(f, diff(g, var_name)))
+        | _ => num(0)
+    }
+    
+    "divide" => match args {
+        // Quotient rule: d/dx(f / g) = (f' * g - f * g') / g²
+        Cons(f, Cons(g, Nil)) => e_div(e_sub(e_mul(diff(f, var_name), g), e_mul(f, diff(g, var_name))), e_pow(g, num(2)))
+        | _ => num(0)
+    }
+    
+    "power" => match args {
+        // Power rule with constant exponent
+        Cons(f, Cons(ENumber(n), Nil)) => 
+            e_mul(e_mul(num(n), e_pow(f, num(n - 1))), diff(f, var_name))
+        // General power rule: d/dx(f^g) = f^g * (g' * ln(f) + g * f'/f)
+        Cons(f, Cons(g, Nil)) =>
+            e_mul(e_pow(f, g), e_add(e_mul(diff(g, var_name), e_ln(f)), e_mul(g, e_div(diff(f, var_name), f))))
+        | _ => num(0)
+    }
+    
+    // Unknown operation - treat as constant
+    _ => num(0)
+}
 
-// =============================================================================
-// Expression Simplification (pattern-matching only, no conditionals)
-// =============================================================================
-
-// simplify(e) - Apply algebraic simplifications using ONLY pattern matching
+// ============================================
+// Coordinate-Specific Derivatives
+// ============================================
 //
-// IMPORTANT: We avoid `if a = b then ...` conditionals because Kleis evaluates
-// them symbolically, creating conditional expressions instead of simplifying!
-// Pattern matching works structurally and correctly reduces expressions.
+// For Cartan geometry with coordinates (t, r, θ, φ)
+//
 
-// Helper: simplify once, then check if more simplification is possible
+define diff_t(e) = diff(e, "t")
+define diff_r(e) = diff(e, "r")
+define diff_theta(e) = diff(e, "theta")
+define diff_phi(e) = diff(e, "phi")
+
+// ============================================
+// Expression Simplification
+// ============================================
+
 define simplify(e) = simplify_once(simplify_children(e))
 
-// First, recursively simplify children
-define simplify_children(e) =
-    match e {
-        Const(v) => Const(v)
-        Var(n) => Var(n)
-        Add(f, g) => Add(simplify(f), simplify(g))
-        Sub(f, g) => Sub(simplify(f), simplify(g))
-        Mul(f, g) => Mul(simplify(f), simplify(g))
-        Div(f, g) => Div(simplify(f), simplify(g))
-        Pow(f, g) => Pow(simplify(f), simplify(g))
-        Neg(f) => Neg(simplify(f))
-        Sin(f) => Sin(simplify(f))
-        Cos(f) => Cos(simplify(f))
-        Tan(f) => Tan(simplify(f))
-        Exp(f) => Exp(simplify(f))
-        Ln(f) => Ln(simplify(f))
-        Sqrt(f) => Sqrt(simplify(f))
-        _ => e
-    }
+define simplify_children(e) = match e {
+    ENumber(v) => ENumber(v)
+    EVariable(n) => EVariable(n)
+    EOperation(name, args) => EOperation(name, map_simplify(args))
+}
 
-// Then apply simplification rules at the top level
-define simplify_once(e) =
-    match e {
-        // ===== Addition rules =====
-        Add(Const(0), f) => f
-        Add(f, Const(0)) => f
-        Add(Const(a), Const(b)) => Const(a + b)
-        // x + (-y) = x - y
-        Add(f, Neg(g)) => Sub(f, g)
-        // (-x) + y = y - x  
-        Add(Neg(f), g) => Sub(g, f)
-        // x + x = 2x
-        // Add(f, g) if f = g => Mul(Const(2), f)  -- can't use guards with =
-        
-        // ===== Subtraction rules =====
-        Sub(f, Const(0)) => f
-        Sub(Const(0), f) => Neg(f)
-        Sub(Const(a), Const(b)) => Const(a - b)
-        // x - (-y) = x + y
-        Sub(f, Neg(g)) => Add(f, g)
-        // x - x = 0 (can't check equality, skip)
-        
-        // ===== Multiplication rules =====
-        Mul(Const(0), _) => Const(0)
-        Mul(_, Const(0)) => Const(0)
-        Mul(Const(1), f) => f
-        Mul(f, Const(1)) => f
-        // Note: Const(-1) pattern doesn't parse; handle via Neg(Const(1)) instead
-        Mul(Neg(Const(1)), f) => Neg(f)
-        Mul(f, Neg(Const(1))) => Neg(f)
-        Mul(Const(a), Const(b)) => Const(a * b)
-        // (-x) * y = -(x * y)
-        Mul(Neg(f), g) => Neg(Mul(f, g))
-        // x * (-y) = -(x * y)
-        Mul(f, Neg(g)) => Neg(Mul(f, g))
-        // x * x = x²
-        // Mul(f, g) if f = g => Pow(f, Const(2))  -- can't use guards
-        
-        // ===== Division rules =====
-        Div(Const(0), _) => Const(0)
-        Div(f, Const(1)) => f
-        Div(Const(a), Const(b)) => Const(a / b)
-        // x / (-y) = -(x / y)
-        Div(f, Neg(g)) => Neg(Div(f, g))
-        // (-x) / y = -(x / y)
-        Div(Neg(f), g) => Neg(Div(f, g))
-        
-        // ===== Power rules =====
-        Pow(_, Const(0)) => Const(1)
-        Pow(f, Const(1)) => f
-        Pow(Const(0), _) => Const(0)
-        Pow(Const(1), _) => Const(1)
-        // √x² = x (for positive x, which we assume)
-        Pow(Sqrt(f), Const(2)) => f
-        // (x²)^(1/2) = x
-        Sqrt(Pow(f, Const(2))) => f
-        
-        // ===== Negation rules =====
-        Neg(Const(0)) => Const(0)
-        Neg(Neg(f)) => f
-        Neg(Const(a)) => Const(0 - a)
-        
-        // ===== Trig identities =====
-        Sin(Const(0)) => Const(0)
-        Cos(Const(0)) => Const(1)
-        
-        // ===== Exp/Log identities =====
-        Exp(Const(0)) => Const(1)
-        Ln(Const(1)) => Const(0)
-        // e^(ln(x)) = x
-        Exp(Ln(f)) => f
-        // ln(e^x) = x
-        Ln(Exp(f)) => f
-        
-        // ===== Sqrt identities =====
-        Sqrt(Const(0)) => Const(0)
-        Sqrt(Const(1)) => Const(1)
-        // √(x²) = x (assuming positive)
-        Sqrt(Pow(f, Const(2))) => f
-        
-        // No rule matched - return as-is
-        _ => e
-    }
+define map_simplify(args) = match args {
+    Nil => Nil
+    Cons(x, xs) => Cons(simplify(x), map_simplify(xs))
+}
 
-// =============================================================================
+define simplify_once(e) = match e {
+    // Addition rules
+    EOperation("plus", Cons(ENumber(0), Cons(f, Nil))) => f
+    EOperation("plus", Cons(f, Cons(ENumber(0), Nil))) => f
+    EOperation("plus", Cons(ENumber(a), Cons(ENumber(b), Nil))) => num(a + b)
+    
+    // Subtraction rules
+    EOperation("minus", Cons(f, Cons(ENumber(0), Nil))) => f
+    EOperation("minus", Cons(ENumber(0), Cons(f, Nil))) => e_neg(f)
+    EOperation("minus", Cons(ENumber(a), Cons(ENumber(b), Nil))) => num(a - b)
+    
+    // Multiplication rules
+    EOperation("times", Cons(ENumber(0), Cons(_, Nil))) => num(0)
+    EOperation("times", Cons(_, Cons(ENumber(0), Nil))) => num(0)
+    EOperation("times", Cons(ENumber(1), Cons(f, Nil))) => f
+    EOperation("times", Cons(f, Cons(ENumber(1), Nil))) => f
+    EOperation("times", Cons(ENumber(a), Cons(ENumber(b), Nil))) => num(a * b)
+    
+    // Division rules
+    EOperation("divide", Cons(ENumber(0), Cons(_, Nil))) => num(0)
+    EOperation("divide", Cons(f, Cons(ENumber(1), Nil))) => f
+    EOperation("divide", Cons(ENumber(a), Cons(ENumber(b), Nil))) => num(a / b)
+    
+    // Power rules
+    EOperation("power", Cons(_, Cons(ENumber(0), Nil))) => num(1)
+    EOperation("power", Cons(f, Cons(ENumber(1), Nil))) => f
+    EOperation("power", Cons(ENumber(0), Cons(_, Nil))) => num(0)
+    EOperation("power", Cons(ENumber(1), Cons(_, Nil))) => num(1)
+    
+    // Negation rules
+    EOperation("negate", Cons(ENumber(0), Nil)) => num(0)
+    EOperation("negate", Cons(EOperation("negate", Cons(f, Nil)), Nil)) => f
+    EOperation("negate", Cons(ENumber(a), Nil)) => num(0 - a)
+    
+    // Trig at 0
+    EOperation("sin", Cons(ENumber(0), Nil)) => num(0)
+    EOperation("cos", Cons(ENumber(0), Nil)) => num(1)
+    
+    // Exp/Ln identities
+    EOperation("exp", Cons(ENumber(0), Nil)) => num(1)
+    EOperation("ln", Cons(ENumber(1), Nil)) => num(0)
+    EOperation("exp", Cons(EOperation("ln", Cons(f, Nil)), Nil)) => f
+    EOperation("ln", Cons(EOperation("exp", Cons(f, Nil)), Nil)) => f
+    
+    // Sqrt identities
+    EOperation("sqrt", Cons(ENumber(0), Nil)) => num(0)
+    EOperation("sqrt", Cons(ENumber(1), Nil)) => num(1)
+    
+    // No rule matched
+    _ => e
+}
+
 // Convenience: differentiate and simplify
-// =============================================================================
+define diffs(e, x) = simplify(diff(e, x))
 
-define D_simplified(e, x) = simplify(diff(e, x))
+// ============================================
+// Variable Substitution
+// ============================================
 
-// =============================================================================
+define subst(e, target_var, val) = match e {
+    ENumber(v) => ENumber(v)
+    EVariable(name) => if str_eq(name, target_var) then val else EVariable(name)
+    EOperation(op_name, args) => EOperation(op_name, map_subst(args, target_var, val))
+}
+
+define map_subst(args, target_var, val) = match args {
+    Nil => Nil
+    Cons(x, xs) => Cons(subst(x, target_var, val), map_subst(xs, target_var, val))
+}
+
+// ============================================
 // Example Expressions
-// =============================================================================
+// ============================================
 
-// x² 
-define x_squared = Pow(Var("x"), Const(2))
-
-// x³
-define x_cubed = Pow(Var("x"), Const(3))
+// x²
+define x_squared = e_pow(var("x"), num(2))
 
 // sin(x)
-define sin_x = Sin(Var("x"))
+define sin_x = e_sin(var("x"))
 
 // e^x
-define exp_x = Exp(Var("x"))
+define exp_x = e_exp(var("x"))
 
-// x² + 2x + 1
-define quadratic = Add(Add(Pow(Var("x"), Const(2)), Mul(Const(2), Var("x"))), Const(1))
+// √(1 - 2M/r) - Schwarzschild metric factor
+define schw_f(M) = e_sqrt(e_sub(num(1), e_div(e_mul(num(2), M), var("r"))))
 
-// sin(x²)
-define sin_x_squared = Sin(Pow(Var("x"), Const(2)))
-
-// e^(x²)
-define exp_x_squared = Exp(Pow(Var("x"), Const(2)))
-
-// ln(x)
-define ln_x = Ln(Var("x"))
-
-// √x
-define sqrt_x = Sqrt(Var("x"))
-
-// x/y
-define x_over_y = Div(Var("x"), Var("y"))
-
+// ============================================
+// Summary
+// ============================================
+//
+// diff : Expression → String → Expression
+//
+// Computes symbolic derivatives by pattern matching on Expression AST.
+// Uses the same Expression type as kleis_in_kleis.kleis.
+//
+// Note: We use lowercase 'diff' because uppercase names in Kleis
+// are reserved for data constructors.
+//
+// For axiomatic verification, see calculus_hof.kleis which defines
+// axioms for Z3 verification (not computation).
+//
+// This module is for COMPUTATION.
+//
+// ============================================

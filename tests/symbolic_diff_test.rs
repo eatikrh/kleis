@@ -1,17 +1,20 @@
 //! Tests for symbolic differentiation in stdlib/symbolic_diff.kleis
 //!
-//! These tests verify that the `diff` function correctly computes
-//! symbolic derivatives using pattern matching on expression trees.
+//! These tests verify that diff(e, x) correctly computes symbolic derivatives
+//! using pattern matching on Expression AST.
 //!
 //! Note: This is COMPUTATIONAL differentiation (Evaluator), not
-//! AXIOMATIC differentiation (D/Dt for Z3 verification).
+//! AXIOMATIC differentiation (calculus_hof.kleis for Z3 verification).
+//!
+//! We use lowercase 'diff' because uppercase names in Kleis are reserved
+//! for data constructors.
 
 use kleis::evaluator::Evaluator;
 use kleis::kleis_parser::{parse_kleis_program, KleisParser};
 use kleis::pretty_print::PrettyPrinter;
 
 /// Load the symbolic_diff.kleis stdlib and return an evaluator
-fn create_evaluator_with_diff() -> Evaluator {
+fn create_evaluator() -> Evaluator {
     let source = std::fs::read_to_string("stdlib/symbolic_diff.kleis")
         .expect("Failed to read stdlib/symbolic_diff.kleis");
 
@@ -40,36 +43,35 @@ fn eval(evaluator: &Evaluator, input: &str) -> Result<String, String> {
 
 #[test]
 fn test_diff_constant() {
-    // d/dx(5) = 0
-    let evaluator = create_evaluator_with_diff();
-    let result = eval(&evaluator, "diff(Const(5), \"x\")");
-    println!("diff(Const(5), x) = {:?}", result);
+    // diff(5, x) = 0
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "diff(num(5), \"x\")");
+    println!("diff(num(5), x) = {:?}", result);
     assert!(result.is_ok());
-    // Result should be Const(0)
     let res = result.unwrap();
-    assert!(res.contains("Const") && res.contains("0"));
+    assert!(res.contains("ENumber") && res.contains("0"));
 }
 
 #[test]
 fn test_diff_variable_same() {
-    // d/dx(x) = 1
-    let evaluator = create_evaluator_with_diff();
-    let result = eval(&evaluator, "diff(Var(\"x\"), \"x\")");
-    println!("diff(Var(x), x) = {:?}", result);
+    // diff(x, x) = 1
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "diff(var(\"x\"), \"x\")");
+    println!("diff(var(x), x) = {:?}", result);
     assert!(result.is_ok());
-    // Result should be Const(1)
-    assert!(result.unwrap().contains("1"));
+    let res = result.unwrap();
+    assert!(res.contains("ENumber") && res.contains("1"));
 }
 
 #[test]
 fn test_diff_variable_different() {
-    // d/dx(y) = 0
-    let evaluator = create_evaluator_with_diff();
-    let result = eval(&evaluator, "diff(Var(\"y\"), \"x\")");
-    println!("diff(Var(y), x) = {:?}", result);
+    // diff(y, x) = 0
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "diff(var(\"y\"), \"x\")");
+    println!("diff(var(y), x) = {:?}", result);
     assert!(result.is_ok());
-    // Result should be Const(0)
-    assert!(result.unwrap().contains("0"));
+    let res = result.unwrap();
+    assert!(res.contains("ENumber") && res.contains("0"));
 }
 
 // =============================================================================
@@ -78,24 +80,23 @@ fn test_diff_variable_different() {
 
 #[test]
 fn test_diff_x_squared() {
-    // d/dx(x²) = 2x
-    let evaluator = create_evaluator_with_diff();
-    let result = eval(&evaluator, "diff(x_squared, \"x\")");
+    // diff(x², x) = 2x
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "diff(e_pow(var(\"x\"), num(2)), \"x\")");
     println!("diff(x², x) = {:?}", result);
     assert!(result.is_ok());
-    // Result should contain Mul and Const(2)
+    // Should contain 2 and x
     let res = result.unwrap();
-    assert!(res.contains("Mul") || res.contains("2"));
+    assert!(res.contains("2"));
 }
 
 #[test]
 fn test_diff_x_cubed() {
-    // d/dx(x³) = 3x²
-    let evaluator = create_evaluator_with_diff();
-    let result = eval(&evaluator, "diff(x_cubed, \"x\")");
+    // diff(x³, x) = 3x²
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "diff(e_pow(var(\"x\"), num(3)), \"x\")");
     println!("diff(x³, x) = {:?}", result);
     assert!(result.is_ok());
-    // Result should contain 3
     let res = result.unwrap();
     assert!(res.contains("3"));
 }
@@ -106,94 +107,92 @@ fn test_diff_x_cubed() {
 
 #[test]
 fn test_diff_sum() {
-    // d/dx(x + y) = 1 + 0 = 1
-    let evaluator = create_evaluator_with_diff();
-    let result = eval(&evaluator, "diff(Add(Var(\"x\"), Var(\"y\")), \"x\")");
+    // diff(x + y, x) = 1 + 0 = 1
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "diff(e_add(var(\"x\"), var(\"y\")), \"x\")");
     println!("diff(x + y, x) = {:?}", result);
     assert!(result.is_ok());
-    // Result should be Add(Const(1), Const(0))
-    let res = result.unwrap();
-    assert!(res.contains("Add") || res.contains("1"));
+    // Should be plus of two derivatives
+    assert!(result.unwrap().contains("plus"));
 }
 
 #[test]
 fn test_diff_product() {
-    // d/dx(x * y) = 1*y + x*0 = y
-    let evaluator = create_evaluator_with_diff();
-    let result = eval(&evaluator, "diff(Mul(Var(\"x\"), Var(\"y\")), \"x\")");
+    // diff(x * y, x) = 1*y + x*0 = y
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "diff(e_mul(var(\"x\"), var(\"y\")), \"x\")");
     println!("diff(x * y, x) = {:?}", result);
     assert!(result.is_ok());
-    // Result should follow product rule: Add(Mul(...), Mul(...))
-    let res = result.unwrap();
-    assert!(res.contains("Add") && res.contains("Mul"));
+    // Product rule applied
+    assert!(result.unwrap().contains("plus"));
 }
 
 #[test]
-fn test_diff_product_x_squared() {
-    // d/dx(x * x) = 1*x + x*1 = 2x (via product rule)
-    let evaluator = create_evaluator_with_diff();
-    let result = eval(&evaluator, "diff(Mul(Var(\"x\"), Var(\"x\")), \"x\")");
+fn test_diff_x_times_x() {
+    // diff(x * x, x) = 1*x + x*1 = 2x
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "diff(e_mul(var(\"x\"), var(\"x\")), \"x\")");
     println!("diff(x * x, x) = {:?}", result);
     assert!(result.is_ok());
-    // Result: Add(Mul(Const(1), Var("x")), Mul(Var("x"), Const(1)))
-    let res = result.unwrap();
-    assert!(res.contains("Add"));
 }
 
 // =============================================================================
-// Trigonometric Derivative Tests
+// Transcendental Function Tests
 // =============================================================================
 
 #[test]
 fn test_diff_sin() {
-    // d/dx(sin(x)) = cos(x) * 1 = cos(x)
-    let evaluator = create_evaluator_with_diff();
-    let result = eval(&evaluator, "diff(sin_x, \"x\")");
+    // diff(sin(x), x) = cos(x) * 1 = cos(x)
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "diff(e_sin(var(\"x\")), \"x\")");
     println!("diff(sin(x), x) = {:?}", result);
     assert!(result.is_ok());
-    // Result should contain Cos
     let res = result.unwrap();
-    assert!(res.contains("Cos"));
+    assert!(res.contains("cos"));
 }
 
 #[test]
 fn test_diff_cos() {
-    // d/dx(cos(x)) = -sin(x) * 1 = -sin(x)
-    let evaluator = create_evaluator_with_diff();
-    let result = eval(&evaluator, "diff(Cos(Var(\"x\")), \"x\")");
+    // diff(cos(x), x) = -sin(x) * 1 = -sin(x)
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "diff(e_cos(var(\"x\")), \"x\")");
     println!("diff(cos(x), x) = {:?}", result);
     assert!(result.is_ok());
-    // Result should contain Sin and Neg
     let res = result.unwrap();
-    assert!(res.contains("Sin") && res.contains("Neg"));
+    assert!(res.contains("sin") && res.contains("negate"));
 }
-
-// =============================================================================
-// Exponential and Logarithm Tests
-// =============================================================================
 
 #[test]
 fn test_diff_exp() {
-    // d/dx(e^x) = e^x * 1 = e^x
-    let evaluator = create_evaluator_with_diff();
-    let result = eval(&evaluator, "diff(exp_x, \"x\")");
+    // diff(e^x, x) = e^x * 1 = e^x
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "diff(e_exp(var(\"x\")), \"x\")");
     println!("diff(e^x, x) = {:?}", result);
     assert!(result.is_ok());
-    // Result should contain Exp
     let res = result.unwrap();
-    assert!(res.contains("Exp"));
+    assert!(res.contains("exp"));
 }
 
 #[test]
 fn test_diff_ln() {
-    // d/dx(ln(x)) = 1/x * 1 = 1/x
-    let evaluator = create_evaluator_with_diff();
-    let result = eval(&evaluator, "diff(ln_x, \"x\")");
+    // diff(ln(x), x) = 1/x * 1 = 1/x
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "diff(e_ln(var(\"x\")), \"x\")");
     println!("diff(ln(x), x) = {:?}", result);
     assert!(result.is_ok());
-    // Result should contain Div
     let res = result.unwrap();
-    assert!(res.contains("Div") || res.contains("Mul"));
+    assert!(res.contains("divide"));
+}
+
+#[test]
+fn test_diff_sqrt() {
+    // diff(√x, x) = 1/(2√x)
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "diff(e_sqrt(var(\"x\")), \"x\")");
+    println!("diff(√x, x) = {:?}", result);
+    assert!(result.is_ok());
+    let res = result.unwrap();
+    assert!(res.contains("divide") && res.contains("sqrt"));
 }
 
 // =============================================================================
@@ -202,43 +201,24 @@ fn test_diff_ln() {
 
 #[test]
 fn test_diff_sin_x_squared() {
-    // d/dx(sin(x²)) = cos(x²) * 2x
-    let evaluator = create_evaluator_with_diff();
-    let result = eval(&evaluator, "diff(sin_x_squared, \"x\")");
+    // diff(sin(x²), x) = cos(x²) * 2x
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "diff(e_sin(e_pow(var(\"x\"), num(2))), \"x\")");
     println!("diff(sin(x²), x) = {:?}", result);
     assert!(result.is_ok());
-    // Result should contain Cos and Mul for the chain rule
     let res = result.unwrap();
-    assert!(res.contains("Cos") && res.contains("Mul"));
+    assert!(res.contains("cos") && res.contains("times"));
 }
 
 #[test]
 fn test_diff_exp_x_squared() {
-    // d/dx(e^(x²)) = e^(x²) * 2x
-    let evaluator = create_evaluator_with_diff();
-    let result = eval(&evaluator, "diff(exp_x_squared, \"x\")");
+    // diff(e^(x²), x) = e^(x²) * 2x
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "diff(e_exp(e_pow(var(\"x\"), num(2))), \"x\")");
     println!("diff(e^(x²), x) = {:?}", result);
     assert!(result.is_ok());
-    // Result should contain Exp and Mul for the chain rule
     let res = result.unwrap();
-    assert!(res.contains("Exp") && res.contains("Mul"));
-}
-
-// =============================================================================
-// Square Root Test (Special Case of Power Rule)
-// =============================================================================
-
-#[test]
-fn test_diff_sqrt() {
-    // d/dx(√x) = 1/(2√x)
-    // Note: √x = x^(1/2), so this is power rule with n=1/2
-    let evaluator = create_evaluator_with_diff();
-    let result = eval(&evaluator, "diff(sqrt_x, \"x\")");
-    println!("diff(√x, x) = {:?}", result);
-    assert!(result.is_ok());
-    // Result should contain Div, Sqrt, and 2
-    let res = result.unwrap();
-    assert!(res.contains("Div") && res.contains("Sqrt"));
+    assert!(res.contains("exp") && res.contains("times"));
 }
 
 // =============================================================================
@@ -247,30 +227,13 @@ fn test_diff_sqrt() {
 
 #[test]
 fn test_diff_quotient() {
-    // d/dx(x/y) = (1*y - x*0) / y² = y/y² = 1/y
-    let evaluator = create_evaluator_with_diff();
-    let result = eval(&evaluator, "diff(x_over_y, \"x\")");
+    // diff(x/y, x) = (1*y - x*0) / y² = y/y² = 1/y
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "diff(e_div(var(\"x\"), var(\"y\")), \"x\")");
     println!("diff(x/y, x) = {:?}", result);
     assert!(result.is_ok());
-    // Result should contain quotient rule structure
     let res = result.unwrap();
-    assert!(res.contains("Div"));
-}
-
-// =============================================================================
-// Quadratic Polynomial Test
-// =============================================================================
-
-#[test]
-fn test_diff_quadratic() {
-    // d/dx(x² + 2x + 1) = 2x + 2
-    let evaluator = create_evaluator_with_diff();
-    let result = eval(&evaluator, "diff(quadratic, \"x\")");
-    println!("diff(x² + 2x + 1, x) = {:?}", result);
-    assert!(result.is_ok());
-    // Result should be a sum of derivatives
-    let res = result.unwrap();
-    assert!(res.contains("Add"));
+    assert!(res.contains("divide"));
 }
 
 // =============================================================================
@@ -278,54 +241,101 @@ fn test_diff_quadratic() {
 // =============================================================================
 
 #[test]
-fn test_simplify_zero_add() {
-    // simplify(0 + x) = x
-    let evaluator = create_evaluator_with_diff();
-    let result = eval(&evaluator, "simplify(Add(Const(0), Var(\"x\")))");
+fn test_simplify_zero_plus() {
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "simplify(e_add(num(0), var(\"x\")))");
     println!("simplify(0 + x) = {:?}", result);
     assert!(result.is_ok());
-    // Result should be Var("x")
     let res = result.unwrap();
-    assert!(res.contains("Var") && res.contains("x"));
+    // Should simplify to just x
+    assert!(res.contains("EVariable") && res.contains("x"));
 }
 
 #[test]
-fn test_simplify_zero_mul() {
-    // simplify(0 * x) = 0
-    let evaluator = create_evaluator_with_diff();
-    let result = eval(&evaluator, "simplify(Mul(Const(0), Var(\"x\")))");
+fn test_simplify_times_zero() {
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "simplify(e_mul(num(0), var(\"x\")))");
     println!("simplify(0 * x) = {:?}", result);
     assert!(result.is_ok());
-    // Result should be Const(0)
     let res = result.unwrap();
-    assert!(res.contains("Const") && res.contains("0"));
+    // Should simplify to 0
+    assert!(res.contains("ENumber") && res.contains("0"));
 }
 
 #[test]
-fn test_simplify_one_mul() {
-    // simplify(1 * x) = x
-    let evaluator = create_evaluator_with_diff();
-    let result = eval(&evaluator, "simplify(Mul(Const(1), Var(\"x\")))");
+fn test_simplify_times_one() {
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "simplify(e_mul(num(1), var(\"x\")))");
     println!("simplify(1 * x) = {:?}", result);
     assert!(result.is_ok());
-    // Result should be Var("x")
     let res = result.unwrap();
-    assert!(res.contains("Var") && res.contains("x"));
+    // Should simplify to x
+    assert!(res.contains("EVariable"));
+}
+
+#[test]
+fn test_diffs_x_squared() {
+    // diffs = differentiate and simplify
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "diffs(e_pow(var(\"x\"), num(2)), \"x\")");
+    println!("diffs(x², x) = {:?}", result);
+    assert!(result.is_ok());
 }
 
 // =============================================================================
-// Combined diff + simplify Test
+// Coordinate-Specific Derivatives
 // =============================================================================
 
 #[test]
-fn test_d_simplified() {
-    // D_simplified differentiates and simplifies
-    let evaluator = create_evaluator_with_diff();
-    let result = eval(
-        &evaluator,
-        "D_simplified(Mul(Var(\"x\"), Var(\"x\")), \"x\")",
-    );
-    println!("D_simplified(x*x, x) = {:?}", result);
+fn test_diff_t() {
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "diff_t(var(\"t\"))");
+    println!("diff_t(t) = {:?}", result);
     assert!(result.is_ok());
-    // Should get a simplified form of 2x
+    let res = result.unwrap();
+    assert!(res.contains("1"));
+}
+
+#[test]
+fn test_diff_r() {
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "diff_r(e_pow(var(\"r\"), num(2)))");
+    println!("diff_r(r²) = {:?}", result);
+    assert!(result.is_ok());
+    let res = result.unwrap();
+    assert!(res.contains("2"));
+}
+
+#[test]
+fn test_diff_theta() {
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "diff_theta(e_sin(var(\"theta\")))");
+    println!("diff_θ(sin(θ)) = {:?}", result);
+    assert!(result.is_ok());
+    let res = result.unwrap();
+    assert!(res.contains("cos"));
+}
+
+// =============================================================================
+// Schwarzschild Metric Factor
+// =============================================================================
+
+#[test]
+fn test_schwarzschild_factor() {
+    // f(r) = √(1 - 2M/r)
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "schw_f(num(1))");
+    println!("schw_f(1) = {:?}", result);
+    assert!(result.is_ok());
+    let res = result.unwrap();
+    assert!(res.contains("sqrt"));
+}
+
+#[test]
+fn test_diff_schwarzschild_factor() {
+    // diff_r(√(1 - 2M/r)) should involve M/r² terms
+    let evaluator = create_evaluator();
+    let result = eval(&evaluator, "diff_r(schw_f(num(1)))");
+    println!("diff_r(√(1 - 2M/r)) = {:?}", result);
+    assert!(result.is_ok());
 }

@@ -278,29 +278,29 @@ define processMeasurements(data: List(ℝ)) =
 
 **Pattern matching on mathematical structures:**
 ```kleis
-data Expr =
-  | Const(ℝ)
-  | Var(String)
-  | Add(Expr, Expr)
-  | Mul(Expr, Expr)
-  | Sin(Expr)
-  | Cos(Expr)
+data Expression =
+    ENumber(value : ℝ)
+  | EVariable(name : String)
+  | EOperation(name : String, args : List(Expression))
+
+// Helper constructors
+define num(n) = ENumber(n)
+define var(x) = EVariable(x)
+define e_add(a, b) = EOperation("plus", Cons(a, Cons(b, Nil)))
+define e_mul(a, b) = EOperation("times", Cons(a, Cons(b, Nil)))
 
 // Symbolic differentiation!
-define diff : Expr → String → Expr
-define diff(expr, var) = match expr {
-  Const(_) => Const(0)
-  Var(x) => match x {
-    var => Const(1)
-    _ => Const(0)
-  }
-  Add(e1, e2) => Add(diff(e1, var), diff(e2, var))
-  Mul(e1, e2) => Add(
-    Mul(diff(e1, var), e2),
-    Mul(e1, diff(e2, var))
-  )
-  Sin(e) => Mul(Cos(e), diff(e, var))
-  Cos(e) => Mul(Const(-1), Mul(Sin(e), diff(e, var)))
+define diff(e, x) = match e {
+    ENumber(_) => num(0)
+    EVariable(name) => if str_eq(name, x) then num(1) else num(0)
+    EOperation("plus", Cons(f, Cons(g, Nil))) => 
+        e_add(diff(f, x), diff(g, x))
+    EOperation("times", Cons(f, Cons(g, Nil))) => 
+        e_add(e_mul(diff(f, x), g), e_mul(f, diff(g, x)))
+    EOperation("sin", Cons(f, Nil)) => 
+        e_mul(e_cos(f), diff(f, x))
+    EOperation("cos", Cons(f, Nil)) => 
+        e_neg(e_mul(e_sin(f), diff(f, x)))
 }
 
 // Symbolic simplification!
@@ -873,28 +873,36 @@ define multiply(m1, m2) = match (m1, m2) {
 ### Use Case 3: Symbolic Computer Algebra System
 
 ```kleis
-data Expr =
-  | Const(ℝ)
-  | Var(String)
-  | Add(Expr, Expr)
-  | Mul(Expr, Expr)
-  | Pow(Expr, ℕ)
-  | Sin(Expr) | Cos(Expr)
-  | Ln(Expr) | Exp(Expr)
+data Expression =
+    ENumber(value : ℝ)
+  | EVariable(name : String)
+  | EOperation(name : String, args : List(Expression))
+
+// Helper constructors
+define num(n) = ENumber(n)
+define var(x) = EVariable(x)
+define e_add(a, b) = EOperation("plus", Cons(a, Cons(b, Nil)))
+define e_mul(a, b) = EOperation("times", Cons(a, Cons(b, Nil)))
+define e_pow(a, b) = EOperation("power", Cons(a, Cons(b, Nil)))
+define e_sin(a) = EOperation("sin", Cons(a, Nil))
+define e_cos(a) = EOperation("cos", Cons(a, Nil))
+define e_ln(a) = EOperation("ln", Cons(a, Nil))
+define e_exp(a) = EOperation("exp", Cons(a, Nil))
 
 // Differentiation rules
-define diff : Expr → String → Expr
-define diff(expr, x) = match expr {
-  Const(_) => Const(0)
-  Var(y) if y == x => Const(1)
-  Var(_) => Const(0)
-  Add(e1, e2) => Add(diff(e1, x), diff(e2, x))
-  Mul(e1, e2) => Add(Mul(diff(e1, x), e2), Mul(e1, diff(e2, x)))
-  Pow(e, n) => Mul(Mul(Const(n), Pow(e, n-1)), diff(e, x))
-  Sin(e) => Mul(Cos(e), diff(e, x))
-  Cos(e) => Mul(Const(-1), Mul(Sin(e), diff(e, x)))
-  Ln(e) => Mul(diff(e, x), Pow(e, -1))
-  Exp(e) => Mul(Exp(e), diff(e, x))
+define diff(e, x) = match e {
+    ENumber(_) => num(0)
+    EVariable(name) => if str_eq(name, x) then num(1) else num(0)
+    EOperation("plus", Cons(f, Cons(g, Nil))) => e_add(diff(f, x), diff(g, x))
+    EOperation("times", Cons(f, Cons(g, Nil))) => 
+        e_add(e_mul(diff(f, x), g), e_mul(f, diff(g, x)))
+    EOperation("power", Cons(f, Cons(ENumber(n), Nil))) => 
+        e_mul(e_mul(num(n), e_pow(f, num(n - 1))), diff(f, x))
+    EOperation("sin", Cons(f, Nil)) => e_mul(e_cos(f), diff(f, x))
+    EOperation("cos", Cons(f, Nil)) => e_neg(e_mul(e_sin(f), diff(f, x)))
+    EOperation("ln", Cons(f, Nil)) => e_mul(diff(f, x), e_pow(f, num(-1)))
+    EOperation("exp", Cons(f, Nil)) => e_mul(e_exp(f), diff(f, x))
+    _ => num(0)
 }
 
 // Chain rule, product rule, quotient rule - all implementable!

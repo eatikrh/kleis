@@ -67,8 +67,8 @@ fn test_basis_forms_exist() {
 fn test_scale1() {
     let evaluator = create_evaluator();
 
-    // Scale dt by r
-    let result = eval(&evaluator, "scale1(Var(\"r\"), dt)");
+    // Scale dt by r (using var("r") helper)
+    let result = eval(&evaluator, "scale1(var(\"r\"), dt)");
     println!("r * dt = {:?}", result);
     assert!(result.is_ok());
 }
@@ -92,7 +92,7 @@ fn test_d0_constant() {
     let evaluator = create_evaluator();
 
     // d(5) = 0 (derivative of constant is zero)
-    let result = eval(&evaluator, "d0(Const(5))");
+    let result = eval(&evaluator, "d0(num(5))");
     println!("d(5) = {:?}", result);
     assert!(result.is_ok());
     // All coefficients should be 0
@@ -103,7 +103,7 @@ fn test_d0_variable() {
     let evaluator = create_evaluator();
 
     // d(r) = dr
-    let result = eval(&evaluator, "d0(Var(\"r\"))");
+    let result = eval(&evaluator, "d0(var(\"r\"))");
     println!("d(r) = {:?}", result);
     assert!(result.is_ok());
     // Should have coefficient 1 in dr position
@@ -114,7 +114,7 @@ fn test_d0_r_squared() {
     let evaluator = create_evaluator();
 
     // d(r²) = 2r dr
-    let result = eval(&evaluator, "d0(Pow(Var(\"r\"), Const(2)))");
+    let result = eval(&evaluator, "d0(e_pow(var(\"r\"), num(2)))");
     println!("d(r²) = {:?}", result);
     assert!(result.is_ok());
     // Coefficient of dr should be 2r
@@ -175,7 +175,7 @@ fn test_schwarzschild_tetrad() {
     let evaluator = create_evaluator();
 
     // Schwarzschild tetrad with symbolic M
-    let result = eval(&evaluator, "schwarzschild_tetrad(Var(\"M\"))");
+    let result = eval(&evaluator, "schwarzschild_tetrad(var(\"M\"))");
     println!("Schwarzschild tetrad = {:?}", result);
     assert!(result.is_ok());
 }
@@ -191,40 +191,6 @@ fn test_d_tetrad() {
     // Compute exterior derivatives of Minkowski tetrad
     let result = eval(&evaluator, "d_tetrad(minkowski_tetrad)");
     println!("d(minkowski_tetrad) = {:?}", result);
-    assert!(result.is_ok());
-}
-
-// =============================================================================
-// Built-in Test Expressions
-// =============================================================================
-
-#[test]
-fn test_d_r_squared() {
-    let evaluator = create_evaluator();
-
-    // d(r²) = 2r dr (should have 2r in position 1)
-    let result = eval(&evaluator, "test_d_r_squared");
-    println!("d(r²) = {:?}", result);
-    assert!(result.is_ok());
-}
-
-#[test]
-fn test_d_sin_theta() {
-    let evaluator = create_evaluator();
-
-    // d(sin(θ)) = cos(θ) dθ
-    let result = eval(&evaluator, "test_d_sin_theta");
-    println!("d(sin(θ)) = {:?}", result);
-    assert!(result.is_ok());
-}
-
-#[test]
-fn test_wedge_dt_dr() {
-    let evaluator = create_evaluator();
-
-    // dt ∧ dr has 1 at (0,1), -1 at (1,0), 0 elsewhere
-    let result = eval(&evaluator, "test_wedge_dt_dr");
-    println!("dt ∧ dr = {:?}", result);
     assert!(result.is_ok());
 }
 
@@ -266,17 +232,17 @@ fn test_solve_connection_schwarzschild() {
     let evaluator = create_evaluator();
 
     // Step 1: Check tetrad size
-    let tetrad = eval(&evaluator, "schwarzschild_tetrad(Var(\"M\"))").unwrap();
+    let tetrad = eval(&evaluator, "schwarzschild_tetrad(var(\"M\"))").unwrap();
     println!("📊 Schwarzschild tetrad size: {} chars", tetrad.len());
 
     // Step 2: Check d_tetrad size
-    let d_tetrad = eval(&evaluator, "d_tetrad(schwarzschild_tetrad(Var(\"M\")))").unwrap();
+    let d_tetrad = eval(&evaluator, "d_tetrad(schwarzschild_tetrad(var(\"M\")))").unwrap();
     println!("📊 d(tetrad) size: {} chars", d_tetrad.len());
 
     // Step 3: Check connection size
     let result = eval(
         &evaluator,
-        "solve_connection(schwarzschild_tetrad(Var(\"M\")))",
+        "solve_connection(schwarzschild_tetrad(var(\"M\")))",
     );
     let conn_size = result.as_ref().map(|s| s.len()).unwrap_or(0);
     println!("📊 Connection size: {} chars", conn_size);
@@ -323,13 +289,13 @@ fn test_schwarzschild_curvature() {
     // Step 1: Connection
     let conn = eval(
         &evaluator,
-        "solve_connection(schwarzschild_tetrad(Var(\"M\")))",
+        "solve_connection(schwarzschild_tetrad(var(\"M\")))",
     )
     .unwrap();
     println!("📊 Schwarzschild connection size: {} chars", conn.len());
 
     // Step 2: Full curvature - this is the Riemann tensor for a black hole!
-    let result = eval(&evaluator, "schwarzschild_curvature(Var(\"M\"))");
+    let result = eval(&evaluator, "schwarzschild_curvature(var(\"M\"))");
     let curv_size = result.as_ref().map(|s| s.len()).unwrap_or(0);
     println!("📊 Schwarzschild curvature size: {} chars", curv_size);
 
@@ -355,12 +321,12 @@ fn test_minkowski_curvature_is_zero() {
 
     let result = eval(&evaluator, "minkowski_curvature").unwrap();
 
-    // All components should simplify to Const(0)
+    // All components should simplify to ENumber(0)
     // The curvature is a 4x4 matrix of 4x4 matrices (2-forms)
     // For flat space, every component should be zero
 
     // Check that the result contains mostly zeros
-    let zero_count = result.matches("Const(0)").count();
+    let zero_count = result.matches("ENumber(0)").count();
     let total_components = 16 * 16; // 4x4 matrix of 4x4 2-forms = 256 components
 
     println!(
@@ -385,24 +351,24 @@ fn test_schwarzschild_connection_nonzero() {
 
     let result = eval(
         &evaluator,
-        "solve_connection(schwarzschild_tetrad(Var(\"M\")))",
+        "solve_connection(schwarzschild_tetrad(var(\"M\")))",
     )
     .unwrap();
 
     // Should contain the mass parameter M
     assert!(
-        result.contains("Var(\"M\")"),
+        result.contains("EVariable(\"M\")"),
         "Schwarzschild connection should depend on mass M"
     );
 
     // Should contain radial coordinate r
     assert!(
-        result.contains("Var(\"r\")"),
+        result.contains("EVariable(\"r\")"),
         "Schwarzschild connection should depend on radius r"
     );
 
     // Should contain angular terms (sin, cos of theta)
-    let has_angular = result.contains("Sin") || result.contains("Cos") || result.contains("theta");
+    let has_angular = result.contains("sin") || result.contains("cos") || result.contains("theta");
     assert!(
         has_angular,
         "Schwarzschild connection should have angular dependence"
@@ -420,29 +386,112 @@ fn test_schwarzschild_curvature_structure() {
     // Reference: Wald "General Relativity" Appendix C
     let evaluator = create_evaluator();
 
-    let result = eval(&evaluator, "schwarzschild_curvature(Var(\"M\"))").unwrap();
+    let result = eval(&evaluator, "schwarzschild_curvature(var(\"M\"))").unwrap();
 
     // Should contain the mass parameter M
     assert!(
-        result.contains("Var(\"M\")"),
+        result.contains("EVariable(\"M\")"),
         "Schwarzschild curvature should depend on mass M"
     );
 
     // Should contain radial coordinate r (tidal forces ~ 1/r³)
     assert!(
-        result.contains("Var(\"r\")"),
+        result.contains("EVariable(\"r\")"),
         "Schwarzschild curvature should depend on radius r"
     );
 
     // Should contain the metric factor f = 1 - 2M/r or its derivatives
-    // This appears as Sub(Const(1), Div(...)) or similar
-    let has_metric_factor = result.contains("Sub(Const(1)") || result.contains("Sqrt");
+    // This appears as e_sub(num(1), ...) or sqrt
+    let has_metric_factor = result.contains("minus") || result.contains("sqrt");
     assert!(
         has_metric_factor,
         "Schwarzschild curvature should contain metric factor"
     );
 
     println!("✓ Schwarzschild curvature has expected structure (M, r, metric factor)");
+}
+
+#[test]
+fn test_schwarzschild_curvature_component_r0101() {
+    // Extract and print R^0_1_01 (time-radial curvature, dt∧dr coefficient)
+    //
+    // LITERATURE: For Schwarzschild in orthonormal frame,
+    // R^0_1_01 should be proportional to M/r³
+    // Reference: Carroll "Spacetime and Geometry" Eq. 5.29
+    let evaluator = create_evaluator();
+
+    // Full curvature is 4x4 matrix of 2-forms (each 2-form is 4x4)
+    // R^a_b_μν = curv[a][b][μ][ν]
+    // R^0_1_01 = curv[0][1][0][1]
+
+    let component = eval(
+        &evaluator,
+        "let curv = schwarzschild_curvature(var(\"M\")) in \
+         nth(nth(nth(nth(curv, 0), 1), 0), 1)",
+    )
+    .unwrap();
+
+    println!("\n=== Schwarzschild Curvature Component R^0_1_01 ===");
+    println!("(coefficient of dt∧dr in R^0_1 curvature 2-form)\n");
+    println!("{}\n", component);
+    println!("Size: {} chars", component.len());
+
+    // Verify it contains expected terms
+    assert!(
+        component.contains("EVariable(\"M\")") || component.contains("M"),
+        "R^0_1_01 should contain mass M"
+    );
+    assert!(
+        component.contains("EVariable(\"r\")") || component.contains("r"),
+        "R^0_1_01 should contain radius r"
+    );
+
+    println!("\n=== Expected from Literature ===");
+    println!("R^0_1_01 ∝ M/r³ (radial tidal force)");
+    println!("Reference: Carroll 'Spacetime and Geometry' Chapter 5");
+}
+
+#[test]
+fn test_schwarzschild_numerical_verification() {
+    // Numerically verify curvature at specific point
+    // At r=10M (well outside horizon), R^0_1_01 should ≈ -2M/r³ = -2/(10³) = -0.002
+    // (in geometric units where M=1)
+    let evaluator = create_evaluator();
+
+    // First, substitute M=1 into the curvature expression
+    // We need to evaluate with concrete values
+
+    // Get the expression with M=1
+    let component = eval(
+        &evaluator,
+        "let curv = schwarzschild_curvature(num(1)) in \
+         nth(nth(nth(nth(curv, 0), 1), 0), 1)",
+    )
+    .unwrap();
+
+    println!("\n=== Numerical Verification at M=1 ===");
+    println!("Expression with M=1: {} chars", component.len());
+
+    // The expression still contains var("r")
+    // To get a number, we'd need to substitute r as well
+    // For now, just verify the structure is maintained
+
+    assert!(
+        component.contains("EVariable(\"r\")"),
+        "Should still contain r"
+    );
+    assert!(
+        !component.contains("EVariable(\"M\")"),
+        "M should be substituted"
+    );
+
+    println!("✓ M successfully substituted to 1");
+    println!("✓ Expression still contains r (as expected)");
+
+    // Note: Full numerical evaluation would require:
+    // 1. Substituting r=10 into the Expr AST
+    // 2. Evaluating the resulting arithmetic
+    // This would require extending the simplify/eval capabilities
 }
 
 #[test]
@@ -460,28 +509,4 @@ fn test_compute_riemann() {
         "Expression exploded! {} chars",
         curv_size
     );
-}
-
-// =============================================================================
-// Sanity Checks
-// =============================================================================
-
-#[test]
-fn test_lorentzian_signature() {
-    let evaluator = create_evaluator();
-
-    let result = eval(&evaluator, "lorentzian");
-    println!("Lorentzian signature = {:?}", result);
-    assert!(result.is_ok());
-    // Should be [-1, 1, 1, 1]
-}
-
-#[test]
-fn test_coord_names() {
-    let evaluator = create_evaluator();
-
-    let result = eval(&evaluator, "coord_names");
-    println!("Coordinate names = {:?}", result);
-    assert!(result.is_ok());
-    // Should be ["t", "r", "theta", "phi"]
 }

@@ -549,39 +549,53 @@ Kleis supports differentiation in two fundamentally different ways:
 The `diff` function **computes** derivatives by pattern matching on expression trees. It's implemented in pure Kleis and returns a new expression:
 
 ```kleis
-data Expr = Const(value : ℝ) 
-          | Var(name : String) 
-          | Add(left : Expr, right : Expr) 
-          | Mul(left : Expr, right : Expr) 
-          | Pow(base : Expr, exp : Expr)
-          | Sin(arg : Expr)
-          | Cos(arg : Expr)
-          | Exp(arg : Expr)
-          | Ln(arg : Expr)
+data Expression = 
+    ENumber(value : ℝ)
+  | EVariable(name : String)
+  | EOperation(name : String, args : List(Expression))
 
-define diff(e, x) =
+// Helper constructors
+define num(n) = ENumber(n)
+define var(x) = EVariable(x)
+define e_add(a, b) = EOperation("plus", Cons(a, Cons(b, Nil)))
+define e_mul(a, b) = EOperation("times", Cons(a, Cons(b, Nil)))
+define e_pow(a, b) = EOperation("power", Cons(a, Cons(b, Nil)))
+
+define diff(e, var_name) =
     match e {
-        Const(_) => Const(0)
-        Var(y) => if y = x then Const(1) else Const(0)
-        
-        Add(f, g) => Add(diff(f, x), diff(g, x))
-        
-        Mul(f, g) =>
-            Add(Mul(diff(f, x), g), Mul(f, diff(g, x)))
-            
-        Pow(f, Const(n)) =>
-            Mul(Mul(Const(n), Pow(f, Const(n - 1))), diff(f, x))
-            
-        Sin(f) => Mul(Cos(f), diff(f, x))
-        Cos(f) => Mul(Mul(Const(-1), Sin(f)), diff(f, x))
-        Exp(f) => Mul(Exp(f), diff(f, x))
-        Ln(f) => Mul(Pow(f, Const(-1)), diff(f, x))
-        
-        _ => Const(0)
+        ENumber(_) => num(0)
+        EVariable(name) => if str_eq(name, var_name) then num(1) else num(0)
+        EOperation(op_name, args) => diff_op(op_name, args, var_name)
     }
+
+define diff_op(op_name, args, var_name) = match op_name {
+    "plus" => match args {
+        Cons(f, Cons(g, Nil)) => e_add(diff(f, var_name), diff(g, var_name))
+        | _ => num(0)
+    }
+    "times" => match args {
+        Cons(f, Cons(g, Nil)) => 
+            e_add(e_mul(diff(f, var_name), g), e_mul(f, diff(g, var_name)))
+        | _ => num(0)
+    }
+    "power" => match args {
+        Cons(f, Cons(ENumber(n), Nil)) => 
+            e_mul(e_mul(num(n), e_pow(f, num(n - 1))), diff(f, var_name))
+        | _ => num(0)
+    }
+    "sin" => match args {
+        Cons(f, Nil) => e_mul(e_cos(f), diff(f, var_name))
+        | _ => num(0)
+    }
+    "cos" => match args {
+        Cons(f, Nil) => e_neg(e_mul(e_sin(f), diff(f, var_name)))
+        | _ => num(0)
+    }
+    _ => num(0)
+}
 ```
 
-**Usage:** Call `diff(Mul(Var("x"), Var("x")), "x")` and get back `Add(Mul(Const(1), Var("x")), Mul(Var("x"), Const(1)))` (which simplifies to `2x`).
+**Usage:** Call `diff(e_mul(var("x"), var("x")), "x")` and get back an expression representing `2x`.
 
 ### Axiomatic Differentiation: `D` and `Dt`
 
