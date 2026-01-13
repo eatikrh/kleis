@@ -282,6 +282,12 @@ Traditional computer algebra systems (Mathematica, Maple) implement differentiat
 
 This is **code as mathematics** — the implementation *is* the specification.
 
+## Current Limitations
+
+**Symbolic integration is not implemented.** The stdlib provides *axioms* for integration (`calculus.kleis` defines the `Integrable` structure with the Fundamental Theorem of Calculus), but no pattern-matching integrator like `symbolic_diff.kleis`.
+
+Symbolic integration is fundamentally harder than differentiation — it requires heuristics, table lookups, and algorithms like Risch's that don't reduce to simple recursive rules. For now, use numerical integration via `ode45` or external tools.
+
 ## What's Next
 
 See how symbolic computation enables physics simulations:

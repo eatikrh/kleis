@@ -43,7 +43,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-07b00baf.js";
+            window.path_to_searchindex_js = "../searchindex-09bb98e4.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b275a7b0.js"></script>
@@ -430,6 +430,9 @@ define d1(omega) =
 <li><strong>Verified</strong> — axioms can be checked by Z3</li>
 </ol>
 <p>This is <strong>code as mathematics</strong> — the implementation <em>is</em> the specification.</p>
+<h2 id="current-limitations"><a class="header" href="#current-limitations">Current Limitations</a></h2>
+<p><strong>Symbolic integration is not implemented.</strong> The stdlib provides <em>axioms</em> for integration (<code>calculus.kleis</code> defines the <code>Integrable</code> structure with the Fundamental Theorem of Calculus), but no pattern-matching integrator like <code>symbolic_diff.kleis</code>.</p>
+<p>Symbolic integration is fundamentally harder than differentiation — it requires heuristics, table lookups, and algorithms like Risch’s that don’t reduce to simple recursive rules. For now, use numerical integration via <code>ode45</code> or external tools.</p>
 <h2 id="whats-next"><a class="header" href="#whats-next">What’s Next</a></h2>
 <p>See how symbolic computation enables physics simulations:</p>
 <p>→ <a href="./25-physics-applications.html">Next: Physics Applications</a></p>

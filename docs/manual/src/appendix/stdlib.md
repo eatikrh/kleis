@@ -24,9 +24,9 @@ stdlib/
 ├── math_functions.kleis     // Trig, hyperbolic, special functions
 │
 ├── # Calculus & Analysis
-├── calculus.kleis           // Derivatives, integrals, limits
+├── calculus.kleis           // Derivative/integral axioms, limits
 ├── calculus_hof.kleis       // Derivative as (F → F) → F → F
-├── symbolic_diff.kleis      // Expression AST with diff(e, x)
+├── symbolic_diff.kleis      // Expression AST with diff(e, x) (differentiation only)
 │
 ├── # Tensors & Differential Geometry
 ├── tensors.kleis            // Abstract tensor algebra
