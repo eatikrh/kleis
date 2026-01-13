@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Standard Library - The Kleis Manual</title>
+        <title>Standard Library Reference - The Kleis Manual</title>
 
 
         <!-- Custom HTML head -->
@@ -43,10 +43,10 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-f9ff6916.js";
+            window.path_to_searchindex_js = "../searchindex-09bb98e4.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-309fc3c5.js"></script>
+        <script src="../toc-b275a7b0.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -188,244 +188,237 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="appendix-c-standard-library"><a class="header" href="#appendix-c-standard-library">Appendix C: Standard Library</a></h1>
-<p>The Kleis standard library provides foundational types, structures, and operations.</p>
-<h2 id="core-types"><a class="header" href="#core-types">Core Types</a></h2>
-<h3 id="numeric-types"><a class="header" href="#numeric-types">Numeric Types</a></h3>
-<pre><code class="language-kleis">// These are primitive types built into Kleis:
-ℕ  (or Nat)      // Natural numbers (0, 1, 2, ...)
-ℤ  (or Int)      // Integers (..., -1, 0, 1, ...)
-ℝ  (or Real)     // Real numbers
-ℂ  (or Complex)  // Complex numbers
+                        <h1 id="appendix-standard-library-reference"><a class="header" href="#appendix-standard-library-reference">Appendix: Standard Library Reference</a></h1>
+<p>The Kleis standard library provides 30 files covering mathematics, physics, and computer science.</p>
+<h2 id="file-organization"><a class="header" href="#file-organization">File Organization</a></h2>
+<pre><code>stdlib/
+├── types.kleis              // Core type definitions (Bool, Option, List, etc.)
+├── prelude.kleis            // Core structures and operations
+├── minimal_prelude.kleis    // Arithmetic, Equatable, Ordered structures
+├── func_core.kleis          // Higher-order functions (map, fold, etc.)
+│
+├── # Mathematics
+├── complex.kleis            // Complex number axioms (ℂ field)
+├── rational.kleis           // Rational number axioms (ℚ ordered field)
+├── matrices.kleis           // Matrix algebra (605 lines!)
+├── lists.kleis              // List operations and axioms
+├── sets.kleis               // Z3-backed set theory
+├── combinatorics.kleis      // Permutations, factorials, binomials
+├── bigops.kleis             // Σ, Π, ∫, lim as polymorphic HOFs
+├── bitvector.kleis          // Z3 BitVec theory
+├── text.kleis               // String operations
+├── math_functions.kleis     // Trig, hyperbolic, special functions
+│
+├── # Calculus &amp; Analysis
+├── calculus.kleis           // Derivative/integral axioms, limits
+├── calculus_hof.kleis       // Derivative as (F → F) → F → F
+├── symbolic_diff.kleis      // Expression AST with diff(e, x) (differentiation only)
+│
+├── # Tensors &amp; Differential Geometry
+├── tensors.kleis            // Abstract tensor algebra
+├── tensors_functional.kleis // Pure Kleis tensor operations
+├── tensors_concrete.kleis   // Component-based tensors for Z3
+├── tensors_minimal.kleis    // Physics palette notation
+├── differential_forms.kleis // Cartan calculus (d, ∧, ⋆, ι)
+├── cartan_geometry.kleis    // Axiomatic framework for curvature
+├── cartan_compute.kleis     // Tetrad → Connection → Curvature pipeline
+│
+├── # Physics
+├── maxwell.kleis            // Covariant electromagnetism
+├── fluid_dynamics.kleis     // Navier-Stokes, Bernoulli, Stokes
+├── solid_mechanics.kleis    // Stress/strain, Von Mises, Mohr-Coulomb
+├── quantum.kleis            // Hilbert space, Dirac notation, Pauli
+├── quantum_minimal.kleis    // Physics palette quantum notation
+└── cosmology.kleis          // Minkowski, de Sitter, FLRW, Schwarzschild
 </code></pre>
-<h3 id="boolean-type"><a class="header" href="#boolean-type">Boolean Type</a></h3>
-<pre><code class="language-kleis">Bool  // True or False
-</code></pre>
-<h3 id="string-type"><a class="header" href="#string-type">String Type</a></h3>
-<pre><code class="language-kleis">String  // Text literals: "hello", "world"
-</code></pre>
-<h3 id="unit-type"><a class="header" href="#unit-type">Unit Type</a></h3>
-<pre><code class="language-kleis">Unit  // Single value: ()
-</code></pre>
-<h2 id="collection-types"><a class="header" href="#collection-types">Collection Types</a></h2>
-<h3 id="list"><a class="header" href="#list">List</a></h3>
-<pre><code class="language-kleis">structure List(T) {
-    operation head : T
-    operation tail : List(T)
-    operation length : ℕ
-    operation append : List(T) → List(T)
-    operation map : (T → U) → List(U)
-    operation filter : (T → Bool) → List(T)
-}
-</code></pre>
-<h3 id="vector"><a class="header" href="#vector">Vector</a></h3>
-<pre><code class="language-kleis">structure Vector(n : ℕ, T) {
-    operation get : ℕ → T
-    operation length : ℕ
-    operation dot : Vector(n, T) → T
-    operation magnitude : ℝ
-    operation normalize : Vector(n, T)
-}
-</code></pre>
-<h3 id="matrix"><a class="header" href="#matrix">Matrix</a></h3>
-<pre><code class="language-kleis">structure Matrix(m : ℕ, n : ℕ, T) {
-    operation get : ℕ × ℕ → T
-    operation rows : ℕ
-    operation cols : ℕ
-    operation transpose : Matrix(n, m, T)
-    operation add : Matrix(m, n, T) → Matrix(m, n, T)
-    operation mul : Matrix(n, p, T) → Matrix(m, p, T)
-}
+<h2 id="core-files"><a class="header" href="#core-files">Core Files</a></h2>
+<h3 id="typeskleis--self-hosted-type-system"><a class="header" href="#typeskleis--self-hosted-type-system"><code>types.kleis</code> — Self-Hosted Type System</a></h3>
+<p>The type system is defined <em>in Kleis itself</em>:</p>
+<pre><code class="language-kleis">data Type =
+    Scalar
+    | Vector(n: Nat, T)
+    | Matrix(m: Nat, n: Nat, T)
+    | Complex
+    | Set(T: Type)
+    | List(T: Type)
+    | Tensor(dims: List(Nat))
 
-structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
-    operation det : T
-    operation trace : T
-    operation inv : SquareMatrix(n, T)
-    operation eigenvalues : List(ℂ)
-}
+data Bool = True | False
+data Option(T) = None | Some(value: T)
+data Result(T, E) = Ok(value: T) | Err(error: E)
+data List(T) = Nil | Cons(head: T, tail: List(T))
 </code></pre>
-<h2 id="complex-numbers"><a class="header" href="#complex-numbers">Complex Numbers</a></h2>
-<p>The complex number type <code>ℂ</code> has full arithmetic support:</p>
-<h3 id="construction-and-extraction"><a class="header" href="#construction-and-extraction">Construction and Extraction</a></h3>
-<pre><code class="language-kleis">// Create complex number: complex(real_part, imaginary_part)
-define z = complex(3, 4)        // 3 + 4i
-
-// The imaginary unit
-define i_unit = i               // = complex(0, 1)
-
-// Extract parts
-define x = re(z)                // 3
-define y = im(z)                // 4
-</code></pre>
-<h3 id="arithmetic-operations"><a class="header" href="#arithmetic-operations">Arithmetic Operations</a></h3>
-<pre><code class="language-kleis">// All operations are explicit (no operator overloading yet)
-complex_add(z1, z2)      // z1 + z2
-complex_sub(z1, z2)      // z1 - z2
-complex_mul(z1, z2)      // z1 × z2
-complex_div(z1, z2)      // z1 / z2
-neg_complex(z)           // -z
-complex_inverse(z)       // 1/z
-</code></pre>
-<h3 id="conjugate-and-magnitude"><a class="header" href="#conjugate-and-magnitude">Conjugate and Magnitude</a></h3>
-<pre><code class="language-kleis">conj(z)                  // Complex conjugate (a - bi)
-abs_squared(z)           // |z|² = a² + b²
-</code></pre>
-<h3 id="operation-reference"><a class="header" href="#operation-reference">Operation Reference</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Operation</th><th>Syntax</th><th>Example</th><th>Result</th></tr>
-</thead>
-<tbody>
-<tr><td>Create</td><td><code>complex(a, b)</code></td><td><code>complex(3, 4)</code></td><td>3 + 4i</td></tr>
-<tr><td>Real part</td><td><code>re(z)</code></td><td><code>re(complex(3, 4))</code></td><td>3</td></tr>
-<tr><td>Imaginary part</td><td><code>im(z)</code></td><td><code>im(complex(3, 4))</code></td><td>4</td></tr>
-<tr><td>Add</td><td><code>complex_add(z1, z2)</code></td><td><code>complex_add(complex(1,2), complex(3,4))</code></td><td>complex(4, 6)</td></tr>
-<tr><td>Subtract</td><td><code>complex_sub(z1, z2)</code></td><td><code>complex_sub(complex(5,3), complex(2,1))</code></td><td>complex(3, 2)</td></tr>
-<tr><td>Multiply</td><td><code>complex_mul(z1, z2)</code></td><td><code>complex_mul(complex(1,2), complex(3,4))</code></td><td>complex(-5, 10)</td></tr>
-<tr><td>Divide</td><td><code>complex_div(z1, z2)</code></td><td><code>complex_div(complex(1,0), complex(0,1))</code></td><td>complex(0, -1)</td></tr>
-<tr><td>Negate</td><td><code>neg_complex(z)</code></td><td><code>neg_complex(complex(3, 4))</code></td><td>complex(-3, -4)</td></tr>
-<tr><td>Inverse</td><td><code>complex_inverse(z)</code></td><td><code>complex_inverse(i)</code></td><td>complex(0, -1)</td></tr>
-<tr><td>Conjugate</td><td><code>conj(z)</code></td><td><code>conj(complex(3, 4))</code></td><td>complex(3, -4)</td></tr>
-<tr><td>Magnitude²</td><td><code>abs_squared(z)</code></td><td><code>abs_squared(complex(3, 4))</code></td><td>25</td></tr>
-</tbody>
-</table>
-</div>
-<p>See <a href="../chapters/14-complex-numbers.html">Chapter 14: Complex Numbers</a> for detailed examples.</p>
-<h2 id="algebraic-structures"><a class="header" href="#algebraic-structures">Algebraic Structures</a></h2>
-<h3 id="monoid"><a class="header" href="#monoid">Monoid</a></h3>
-<pre><code class="language-kleis">structure Monoid(M) {
-    e : M                         // Identity element
-    operation mul : M × M → M     // Binary operation
-    
-    axiom identity_left : ∀(x : M). mul(e, x) = x
-    axiom identity_right : ∀(x : M). mul(x, e) = x
-    axiom associative : ∀(x : M)(y : M)(z : M).
-        mul(mul(x, y), z) = mul(x, mul(y, z))
-}
-</code></pre>
-<h3 id="group"><a class="header" href="#group">Group</a></h3>
-<pre><code class="language-kleis">structure Group(G) extends Monoid(G) {
-    operation inv : G → G         // Inverse
-    
-    axiom inverse_left : ∀(x : G). mul(inv(x), x) = e
-    axiom inverse_right : ∀(x : G). mul(x, inv(x)) = e
-}
-</code></pre>
-<h3 id="ring"><a class="header" href="#ring">Ring</a></h3>
+<h3 id="preludekleis--core-structures"><a class="header" href="#preludekleis--core-structures"><code>prelude.kleis</code> — Core Structures</a></h3>
+<p>Defines fundamental mathematical structures:</p>
 <pre><code class="language-kleis">structure Ring(R) {
-    operation zero : R
-    operation one : R
+    zero : R
+    one : R
     operation add : R × R → R
     operation mul : R × R → R
     operation neg : R → R
     
-    // (R, add, zero) is an abelian group
-    // (R, mul, one) is a monoid
-    // mul distributes over add
+    axiom add_assoc : ∀(a b c : R). add(add(a, b), c) = add(a, add(b, c))
+    axiom distributive : ∀(a b c : R). mul(a, add(b, c)) = add(mul(a, b), mul(a, c))
 }
 </code></pre>
-<h3 id="field"><a class="header" href="#field">Field</a></h3>
-<pre><code class="language-kleis">structure Field(F) extends Ring(F) {
-    operation inv : F → F  // Multiplicative inverse (for non-zero)
+<h3 id="func_corekleis--functional-primitives"><a class="header" href="#func_corekleis--functional-primitives"><code>func_core.kleis</code> — Functional Primitives</a></h3>
+<p>Higher-order functions and function composition:</p>
+<pre><code class="language-kleis">define compose(f, g) = λ x . f(g(x))
+define id(x) = x
+define const(x) = λ _ . x
+define flip(f) = λ x y . f(y, x)
+</code></pre>
+<h2 id="mathematics-files"><a class="header" href="#mathematics-files">Mathematics Files</a></h2>
+<h3 id="matriceskleis--full-matrix-algebra-605-lines"><a class="header" href="#matriceskleis--full-matrix-algebra-605-lines"><code>matrices.kleis</code> — Full Matrix Algebra (605 lines)</a></h3>
+<p>Comprehensive matrix operations with axioms:</p>
+<pre><code class="language-kleis">structure Matrix(m: Nat, n: Nat, T) {
+    operation transpose : Matrix(m, n, T) → Matrix(n, m, T)
+    operation matmul : Matrix(m, n, T) × Matrix(n, p, T) → Matrix(m, p, T)
+    operation det : Matrix(n, n, T) → T
+    operation inv : Matrix(n, n, T) → Matrix(n, n, T)
+    operation eigenvalues : Matrix(n, n, T) → List(ℂ)
     
-    axiom mul_inverse : ∀(x : F). x ≠ zero → mul(x, inv(x)) = one
-    axiom mul_commutative : ∀(x : F)(y : F). mul(x, y) = mul(y, x)
+    axiom transpose_involution : ∀ A : Matrix(m, n, T) .
+        transpose(transpose(A)) = A
 }
 </code></pre>
-<h3 id="vector-space"><a class="header" href="#vector-space">Vector Space</a></h3>
-<pre><code class="language-kleis">structure VectorSpace(V, F) over Field(F) {
-    operation add : V × V → V
-    operation scale : F × V → V
-    zero : V
+<h3 id="symbolic_diffkleis--symbolic-differentiation"><a class="header" href="#symbolic_diffkleis--symbolic-differentiation"><code>symbolic_diff.kleis</code> — Symbolic Differentiation</a></h3>
+<p>Expression AST with pattern-matching differentiation:</p>
+<pre><code class="language-kleis">data Expression = 
+    ENumber(value : ℝ)
+  | EVariable(name : String)
+  | EOperation(name : String, args : List(Expression))
+
+define diff(e, x) = match e {
+    ENumber(_) =&gt; num(0)
+    | EVariable(name) =&gt; if str_eq(name, x) then num(1) else num(0)
+    | EOperation("plus", [a, b]) =&gt; e_add(diff(a, x), diff(b, x))
+    | EOperation("times", [a, b]) =&gt; 
+        e_add(e_mul(diff(a, x), b), e_mul(a, diff(b, x)))  // Product rule
+    | EOperation("sin", [f]) =&gt; e_mul(e_cos(f), diff(f, x))  // Chain rule
+    // ... more rules
+}
+</code></pre>
+<h3 id="calculus_hofkleis--derivative-as-higher-order-function"><a class="header" href="#calculus_hofkleis--derivative-as-higher-order-function"><code>calculus_hof.kleis</code> — Derivative as Higher-Order Function</a></h3>
+<pre><code>structure Derivative(F) {
+    operation D : (F → F) → F → F
     
-    // (V, add, zero) is an abelian group
-    // scale distributes over add
-    // scale is associative with field multiplication
-}
-</code></pre>
-<h2 id="geometric-structures"><a class="header" href="#geometric-structures">Geometric Structures</a></h2>
-<h3 id="metric-space"><a class="header" href="#metric-space">Metric Space</a></h3>
-<pre><code class="language-kleis">structure MetricSpace(M) {
-    operation distance : M × M → ℝ
+    axiom chain_rule : ∀(f g : F → F)(x : F).
+        D(compose(f, g))(x) = times(D(f)(g(x)), D(g)(x))
     
-    axiom non_negative : ∀(x : M)(y : M). distance(x, y) ≥ 0
-    axiom identity : ∀(x : M)(y : M). distance(x, y) = 0 ↔ x = y
-    axiom symmetric : ∀(x : M)(y : M). distance(x, y) = distance(y, x)
-    axiom triangle : ∀(x : M)(y : M)(z : M).
-        distance(x, z) ≤ distance(x, y) + distance(y, z)
+    axiom product_rule : ∀(f g : F → F)(x : F).
+        D(times_fn(f, g))(x) = plus(times(D(f)(x), g(x)), times(f(x), D(g)(x)))
+    
+    axiom linearity : ∀(f g : F → F)(x : F).
+        D(plus_fn(f, g))(x) = plus(D(f)(x), D(g)(x))
 }
 </code></pre>
-<h3 id="manifold"><a class="header" href="#manifold">Manifold</a></h3>
-<pre><code class="language-kleis">structure Manifold(M, dim : ℕ) {
-    operation tangent : M → TangentSpace(dim)
-    operation chart : M → Vector(dim, ℝ)  // Local coordinates
+<h3 id="bigopskleis--polymorphic-big-operators"><a class="header" href="#bigopskleis--polymorphic-big-operators"><code>bigops.kleis</code> — Polymorphic Big Operators</a></h3>
+<p>Σ, Π, ∫, lim that work on any type with the right structure:</p>
+<pre><code>// Summation requires additive monoid (has +, 0)
+operation sum_bounds : (ℤ → T) × ℤ × ℤ → T
+
+// Product requires multiplicative monoid (has ×, 1)
+operation prod_bounds : (ℤ → T) × ℤ × ℤ → T
+
+// Integral requires Banach space (complete normed vector space)
+operation int_bounds : (T → S) × T × T × T → S
+
+// Probability expectation
+operation E : (Ω → ℝ) → ℝ
+</code></pre>
+<h2 id="physics-files"><a class="header" href="#physics-files">Physics Files</a></h2>
+<h3 id="differential_formskleis--cartan-calculus"><a class="header" href="#differential_formskleis--cartan-calculus"><code>differential_forms.kleis</code> — Cartan Calculus</a></h3>
+<p>Full exterior calculus with wedge products, exterior derivative, and Hodge star:</p>
+<pre><code>structure WedgeProduct(p: Nat, q: Nat, dim: Nat) {
+    operation wedge : DifferentialForm(p, dim) → DifferentialForm(q, dim) 
+                    → DifferentialForm(p + q, dim)
+    
+    axiom graded_antisymmetric : ∀ α β .
+        wedge(α, β) = scale(power(-1, p*q), wedge(β, α))
+}
+
+structure ExteriorDerivative(p: Nat, dim: Nat) {
+    operation d : DifferentialForm(p, dim) → DifferentialForm(p + 1, dim)
+    
+    axiom d_squared_zero : ∀ α . d(d(α)) = 0  // Fundamental!
+}
+
+// Cartan's Magic Formula: ℒ_X = d ∘ ι_X + ι_X ∘ d
+define cartan_magic_impl(X, alpha) = 
+    plus(d(interior(X, alpha)), interior(X, d(alpha)))
+</code></pre>
+<h3 id="cartan_computekleis--schwarzschild-curvature"><a class="header" href="#cartan_computekleis--schwarzschild-curvature"><code>cartan_compute.kleis</code> — Schwarzschild Curvature</a></h3>
+<p>Complete pipeline from tetrad to Riemann curvature:</p>
+<pre><code class="language-kleis">define schwarzschild_tetrad(M) =
+    let f = e_sub(num(1), e_div(e_mul(num(2), M), var("r"))) in
+    let sqrt_f = e_sqrt(f) in
+    [
+        scale1(sqrt_f, dt),
+        scale1(e_div(num(1), sqrt_f), dr),
+        scale1(var("r"), dtheta),
+        scale1(e_mul(var("r"), e_sin(var("theta"))), dphi)
+    ]
+
+define compute_riemann(tetrad) =
+    let omega = solve_connection(tetrad) in
+    compute_curvature(omega)
+
+define schwarzschild_curvature(M) = compute_riemann(schwarzschild_tetrad(M))
+</code></pre>
+<h3 id="quantumkleis--hilbert-space-formalism"><a class="header" href="#quantumkleis--hilbert-space-formalism"><code>quantum.kleis</code> — Hilbert Space Formalism</a></h3>
+<p>Full quantum mechanics with Dirac notation:</p>
+<pre><code class="language-kleis">structure Ket(dim: Nat, T) {
+    operation normalize : Ket(dim, T) → Ket(dim, T)
+    operation scale : T → Ket(dim, T) → Ket(dim, T)
+}
+
+structure Operator(dim: Nat, T) {
+    operation apply : Operator(dim, T) → Ket(dim, T) → Ket(dim, T)
+    operation adjoint : Operator(dim, T) → Operator(dim, T)
+    operation compose : Operator(dim, T) → Operator(dim, T) → Operator(dim, T)
+}
+
+structure Commutator(dim: Nat, T) {
+    operation commutator : Operator(dim, T) → Operator(dim, T) → Operator(dim, T)
+    // [x̂, p̂] = iℏ (Heisenberg uncertainty!)
 }
 </code></pre>
-<h3 id="riemannian-manifold"><a class="header" href="#riemannian-manifold">Riemannian Manifold</a></h3>
-<pre><code class="language-kleis">structure RiemannianManifold(M, dim : ℕ) extends Manifold(M, dim) {
-    operation metric : M → Matrix(dim, dim, ℝ)
-    operation christoffel : M → Tensor(1, 2)
-    operation riemann : M → Tensor(1, 3)
-    operation ricci : M → Matrix(dim, dim, ℝ)
-    operation scalar_curvature : M → ℝ
+<h3 id="maxwellkleis--covariant-electromagnetism"><a class="header" href="#maxwellkleis--covariant-electromagnetism"><code>maxwell.kleis</code> — Covariant Electromagnetism</a></h3>
+<pre><code class="language-kleis">structure MaxwellInhomogeneous {
+    operation F : Nat → Nat → ℝ  // Field tensor
+    operation J : Nat → ℝ         // 4-current
+    
+    // ∂_μ F^μν = μ₀ J^ν
+    axiom maxwell_inhomogeneous : ∀ nu : Nat .
+        divF(nu) = times(mu0, J(nu))
 }
 </code></pre>
-<h2 id="option-and-result-types"><a class="header" href="#option-and-result-types">Option and Result Types</a></h2>
-<h3 id="option"><a class="header" href="#option">Option</a></h3>
-<pre><code class="language-kleis">data Option(T) = Some(value : T) | None
-
-// Operations
-define is_some(opt) =
-    match opt {
-        Some(_) =&gt; True
-        None =&gt; False
-    }
-
-define unwrap_or(opt, default) =
-    match opt {
-        Some(v) =&gt; v
-        None =&gt; default
-    }
-</code></pre>
-<h3 id="result"><a class="header" href="#result">Result</a></h3>
-<pre><code class="language-kleis">data Result(T, E) = Ok(value : T) | Err(error : E)
-
-// Operations
-define is_ok(res) =
-    match res {
-        Ok(_) =&gt; True
-        Err(_) =&gt; False
-    }
-
-define map_result(res, f) =
-    match res {
-        Ok(v) =&gt; Ok(f(v))
-        Err(e) =&gt; Err(e)
-    }
+<h3 id="fluid_dynamicskleis--navier-stokes"><a class="header" href="#fluid_dynamicskleis--navier-stokes"><code>fluid_dynamics.kleis</code> — Navier-Stokes</a></h3>
+<pre><code class="language-kleis">structure MomentumEquation {
+    // ρ ∂u_i/∂t + ∂(ρu_i u_j)/∂x_j = -∂p/∂x_i + ∂τ_ij/∂x_j + ρf_i
+    axiom momentum : ∀ i : Nat .
+        plus(times(rho, du_dt(i)), div_momentum(i)) = 
+        plus(plus(negate(grad_p(i)), div_tau(i)), times(rho, f(i)))
+}
 </code></pre>
 <h2 id="loading-the-standard-library"><a class="header" href="#loading-the-standard-library">Loading the Standard Library</a></h2>
+<p>In files:</p>
+<pre><code class="language-kleis">import "stdlib/prelude.kleis"
+import "stdlib/matrices.kleis"
+import "stdlib/symbolic_diff.kleis"
+</code></pre>
 <p>In the REPL:</p>
 <pre><code>kleis&gt; :load stdlib/prelude.kleis
 Loaded standard library.
 </code></pre>
-<p>In files:</p>
-<pre><code class="language-kleis example">import "stdlib/prelude.kleis"
-import "stdlib/linear_algebra.kleis"
-import "stdlib/differential_geometry.kleis"
-</code></pre>
-<h2 id="file-organization"><a class="header" href="#file-organization">File Organization</a></h2>
-<pre><code>stdlib/
-├── prelude.kleis          // Core types and functions (includes complex)
-├── complex.kleis          // Complex number axioms and properties
-├── numeric.kleis          // Numeric operations
-├── text.kleis             // String processing operations
-├── collections.kleis      // List, Vector, Matrix
-├── algebraic.kleis        // Group, Ring, Field, etc.
-├── linear_algebra.kleis   // Matrix operations
-├── differential_geometry.kleis  // Manifolds, tensors
-└── category_theory.kleis  // Categories, functors
-</code></pre>
+<h2 id="see-also"><a class="header" href="#see-also">See Also</a></h2>
+<ul>
+<li><a href="./cartan-geometry.html">Cartan Geometry Appendix</a> — Full Schwarzschild example</li>
+<li><a href="./ode-solver.html">ODE Solver Appendix</a> — Control systems with LQR</li>
+<li><a href="./lapack.html">LAPACK Functions</a> — Numerical linear algebra</li>
+<li><a href="./builtin-functions.html">Built-in Functions</a> — Complete function reference</li>
+</ul>
 
                     </main>
 

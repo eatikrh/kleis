@@ -131,6 +131,21 @@
     <priority>1.0</priority>
   </url>
   <url>
+    <loc>https://kleis.io/docs/manual/book/chapters/24-symbolic-computation.html</loc>
+    <lastmod>2026-01-12</lastmod>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://kleis.io/docs/manual/book/chapters/25-physics-applications.html</loc>
+    <lastmod>2026-01-12</lastmod>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://kleis.io/docs/manual/book/chapters/26-control-systems.html</loc>
+    <lastmod>2026-01-12</lastmod>
+    <priority>1.0</priority>
+  </url>
+  <url>
     <loc>https://kleis.io/docs/manual/book/appendix/grammar.html</loc>
     <lastmod>2026-01-12</lastmod>
     <priority>1.0</priority>

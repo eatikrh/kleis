@@ -43,6 +43,12 @@
 - [Set Theory](./chapters/18-sets.md)
 - [Matrices](./chapters/19-matrices.md)
 
+# Scientific Computing
+
+- [Symbolic Computation](./chapters/24-symbolic-computation.md)
+- [Physics Applications](./chapters/25-physics-applications.md)
+- [Control Systems](./chapters/26-control-systems.md)
+
 # Appendices
 
 - [Grammar Reference](./appendix/grammar.md)
@@ -50,8 +56,7 @@
 - [Built-in Functions](./appendix/builtin-functions.md)
 - [LAPACK Functions](./appendix/lapack.md)
 - [ODE Solver](./appendix/ode-solver.md)
-- [Standard Library](./appendix/stdlib.md)
+- [Standard Library Reference](./appendix/stdlib.md)
 - [LISP Interpreter](./appendix/lisp-interpreter.md)
 - [VS Code Debugging](./appendix/vscode-debugging.md)
 - [Cartan Geometry](./appendix/cartan-geometry.md)
-

@@ -44,10 +44,10 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-f9ff6916.js";
+            window.path_to_searchindex_js = "searchindex-09bb98e4.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-309fc3c5.js"></script>
+        <script src="toc-b275a7b0.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -4772,7 +4772,7 @@ structure Functor(C, D) {
 <p>Check out the reference appendices!</p>
 <p>→ <a href="#appendix-a-grammar-reference">Appendix A: Grammar Reference</a>
 → <a href="#appendix-operators">Appendix B: Operators</a>
-→ <a href="#appendix-c-standard-library">Appendix C: Standard Library</a>
+→ <a href="#appendix-standard-library-reference">Appendix C: Standard Library</a>
 → <a href="#appendix-lisp-interpreter-in-kleis">Appendix D: LISP Interpreter</a></p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="example-blocks-v093"><a class="header" href="#example-blocks-v093">Example Blocks (v0.93)</a></h1>
@@ -7247,6 +7247,905 @@ det(sI - A + LC) = s² + (3 + l₁)s + (2 + l₂)</p>
 <li><a href="#the-repl-1">The REPL</a> - Using <code>:eval</code> for concrete computation</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="symbolic-computation"><a class="header" href="#symbolic-computation">Symbolic Computation</a></h1>
+<p>Kleis isn’t just about verification — it can <em>compute</em> with symbolic expressions. The crown jewel is <code>symbolic_diff.kleis</code>: a complete symbolic differentiation engine written in pure Kleis.</p>
+<h2 id="the-expression-ast"><a class="header" href="#the-expression-ast">The Expression AST</a></h2>
+<p>Mathematical expressions are represented as an algebraic data type:</p>
+<pre><code class="language-kleis">data Expression = 
+    ENumber(value : ℝ)
+  | EVariable(name : String)
+  | EOperation(name : String, args : List(Expression))
+</code></pre>
+<p>This simple structure represents <em>any</em> mathematical expression:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Expression</th><th>Representation</th></tr>
+</thead>
+<tbody>
+<tr><td><code>5</code></td><td><code>ENumber(5)</code></td></tr>
+<tr><td><code>x</code></td><td><code>EVariable("x")</code></td></tr>
+<tr><td><code>x + y</code></td><td><code>EOperation("plus", [EVariable("x"), EVariable("y")])</code></td></tr>
+<tr><td><code>sin(x²)</code></td><td><code>EOperation("sin", [EOperation("power", [EVariable("x"), ENumber(2)])])</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="helper-constructors"><a class="header" href="#helper-constructors">Helper Constructors</a></h3>
+<p>For readability, helper functions build expressions:</p>
+<pre><code class="language-kleis">// Value constructors
+define num(n) = ENumber(n)
+define var(x) = EVariable(x)
+
+// Operation constructors (e_ prefix avoids builtin conflicts)
+define e_add(a, b) = EOperation("plus", Cons(a, Cons(b, Nil)))
+define e_mul(a, b) = EOperation("times", Cons(a, Cons(b, Nil)))
+define e_sub(a, b) = EOperation("minus", Cons(a, Cons(b, Nil)))
+define e_div(a, b) = EOperation("divide", Cons(a, Cons(b, Nil)))
+define e_pow(a, b) = EOperation("power", Cons(a, Cons(b, Nil)))
+define e_neg(a) = EOperation("negate", Cons(a, Nil))
+define e_sin(a) = EOperation("sin", Cons(a, Nil))
+define e_cos(a) = EOperation("cos", Cons(a, Nil))
+define e_sqrt(a) = EOperation("sqrt", Cons(a, Nil))
+define e_exp(a) = EOperation("exp", Cons(a, Nil))
+define e_ln(a) = EOperation("ln", Cons(a, Nil))
+</code></pre>
+<h2 id="symbolic-differentiation-1"><a class="header" href="#symbolic-differentiation-1">Symbolic Differentiation</a></h2>
+<p>The <code>diff</code> function computes derivatives by pattern matching on the AST:</p>
+<pre><code class="language-kleis">define diff(e, var_name) = match e {
+    // Constant rule: d/dx(c) = 0
+    ENumber(_) =&gt; num(0)
+    
+    // Variable rule: d/dx(x) = 1, d/dx(y) = 0 if y ≠ x
+    EVariable(name) =&gt; if str_eq(name, var_name) then num(1) else num(0)
+    
+    // Operation rules
+    EOperation(op_name, args) =&gt; diff_op(op_name, args, var_name)
+}
+</code></pre>
+<h3 id="differentiation-rules"><a class="header" href="#differentiation-rules">Differentiation Rules</a></h3>
+<p>Each operation has its own differentiation rule:</p>
+<pre><code class="language-kleis">define diff_op(op_name, args, var_name) = match op_name {
+    // Sum rule: d/dx(f + g) = df/dx + dg/dx
+    "plus" =&gt; match args {
+        Cons(f, Cons(g, Nil)) =&gt; e_add(diff(f, var_name), diff(g, var_name))
+        | _ =&gt; num(0)
+    }
+    
+    // Product rule: d/dx(f × g) = f'g + fg'
+    "times" =&gt; match args {
+        Cons(f, Cons(g, Nil)) =&gt; 
+            e_add(e_mul(diff(f, var_name), g), e_mul(f, diff(g, var_name)))
+        | _ =&gt; num(0)
+    }
+    
+    // Chain rule for sin: d/dx(sin(f)) = cos(f) × f'
+    "sin" =&gt; match args {
+        Cons(f, Nil) =&gt; e_mul(e_cos(f), diff(f, var_name))
+        | _ =&gt; num(0)
+    }
+    
+    // Chain rule for cos: d/dx(cos(f)) = -sin(f) × f'
+    "cos" =&gt; match args {
+        Cons(f, Nil) =&gt; e_neg(e_mul(e_sin(f), diff(f, var_name)))
+        | _ =&gt; num(0)
+    }
+    
+    // Power rule: d/dx(f^n) = n × f^(n-1) × f'
+    "power" =&gt; match args {
+        Cons(f, Cons(ENumber(n), Nil)) =&gt; 
+            e_mul(e_mul(num(n), e_pow(f, num(n - 1))), diff(f, var_name))
+        | _ =&gt; num(0)
+    }
+    
+    // Exponential rule: d/dx(e^f) = e^f × f'
+    "exp" =&gt; match args {
+        Cons(f, Nil) =&gt; e_mul(e_exp(f), diff(f, var_name))
+        | _ =&gt; num(0)
+    }
+    
+    // Logarithm rule: d/dx(ln(f)) = f'/f
+    "ln" =&gt; match args {
+        Cons(f, Nil) =&gt; e_div(diff(f, var_name), f)
+        | _ =&gt; num(0)
+    }
+    
+    // Square root: d/dx(√f) = f'/(2√f)
+    "sqrt" =&gt; match args {
+        Cons(f, Nil) =&gt; e_div(diff(f, var_name), e_mul(num(2), e_sqrt(f)))
+        | _ =&gt; num(0)
+    }
+    
+    | _ =&gt; num(0)  // Unknown operation
+}
+</code></pre>
+<h2 id="algebraic-simplification"><a class="header" href="#algebraic-simplification">Algebraic Simplification</a></h2>
+<p>Raw differentiation produces verbose expressions. The <code>simplify</code> function cleans them up:</p>
+<pre><code class="language-kleis">define simplify(e) = match e {
+    // Base cases
+    ENumber(n) =&gt; ENumber(n)
+    EVariable(x) =&gt; EVariable(x)
+    
+    // Simplify operations recursively
+    EOperation(op, args) =&gt; simplify_op(op, list_map(simplify, args))
+}
+
+define simplify_op(op, args) = match op {
+    "plus" =&gt; match args {
+        // 0 + x = x
+        Cons(ENumber(0), Cons(x, Nil)) =&gt; x
+        // x + 0 = x
+        Cons(x, Cons(ENumber(0), Nil)) =&gt; x
+        // n + m = (n+m)
+        Cons(ENumber(n), Cons(ENumber(m), Nil)) =&gt; ENumber(n + m)
+        | _ =&gt; EOperation("plus", args)
+    }
+    
+    "times" =&gt; match args {
+        // 0 × x = 0
+        Cons(ENumber(0), _) =&gt; num(0)
+        Cons(_, Cons(ENumber(0), Nil)) =&gt; num(0)
+        // 1 × x = x
+        Cons(ENumber(1), Cons(x, Nil)) =&gt; x
+        // x × 1 = x
+        Cons(x, Cons(ENumber(1), Nil)) =&gt; x
+        // n × m = (n×m)
+        Cons(ENumber(n), Cons(ENumber(m), Nil)) =&gt; ENumber(n * m)
+        | _ =&gt; EOperation("times", args)
+    }
+    
+    "power" =&gt; match args {
+        // x^0 = 1
+        Cons(_, Cons(ENumber(0), Nil)) =&gt; num(1)
+        // x^1 = x
+        Cons(x, Cons(ENumber(1), Nil)) =&gt; x
+        | _ =&gt; EOperation("power", args)
+    }
+    
+    | _ =&gt; EOperation(op, args)
+}
+</code></pre>
+<h2 id="example-differentiating-x²"><a class="header" href="#example-differentiating-x²">Example: Differentiating x²</a></h2>
+<pre><code class="language-kleis">example "derivative of x squared" {
+    let expr = e_pow(var("x"), num(2)) in      // x²
+    let deriv = diff(expr, "x") in              // d/dx(x²)
+    let simplified = simplify(deriv) in
+    // Result: 2x (after simplification)
+    simplified
+}
+</code></pre>
+<p>Step-by-step:</p>
+<ol>
+<li><code>e_pow(var("x"), num(2))</code> = <code>EOperation("power", [EVariable("x"), ENumber(2)])</code></li>
+<li>Power rule: <code>e_mul(e_mul(num(2), e_pow(var("x"), num(1))), diff(var("x"), "x"))</code></li>
+<li>Variable rule: <code>diff(var("x"), "x")</code> = <code>num(1)</code></li>
+<li>Simplify: <code>2 × x^1 × 1</code> → <code>2 × x</code></li>
+</ol>
+<h2 id="example-chain-rule"><a class="header" href="#example-chain-rule">Example: Chain Rule</a></h2>
+<pre><code class="language-kleis">example "derivative of sin(x²)" {
+    let expr = e_sin(e_pow(var("x"), num(2))) in   // sin(x²)
+    let deriv = diff(expr, "x") in
+    simplify(deriv)
+    // Result: cos(x²) × 2x
+}
+</code></pre>
+<h2 id="substitution"><a class="header" href="#substitution">Substitution</a></h2>
+<p>The <code>subst</code> function replaces variables with values:</p>
+<pre><code class="language-kleis">define subst(e, var_name, value) = match e {
+    ENumber(n) =&gt; ENumber(n)
+    EVariable(name) =&gt; if str_eq(name, var_name) then value else e
+    EOperation(op, args) =&gt; EOperation(op, list_map(λ a . subst(a, var_name, value), args))
+}
+</code></pre>
+<p><strong>Usage:</strong></p>
+<pre><code class="language-kleis">example "evaluate at x=2" {
+    let expr = e_pow(var("x"), num(2)) in   // x²
+    let at_2 = subst(expr, "x", num(2)) in  // 2²
+    simplify(at_2)                           // 4
+}
+</code></pre>
+<h2 id="application-cartan-geometry"><a class="header" href="#application-cartan-geometry">Application: Cartan Geometry</a></h2>
+<p>The symbolic differentiation engine powers the Cartan geometry computation. See the <a href="#appendix-cartan-geometry-and-tensor-computation">Cartan Geometry appendix</a> for details.</p>
+<pre><code class="language-kleis">// Compute exterior derivative of a 1-form
+define d0(f) = [
+    simplify(diff(f, "t")),
+    simplify(diff(f, "r")),
+    simplify(diff(f, "theta")),
+    simplify(diff(f, "phi"))
+]
+
+// Schwarzschild metric factor
+let f = e_sub(num(1), e_div(e_mul(num(2), M), var("r"))) in
+// d(f) = [0, 2M/r², 0, 0]
+d0(f)
+</code></pre>
+<h2 id="coordinate-specific-derivatives"><a class="header" href="#coordinate-specific-derivatives">Coordinate-Specific Derivatives</a></h2>
+<p>For physics applications, we define coordinate-specific differentiation:</p>
+<pre><code class="language-kleis">define diff_t(e) = diff(e, "t")
+define diff_r(e) = diff(e, "r")
+define diff_theta(e) = diff(e, "theta")
+define diff_phi(e) = diff(e, "phi")
+</code></pre>
+<p>These are used in the exterior derivative for differential forms:</p>
+<pre><code class="language-kleis">// (dω)_μν = ∂ω_ν/∂x^μ - ∂ω_μ/∂x^ν
+define d1(omega) = 
+    let w0 = nth(omega, 0) in
+    let w1 = nth(omega, 1) in
+    let w2 = nth(omega, 2) in
+    let w3 = nth(omega, 3) in
+    [
+        [num(0),
+         simplify(e_sub(diff_t(w1), diff_r(w0))),
+         simplify(e_sub(diff_t(w2), diff_theta(w0))),
+         simplify(e_sub(diff_t(w3), diff_phi(w0)))],
+        // ... (antisymmetric matrix)
+    ]
+</code></pre>
+<h2 id="why-this-matters"><a class="header" href="#why-this-matters">Why This Matters</a></h2>
+<p>Traditional computer algebra systems (Mathematica, Maple) implement differentiation in their host language. In Kleis:</p>
+<ol>
+<li><strong>Differentiation is pure Kleis</strong> — no Rust builtins needed</li>
+<li><strong>Rules are explicit</strong> — you can read and verify them</li>
+<li><strong>Extensible</strong> — add new rules for new operations</li>
+<li><strong>Verified</strong> — axioms can be checked by Z3</li>
+</ol>
+<p>This is <strong>code as mathematics</strong> — the implementation <em>is</em> the specification.</p>
+<h2 id="current-limitations-1"><a class="header" href="#current-limitations-1">Current Limitations</a></h2>
+<p><strong>Symbolic integration is not implemented.</strong> The stdlib provides <em>axioms</em> for integration (<code>calculus.kleis</code> defines the <code>Integrable</code> structure with the Fundamental Theorem of Calculus), but no pattern-matching integrator like <code>symbolic_diff.kleis</code>.</p>
+<p>Symbolic integration is fundamentally harder than differentiation — it requires heuristics, table lookups, and algorithms like Risch’s that don’t reduce to simple recursive rules. For now, use numerical integration via <code>ode45</code> or external tools.</p>
+<h2 id="whats-next-20"><a class="header" href="#whats-next-20">What’s Next</a></h2>
+<p>See how symbolic computation enables physics simulations:</p>
+<p>→ <a href="#physics-applications">Next: Physics Applications</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="physics-applications"><a class="header" href="#physics-applications">Physics Applications</a></h1>
+<p>Kleis includes extensive physics libraries. This chapter showcases what’s possible.</p>
+<h2 id="electromagnetism-maxwells-equations"><a class="header" href="#electromagnetism-maxwells-equations">Electromagnetism: Maxwell’s Equations</a></h2>
+<p>The <code>maxwell.kleis</code> module expresses electromagnetism in covariant (tensor) form.</p>
+<h3 id="the-field-tensor"><a class="header" href="#the-field-tensor">The Field Tensor</a></h3>
+<p>The electromagnetic field tensor F_μν is antisymmetric and encodes both E and B fields:</p>
+<pre><code class="language-kleis">structure FieldTensorProperties {
+    operation F : Nat → Nat → ℝ
+    
+    // Antisymmetry: F_μν = -F_νμ
+    axiom F_antisymmetric : ∀ mu : Nat . ∀ nu : Nat .
+        F(mu, nu) = negate(F(nu, mu))
+    
+    // Diagonal vanishes
+    axiom F_diagonal_zero : ∀ mu : Nat . F(mu, mu) = 0
+}
+</code></pre>
+<h3 id="maxwells-equations"><a class="header" href="#maxwells-equations">Maxwell’s Equations</a></h3>
+<p>The four Maxwell equations reduce to two tensor equations:</p>
+<pre><code class="language-kleis">structure MaxwellInhomogeneous {
+    operation F : Nat → Nat → ℝ  // Field tensor
+    operation J : Nat → ℝ         // 4-current
+    operation divF : Nat → ℝ      // Divergence of F
+    element mu0 : ℝ               // Permeability
+    
+    // ∂_μ F^μν = μ₀ J^ν
+    // This encodes Gauss's law (ν=0) and Ampère's law (ν=i)
+    axiom maxwell_inhomogeneous : ∀ nu : Nat .
+        divF(nu) = times(mu0, J(nu))
+}
+
+structure MaxwellHomogeneous {
+    operation F : Nat → Nat → ℝ
+    operation cyclicF : Nat → Nat → Nat → ℝ  // ∂_[λ F_μν]
+    
+    // ∂_λ F_μν + ∂_μ F_νλ + ∂_ν F_λμ = 0
+    // This encodes no magnetic monopoles and Faraday's law
+    axiom maxwell_homogeneous : ∀ lam : Nat . ∀ mu : Nat . ∀ nu : Nat .
+        cyclicF(lam, mu, nu) = 0
+}
+</code></pre>
+<h3 id="einstein-maxwell"><a class="header" href="#einstein-maxwell">Einstein-Maxwell</a></h3>
+<p>Electromagnetism in curved spacetime (charged black holes):</p>
+<pre><code class="language-kleis">structure EinsteinMaxwell {
+    operation g : Nat → Nat → ℝ      // Metric
+    operation G : Nat → Nat → ℝ      // Einstein tensor
+    operation F : Nat → Nat → ℝ      // EM field tensor
+    operation T_EM : Nat → Nat → ℝ   // EM stress-energy
+    
+    element Lambda : ℝ   // Cosmological constant
+    element kappa : ℝ    // 8πG/c⁴
+    
+    // Einstein-Maxwell field equations:
+    // G_μν + Λg_μν = κ T^EM_μν
+    axiom einstein_maxwell_field_eqn : ∀ mu : Nat . ∀ nu : Nat .
+        plus(G(mu, nu), times(Lambda, g(mu, nu))) = times(kappa, T_EM(mu, nu))
+}
+</code></pre>
+<h2 id="fluid-dynamics-navier-stokes"><a class="header" href="#fluid-dynamics-navier-stokes">Fluid Dynamics: Navier-Stokes</a></h2>
+<p>The <code>fluid_dynamics.kleis</code> module covers incompressible and compressible flow.</p>
+<h3 id="continuity-equation"><a class="header" href="#continuity-equation">Continuity Equation</a></h3>
+<p>Mass conservation:</p>
+<pre><code class="language-kleis">structure ContinuityEquation {
+    element drho_dt : ℝ      // ∂ρ/∂t
+    element div_rho_u : ℝ    // ∇·(ρv)
+    
+    // ∂ρ/∂t + ∇·(ρv) = 0
+    axiom continuity : plus(drho_dt, div_rho_u) = 0
+}
+</code></pre>
+<h3 id="momentum-equation"><a class="header" href="#momentum-equation">Momentum Equation</a></h3>
+<p>The full Navier-Stokes momentum equation:</p>
+<pre><code>structure MomentumEquation {
+    element rho : ℝ
+    operation du_dt : Nat → ℝ
+    operation div_momentum : Nat → ℝ
+    operation grad_p : Nat → ℝ
+    operation div_tau : Nat → ℝ
+    operation f : Nat → ℝ
+    
+    // Navier-Stokes momentum equation
+    axiom momentum : ∀ i : Nat .
+        plus(times(rho, du_dt(i)), div_momentum(i)) = 
+        plus(plus(negate(grad_p(i)), div_tau(i)), times(rho, f(i)))
+}
+</code></pre>
+<h3 id="special-cases"><a class="header" href="#special-cases">Special Cases</a></h3>
+<p><strong>Incompressible flow</strong> (∇·v = 0):</p>
+<pre><code class="language-kleis">structure IncompressibleFlow {
+    element div_u : ℝ
+    axiom incompressible : div_u = 0
+}
+</code></pre>
+<p><strong>Stokes flow</strong> (creeping flow, Re &lt;&lt; 1):</p>
+<pre><code class="language-kleis">structure StokesFlow {
+    operation grad_p : Nat → ℝ
+    operation laplacian_u : Nat → ℝ
+    element mu : ℝ
+    
+    // ∇p = μ∇²v (inertia negligible)
+    axiom stokes : ∀ i : Nat .
+        grad_p(i) = times(mu, laplacian_u(i))
+}
+</code></pre>
+<p><strong>Euler equations</strong> (inviscid, μ = 0):</p>
+<pre><code class="language-kleis">structure EulerEquations {
+    element rho : ℝ
+    operation du_dt : Nat → ℝ
+    operation convective : Nat → ℝ
+    operation grad_p : Nat → ℝ
+    
+    // ρ∂v/∂t + ρ(v·∇)v = -∇p
+    axiom euler : ∀ i : Nat .
+        plus(times(rho, du_dt(i)), times(rho, convective(i))) = negate(grad_p(i))
+}
+</code></pre>
+<h3 id="bernoullis-equation"><a class="header" href="#bernoullis-equation">Bernoulli’s Equation</a></h3>
+<p>For steady, inviscid, incompressible flow along a streamline:</p>
+<pre><code>structure BernoulliEquation {
+    element rho : ℝ
+    element g : ℝ
+    element p1 : ℝ
+    element p2 : ℝ
+    element v1 : ℝ
+    element v2 : ℝ
+    element h1 : ℝ
+    element h2 : ℝ
+    
+    // p + ½ρv² + ρgh = constant
+    // Scaled: 2p + ρv² + 2ρgh = constant
+    axiom bernoulli_conservation : 
+        plus(plus(times(2, p1), times(rho, times(v1, v1))),
+             times(times(2, rho), times(g, h1))) =
+        plus(plus(times(2, p2), times(rho, times(v2, v2))),
+             times(times(2, rho), times(g, h2)))
+}
+</code></pre>
+<h2 id="solid-mechanics"><a class="header" href="#solid-mechanics">Solid Mechanics</a></h2>
+<p>The <code>solid_mechanics.kleis</code> module covers stress, strain, and failure criteria.</p>
+<h3 id="stress-and-strain-tensors"><a class="header" href="#stress-and-strain-tensors">Stress and Strain Tensors</a></h3>
+<pre><code class="language-kleis">structure StressTensorSymmetry {
+    operation sigma : Nat → Nat → ℝ
+    
+    // σ_ij = σ_ji (angular momentum balance)
+    axiom stress_symmetric : ∀ i : Nat . ∀ j : Nat .
+        sigma(i, j) = sigma(j, i)
+}
+
+structure ElasticityTensorSymmetries {
+    // Fourth-order elasticity tensor: σ_ij = C_ijkl ε_kl
+    operation C : Nat → Nat → Nat → Nat → ℝ
+    
+    // Major symmetry (strain energy)
+    axiom C_major_symmetry : ∀ i j k l : Nat .
+        C(i, j, k, l) = C(k, l, i, j)
+    
+    // Minor symmetries (stress/strain symmetry)
+    axiom C_minor_symmetry_1 : ∀ i j k l : Nat .
+        C(i, j, k, l) = C(j, i, k, l)
+}
+</code></pre>
+<h3 id="yield-criteria"><a class="header" href="#yield-criteria">Yield Criteria</a></h3>
+<p><strong>Von Mises</strong> (ductile metals):</p>
+<pre><code>structure VonMisesYieldCriterion {
+    element sigma1 : ℝ
+    element sigma2 : ℝ
+    element sigma3 : ℝ
+    element vm_sq_2 : ℝ
+    
+    // 2σ_vm² = (σ₁-σ₂)² + (σ₂-σ₃)² + (σ₃-σ₁)²
+    axiom von_mises_def : vm_sq_2 = plus(plus(
+        times(minus(sigma1, sigma2), minus(sigma1, sigma2)),
+        times(minus(sigma2, sigma3), minus(sigma2, sigma3))),
+        times(minus(sigma3, sigma1), minus(sigma3, sigma1)))
+}
+</code></pre>
+<p><strong>Mohr-Coulomb</strong> (soils and rocks):</p>
+<pre><code class="language-kleis">structure MohrCoulombCriterion {
+    element sigma_n : ℝ  // Normal stress
+    element c : ℝ        // Cohesion
+    element phi : ℝ      // tan(friction angle)
+    element tau_critical : ℝ
+    
+    // |τ| = c + σ_n tan(φ)
+    axiom mohr_coulomb : tau_critical = plus(c, times(sigma_n, phi))
+}
+</code></pre>
+<h2 id="quantum-mechanics-1"><a class="header" href="#quantum-mechanics-1">Quantum Mechanics</a></h2>
+<p>The <code>quantum.kleis</code> module provides Hilbert space formalism.</p>
+<h3 id="state-vectors"><a class="header" href="#state-vectors">State Vectors</a></h3>
+<pre><code class="language-kleis">structure Ket(dim: Nat, T) {
+    operation normalize : Ket(dim, T) → Ket(dim, T)
+    operation scale : T → Ket(dim, T) → Ket(dim, T)
+}
+
+structure Bra(dim: Nat, T) {
+    operation conjugate : Ket(dim, T) → Bra(dim, T)
+}
+</code></pre>
+<h3 id="inner-product"><a class="header" href="#inner-product">Inner Product</a></h3>
+<pre><code class="language-kleis">structure InnerProduct(dim: Nat) {
+    operation inner : Bra(dim, ℂ) → Ket(dim, ℂ) → ℂ
+    
+    // ⟨φ|ψ⟩ is the probability amplitude
+    // |⟨φ|ψ⟩|² is the probability
+}
+</code></pre>
+<h3 id="operators"><a class="header" href="#operators">Operators</a></h3>
+<pre><code class="language-kleis">structure Operator(dim: Nat, T) {
+    operation apply : Operator(dim, T) → Ket(dim, T) → Ket(dim, T)
+    operation adjoint : Operator(dim, T) → Operator(dim, T)
+    operation compose : Operator(dim, T) → Operator(dim, T) → Operator(dim, T)
+}
+
+structure Commutator(dim: Nat, T) {
+    operation commutator : Operator(dim, T) → Operator(dim, T) → Operator(dim, T)
+    
+    // [Â, B̂] = ÂB̂ - B̂Â
+    // [x̂, p̂] = iℏ (Heisenberg uncertainty!)
+}
+</code></pre>
+<h3 id="pauli-matrices"><a class="header" href="#pauli-matrices">Pauli Matrices</a></h3>
+<pre><code class="language-kleis">structure PauliMatrices(T) {
+    operation sigma_x : Operator(2, ℂ)  // |0⟩⟨1| + |1⟩⟨0|
+    operation sigma_y : Operator(2, ℂ)  // -i|0⟩⟨1| + i|1⟩⟨0|
+    operation sigma_z : Operator(2, ℂ)  // |0⟩⟨0| - |1⟩⟨1|
+    
+    // σ_x² = σ_y² = σ_z² = I
+    // [σ_x, σ_y] = 2iσ_z
+}
+</code></pre>
+<h3 id="time-evolution"><a class="header" href="#time-evolution">Time Evolution</a></h3>
+<pre><code class="language-kleis">structure TimeEvolution(dim: Nat) {
+    // |ψ(t)⟩ = e^(-iĤt/ℏ) |ψ(0)⟩
+    operation evolve : Operator(dim, ℂ) → ℝ → Ket(dim, ℂ) → Ket(dim, ℂ)
+    operation propagator : Operator(dim, ℂ) → ℝ → Operator(dim, ℂ)
+}
+</code></pre>
+<h2 id="cosmology"><a class="header" href="#cosmology">Cosmology</a></h2>
+<p>The <code>cosmology.kleis</code> module defines standard spacetimes.</p>
+<h3 id="minkowski-flat-space"><a class="header" href="#minkowski-flat-space">Minkowski (Flat Space)</a></h3>
+<pre><code class="language-kleis">structure MinkowskiSpacetime {
+    operation g : Nat → Nat → ℝ
+    
+    // All curvature vanishes
+    axiom minkowski_ricci_vanish : ∀ mu nu : Nat . Ric(mu, nu) = 0
+    axiom minkowski_einstein_vanish : ∀ mu nu : Nat . G(mu, nu) = 0
+}
+</code></pre>
+<h3 id="de-sitter-accelerating-universe"><a class="header" href="#de-sitter-accelerating-universe">de Sitter (Accelerating Universe)</a></h3>
+<pre><code class="language-kleis">structure DeSitterSpacetime {
+    operation g : Nat → Nat → ℝ
+    operation G : Nat → Nat → ℝ
+    element Lambda : ℝ
+    
+    axiom positive_lambda : Lambda = 1  // Λ &gt; 0
+    
+    // Vacuum: G_μν = -Λg_μν
+    axiom desitter_einstein : ∀ mu nu : Nat .
+        G(mu, nu) = negate(times(Lambda, g(mu, nu)))
+}
+</code></pre>
+<h3 id="schwarzschild-black-hole"><a class="header" href="#schwarzschild-black-hole">Schwarzschild (Black Hole)</a></h3>
+<pre><code class="language-kleis">structure SchwarzschildSpacetime {
+    operation g : Nat → Nat → ℝ
+    operation G : Nat → Nat → ℝ
+    element M : ℝ  // Black hole mass
+    
+    // Vacuum with Λ=0
+    axiom schwarzschild_vacuum : ∀ mu nu : Nat . G(mu, nu) = 0
+}
+</code></pre>
+<p>See the <a href="#appendix-cartan-geometry-and-tensor-computation">Cartan Geometry appendix</a> for computing the actual Schwarzschild curvature tensor.</p>
+<h3 id="flrw-cosmology"><a class="header" href="#flrw-cosmology">FLRW (Cosmology)</a></h3>
+<pre><code class="language-kleis">structure FLRWCosmology {
+    operation g : Nat → Nat → ℝ
+    operation T : Nat → Nat → ℝ  // Stress-energy (perfect fluid)
+    
+    element Lambda : ℝ   // Cosmological constant
+    element rho : ℝ      // Energy density
+    element p : ℝ        // Pressure
+    
+    // Perfect fluid: T_00 = ρ
+    axiom perfect_fluid_energy : T(0, 0) = rho
+    
+    // Einstein field equations
+    axiom field_equations : ∀ mu nu : Nat .
+        plus(G(mu, nu), times(Lambda, g(mu, nu))) = times(kappa, T(mu, nu))
+}
+</code></pre>
+<h2 id="differential-forms"><a class="header" href="#differential-forms">Differential Forms</a></h2>
+<p>The <code>differential_forms.kleis</code> module provides Cartan calculus:</p>
+<pre><code class="language-kleis">// Wedge product: α ∧ β
+structure WedgeProduct(p: Nat, q: Nat, dim: Nat) {
+    operation wedge : DifferentialForm(p, dim) → DifferentialForm(q, dim) 
+                    → DifferentialForm(p + q, dim)
+    
+    axiom graded_antisymmetric : ∀ α β .
+        wedge(α, β) = scale(power(-1, p*q), wedge(β, α))
+}
+
+// Exterior derivative: dα
+structure ExteriorDerivative(p: Nat, dim: Nat) {
+    operation d : DifferentialForm(p, dim) → DifferentialForm(p + 1, dim)
+    
+    axiom d_squared_zero : ∀ α . d(d(α)) = 0  // d² = 0
+}
+
+// Hodge star: ⋆α
+structure HodgeStar(p: Nat, dim: Nat) {
+    operation star : DifferentialForm(p, dim) → DifferentialForm(dim - p, dim)
+    
+    axiom hodge_involutive : ∀ α .
+        star(star(α)) = scale(power(-1, p*(dim-p)), α)
+}
+</code></pre>
+<h3 id="cartans-magic-formula"><a class="header" href="#cartans-magic-formula">Cartan’s Magic Formula</a></h3>
+<p>The Lie derivative ℒ_X connects all operations:</p>
+<pre><code class="language-kleis">// ℒ_X = d ∘ ι_X + ι_X ∘ d
+define cartan_magic_impl(X, alpha) = 
+    plus(d(interior(X, alpha)), interior(X, d(alpha)))
+</code></pre>
+<h2 id="whats-next-21"><a class="header" href="#whats-next-21">What’s Next</a></h2>
+<p>Apply these physics structures with numerical methods:</p>
+<p>→ <a href="#control-systems">Next: Control Systems</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="control-systems"><a class="header" href="#control-systems">Control Systems</a></h1>
+<p>Kleis provides a complete control systems toolkit: state-space modeling, LQR/LQG design, ODE integration, and stability analysis.</p>
+<h2 id="state-space-representation"><a class="header" href="#state-space-representation">State-Space Representation</a></h2>
+<p>A linear time-invariant (LTI) system is represented as:</p>
+<pre><code>ẋ = Ax + Bu    (state equation)
+y = Cx + Du    (output equation)
+</code></pre>
+<p>In Kleis:</p>
+<pre><code class="language-kleis">// State vector x = [x₁, x₂, ..., xₙ]
+// Input vector u = [u₁, u₂, ..., uₘ]
+// Output vector y = [y₁, y₂, ..., yₚ]
+
+let A = [[a11, a12], [a21, a22]] in  // n×n state matrix
+let B = [[b11], [b21]] in             // n×m input matrix
+let C = [[c11, c12]] in               // p×n output matrix
+let D = [[0]] in                      // p×m feedthrough matrix
+</code></pre>
+<h2 id="eigenvalue-analysis"><a class="header" href="#eigenvalue-analysis">Eigenvalue Analysis</a></h2>
+<p>System stability depends on eigenvalues of the A matrix:</p>
+<pre><code class="language-kleis">example "stability check" {
+    let A = [[-1, 2], [0, -3]] in
+    let eigs = eigenvalues(A) in
+    out("Eigenvalues:", eigs)
+    // If all real parts &lt; 0, system is stable
+}
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Eigenvalue Location</th><th>Continuous-Time</th><th>Discrete-Time</th></tr>
+</thead>
+<tbody>
+<tr><td>Left half-plane (Re &lt; 0)</td><td>Stable</td><td>—</td></tr>
+<tr><td>Inside unit circle (|λ| &lt; 1)</td><td>—</td><td>Stable</td></tr>
+<tr><td>On imaginary axis</td><td>Marginally stable</td><td>—</td></tr>
+<tr><td>On unit circle</td><td>—</td><td>Marginally stable</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="linear-quadratic-regulator-lqr"><a class="header" href="#linear-quadratic-regulator-lqr">Linear Quadratic Regulator (LQR)</a></h2>
+<p>LQR finds the optimal feedback gain K that minimizes:</p>
+<pre><code>J = ∫₀^∞ (x'Qx + u'Ru) dt
+</code></pre>
+<h3 id="continuous-time-lqr"><a class="header" href="#continuous-time-lqr">Continuous-Time LQR</a></h3>
+<pre><code class="language-kleis">example "continuous LQR" {
+    // Double integrator: ẍ = u
+    let A = [[0, 1], [0, 0]] in
+    let B = [[0], [1]] in
+    
+    // Cost matrices
+    let Q = [[10, 0], [0, 1]] in  // State cost
+    let R = [[1]] in               // Control cost
+    
+    // Compute optimal gain K and Riccati solution P
+    let result = lqr(A, B, Q, R) in
+    let K = nth(result, 0) in
+    let P = nth(result, 1) in
+    
+    out("Feedback gain K:", K)
+    out("Riccati solution P:", P)
+    
+    // Closed-loop: ẋ = (A - BK)x
+    let A_cl = matrix_sub(A, matmul(B, K)) in
+    out("Closed-loop eigenvalues:", eigenvalues(A_cl))
+}
+</code></pre>
+<h3 id="the-care-solver"><a class="header" href="#the-care-solver">The CARE Solver</a></h3>
+<p>LQR requires solving the Continuous Algebraic Riccati Equation (CARE):</p>
+<pre><code>A'P + PA - PBR⁻¹B'P + Q = 0
+</code></pre>
+<p>Kleis uses the Schur method via LAPACK:</p>
+<pre><code class="language-kleis">let P = care(A, B, Q, R) in   // Solve CARE for P
+let K = lqr(A, B, Q, R) in    // Returns [K, P]
+</code></pre>
+<h2 id="discrete-time-control"><a class="header" href="#discrete-time-control">Discrete-Time Control</a></h2>
+<h3 id="discretization"><a class="header" href="#discretization">Discretization</a></h3>
+<p>Convert continuous-time to discrete-time with sampling period Ts:</p>
+<pre><code class="language-kleis">let ts = 0.05 in  // 20 Hz sample rate
+
+// Exact discretization: A_d = e^(A·Ts)
+let A_disc = expm(scalar_matrix_mul(ts, A_cont)) in
+
+// First-order approximation: B_d ≈ Ts·B
+let B_disc = scalar_matrix_mul(ts, B_cont) in
+</code></pre>
+<h3 id="discrete-lqr-dlqr"><a class="header" href="#discrete-lqr-dlqr">Discrete LQR (DLQR)</a></h3>
+<p>For discrete-time systems xₖ₊₁ = Aₓₖ + Buₖ:</p>
+<pre><code class="language-kleis">example "discrete LQR" {
+    let ts = 0.05 in
+    
+    // Continuous system
+    let A_cont = [[0, 1], [10, 0]] in  // Inverted pendulum
+    let B_cont = [[0], [1]] in
+    
+    // Discretize
+    let A_disc = expm(scalar_matrix_mul(ts, A_cont)) in
+    let B_disc = scalar_matrix_mul(ts, B_cont) in
+    
+    // Cost matrices
+    let Q = [[10, 0], [0, 1]] in
+    let R = [[1]] in
+    
+    // Compute discrete optimal gain
+    let result = dlqr(A_disc, B_disc, Q, R) in
+    let K = nth(result, 0) in
+    
+    out("Discrete feedback gain:", K)
+}
+</code></pre>
+<h3 id="the-dare-solver"><a class="header" href="#the-dare-solver">The DARE Solver</a></h3>
+<p>DLQR requires solving the Discrete Algebraic Riccati Equation (DARE):</p>
+<pre><code>A'PA - P - (A'PB)(B'PB + R)⁻¹(B'PA) + Q = 0
+</code></pre>
+<pre><code class="language-kleis">let P = dare(A, B, Q, R) in    // Solve DARE for P
+let K = dlqr(A, B, Q, R) in    // Returns [K, P]
+</code></pre>
+<h2 id="ode-integration"><a class="header" href="#ode-integration">ODE Integration</a></h2>
+<p>The <code>ode45</code> function integrates ODEs using the Dormand-Prince 5(4) method:</p>
+<pre><code class="language-kleis">let result = ode45(dynamics, t_span, y0, dt)
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>dynamics</code></td><td><code>λ t y . [dy/dt]</code></td><td>System dynamics function</td></tr>
+<tr><td><code>t_span</code></td><td><code>[t_start, t_end]</code></td><td>Time interval</td></tr>
+<tr><td><code>y0</code></td><td><code>[y₁₀, y₂₀, ...]</code></td><td>Initial state</td></tr>
+<tr><td><code>dt</code></td><td><code>ℝ</code></td><td>Output time step</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="example-inverted-pendulum"><a class="header" href="#example-inverted-pendulum">Example: Inverted Pendulum</a></h3>
+<pre><code class="language-kleis">example "inverted pendulum with LQR" {
+    // System parameters
+    let g = 9.81 in
+    let ell = 1.0 in
+    
+    // Linearized system (about upright equilibrium)
+    let A = [[0, 1], [g/ell, 0]] in
+    let B = [[0], [1/ell]] in
+    
+    // LQR design
+    let Q = [[10, 0], [0, 1]] in
+    let R = [[0.1]] in
+    let result = lqr(A, B, Q, R) in
+    let K = nth(result, 0) in
+    let k1 = nth(nth(K, 0), 0) in
+    let k2 = nth(nth(K, 0), 1) in
+    
+    // Nonlinear dynamics with control
+    let dynamics = lambda t y .
+        let theta = nth(y, 0) in
+        let omega = nth(y, 1) in
+        let u = neg(k1*theta + k2*omega) in
+        [omega, (g/ell)*sin(theta) + u/ell]
+    in
+    
+    // Simulate from initial angle
+    let t_span = [0, 5] in
+    let y0 = [0.2, 0] in  // 0.2 rad initial tilt
+    let dt = 0.05 in
+    
+    let result = ode45(dynamics, t_span, y0, dt) in
+    let times = nth(result, 0) in
+    let states = nth(result, 1) in
+    
+    // Extract theta trajectory
+    let thetas = list_map(lambda s . nth(s, 0), states) in
+    
+    diagram(
+        plot(
+            line(times, thetas, color = "blue", label = "θ (rad)"),
+            xlabel = "Time (s)",
+            ylabel = "Angle",
+            title = "Inverted Pendulum Stabilization"
+        )
+    )
+}
+</code></pre>
+<h2 id="complete-example-pendulum-stabilization"><a class="header" href="#complete-example-pendulum-stabilization">Complete Example: Pendulum Stabilization</a></h2>
+<p>Here’s a full control system design workflow:</p>
+<pre><code class="language-kleis">import "stdlib/matrices.kleis"
+
+example "pendulum control design" {
+    // Physical parameters
+    let g = 9.81 in
+    let ell = 1.0 in
+    
+    // Step 1: State-space model
+    // State: [θ, ω] where θ is angle from vertical, ω is angular velocity
+    // Input: u = cart acceleration
+    // ẋ = Ax + Bu
+    let A = [[0, 1], [g/ell, 0]] in
+    let B = [[0], [neg(1/ell)]] in
+    
+    // Step 2: Check controllability
+    // The system is controllable if rank([B, AB]) = n
+    out("A matrix:", A)
+    out("B matrix:", B)
+    
+    // Step 3: Check open-loop stability
+    let open_loop_eigs = eigenvalues(A) in
+    out("Open-loop eigenvalues:", open_loop_eigs)
+    // One eigenvalue is positive → unstable!
+    
+    // Step 4: LQR design
+    let Q = [[10, 0], [0, 1]] in   // Penalize angle more than velocity
+    let R = [[0.1]] in              // Cheap control
+    
+    let lqr_result = lqr(A, B, Q, R) in
+    let K = nth(lqr_result, 0) in
+    let k1 = nth(nth(K, 0), 0) in
+    let k2 = nth(nth(K, 0), 1) in
+    
+    out("LQR gain K:", K)
+    
+    // Step 5: Check closed-loop stability
+    let A_cl = matrix_sub(A, matmul(B, K)) in
+    let closed_loop_eigs = eigenvalues(A_cl) in
+    out("Closed-loop eigenvalues:", closed_loop_eigs)
+    // All eigenvalues have negative real parts → stable!
+    
+    // Step 6: Simulate
+    let dynamics = lambda t y .
+        let theta = nth(y, 0) in
+        let omega = nth(y, 1) in
+        let u = neg(k1*theta + k2*omega) in
+        [omega, (g/ell)*sin(theta) + u/ell]
+    in
+    
+    let result = ode45(dynamics, [0, 5], [0.2, 0], 0.05) in
+    let times = nth(result, 0) in
+    let states = nth(result, 1) in
+    
+    let thetas = list_map(lambda s . nth(s, 0), states) in
+    let omegas = list_map(lambda s . nth(s, 1), states) in
+    let controls = list_map(lambda s . neg(k1*nth(s, 0) + k2*nth(s, 1)), states) in
+    
+    // Step 7: Plot results
+    diagram(
+        plot(
+            line(times, thetas, color = "blue", label = "θ (rad)"),
+            line(times, omegas, color = "red", label = "ω (rad/s)"),
+            line(times, controls, color = "green", label = "u (m/s²)"),
+            xlabel = "Time (s)",
+            ylabel = "State / Control",
+            title = "Inverted Pendulum LQR Control",
+            legend = "right + bottom",
+            width = 14,
+            height = 8
+        )
+    )
+}
+</code></pre>
+<h2 id="digital-control"><a class="header" href="#digital-control">Digital Control</a></h2>
+<p>For digital (discrete-time) control with zero-order hold:</p>
+<pre><code class="language-kleis">example "digital pendulum control" {
+    let ts = 0.05 in  // 20 Hz sampling
+    
+    // Continuous system
+    let A_cont = [[0, 1], [9.81, 0]] in
+    let B_cont = [[0], [neg(1)]] in
+    
+    // Discretize
+    let A_disc = expm(scalar_matrix_mul(ts, A_cont)) in
+    let B_disc = scalar_matrix_mul(ts, B_cont) in
+    
+    // Discrete LQR
+    let Q = [[10, 0], [0, 1]] in
+    let R = [[1]] in
+    let result = dlqr(A_disc, B_disc, Q, R) in
+    let K = nth(result, 0) in
+    
+    out("Discrete gain K:", K)
+    
+    // Verify discrete stability
+    let A_cl = matrix_sub(A_disc, matmul(B_disc, K)) in
+    let eigs = eigenvalues(A_cl) in
+    out("Closed-loop eigenvalues:", eigs)
+    // All eigenvalues should be inside unit circle
+}
+</code></pre>
+<h2 id="stability-verification-with-z3"><a class="header" href="#stability-verification-with-z3">Stability Verification with Z3</a></h2>
+<p>Verify control system properties formally:</p>
+<pre><code class="language-kleis">structure StabilityProperties {
+    // Continuous-time: eigenvalues have negative real parts
+    axiom hurwitz_stability : ∀ λ : ℂ . 
+        is_eigenvalue(A, λ) → re(λ) &lt; 0
+    
+    // Discrete-time: eigenvalues inside unit circle
+    axiom schur_stability : ∀ λ : ℂ .
+        is_eigenvalue(A_d, λ) → abs_squared(λ) &lt; 1
+    
+    // Lyapunov stability: ∃ P &gt; 0 such that A'P + PA &lt; 0
+    axiom lyapunov_continuous : ∃ P : Matrix(n, n, ℝ) .
+        positive_definite(P) ∧ 
+        negative_definite(plus(matmul(transpose(A), P), matmul(P, A)))
+}
+</code></pre>
+<h2 id="lapack-functions-reference"><a class="header" href="#lapack-functions-reference">LAPACK Functions Reference</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>eigenvalues(A)</code></td><td>Compute eigenvalues of matrix A</td></tr>
+<tr><td><code>eigenvectors(A)</code></td><td>Compute eigenvalues and eigenvectors</td></tr>
+<tr><td><code>svd(A)</code></td><td>Singular value decomposition</td></tr>
+<tr><td><code>expm(A)</code></td><td>Matrix exponential e^A</td></tr>
+<tr><td><code>care(A, B, Q, R)</code></td><td>Solve continuous algebraic Riccati equation</td></tr>
+<tr><td><code>dare(A, B, Q, R)</code></td><td>Solve discrete algebraic Riccati equation</td></tr>
+<tr><td><code>lqr(A, B, Q, R)</code></td><td>Continuous LQR design (returns [K, P])</td></tr>
+<tr><td><code>dlqr(A, B, Q, R)</code></td><td>Discrete LQR design (returns [K, P])</td></tr>
+</tbody>
+</table>
+</div>
+<p>See <a href="#appendix-lapack-functions">LAPACK Functions appendix</a> for complete documentation.</p>
+<h2 id="whats-next-22"><a class="header" href="#whats-next-22">What’s Next</a></h2>
+<p>Explore more examples:</p>
+<p>→ <a href="#appendix-ode-solver">ODE Solver appendix</a> — detailed ode45 documentation<br>→ <a href="#appendix-lapack-functions">LAPACK Functions</a> — numerical linear algebra<br>→ <a href="#appendix-cartan-geometry-and-tensor-computation">Cartan Geometry</a> — differential geometry</p>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="appendix-a-grammar-reference"><a class="header" href="#appendix-a-grammar-reference">Appendix A: Grammar Reference</a></h1>
 <p>This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.97).</p>
 <blockquote>
@@ -7542,7 +8441,7 @@ Product(expr, i, 1, n)    // Πᵢ₌₁ⁿ expr
 Limit(f, x, a)            // lim_{x→a} f
 </code></pre>
 <p>Derivatives use function call syntax: <code>D(f, x)</code> for partial derivatives and <code>Dt(f, x)</code> for total derivatives.</p>
-<h2 id="operators"><a class="header" href="#operators">Operators</a></h2>
+<h2 id="operators-1"><a class="header" href="#operators-1">Operators</a></h2>
 <h3 id="prefix-operators"><a class="header" href="#prefix-operators">Prefix Operators</a></h3>
 <pre><code class="language-ebnf">prefixOp ::= "-" | "¬" | "∇" | "∫" | "∬" | "∭" | "∮" | "∯"
 </code></pre>
@@ -8358,7 +9257,7 @@ let B = [[1, 1], [0, 1]] in
 mpow(B, 3)   // → [[1, 3], [0, 1]]
 </code></pre>
 <hr>
-<h2 id="control-systems"><a class="header" href="#control-systems">Control Systems</a></h2>
+<h2 id="control-systems-1"><a class="header" href="#control-systems-1">Control Systems</a></h2>
 <p>Functions for linear control system design using the Algebraic Riccati Equation.</p>
 <div class="table-wrapper">
 <table>
@@ -8847,244 +9746,237 @@ ode45(dyn, [1], [0, 1], 0.1)
 <li><a href="#appendix-built-in-functions">Built-in Functions</a> - <code>list_map</code>, <code>nth</code>, <code>list_fold</code>, etc.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="appendix-c-standard-library"><a class="header" href="#appendix-c-standard-library">Appendix C: Standard Library</a></h1>
-<p>The Kleis standard library provides foundational types, structures, and operations.</p>
-<h2 id="core-types-1"><a class="header" href="#core-types-1">Core Types</a></h2>
-<h3 id="numeric-types-2"><a class="header" href="#numeric-types-2">Numeric Types</a></h3>
-<pre><code class="language-kleis">// These are primitive types built into Kleis:
-ℕ  (or Nat)      // Natural numbers (0, 1, 2, ...)
-ℤ  (or Int)      // Integers (..., -1, 0, 1, ...)
-ℝ  (or Real)     // Real numbers
-ℂ  (or Complex)  // Complex numbers
+<h1 id="appendix-standard-library-reference"><a class="header" href="#appendix-standard-library-reference">Appendix: Standard Library Reference</a></h1>
+<p>The Kleis standard library provides 30 files covering mathematics, physics, and computer science.</p>
+<h2 id="file-organization"><a class="header" href="#file-organization">File Organization</a></h2>
+<pre><code>stdlib/
+├── types.kleis              // Core type definitions (Bool, Option, List, etc.)
+├── prelude.kleis            // Core structures and operations
+├── minimal_prelude.kleis    // Arithmetic, Equatable, Ordered structures
+├── func_core.kleis          // Higher-order functions (map, fold, etc.)
+│
+├── # Mathematics
+├── complex.kleis            // Complex number axioms (ℂ field)
+├── rational.kleis           // Rational number axioms (ℚ ordered field)
+├── matrices.kleis           // Matrix algebra (605 lines!)
+├── lists.kleis              // List operations and axioms
+├── sets.kleis               // Z3-backed set theory
+├── combinatorics.kleis      // Permutations, factorials, binomials
+├── bigops.kleis             // Σ, Π, ∫, lim as polymorphic HOFs
+├── bitvector.kleis          // Z3 BitVec theory
+├── text.kleis               // String operations
+├── math_functions.kleis     // Trig, hyperbolic, special functions
+│
+├── # Calculus &amp; Analysis
+├── calculus.kleis           // Derivative/integral axioms, limits
+├── calculus_hof.kleis       // Derivative as (F → F) → F → F
+├── symbolic_diff.kleis      // Expression AST with diff(e, x) (differentiation only)
+│
+├── # Tensors &amp; Differential Geometry
+├── tensors.kleis            // Abstract tensor algebra
+├── tensors_functional.kleis // Pure Kleis tensor operations
+├── tensors_concrete.kleis   // Component-based tensors for Z3
+├── tensors_minimal.kleis    // Physics palette notation
+├── differential_forms.kleis // Cartan calculus (d, ∧, ⋆, ι)
+├── cartan_geometry.kleis    // Axiomatic framework for curvature
+├── cartan_compute.kleis     // Tetrad → Connection → Curvature pipeline
+│
+├── # Physics
+├── maxwell.kleis            // Covariant electromagnetism
+├── fluid_dynamics.kleis     // Navier-Stokes, Bernoulli, Stokes
+├── solid_mechanics.kleis    // Stress/strain, Von Mises, Mohr-Coulomb
+├── quantum.kleis            // Hilbert space, Dirac notation, Pauli
+├── quantum_minimal.kleis    // Physics palette quantum notation
+└── cosmology.kleis          // Minkowski, de Sitter, FLRW, Schwarzschild
 </code></pre>
-<h3 id="boolean-type"><a class="header" href="#boolean-type">Boolean Type</a></h3>
-<pre><code class="language-kleis">Bool  // True or False
-</code></pre>
-<h3 id="string-type"><a class="header" href="#string-type">String Type</a></h3>
-<pre><code class="language-kleis">String  // Text literals: "hello", "world"
-</code></pre>
-<h3 id="unit-type"><a class="header" href="#unit-type">Unit Type</a></h3>
-<pre><code class="language-kleis">Unit  // Single value: ()
-</code></pre>
-<h2 id="collection-types"><a class="header" href="#collection-types">Collection Types</a></h2>
-<h3 id="list"><a class="header" href="#list">List</a></h3>
-<pre><code class="language-kleis">structure List(T) {
-    operation head : T
-    operation tail : List(T)
-    operation length : ℕ
-    operation append : List(T) → List(T)
-    operation map : (T → U) → List(U)
-    operation filter : (T → Bool) → List(T)
-}
-</code></pre>
-<h3 id="vector"><a class="header" href="#vector">Vector</a></h3>
-<pre><code class="language-kleis">structure Vector(n : ℕ, T) {
-    operation get : ℕ → T
-    operation length : ℕ
-    operation dot : Vector(n, T) → T
-    operation magnitude : ℝ
-    operation normalize : Vector(n, T)
-}
-</code></pre>
-<h3 id="matrix"><a class="header" href="#matrix">Matrix</a></h3>
-<pre><code class="language-kleis">structure Matrix(m : ℕ, n : ℕ, T) {
-    operation get : ℕ × ℕ → T
-    operation rows : ℕ
-    operation cols : ℕ
-    operation transpose : Matrix(n, m, T)
-    operation add : Matrix(m, n, T) → Matrix(m, n, T)
-    operation mul : Matrix(n, p, T) → Matrix(m, p, T)
-}
+<h2 id="core-files"><a class="header" href="#core-files">Core Files</a></h2>
+<h3 id="typeskleis--self-hosted-type-system"><a class="header" href="#typeskleis--self-hosted-type-system"><code>types.kleis</code> — Self-Hosted Type System</a></h3>
+<p>The type system is defined <em>in Kleis itself</em>:</p>
+<pre><code class="language-kleis">data Type =
+    Scalar
+    | Vector(n: Nat, T)
+    | Matrix(m: Nat, n: Nat, T)
+    | Complex
+    | Set(T: Type)
+    | List(T: Type)
+    | Tensor(dims: List(Nat))
 
-structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
-    operation det : T
-    operation trace : T
-    operation inv : SquareMatrix(n, T)
-    operation eigenvalues : List(ℂ)
-}
+data Bool = True | False
+data Option(T) = None | Some(value: T)
+data Result(T, E) = Ok(value: T) | Err(error: E)
+data List(T) = Nil | Cons(head: T, tail: List(T))
 </code></pre>
-<h2 id="complex-numbers-1"><a class="header" href="#complex-numbers-1">Complex Numbers</a></h2>
-<p>The complex number type <code>ℂ</code> has full arithmetic support:</p>
-<h3 id="construction-and-extraction-1"><a class="header" href="#construction-and-extraction-1">Construction and Extraction</a></h3>
-<pre><code class="language-kleis">// Create complex number: complex(real_part, imaginary_part)
-define z = complex(3, 4)        // 3 + 4i
-
-// The imaginary unit
-define i_unit = i               // = complex(0, 1)
-
-// Extract parts
-define x = re(z)                // 3
-define y = im(z)                // 4
-</code></pre>
-<h3 id="arithmetic-operations-4"><a class="header" href="#arithmetic-operations-4">Arithmetic Operations</a></h3>
-<pre><code class="language-kleis">// All operations are explicit (no operator overloading yet)
-complex_add(z1, z2)      // z1 + z2
-complex_sub(z1, z2)      // z1 - z2
-complex_mul(z1, z2)      // z1 × z2
-complex_div(z1, z2)      // z1 / z2
-neg_complex(z)           // -z
-complex_inverse(z)       // 1/z
-</code></pre>
-<h3 id="conjugate-and-magnitude"><a class="header" href="#conjugate-and-magnitude">Conjugate and Magnitude</a></h3>
-<pre><code class="language-kleis">conj(z)                  // Complex conjugate (a - bi)
-abs_squared(z)           // |z|² = a² + b²
-</code></pre>
-<h3 id="operation-reference-2"><a class="header" href="#operation-reference-2">Operation Reference</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Operation</th><th>Syntax</th><th>Example</th><th>Result</th></tr>
-</thead>
-<tbody>
-<tr><td>Create</td><td><code>complex(a, b)</code></td><td><code>complex(3, 4)</code></td><td>3 + 4i</td></tr>
-<tr><td>Real part</td><td><code>re(z)</code></td><td><code>re(complex(3, 4))</code></td><td>3</td></tr>
-<tr><td>Imaginary part</td><td><code>im(z)</code></td><td><code>im(complex(3, 4))</code></td><td>4</td></tr>
-<tr><td>Add</td><td><code>complex_add(z1, z2)</code></td><td><code>complex_add(complex(1,2), complex(3,4))</code></td><td>complex(4, 6)</td></tr>
-<tr><td>Subtract</td><td><code>complex_sub(z1, z2)</code></td><td><code>complex_sub(complex(5,3), complex(2,1))</code></td><td>complex(3, 2)</td></tr>
-<tr><td>Multiply</td><td><code>complex_mul(z1, z2)</code></td><td><code>complex_mul(complex(1,2), complex(3,4))</code></td><td>complex(-5, 10)</td></tr>
-<tr><td>Divide</td><td><code>complex_div(z1, z2)</code></td><td><code>complex_div(complex(1,0), complex(0,1))</code></td><td>complex(0, -1)</td></tr>
-<tr><td>Negate</td><td><code>neg_complex(z)</code></td><td><code>neg_complex(complex(3, 4))</code></td><td>complex(-3, -4)</td></tr>
-<tr><td>Inverse</td><td><code>complex_inverse(z)</code></td><td><code>complex_inverse(i)</code></td><td>complex(0, -1)</td></tr>
-<tr><td>Conjugate</td><td><code>conj(z)</code></td><td><code>conj(complex(3, 4))</code></td><td>complex(3, -4)</td></tr>
-<tr><td>Magnitude²</td><td><code>abs_squared(z)</code></td><td><code>abs_squared(complex(3, 4))</code></td><td>25</td></tr>
-</tbody>
-</table>
-</div>
-<p>See <a href="#complex-numbers">Chapter 14: Complex Numbers</a> for detailed examples.</p>
-<h2 id="algebraic-structures"><a class="header" href="#algebraic-structures">Algebraic Structures</a></h2>
-<h3 id="monoid"><a class="header" href="#monoid">Monoid</a></h3>
-<pre><code class="language-kleis">structure Monoid(M) {
-    e : M                         // Identity element
-    operation mul : M × M → M     // Binary operation
-    
-    axiom identity_left : ∀(x : M). mul(e, x) = x
-    axiom identity_right : ∀(x : M). mul(x, e) = x
-    axiom associative : ∀(x : M)(y : M)(z : M).
-        mul(mul(x, y), z) = mul(x, mul(y, z))
-}
-</code></pre>
-<h3 id="group"><a class="header" href="#group">Group</a></h3>
-<pre><code class="language-kleis">structure Group(G) extends Monoid(G) {
-    operation inv : G → G         // Inverse
-    
-    axiom inverse_left : ∀(x : G). mul(inv(x), x) = e
-    axiom inverse_right : ∀(x : G). mul(x, inv(x)) = e
-}
-</code></pre>
-<h3 id="ring"><a class="header" href="#ring">Ring</a></h3>
+<h3 id="preludekleis--core-structures"><a class="header" href="#preludekleis--core-structures"><code>prelude.kleis</code> — Core Structures</a></h3>
+<p>Defines fundamental mathematical structures:</p>
 <pre><code class="language-kleis">structure Ring(R) {
-    operation zero : R
-    operation one : R
+    zero : R
+    one : R
     operation add : R × R → R
     operation mul : R × R → R
     operation neg : R → R
     
-    // (R, add, zero) is an abelian group
-    // (R, mul, one) is a monoid
-    // mul distributes over add
+    axiom add_assoc : ∀(a b c : R). add(add(a, b), c) = add(a, add(b, c))
+    axiom distributive : ∀(a b c : R). mul(a, add(b, c)) = add(mul(a, b), mul(a, c))
 }
 </code></pre>
-<h3 id="field"><a class="header" href="#field">Field</a></h3>
-<pre><code class="language-kleis">structure Field(F) extends Ring(F) {
-    operation inv : F → F  // Multiplicative inverse (for non-zero)
+<h3 id="func_corekleis--functional-primitives"><a class="header" href="#func_corekleis--functional-primitives"><code>func_core.kleis</code> — Functional Primitives</a></h3>
+<p>Higher-order functions and function composition:</p>
+<pre><code class="language-kleis">define compose(f, g) = λ x . f(g(x))
+define id(x) = x
+define const(x) = λ _ . x
+define flip(f) = λ x y . f(y, x)
+</code></pre>
+<h2 id="mathematics-files"><a class="header" href="#mathematics-files">Mathematics Files</a></h2>
+<h3 id="matriceskleis--full-matrix-algebra-605-lines"><a class="header" href="#matriceskleis--full-matrix-algebra-605-lines"><code>matrices.kleis</code> — Full Matrix Algebra (605 lines)</a></h3>
+<p>Comprehensive matrix operations with axioms:</p>
+<pre><code class="language-kleis">structure Matrix(m: Nat, n: Nat, T) {
+    operation transpose : Matrix(m, n, T) → Matrix(n, m, T)
+    operation matmul : Matrix(m, n, T) × Matrix(n, p, T) → Matrix(m, p, T)
+    operation det : Matrix(n, n, T) → T
+    operation inv : Matrix(n, n, T) → Matrix(n, n, T)
+    operation eigenvalues : Matrix(n, n, T) → List(ℂ)
     
-    axiom mul_inverse : ∀(x : F). x ≠ zero → mul(x, inv(x)) = one
-    axiom mul_commutative : ∀(x : F)(y : F). mul(x, y) = mul(y, x)
+    axiom transpose_involution : ∀ A : Matrix(m, n, T) .
+        transpose(transpose(A)) = A
 }
 </code></pre>
-<h3 id="vector-space"><a class="header" href="#vector-space">Vector Space</a></h3>
-<pre><code class="language-kleis">structure VectorSpace(V, F) over Field(F) {
-    operation add : V × V → V
-    operation scale : F × V → V
-    zero : V
+<h3 id="symbolic_diffkleis--symbolic-differentiation"><a class="header" href="#symbolic_diffkleis--symbolic-differentiation"><code>symbolic_diff.kleis</code> — Symbolic Differentiation</a></h3>
+<p>Expression AST with pattern-matching differentiation:</p>
+<pre><code class="language-kleis">data Expression = 
+    ENumber(value : ℝ)
+  | EVariable(name : String)
+  | EOperation(name : String, args : List(Expression))
+
+define diff(e, x) = match e {
+    ENumber(_) =&gt; num(0)
+    | EVariable(name) =&gt; if str_eq(name, x) then num(1) else num(0)
+    | EOperation("plus", [a, b]) =&gt; e_add(diff(a, x), diff(b, x))
+    | EOperation("times", [a, b]) =&gt; 
+        e_add(e_mul(diff(a, x), b), e_mul(a, diff(b, x)))  // Product rule
+    | EOperation("sin", [f]) =&gt; e_mul(e_cos(f), diff(f, x))  // Chain rule
+    // ... more rules
+}
+</code></pre>
+<h3 id="calculus_hofkleis--derivative-as-higher-order-function"><a class="header" href="#calculus_hofkleis--derivative-as-higher-order-function"><code>calculus_hof.kleis</code> — Derivative as Higher-Order Function</a></h3>
+<pre><code>structure Derivative(F) {
+    operation D : (F → F) → F → F
     
-    // (V, add, zero) is an abelian group
-    // scale distributes over add
-    // scale is associative with field multiplication
-}
-</code></pre>
-<h2 id="geometric-structures"><a class="header" href="#geometric-structures">Geometric Structures</a></h2>
-<h3 id="metric-space"><a class="header" href="#metric-space">Metric Space</a></h3>
-<pre><code class="language-kleis">structure MetricSpace(M) {
-    operation distance : M × M → ℝ
+    axiom chain_rule : ∀(f g : F → F)(x : F).
+        D(compose(f, g))(x) = times(D(f)(g(x)), D(g)(x))
     
-    axiom non_negative : ∀(x : M)(y : M). distance(x, y) ≥ 0
-    axiom identity : ∀(x : M)(y : M). distance(x, y) = 0 ↔ x = y
-    axiom symmetric : ∀(x : M)(y : M). distance(x, y) = distance(y, x)
-    axiom triangle : ∀(x : M)(y : M)(z : M).
-        distance(x, z) ≤ distance(x, y) + distance(y, z)
+    axiom product_rule : ∀(f g : F → F)(x : F).
+        D(times_fn(f, g))(x) = plus(times(D(f)(x), g(x)), times(f(x), D(g)(x)))
+    
+    axiom linearity : ∀(f g : F → F)(x : F).
+        D(plus_fn(f, g))(x) = plus(D(f)(x), D(g)(x))
 }
 </code></pre>
-<h3 id="manifold"><a class="header" href="#manifold">Manifold</a></h3>
-<pre><code class="language-kleis">structure Manifold(M, dim : ℕ) {
-    operation tangent : M → TangentSpace(dim)
-    operation chart : M → Vector(dim, ℝ)  // Local coordinates
+<h3 id="bigopskleis--polymorphic-big-operators"><a class="header" href="#bigopskleis--polymorphic-big-operators"><code>bigops.kleis</code> — Polymorphic Big Operators</a></h3>
+<p>Σ, Π, ∫, lim that work on any type with the right structure:</p>
+<pre><code>// Summation requires additive monoid (has +, 0)
+operation sum_bounds : (ℤ → T) × ℤ × ℤ → T
+
+// Product requires multiplicative monoid (has ×, 1)
+operation prod_bounds : (ℤ → T) × ℤ × ℤ → T
+
+// Integral requires Banach space (complete normed vector space)
+operation int_bounds : (T → S) × T × T × T → S
+
+// Probability expectation
+operation E : (Ω → ℝ) → ℝ
+</code></pre>
+<h2 id="physics-files"><a class="header" href="#physics-files">Physics Files</a></h2>
+<h3 id="differential_formskleis--cartan-calculus"><a class="header" href="#differential_formskleis--cartan-calculus"><code>differential_forms.kleis</code> — Cartan Calculus</a></h3>
+<p>Full exterior calculus with wedge products, exterior derivative, and Hodge star:</p>
+<pre><code>structure WedgeProduct(p: Nat, q: Nat, dim: Nat) {
+    operation wedge : DifferentialForm(p, dim) → DifferentialForm(q, dim) 
+                    → DifferentialForm(p + q, dim)
+    
+    axiom graded_antisymmetric : ∀ α β .
+        wedge(α, β) = scale(power(-1, p*q), wedge(β, α))
+}
+
+structure ExteriorDerivative(p: Nat, dim: Nat) {
+    operation d : DifferentialForm(p, dim) → DifferentialForm(p + 1, dim)
+    
+    axiom d_squared_zero : ∀ α . d(d(α)) = 0  // Fundamental!
+}
+
+// Cartan's Magic Formula: ℒ_X = d ∘ ι_X + ι_X ∘ d
+define cartan_magic_impl(X, alpha) = 
+    plus(d(interior(X, alpha)), interior(X, d(alpha)))
+</code></pre>
+<h3 id="cartan_computekleis--schwarzschild-curvature"><a class="header" href="#cartan_computekleis--schwarzschild-curvature"><code>cartan_compute.kleis</code> — Schwarzschild Curvature</a></h3>
+<p>Complete pipeline from tetrad to Riemann curvature:</p>
+<pre><code class="language-kleis">define schwarzschild_tetrad(M) =
+    let f = e_sub(num(1), e_div(e_mul(num(2), M), var("r"))) in
+    let sqrt_f = e_sqrt(f) in
+    [
+        scale1(sqrt_f, dt),
+        scale1(e_div(num(1), sqrt_f), dr),
+        scale1(var("r"), dtheta),
+        scale1(e_mul(var("r"), e_sin(var("theta"))), dphi)
+    ]
+
+define compute_riemann(tetrad) =
+    let omega = solve_connection(tetrad) in
+    compute_curvature(omega)
+
+define schwarzschild_curvature(M) = compute_riemann(schwarzschild_tetrad(M))
+</code></pre>
+<h3 id="quantumkleis--hilbert-space-formalism"><a class="header" href="#quantumkleis--hilbert-space-formalism"><code>quantum.kleis</code> — Hilbert Space Formalism</a></h3>
+<p>Full quantum mechanics with Dirac notation:</p>
+<pre><code class="language-kleis">structure Ket(dim: Nat, T) {
+    operation normalize : Ket(dim, T) → Ket(dim, T)
+    operation scale : T → Ket(dim, T) → Ket(dim, T)
+}
+
+structure Operator(dim: Nat, T) {
+    operation apply : Operator(dim, T) → Ket(dim, T) → Ket(dim, T)
+    operation adjoint : Operator(dim, T) → Operator(dim, T)
+    operation compose : Operator(dim, T) → Operator(dim, T) → Operator(dim, T)
+}
+
+structure Commutator(dim: Nat, T) {
+    operation commutator : Operator(dim, T) → Operator(dim, T) → Operator(dim, T)
+    // [x̂, p̂] = iℏ (Heisenberg uncertainty!)
 }
 </code></pre>
-<h3 id="riemannian-manifold"><a class="header" href="#riemannian-manifold">Riemannian Manifold</a></h3>
-<pre><code class="language-kleis">structure RiemannianManifold(M, dim : ℕ) extends Manifold(M, dim) {
-    operation metric : M → Matrix(dim, dim, ℝ)
-    operation christoffel : M → Tensor(1, 2)
-    operation riemann : M → Tensor(1, 3)
-    operation ricci : M → Matrix(dim, dim, ℝ)
-    operation scalar_curvature : M → ℝ
+<h3 id="maxwellkleis--covariant-electromagnetism"><a class="header" href="#maxwellkleis--covariant-electromagnetism"><code>maxwell.kleis</code> — Covariant Electromagnetism</a></h3>
+<pre><code class="language-kleis">structure MaxwellInhomogeneous {
+    operation F : Nat → Nat → ℝ  // Field tensor
+    operation J : Nat → ℝ         // 4-current
+    
+    // ∂_μ F^μν = μ₀ J^ν
+    axiom maxwell_inhomogeneous : ∀ nu : Nat .
+        divF(nu) = times(mu0, J(nu))
 }
 </code></pre>
-<h2 id="option-and-result-types"><a class="header" href="#option-and-result-types">Option and Result Types</a></h2>
-<h3 id="option"><a class="header" href="#option">Option</a></h3>
-<pre><code class="language-kleis">data Option(T) = Some(value : T) | None
-
-// Operations
-define is_some(opt) =
-    match opt {
-        Some(_) =&gt; True
-        None =&gt; False
-    }
-
-define unwrap_or(opt, default) =
-    match opt {
-        Some(v) =&gt; v
-        None =&gt; default
-    }
-</code></pre>
-<h3 id="result-2"><a class="header" href="#result-2">Result</a></h3>
-<pre><code class="language-kleis">data Result(T, E) = Ok(value : T) | Err(error : E)
-
-// Operations
-define is_ok(res) =
-    match res {
-        Ok(_) =&gt; True
-        Err(_) =&gt; False
-    }
-
-define map_result(res, f) =
-    match res {
-        Ok(v) =&gt; Ok(f(v))
-        Err(e) =&gt; Err(e)
-    }
+<h3 id="fluid_dynamicskleis--navier-stokes"><a class="header" href="#fluid_dynamicskleis--navier-stokes"><code>fluid_dynamics.kleis</code> — Navier-Stokes</a></h3>
+<pre><code class="language-kleis">structure MomentumEquation {
+    // ρ ∂u_i/∂t + ∂(ρu_i u_j)/∂x_j = -∂p/∂x_i + ∂τ_ij/∂x_j + ρf_i
+    axiom momentum : ∀ i : Nat .
+        plus(times(rho, du_dt(i)), div_momentum(i)) = 
+        plus(plus(negate(grad_p(i)), div_tau(i)), times(rho, f(i)))
+}
 </code></pre>
 <h2 id="loading-the-standard-library"><a class="header" href="#loading-the-standard-library">Loading the Standard Library</a></h2>
+<p>In files:</p>
+<pre><code class="language-kleis">import "stdlib/prelude.kleis"
+import "stdlib/matrices.kleis"
+import "stdlib/symbolic_diff.kleis"
+</code></pre>
 <p>In the REPL:</p>
 <pre><code>kleis&gt; :load stdlib/prelude.kleis
 Loaded standard library.
 </code></pre>
-<p>In files:</p>
-<pre><code class="language-kleis example">import "stdlib/prelude.kleis"
-import "stdlib/linear_algebra.kleis"
-import "stdlib/differential_geometry.kleis"
-</code></pre>
-<h2 id="file-organization"><a class="header" href="#file-organization">File Organization</a></h2>
-<pre><code>stdlib/
-├── prelude.kleis          // Core types and functions (includes complex)
-├── complex.kleis          // Complex number axioms and properties
-├── numeric.kleis          // Numeric operations
-├── text.kleis             // String processing operations
-├── collections.kleis      // List, Vector, Matrix
-├── algebraic.kleis        // Group, Ring, Field, etc.
-├── linear_algebra.kleis   // Matrix operations
-├── differential_geometry.kleis  // Manifolds, tensors
-└── category_theory.kleis  // Categories, functors
-</code></pre>
+<h2 id="see-also-6"><a class="header" href="#see-also-6">See Also</a></h2>
+<ul>
+<li><a href="#appendix-cartan-geometry-and-tensor-computation">Cartan Geometry Appendix</a> — Full Schwarzschild example</li>
+<li><a href="#appendix-ode-solver">ODE Solver Appendix</a> — Control systems with LQR</li>
+<li><a href="#appendix-lapack-functions">LAPACK Functions</a> — Numerical linear algebra</li>
+<li><a href="#appendix-built-in-functions">Built-in Functions</a> — Complete function reference</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="appendix-lisp-interpreter-in-kleis"><a class="header" href="#appendix-lisp-interpreter-in-kleis">Appendix: LISP Interpreter in Kleis</a></h1>
 <p>This appendix presents a LISP interpreter written entirely in Kleis. This is a <strong>demonstration</strong> of Kleis’s power as a meta-language — proving that Kleis can parse and execute programs written in other languages.</p>
@@ -10100,7 +10992,7 @@ example "symbolic verification" {
 <li><strong>Think symbolically</strong> — Variables hold AST, not computed values</li>
 <li><strong>Use Z3 for verification</strong> — Let <code>assert()</code> prove symbolic claims</li>
 </ol>
-<h2 id="see-also-6"><a class="header" href="#see-also-6">See Also</a></h2>
+<h2 id="see-also-7"><a class="header" href="#see-also-7">See Also</a></h2>
 <ul>
 <li><a href="#example-blocks-v093">Example Blocks</a> — How to write debuggable code</li>
 <li><a href="#the-repl-1">The REPL</a> — Interactive exploration</li>
@@ -10255,7 +11147,7 @@ define schwarzschild_curvature(M) =
 </div>
 <h2 id="literature-verification"><a class="header" href="#literature-verification">Literature Verification</a></h2>
 <p>The computed results match known properties from the literature:</p>
-<h3 id="minkowski-flat-space"><a class="header" href="#minkowski-flat-space">Minkowski (Flat Space)</a></h3>
+<h3 id="minkowski-flat-space-1"><a class="header" href="#minkowski-flat-space-1">Minkowski (Flat Space)</a></h3>
 <ul>
 <li><strong>Expected:</strong> All curvature components = 0</li>
 <li><strong>Computed:</strong> 238/256 components are <code>ENumber(0)</code> ✓</li>

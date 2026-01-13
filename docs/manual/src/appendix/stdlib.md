@@ -1,285 +1,279 @@
-# Appendix C: Standard Library
+# Appendix: Standard Library Reference
 
-The Kleis standard library provides foundational types, structures, and operations.
+The Kleis standard library provides 30 files covering mathematics, physics, and computer science.
 
-## Core Types
+## File Organization
 
-### Numeric Types
-
-```kleis
-// These are primitive types built into Kleis:
-ℕ  (or Nat)      // Natural numbers (0, 1, 2, ...)
-ℤ  (or Int)      // Integers (..., -1, 0, 1, ...)
-ℝ  (or Real)     // Real numbers
-ℂ  (or Complex)  // Complex numbers
+```
+stdlib/
+├── types.kleis              // Core type definitions (Bool, Option, List, etc.)
+├── prelude.kleis            // Core structures and operations
+├── minimal_prelude.kleis    // Arithmetic, Equatable, Ordered structures
+├── func_core.kleis          // Higher-order functions (map, fold, etc.)
+│
+├── # Mathematics
+├── complex.kleis            // Complex number axioms (ℂ field)
+├── rational.kleis           // Rational number axioms (ℚ ordered field)
+├── matrices.kleis           // Matrix algebra (605 lines!)
+├── lists.kleis              // List operations and axioms
+├── sets.kleis               // Z3-backed set theory
+├── combinatorics.kleis      // Permutations, factorials, binomials
+├── bigops.kleis             // Σ, Π, ∫, lim as polymorphic HOFs
+├── bitvector.kleis          // Z3 BitVec theory
+├── text.kleis               // String operations
+├── math_functions.kleis     // Trig, hyperbolic, special functions
+│
+├── # Calculus & Analysis
+├── calculus.kleis           // Derivative/integral axioms, limits
+├── calculus_hof.kleis       // Derivative as (F → F) → F → F
+├── symbolic_diff.kleis      // Expression AST with diff(e, x) (differentiation only)
+│
+├── # Tensors & Differential Geometry
+├── tensors.kleis            // Abstract tensor algebra
+├── tensors_functional.kleis // Pure Kleis tensor operations
+├── tensors_concrete.kleis   // Component-based tensors for Z3
+├── tensors_minimal.kleis    // Physics palette notation
+├── differential_forms.kleis // Cartan calculus (d, ∧, ⋆, ι)
+├── cartan_geometry.kleis    // Axiomatic framework for curvature
+├── cartan_compute.kleis     // Tetrad → Connection → Curvature pipeline
+│
+├── # Physics
+├── maxwell.kleis            // Covariant electromagnetism
+├── fluid_dynamics.kleis     // Navier-Stokes, Bernoulli, Stokes
+├── solid_mechanics.kleis    // Stress/strain, Von Mises, Mohr-Coulomb
+├── quantum.kleis            // Hilbert space, Dirac notation, Pauli
+├── quantum_minimal.kleis    // Physics palette quantum notation
+└── cosmology.kleis          // Minkowski, de Sitter, FLRW, Schwarzschild
 ```
 
-### Boolean Type
+## Core Files
+
+### `types.kleis` — Self-Hosted Type System
+
+The type system is defined *in Kleis itself*:
 
 ```kleis
-Bool  // True or False
+data Type =
+    Scalar
+    | Vector(n: Nat, T)
+    | Matrix(m: Nat, n: Nat, T)
+    | Complex
+    | Set(T: Type)
+    | List(T: Type)
+    | Tensor(dims: List(Nat))
+
+data Bool = True | False
+data Option(T) = None | Some(value: T)
+data Result(T, E) = Ok(value: T) | Err(error: E)
+data List(T) = Nil | Cons(head: T, tail: List(T))
 ```
 
-### String Type
+### `prelude.kleis` — Core Structures
 
-```kleis
-String  // Text literals: "hello", "world"
-```
-
-### Unit Type
-
-```kleis
-Unit  // Single value: ()
-```
-
-## Collection Types
-
-### List
-
-```kleis
-structure List(T) {
-    operation head : T
-    operation tail : List(T)
-    operation length : ℕ
-    operation append : List(T) → List(T)
-    operation map : (T → U) → List(U)
-    operation filter : (T → Bool) → List(T)
-}
-```
-
-### Vector
-
-```kleis
-structure Vector(n : ℕ, T) {
-    operation get : ℕ → T
-    operation length : ℕ
-    operation dot : Vector(n, T) → T
-    operation magnitude : ℝ
-    operation normalize : Vector(n, T)
-}
-```
-
-### Matrix
-
-```kleis
-structure Matrix(m : ℕ, n : ℕ, T) {
-    operation get : ℕ × ℕ → T
-    operation rows : ℕ
-    operation cols : ℕ
-    operation transpose : Matrix(n, m, T)
-    operation add : Matrix(m, n, T) → Matrix(m, n, T)
-    operation mul : Matrix(n, p, T) → Matrix(m, p, T)
-}
-
-structure SquareMatrix(n : ℕ, T) extends Matrix(n, n, T) {
-    operation det : T
-    operation trace : T
-    operation inv : SquareMatrix(n, T)
-    operation eigenvalues : List(ℂ)
-}
-```
-
-## Complex Numbers
-
-The complex number type `ℂ` has full arithmetic support:
-
-### Construction and Extraction
-
-```kleis
-// Create complex number: complex(real_part, imaginary_part)
-define z = complex(3, 4)        // 3 + 4i
-
-// The imaginary unit
-define i_unit = i               // = complex(0, 1)
-
-// Extract parts
-define x = re(z)                // 3
-define y = im(z)                // 4
-```
-
-### Arithmetic Operations
-
-```kleis
-// All operations are explicit (no operator overloading yet)
-complex_add(z1, z2)      // z1 + z2
-complex_sub(z1, z2)      // z1 - z2
-complex_mul(z1, z2)      // z1 × z2
-complex_div(z1, z2)      // z1 / z2
-neg_complex(z)           // -z
-complex_inverse(z)       // 1/z
-```
-
-### Conjugate and Magnitude
-
-```kleis
-conj(z)                  // Complex conjugate (a - bi)
-abs_squared(z)           // |z|² = a² + b²
-```
-
-### Operation Reference
-
-| Operation | Syntax | Example | Result |
-|-----------|--------|---------|--------|
-| Create | `complex(a, b)` | `complex(3, 4)` | 3 + 4i |
-| Real part | `re(z)` | `re(complex(3, 4))` | 3 |
-| Imaginary part | `im(z)` | `im(complex(3, 4))` | 4 |
-| Add | `complex_add(z1, z2)` | `complex_add(complex(1,2), complex(3,4))` | complex(4, 6) |
-| Subtract | `complex_sub(z1, z2)` | `complex_sub(complex(5,3), complex(2,1))` | complex(3, 2) |
-| Multiply | `complex_mul(z1, z2)` | `complex_mul(complex(1,2), complex(3,4))` | complex(-5, 10) |
-| Divide | `complex_div(z1, z2)` | `complex_div(complex(1,0), complex(0,1))` | complex(0, -1) |
-| Negate | `neg_complex(z)` | `neg_complex(complex(3, 4))` | complex(-3, -4) |
-| Inverse | `complex_inverse(z)` | `complex_inverse(i)` | complex(0, -1) |
-| Conjugate | `conj(z)` | `conj(complex(3, 4))` | complex(3, -4) |
-| Magnitude² | `abs_squared(z)` | `abs_squared(complex(3, 4))` | 25 |
-
-See [Chapter 14: Complex Numbers](../chapters/14-complex-numbers.md) for detailed examples.
-
-## Algebraic Structures
-
-### Monoid
-
-```kleis
-structure Monoid(M) {
-    e : M                         // Identity element
-    operation mul : M × M → M     // Binary operation
-    
-    axiom identity_left : ∀(x : M). mul(e, x) = x
-    axiom identity_right : ∀(x : M). mul(x, e) = x
-    axiom associative : ∀(x : M)(y : M)(z : M).
-        mul(mul(x, y), z) = mul(x, mul(y, z))
-}
-```
-
-### Group
-
-```kleis
-structure Group(G) extends Monoid(G) {
-    operation inv : G → G         // Inverse
-    
-    axiom inverse_left : ∀(x : G). mul(inv(x), x) = e
-    axiom inverse_right : ∀(x : G). mul(x, inv(x)) = e
-}
-```
-
-### Ring
+Defines fundamental mathematical structures:
 
 ```kleis
 structure Ring(R) {
-    operation zero : R
-    operation one : R
+    zero : R
+    one : R
     operation add : R × R → R
     operation mul : R × R → R
     operation neg : R → R
     
-    // (R, add, zero) is an abelian group
-    // (R, mul, one) is a monoid
-    // mul distributes over add
+    axiom add_assoc : ∀(a b c : R). add(add(a, b), c) = add(a, add(b, c))
+    axiom distributive : ∀(a b c : R). mul(a, add(b, c)) = add(mul(a, b), mul(a, c))
 }
 ```
 
-### Field
+### `func_core.kleis` — Functional Primitives
+
+Higher-order functions and function composition:
 
 ```kleis
-structure Field(F) extends Ring(F) {
-    operation inv : F → F  // Multiplicative inverse (for non-zero)
+define compose(f, g) = λ x . f(g(x))
+define id(x) = x
+define const(x) = λ _ . x
+define flip(f) = λ x y . f(y, x)
+```
+
+## Mathematics Files
+
+### `matrices.kleis` — Full Matrix Algebra (605 lines)
+
+Comprehensive matrix operations with axioms:
+
+```kleis
+structure Matrix(m: Nat, n: Nat, T) {
+    operation transpose : Matrix(m, n, T) → Matrix(n, m, T)
+    operation matmul : Matrix(m, n, T) × Matrix(n, p, T) → Matrix(m, p, T)
+    operation det : Matrix(n, n, T) → T
+    operation inv : Matrix(n, n, T) → Matrix(n, n, T)
+    operation eigenvalues : Matrix(n, n, T) → List(ℂ)
     
-    axiom mul_inverse : ∀(x : F). x ≠ zero → mul(x, inv(x)) = one
-    axiom mul_commutative : ∀(x : F)(y : F). mul(x, y) = mul(y, x)
+    axiom transpose_involution : ∀ A : Matrix(m, n, T) .
+        transpose(transpose(A)) = A
 }
 ```
 
-### Vector Space
+### `symbolic_diff.kleis` — Symbolic Differentiation
+
+Expression AST with pattern-matching differentiation:
 
 ```kleis
-structure VectorSpace(V, F) over Field(F) {
-    operation add : V × V → V
-    operation scale : F × V → V
-    zero : V
+data Expression = 
+    ENumber(value : ℝ)
+  | EVariable(name : String)
+  | EOperation(name : String, args : List(Expression))
+
+define diff(e, x) = match e {
+    ENumber(_) => num(0)
+    | EVariable(name) => if str_eq(name, x) then num(1) else num(0)
+    | EOperation("plus", [a, b]) => e_add(diff(a, x), diff(b, x))
+    | EOperation("times", [a, b]) => 
+        e_add(e_mul(diff(a, x), b), e_mul(a, diff(b, x)))  // Product rule
+    | EOperation("sin", [f]) => e_mul(e_cos(f), diff(f, x))  // Chain rule
+    // ... more rules
+}
+```
+
+### `calculus_hof.kleis` — Derivative as Higher-Order Function
+
+```
+structure Derivative(F) {
+    operation D : (F → F) → F → F
     
-    // (V, add, zero) is an abelian group
-    // scale distributes over add
-    // scale is associative with field multiplication
-}
-```
-
-## Geometric Structures
-
-### Metric Space
-
-```kleis
-structure MetricSpace(M) {
-    operation distance : M × M → ℝ
+    axiom chain_rule : ∀(f g : F → F)(x : F).
+        D(compose(f, g))(x) = times(D(f)(g(x)), D(g)(x))
     
-    axiom non_negative : ∀(x : M)(y : M). distance(x, y) ≥ 0
-    axiom identity : ∀(x : M)(y : M). distance(x, y) = 0 ↔ x = y
-    axiom symmetric : ∀(x : M)(y : M). distance(x, y) = distance(y, x)
-    axiom triangle : ∀(x : M)(y : M)(z : M).
-        distance(x, z) ≤ distance(x, y) + distance(y, z)
+    axiom product_rule : ∀(f g : F → F)(x : F).
+        D(times_fn(f, g))(x) = plus(times(D(f)(x), g(x)), times(f(x), D(g)(x)))
+    
+    axiom linearity : ∀(f g : F → F)(x : F).
+        D(plus_fn(f, g))(x) = plus(D(f)(x), D(g)(x))
 }
 ```
 
-### Manifold
+### `bigops.kleis` — Polymorphic Big Operators
+
+Σ, Π, ∫, lim that work on any type with the right structure:
+
+```
+// Summation requires additive monoid (has +, 0)
+operation sum_bounds : (ℤ → T) × ℤ × ℤ → T
+
+// Product requires multiplicative monoid (has ×, 1)
+operation prod_bounds : (ℤ → T) × ℤ × ℤ → T
+
+// Integral requires Banach space (complete normed vector space)
+operation int_bounds : (T → S) × T × T × T → S
+
+// Probability expectation
+operation E : (Ω → ℝ) → ℝ
+```
+
+## Physics Files
+
+### `differential_forms.kleis` — Cartan Calculus
+
+Full exterior calculus with wedge products, exterior derivative, and Hodge star:
+
+```
+structure WedgeProduct(p: Nat, q: Nat, dim: Nat) {
+    operation wedge : DifferentialForm(p, dim) → DifferentialForm(q, dim) 
+                    → DifferentialForm(p + q, dim)
+    
+    axiom graded_antisymmetric : ∀ α β .
+        wedge(α, β) = scale(power(-1, p*q), wedge(β, α))
+}
+
+structure ExteriorDerivative(p: Nat, dim: Nat) {
+    operation d : DifferentialForm(p, dim) → DifferentialForm(p + 1, dim)
+    
+    axiom d_squared_zero : ∀ α . d(d(α)) = 0  // Fundamental!
+}
+
+// Cartan's Magic Formula: ℒ_X = d ∘ ι_X + ι_X ∘ d
+define cartan_magic_impl(X, alpha) = 
+    plus(d(interior(X, alpha)), interior(X, d(alpha)))
+```
+
+### `cartan_compute.kleis` — Schwarzschild Curvature
+
+Complete pipeline from tetrad to Riemann curvature:
 
 ```kleis
-structure Manifold(M, dim : ℕ) {
-    operation tangent : M → TangentSpace(dim)
-    operation chart : M → Vector(dim, ℝ)  // Local coordinates
+define schwarzschild_tetrad(M) =
+    let f = e_sub(num(1), e_div(e_mul(num(2), M), var("r"))) in
+    let sqrt_f = e_sqrt(f) in
+    [
+        scale1(sqrt_f, dt),
+        scale1(e_div(num(1), sqrt_f), dr),
+        scale1(var("r"), dtheta),
+        scale1(e_mul(var("r"), e_sin(var("theta"))), dphi)
+    ]
+
+define compute_riemann(tetrad) =
+    let omega = solve_connection(tetrad) in
+    compute_curvature(omega)
+
+define schwarzschild_curvature(M) = compute_riemann(schwarzschild_tetrad(M))
+```
+
+### `quantum.kleis` — Hilbert Space Formalism
+
+Full quantum mechanics with Dirac notation:
+
+```kleis
+structure Ket(dim: Nat, T) {
+    operation normalize : Ket(dim, T) → Ket(dim, T)
+    operation scale : T → Ket(dim, T) → Ket(dim, T)
+}
+
+structure Operator(dim: Nat, T) {
+    operation apply : Operator(dim, T) → Ket(dim, T) → Ket(dim, T)
+    operation adjoint : Operator(dim, T) → Operator(dim, T)
+    operation compose : Operator(dim, T) → Operator(dim, T) → Operator(dim, T)
+}
+
+structure Commutator(dim: Nat, T) {
+    operation commutator : Operator(dim, T) → Operator(dim, T) → Operator(dim, T)
+    // [x̂, p̂] = iℏ (Heisenberg uncertainty!)
 }
 ```
 
-### Riemannian Manifold
+### `maxwell.kleis` — Covariant Electromagnetism
 
 ```kleis
-structure RiemannianManifold(M, dim : ℕ) extends Manifold(M, dim) {
-    operation metric : M → Matrix(dim, dim, ℝ)
-    operation christoffel : M → Tensor(1, 2)
-    operation riemann : M → Tensor(1, 3)
-    operation ricci : M → Matrix(dim, dim, ℝ)
-    operation scalar_curvature : M → ℝ
+structure MaxwellInhomogeneous {
+    operation F : Nat → Nat → ℝ  // Field tensor
+    operation J : Nat → ℝ         // 4-current
+    
+    // ∂_μ F^μν = μ₀ J^ν
+    axiom maxwell_inhomogeneous : ∀ nu : Nat .
+        divF(nu) = times(mu0, J(nu))
 }
 ```
 
-## Option and Result Types
-
-### Option
+### `fluid_dynamics.kleis` — Navier-Stokes
 
 ```kleis
-data Option(T) = Some(value : T) | None
-
-// Operations
-define is_some(opt) =
-    match opt {
-        Some(_) => True
-        None => False
-    }
-
-define unwrap_or(opt, default) =
-    match opt {
-        Some(v) => v
-        None => default
-    }
-```
-
-### Result
-
-```kleis
-data Result(T, E) = Ok(value : T) | Err(error : E)
-
-// Operations
-define is_ok(res) =
-    match res {
-        Ok(_) => True
-        Err(_) => False
-    }
-
-define map_result(res, f) =
-    match res {
-        Ok(v) => Ok(f(v))
-        Err(e) => Err(e)
-    }
+structure MomentumEquation {
+    // ρ ∂u_i/∂t + ∂(ρu_i u_j)/∂x_j = -∂p/∂x_i + ∂τ_ij/∂x_j + ρf_i
+    axiom momentum : ∀ i : Nat .
+        plus(times(rho, du_dt(i)), div_momentum(i)) = 
+        plus(plus(negate(grad_p(i)), div_tau(i)), times(rho, f(i)))
+}
 ```
 
 ## Loading the Standard Library
+
+In files:
+
+```kleis
+import "stdlib/prelude.kleis"
+import "stdlib/matrices.kleis"
+import "stdlib/symbolic_diff.kleis"
+```
 
 In the REPL:
 
@@ -288,25 +282,9 @@ kleis> :load stdlib/prelude.kleis
 Loaded standard library.
 ```
 
-In files:
+## See Also
 
-```kleis example
-import "stdlib/prelude.kleis"
-import "stdlib/linear_algebra.kleis"
-import "stdlib/differential_geometry.kleis"
-```
-
-## File Organization
-
-```
-stdlib/
-├── prelude.kleis          // Core types and functions (includes complex)
-├── complex.kleis          // Complex number axioms and properties
-├── numeric.kleis          // Numeric operations
-├── text.kleis             // String processing operations
-├── collections.kleis      // List, Vector, Matrix
-├── algebraic.kleis        // Group, Ring, Field, etc.
-├── linear_algebra.kleis   // Matrix operations
-├── differential_geometry.kleis  // Manifolds, tensors
-└── category_theory.kleis  // Categories, functors
-```
+- [Cartan Geometry Appendix](./cartan-geometry.md) — Full Schwarzschild example
+- [ODE Solver Appendix](./ode-solver.md) — Control systems with LQR
+- [LAPACK Functions](./lapack.md) — Numerical linear algebra
+- [Built-in Functions](./builtin-functions.md) — Complete function reference
