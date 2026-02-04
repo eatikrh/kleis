@@ -284,28 +284,36 @@ fn test_minkowski_curvature() {
 
 #[test]
 fn test_schwarzschild_curvature() {
-    let evaluator = create_evaluator();
+    // Run in a larger stack to avoid CI stack overflow during deep formatting.
+    std::thread::Builder::new()
+        .stack_size(32 * 1024 * 1024)
+        .spawn(|| {
+            let evaluator = create_evaluator();
 
-    // Step 1: Connection
-    let conn = eval(
-        &evaluator,
-        "solve_connection(schwarzschild_tetrad(var(\"M\")))",
-    )
-    .unwrap();
-    println!("📊 Schwarzschild connection size: {} chars", conn.len());
+            // Step 1: Connection
+            let conn = eval(
+                &evaluator,
+                "solve_connection(schwarzschild_tetrad(var(\"M\")))",
+            )
+            .unwrap();
+            println!("📊 Schwarzschild connection size: {} chars", conn.len());
 
-    // Step 2: Full curvature - this is the Riemann tensor for a black hole!
-    let result = eval(&evaluator, "schwarzschild_curvature(var(\"M\"))");
-    let curv_size = result.as_ref().map(|s| s.len()).unwrap_or(0);
-    println!("📊 Schwarzschild curvature size: {} chars", curv_size);
+            // Step 2: Full curvature - this is the Riemann tensor for a black hole!
+            let result = eval(&evaluator, "schwarzschild_curvature(var(\"M\"))");
+            let curv_size = result.as_ref().map(|s| s.len()).unwrap_or(0);
+            println!("📊 Schwarzschild curvature size: {} chars", curv_size);
 
-    assert!(result.is_ok());
-    // Schwarzschild curvature is genuinely complex - allow larger expressions
-    assert!(
-        curv_size < 5000000,
-        "Expression exploded! {} chars",
-        curv_size
-    );
+            assert!(result.is_ok());
+            // Schwarzschild curvature is genuinely complex - allow larger expressions
+            assert!(
+                curv_size < 5000000,
+                "Expression exploded! {} chars",
+                curv_size
+            );
+        })
+        .expect("failed to spawn test thread with larger stack")
+        .join()
+        .expect("test thread panicked");
 }
 
 // =============================================================================
