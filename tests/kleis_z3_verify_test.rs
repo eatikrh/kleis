@@ -1,3 +1,4 @@
+#![cfg(feature = "axiom-verification")]
 //! Level 3 Tests: Render → Parse → Z3 Verify
 //!
 //! These tests complete the testing ladder:
