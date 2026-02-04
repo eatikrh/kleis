@@ -379,36 +379,44 @@ fn test_schwarzschild_connection_nonzero() {
 
 #[test]
 fn test_schwarzschild_curvature_structure() {
-    // LITERATURE CHECK: Schwarzschild Riemann tensor structure
-    // Key properties:
-    // 1. Depends on M/r³ (Newtonian tidal forces)
-    // 2. Has specific symmetries (Riemann symmetries)
-    // Reference: Wald "General Relativity" Appendix C
-    let evaluator = create_evaluator();
+    // Run in a larger stack to avoid CI stack overflow during deep formatting.
+    std::thread::Builder::new()
+        .stack_size(32 * 1024 * 1024)
+        .spawn(|| {
+            // LITERATURE CHECK: Schwarzschild Riemann tensor structure
+            // Key properties:
+            // 1. Depends on M/r³ (Newtonian tidal forces)
+            // 2. Has specific symmetries (Riemann symmetries)
+            // Reference: Wald "General Relativity" Appendix C
+            let evaluator = create_evaluator();
 
-    let result = eval(&evaluator, "schwarzschild_curvature(var(\"M\"))").unwrap();
+            let result = eval(&evaluator, "schwarzschild_curvature(var(\"M\"))").unwrap();
 
-    // Should contain the mass parameter M
-    assert!(
-        result.contains("EVariable(\"M\")"),
-        "Schwarzschild curvature should depend on mass M"
-    );
+            // Should contain the mass parameter M
+            assert!(
+                result.contains("EVariable(\"M\")"),
+                "Schwarzschild curvature should depend on mass M"
+            );
 
-    // Should contain radial coordinate r (tidal forces ~ 1/r³)
-    assert!(
-        result.contains("EVariable(\"r\")"),
-        "Schwarzschild curvature should depend on radius r"
-    );
+            // Should contain radial coordinate r (tidal forces ~ 1/r³)
+            assert!(
+                result.contains("EVariable(\"r\")"),
+                "Schwarzschild curvature should depend on radius r"
+            );
 
-    // Should contain the metric factor f = 1 - 2M/r or its derivatives
-    // This appears as e_sub(num(1), ...) or sqrt
-    let has_metric_factor = result.contains("minus") || result.contains("sqrt");
-    assert!(
-        has_metric_factor,
-        "Schwarzschild curvature should contain metric factor"
-    );
+            // Should contain the metric factor f = 1 - 2M/r or its derivatives
+            // This appears as e_sub(num(1), ...) or sqrt
+            let has_metric_factor = result.contains("minus") || result.contains("sqrt");
+            assert!(
+                has_metric_factor,
+                "Schwarzschild curvature should contain metric factor"
+            );
 
-    println!("✓ Schwarzschild curvature has expected structure (M, r, metric factor)");
+            println!("✓ Schwarzschild curvature has expected structure (M, r, metric factor)");
+        })
+        .expect("failed to spawn test thread with larger stack")
+        .join()
+        .expect("test thread panicked");
 }
 
 #[test]
