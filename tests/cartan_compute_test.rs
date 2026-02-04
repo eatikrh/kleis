@@ -284,28 +284,36 @@ fn test_minkowski_curvature() {
 
 #[test]
 fn test_schwarzschild_curvature() {
-    let evaluator = create_evaluator();
+    // Run in a larger stack to avoid CI stack overflow during deep formatting.
+    std::thread::Builder::new()
+        .stack_size(32 * 1024 * 1024)
+        .spawn(|| {
+            let evaluator = create_evaluator();
 
-    // Step 1: Connection
-    let conn = eval(
-        &evaluator,
-        "solve_connection(schwarzschild_tetrad(var(\"M\")))",
-    )
-    .unwrap();
-    println!("📊 Schwarzschild connection size: {} chars", conn.len());
+            // Step 1: Connection
+            let conn = eval(
+                &evaluator,
+                "solve_connection(schwarzschild_tetrad(var(\"M\")))",
+            )
+            .unwrap();
+            println!("📊 Schwarzschild connection size: {} chars", conn.len());
 
-    // Step 2: Full curvature - this is the Riemann tensor for a black hole!
-    let result = eval(&evaluator, "schwarzschild_curvature(var(\"M\"))");
-    let curv_size = result.as_ref().map(|s| s.len()).unwrap_or(0);
-    println!("📊 Schwarzschild curvature size: {} chars", curv_size);
+            // Step 2: Full curvature - this is the Riemann tensor for a black hole!
+            let result = eval(&evaluator, "schwarzschild_curvature(var(\"M\"))");
+            let curv_size = result.as_ref().map(|s| s.len()).unwrap_or(0);
+            println!("📊 Schwarzschild curvature size: {} chars", curv_size);
 
-    assert!(result.is_ok());
-    // Schwarzschild curvature is genuinely complex - allow larger expressions
-    assert!(
-        curv_size < 5000000,
-        "Expression exploded! {} chars",
-        curv_size
-    );
+            assert!(result.is_ok());
+            // Schwarzschild curvature is genuinely complex - allow larger expressions
+            assert!(
+                curv_size < 5000000,
+                "Expression exploded! {} chars",
+                curv_size
+            );
+        })
+        .expect("failed to spawn test thread with larger stack")
+        .join()
+        .expect("test thread panicked");
 }
 
 // =============================================================================
@@ -379,76 +387,92 @@ fn test_schwarzschild_connection_nonzero() {
 
 #[test]
 fn test_schwarzschild_curvature_structure() {
-    // LITERATURE CHECK: Schwarzschild Riemann tensor structure
-    // Key properties:
-    // 1. Depends on M/r³ (Newtonian tidal forces)
-    // 2. Has specific symmetries (Riemann symmetries)
-    // Reference: Wald "General Relativity" Appendix C
-    let evaluator = create_evaluator();
+    // Run in a larger stack to avoid CI stack overflow during deep formatting.
+    std::thread::Builder::new()
+        .stack_size(32 * 1024 * 1024)
+        .spawn(|| {
+            // LITERATURE CHECK: Schwarzschild Riemann tensor structure
+            // Key properties:
+            // 1. Depends on M/r³ (Newtonian tidal forces)
+            // 2. Has specific symmetries (Riemann symmetries)
+            // Reference: Wald "General Relativity" Appendix C
+            let evaluator = create_evaluator();
 
-    let result = eval(&evaluator, "schwarzschild_curvature(var(\"M\"))").unwrap();
+            let result = eval(&evaluator, "schwarzschild_curvature(var(\"M\"))").unwrap();
 
-    // Should contain the mass parameter M
-    assert!(
-        result.contains("EVariable(\"M\")"),
-        "Schwarzschild curvature should depend on mass M"
-    );
+            // Should contain the mass parameter M
+            assert!(
+                result.contains("EVariable(\"M\")"),
+                "Schwarzschild curvature should depend on mass M"
+            );
 
-    // Should contain radial coordinate r (tidal forces ~ 1/r³)
-    assert!(
-        result.contains("EVariable(\"r\")"),
-        "Schwarzschild curvature should depend on radius r"
-    );
+            // Should contain radial coordinate r (tidal forces ~ 1/r³)
+            assert!(
+                result.contains("EVariable(\"r\")"),
+                "Schwarzschild curvature should depend on radius r"
+            );
 
-    // Should contain the metric factor f = 1 - 2M/r or its derivatives
-    // This appears as e_sub(num(1), ...) or sqrt
-    let has_metric_factor = result.contains("minus") || result.contains("sqrt");
-    assert!(
-        has_metric_factor,
-        "Schwarzschild curvature should contain metric factor"
-    );
+            // Should contain the metric factor f = 1 - 2M/r or its derivatives
+            // This appears as e_sub(num(1), ...) or sqrt
+            let has_metric_factor = result.contains("minus") || result.contains("sqrt");
+            assert!(
+                has_metric_factor,
+                "Schwarzschild curvature should contain metric factor"
+            );
 
-    println!("✓ Schwarzschild curvature has expected structure (M, r, metric factor)");
+            println!("✓ Schwarzschild curvature has expected structure (M, r, metric factor)");
+        })
+        .expect("failed to spawn test thread with larger stack")
+        .join()
+        .expect("test thread panicked");
 }
 
 #[test]
 fn test_schwarzschild_curvature_component_r0101() {
-    // Extract and print R^0_1_01 (time-radial curvature, dt∧dr coefficient)
-    //
-    // LITERATURE: For Schwarzschild in orthonormal frame,
-    // R^0_1_01 should be proportional to M/r³
-    // Reference: Carroll "Spacetime and Geometry" Eq. 5.29
-    let evaluator = create_evaluator();
+    // Run in a larger stack to avoid CI stack overflow during deep formatting.
+    std::thread::Builder::new()
+        .stack_size(32 * 1024 * 1024)
+        .spawn(|| {
+            // Extract and print R^0_1_01 (time-radial curvature, dt∧dr coefficient)
+            //
+            // LITERATURE: For Schwarzschild in orthonormal frame,
+            // R^0_1_01 should be proportional to M/r³
+            // Reference: Carroll "Spacetime and Geometry" Eq. 5.29
+            let evaluator = create_evaluator();
 
-    // Full curvature is 4x4 matrix of 2-forms (each 2-form is 4x4)
-    // R^a_b_μν = curv[a][b][μ][ν]
-    // R^0_1_01 = curv[0][1][0][1]
+            // Full curvature is 4x4 matrix of 2-forms (each 2-form is 4x4)
+            // R^a_b_μν = curv[a][b][μ][ν]
+            // R^0_1_01 = curv[0][1][0][1]
 
-    let component = eval(
-        &evaluator,
-        "let curv = schwarzschild_curvature(var(\"M\")) in \
+            let component = eval(
+                &evaluator,
+                "let curv = schwarzschild_curvature(var(\"M\")) in \
          nth(nth(nth(nth(curv, 0), 1), 0), 1)",
-    )
-    .unwrap();
+            )
+            .unwrap();
 
-    println!("\n=== Schwarzschild Curvature Component R^0_1_01 ===");
-    println!("(coefficient of dt∧dr in R^0_1 curvature 2-form)\n");
-    println!("{}\n", component);
-    println!("Size: {} chars", component.len());
+            println!("\n=== Schwarzschild Curvature Component R^0_1_01 ===");
+            println!("(coefficient of dt∧dr in R^0_1 curvature 2-form)\n");
+            println!("{}\n", component);
+            println!("Size: {} chars", component.len());
 
-    // Verify it contains expected terms
-    assert!(
-        component.contains("EVariable(\"M\")") || component.contains("M"),
-        "R^0_1_01 should contain mass M"
-    );
-    assert!(
-        component.contains("EVariable(\"r\")") || component.contains("r"),
-        "R^0_1_01 should contain radius r"
-    );
+            // Verify it contains expected terms
+            assert!(
+                component.contains("EVariable(\"M\")") || component.contains("M"),
+                "R^0_1_01 should contain mass M"
+            );
+            assert!(
+                component.contains("EVariable(\"r\")") || component.contains("r"),
+                "R^0_1_01 should contain radius r"
+            );
 
-    println!("\n=== Expected from Literature ===");
-    println!("R^0_1_01 ∝ M/r³ (radial tidal force)");
-    println!("Reference: Carroll 'Spacetime and Geometry' Chapter 5");
+            println!("\n=== Expected from Literature ===");
+            println!("R^0_1_01 ∝ M/r³ (radial tidal force)");
+            println!("Reference: Carroll 'Spacetime and Geometry' Chapter 5");
+        })
+        .expect("failed to spawn test thread with larger stack")
+        .join()
+        .expect("test thread panicked");
 }
 
 #[test]

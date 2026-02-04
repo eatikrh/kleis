@@ -88,3 +88,172 @@ structure VectorComponents(dim: Nat) {
         )
 }
 
+// ============================================
+// List Predicates
+// ============================================
+
+structure ListPredicates(T) {
+    // Check if list is empty
+    operation isEmpty : List(T) → Bool
+    
+    axiom isEmpty_nil : isEmpty(nil) = true
+    axiom isEmpty_cons : ∀ x : T . ∀ xs : List(T) . isEmpty(cons(x, xs)) = false
+}
+
+implements ListPredicates(T) {
+    operation isEmpty = builtin_isEmpty
+}
+
+// ============================================
+// List Manipulation
+// ============================================
+
+structure ListManip(T) {
+    // Concatenate two lists
+    operation append : List(T) → List(T) → List(T)
+    
+    // Reverse a list
+    operation reverse : List(T) → List(T)
+    
+    // append([], ys) = ys
+    axiom append_nil : ∀ ys : List(T) . append(nil, ys) = ys
+    
+    // append([x, ...xs], ys) = [x, ...append(xs, ys)]
+    axiom append_cons : ∀ x : T . ∀ xs : List(T) . ∀ ys : List(T) .
+        append(cons(x, xs), ys) = cons(x, append(xs, ys))
+    
+    // reverse([]) = []
+    axiom reverse_nil : reverse(nil) = nil
+    
+    // reverse([x, ...xs]) = append(reverse(xs), [x])
+    axiom reverse_cons : ∀ x : T . ∀ xs : List(T) .
+        reverse(cons(x, xs)) = append(reverse(xs), cons(x, nil))
+    
+    // Derived property: append is associative
+    axiom append_assoc : ∀ xs : List(T) . ∀ ys : List(T) . ∀ zs : List(T) .
+        append(append(xs, ys), zs) = append(xs, append(ys, zs))
+    
+    // Derived property: reverse is involutive
+    axiom reverse_reverse : ∀ xs : List(T) . reverse(reverse(xs)) = xs
+}
+
+implements ListManip(T) {
+    operation append = builtin_append
+    operation reverse = builtin_reverse
+}
+
+// ============================================
+// Higher-Order List Operations
+// ============================================
+
+// Map: apply a function to each element
+structure ListMap(T, R) {
+    operation map : (T → R) → List(T) → List(R)
+    
+    // map(f, []) = []
+    axiom map_nil : ∀ f : T → R . map(f, nil) = nil
+    
+    // map(f, [x, ...xs]) = [f(x), ...map(f, xs)]
+    axiom map_cons : ∀ f : T → R . ∀ x : T . ∀ xs : List(T) .
+        map(f, cons(x, xs)) = cons(f(x), map(f, xs))
+    
+    // Functor law: map(id, xs) = xs
+    axiom map_id : ∀ xs : List(T) . map(λ x . x, xs) = xs
+    
+    // Functor law: map(f ∘ g, xs) = map(f, map(g, xs))
+    axiom map_compose : ∀ f : R → R . ∀ g : T → R . ∀ xs : List(T) .
+        map(λ x . f(g(x)), xs) = map(f, map(g, xs))
+}
+
+implements ListMap(T, R) {
+    operation map = builtin_map
+}
+
+// Filter: keep elements satisfying a predicate
+structure ListFilter(T) {
+    operation filter : (T → Bool) → List(T) → List(T)
+    
+    // filter(p, []) = []
+    axiom filter_nil : ∀ p : T → Bool . filter(p, nil) = nil
+    
+    // filter(p, [x, ...xs]) = if p(x) then [x, ...filter(p, xs)] else filter(p, xs)
+    axiom filter_cons_true : ∀ p : T → Bool . ∀ x : T . ∀ xs : List(T) .
+        p(x) = true → filter(p, cons(x, xs)) = cons(x, filter(p, xs))
+    
+    axiom filter_cons_false : ∀ p : T → Bool . ∀ x : T . ∀ xs : List(T) .
+        p(x) = false → filter(p, cons(x, xs)) = filter(p, xs)
+}
+
+implements ListFilter(T) {
+    operation filter = builtin_filter
+}
+
+// Fold: reduce a list to a single value
+structure ListFold(T, R) {
+    // Left fold: foldl(f, z, [a,b,c]) = f(f(f(z, a), b), c)
+    operation foldl : (R → T → R) → R → List(T) → R
+    
+    // Right fold: foldr(f, z, [a,b,c]) = f(a, f(b, f(c, z)))
+    operation foldr : (T → R → R) → R → List(T) → R
+    
+    // foldl(f, z, []) = z
+    axiom foldl_nil : ∀ f : R → T → R . ∀ z : R . foldl(f, z, nil) = z
+    
+    // foldl(f, z, [x, ...xs]) = foldl(f, f(z, x), xs)
+    axiom foldl_cons : ∀ f : R → T → R . ∀ z : R . ∀ x : T . ∀ xs : List(T) .
+        foldl(f, z, cons(x, xs)) = foldl(f, f(z, x), xs)
+    
+    // foldr(f, z, []) = z
+    axiom foldr_nil : ∀ f : T → R → R . ∀ z : R . foldr(f, z, nil) = z
+    
+    // foldr(f, z, [x, ...xs]) = f(x, foldr(f, z, xs))
+    axiom foldr_cons : ∀ f : T → R → R . ∀ z : R . ∀ x : T . ∀ xs : List(T) .
+        foldr(f, z, cons(x, xs)) = f(x, foldr(f, z, xs))
+}
+
+implements ListFold(T, R) {
+    operation foldl = builtin_foldl
+    operation foldr = builtin_foldr
+}
+
+// ============================================
+// Derived Operations (defined via fold)
+// ============================================
+
+structure ListDerived(T) {
+    // Sum of numeric list: sum([1,2,3]) = 6
+    operation sum : List(ℝ) → ℝ
+    
+    // Product of numeric list: product([2,3,4]) = 24
+    operation product : List(ℝ) → ℝ
+    
+    // Check if all elements satisfy predicate
+    operation all : (T → Bool) → List(T) → Bool
+    
+    // Check if any element satisfies predicate
+    operation any : (T → Bool) → List(T) → Bool
+    
+    // sum = foldl(+, 0, xs)
+    axiom sum_def : ∀ xs : List(ℝ) . sum(xs) = foldl(plus, 0, xs)
+    
+    // product = foldl(*, 1, xs)
+    axiom product_def : ∀ xs : List(ℝ) . product(xs) = foldl(times, 1, xs)
+    
+    // all(p, xs) = foldl(λ acc x . acc ∧ p(x), true, xs)
+    axiom all_nil : ∀ p : T → Bool . all(p, nil) = true
+    axiom all_cons : ∀ p : T → Bool . ∀ x : T . ∀ xs : List(T) .
+        all(p, cons(x, xs)) = and(p(x), all(p, xs))
+    
+    // any(p, xs) = foldl(λ acc x . acc ∨ p(x), false, xs)
+    axiom any_nil : ∀ p : T → Bool . any(p, nil) = false
+    axiom any_cons : ∀ p : T → Bool . ∀ x : T . ∀ xs : List(T) .
+        any(p, cons(x, xs)) = or(p(x), any(p, xs))
+}
+
+implements ListDerived(T) {
+    operation sum = builtin_sum
+    operation product = builtin_product
+    operation all = builtin_all
+    operation any = builtin_any
+}
+

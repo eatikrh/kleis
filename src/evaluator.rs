@@ -2936,7 +2936,7 @@ impl Evaluator {
                     _ => Err("tail: expected non-empty list".to_string()),
                 }
             }
-            "null?" | "isEmpty" | "isNil" => {
+            "null?" | "isEmpty" | "isNil" | "builtin_isEmpty" => {
                 // null?(list) → true if empty
                 if args.len() != 1 {
                     return Ok(None);
@@ -3027,7 +3027,7 @@ impl Evaluator {
                 }
                 Ok(None)
             }
-            "list_map" => {
+            "list_map" | "map" | "builtin_map" => {
                 // list_map(f, [a, b, c]) → [f(a), f(b), f(c)]
                 // Works with Expression::List (bracket lists)
                 if args.len() != 2 {
@@ -3085,7 +3085,7 @@ impl Evaluator {
 
                 Ok(None)
             }
-            "list_filter" => {
+            "list_filter" | "filter" | "builtin_filter" => {
                 // list_filter(predicate, [a, b, c]) → elements where predicate(x) is true
                 if args.len() != 2 {
                     return Ok(None);
@@ -3116,7 +3116,7 @@ impl Evaluator {
                 }
                 Ok(None)
             }
-            "list_fold" => {
+            "list_fold" | "foldl" | "builtin_foldl" => {
                 // list_fold(f, init, [a, b, c]) → f(f(f(init, a), b), c)
                 if args.len() != 3 {
                     return Ok(None);
@@ -3138,7 +3138,7 @@ impl Evaluator {
                 }
                 Ok(None)
             }
-            "list_flatmap" | "flatmap" | "concat_map" => {
+            "list_flatmap" | "flatmap" | "concat_map" | "builtin_flatmap" => {
                 // list_flatmap(f, [a, b, c]) → flatten(map(f, [a, b, c]))
                 // f should return a list, results are concatenated
                 if args.len() != 2 {
@@ -3166,7 +3166,7 @@ impl Evaluator {
                 }
                 Ok(None)
             }
-            "list_zip" => {
+            "list_zip" | "zip" | "builtin_zip" => {
                 // list_zip([a, b, c], [1, 2, 3]) → [(a, 1), (b, 2), (c, 3)]
                 // Returns pairs (tuples) of corresponding elements
                 if args.len() != 2 {
@@ -3262,7 +3262,7 @@ impl Evaluator {
                 }
                 Ok(None)
             }
-            "list_concat" | "list_append" => {
+            "list_concat" | "list_append" | "append" | "builtin_append" => {
                 // list_concat([a, b], [c, d]) → [a, b, c, d]
                 if args.len() != 2 {
                     return Ok(None);
@@ -3344,6 +3344,163 @@ impl Evaluator {
                     let mut result = elements[n..].to_vec();
                     result.extend(elements[..n].to_vec());
                     return Ok(Some(Expression::List(result)));
+                }
+                Ok(None)
+            }
+
+            // === Additional List Operations (for stdlib/lists.kleis) ===
+            "reverse" | "builtin_reverse" => {
+                // reverse([a, b, c]) → [c, b, a]
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let evaluated_list = self.eval_concrete(&args[0])?;
+                match &evaluated_list {
+                    Expression::Object(s) if s == "Nil" => {
+                        Ok(Some(Expression::Object("Nil".to_string())))
+                    }
+                    Expression::List(elements) => {
+                        let mut reversed = elements.clone();
+                        reversed.reverse();
+                        Ok(Some(Expression::List(reversed)))
+                    }
+                    Expression::Operation {
+                        name, args: inner, ..
+                    } if name == "Cons" && inner.len() == 2 => {
+                        // Convert Cons list to vec, reverse, return as List
+                        let mut elements = vec![];
+                        let mut current = evaluated_list.clone();
+                        while let Expression::Operation {
+                            name, args: inner, ..
+                        } = &current
+                        {
+                            if name == "Cons" && inner.len() == 2 {
+                                elements.push(inner[0].clone());
+                                current = inner[1].clone();
+                            } else {
+                                break;
+                            }
+                        }
+                        elements.reverse();
+                        Ok(Some(Expression::List(elements)))
+                    }
+                    _ => Ok(None),
+                }
+            }
+
+            "foldr" | "builtin_foldr" => {
+                // foldr(f, z, [a, b, c]) → f(a, f(b, f(c, z)))
+                if args.len() != 3 {
+                    return Ok(None);
+                }
+                let func = &args[0];
+                let z = &args[1];
+                let evaluated_list = self.eval_concrete(&args[2])?;
+
+                if let Expression::List(elements) = &evaluated_list {
+                    let mut acc = z.clone();
+                    for elem in elements.iter().rev() {
+                        let reduced = self.beta_reduce_multi(func, &[elem.clone(), acc])?;
+                        acc = self.eval_concrete(&reduced)?;
+                    }
+                    return Ok(Some(acc));
+                }
+                if let Expression::Object(s) = &evaluated_list {
+                    if s == "Nil" {
+                        return Ok(Some(z.clone()));
+                    }
+                }
+                Ok(None)
+            }
+
+            "sum" | "builtin_sum" => {
+                // sum([1, 2, 3]) → 6
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let evaluated_list = self.eval_concrete(&args[0])?;
+                if let Expression::List(elements) = &evaluated_list {
+                    let mut total = 0.0;
+                    for e in elements {
+                        if let Some(n) = self.as_number(e) {
+                            total += n;
+                        } else {
+                            return Ok(None);
+                        }
+                    }
+                    return Ok(Some(Self::const_from_f64(total)));
+                }
+                Ok(None)
+            }
+
+            "product" | "builtin_product" => {
+                // product([2, 3, 4]) → 24
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                let evaluated_list = self.eval_concrete(&args[0])?;
+                if let Expression::List(elements) = &evaluated_list {
+                    let mut total = 1.0;
+                    for e in elements {
+                        if let Some(n) = self.as_number(e) {
+                            total *= n;
+                        } else {
+                            return Ok(None);
+                        }
+                    }
+                    return Ok(Some(Self::const_from_f64(total)));
+                }
+                Ok(None)
+            }
+
+            "all" | "builtin_all" => {
+                // all(p, [a, b, c]) → true if p(x) is true for all x
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                let pred = &args[0];
+                let evaluated_list = self.eval_concrete(&args[1])?;
+
+                if let Expression::List(elements) = &evaluated_list {
+                    for elem in elements {
+                        let reduced = self.beta_reduce(pred, elem)?;
+                        let result = self.eval_concrete(&reduced)?;
+                        if let Some(false) = self.as_bool(&result) {
+                            return Ok(Some(Expression::Object("false".to_string())));
+                        }
+                    }
+                    return Ok(Some(Expression::Object("true".to_string())));
+                }
+                if let Expression::Object(s) = &evaluated_list {
+                    if s == "Nil" {
+                        return Ok(Some(Expression::Object("true".to_string())));
+                    }
+                }
+                Ok(None)
+            }
+
+            "any" | "builtin_any" => {
+                // any(p, [a, b, c]) → true if p(x) is true for any x
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                let pred = &args[0];
+                let evaluated_list = self.eval_concrete(&args[1])?;
+
+                if let Expression::List(elements) = &evaluated_list {
+                    for elem in elements {
+                        let reduced = self.beta_reduce(pred, elem)?;
+                        let result = self.eval_concrete(&reduced)?;
+                        if let Some(true) = self.as_bool(&result) {
+                            return Ok(Some(Expression::Object("true".to_string())));
+                        }
+                    }
+                    return Ok(Some(Expression::Object("false".to_string())));
+                }
+                if let Expression::Object(s) = &evaluated_list {
+                    if s == "Nil" {
+                        return Ok(Some(Expression::Object("false".to_string())));
+                    }
                 }
                 Ok(None)
             }
