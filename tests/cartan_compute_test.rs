@@ -413,42 +413,50 @@ fn test_schwarzschild_curvature_structure() {
 
 #[test]
 fn test_schwarzschild_curvature_component_r0101() {
-    // Extract and print R^0_1_01 (time-radial curvature, dt∧dr coefficient)
-    //
-    // LITERATURE: For Schwarzschild in orthonormal frame,
-    // R^0_1_01 should be proportional to M/r³
-    // Reference: Carroll "Spacetime and Geometry" Eq. 5.29
-    let evaluator = create_evaluator();
+    // Run in a larger stack to avoid CI stack overflow during deep formatting.
+    std::thread::Builder::new()
+        .stack_size(32 * 1024 * 1024)
+        .spawn(|| {
+            // Extract and print R^0_1_01 (time-radial curvature, dt∧dr coefficient)
+            //
+            // LITERATURE: For Schwarzschild in orthonormal frame,
+            // R^0_1_01 should be proportional to M/r³
+            // Reference: Carroll "Spacetime and Geometry" Eq. 5.29
+            let evaluator = create_evaluator();
 
-    // Full curvature is 4x4 matrix of 2-forms (each 2-form is 4x4)
-    // R^a_b_μν = curv[a][b][μ][ν]
-    // R^0_1_01 = curv[0][1][0][1]
+            // Full curvature is 4x4 matrix of 2-forms (each 2-form is 4x4)
+            // R^a_b_μν = curv[a][b][μ][ν]
+            // R^0_1_01 = curv[0][1][0][1]
 
-    let component = eval(
-        &evaluator,
-        "let curv = schwarzschild_curvature(var(\"M\")) in \
+            let component = eval(
+                &evaluator,
+                "let curv = schwarzschild_curvature(var(\"M\")) in \
          nth(nth(nth(nth(curv, 0), 1), 0), 1)",
-    )
-    .unwrap();
+            )
+            .unwrap();
 
-    println!("\n=== Schwarzschild Curvature Component R^0_1_01 ===");
-    println!("(coefficient of dt∧dr in R^0_1 curvature 2-form)\n");
-    println!("{}\n", component);
-    println!("Size: {} chars", component.len());
+            println!("\n=== Schwarzschild Curvature Component R^0_1_01 ===");
+            println!("(coefficient of dt∧dr in R^0_1 curvature 2-form)\n");
+            println!("{}\n", component);
+            println!("Size: {} chars", component.len());
 
-    // Verify it contains expected terms
-    assert!(
-        component.contains("EVariable(\"M\")") || component.contains("M"),
-        "R^0_1_01 should contain mass M"
-    );
-    assert!(
-        component.contains("EVariable(\"r\")") || component.contains("r"),
-        "R^0_1_01 should contain radius r"
-    );
+            // Verify it contains expected terms
+            assert!(
+                component.contains("EVariable(\"M\")") || component.contains("M"),
+                "R^0_1_01 should contain mass M"
+            );
+            assert!(
+                component.contains("EVariable(\"r\")") || component.contains("r"),
+                "R^0_1_01 should contain radius r"
+            );
 
-    println!("\n=== Expected from Literature ===");
-    println!("R^0_1_01 ∝ M/r³ (radial tidal force)");
-    println!("Reference: Carroll 'Spacetime and Geometry' Chapter 5");
+            println!("\n=== Expected from Literature ===");
+            println!("R^0_1_01 ∝ M/r³ (radial tidal force)");
+            println!("Reference: Carroll 'Spacetime and Geometry' Chapter 5");
+        })
+        .expect("failed to spawn test thread with larger stack")
+        .join()
+        .expect("test thread panicked");
 }
 
 #[test]
