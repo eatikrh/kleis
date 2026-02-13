@@ -562,10 +562,14 @@ impl Evaluator {
                 // Substitute in each case body and guard (patterns bind their own variables)
                 let new_cases = cases
                     .iter()
-                    .map(|case| crate::ast::MatchCase {
-                        pattern: case.pattern.clone(),
-                        guard: case.guard.as_ref().map(|g| self.substitute(g, subst)),
-                        body: self.substitute(&case.body, subst),
+                    .map(|case| {
+                        let mut case_subst = subst.clone();
+                        self.remove_pattern_vars_from_subst(&case.pattern, &mut case_subst);
+                        crate::ast::MatchCase {
+                            pattern: case.pattern.clone(),
+                            guard: case.guard.as_ref().map(|g| self.substitute(g, &case_subst)),
+                            body: self.substitute(&case.body, &case_subst),
+                        }
                     })
                     .collect();
 
@@ -582,14 +586,20 @@ impl Evaluator {
                 variables,
                 where_clause,
                 body,
-            } => Expression::Quantifier {
-                quantifier: quantifier.clone(),
-                variables: variables.clone(),
-                where_clause: where_clause
-                    .as_ref()
-                    .map(|w| Box::new(self.substitute(w, subst))),
-                body: Box::new(self.substitute(body, subst)),
-            },
+            } => {
+                let mut filtered_subst = subst.clone();
+                for var in variables {
+                    filtered_subst.remove(&var.name);
+                }
+                Expression::Quantifier {
+                    quantifier: quantifier.clone(),
+                    variables: variables.clone(),
+                    where_clause: where_clause
+                        .as_ref()
+                        .map(|w| Box::new(self.substitute(w, &filtered_subst))),
+                    body: Box::new(self.substitute(body, &filtered_subst)),
+                }
+            }
 
             Expression::List(elements) => {
                 // Substitute in list elements
@@ -786,7 +796,7 @@ impl Evaluator {
                     Ok(Expression::Operation {
                         name: name.clone(),
                         args: eval_args,
-                        span: None,
+                        span: span.clone(),
                     })
                 }
             }
@@ -820,19 +830,22 @@ impl Evaluator {
                 condition,
                 then_branch,
                 else_branch,
-                ..
+                span,
             } => {
                 let eval_cond = self.eval_internal(condition, depth + 1)?;
-                let eval_then = self.eval_internal(then_branch, depth + 1)?;
-                let eval_else = self.eval_internal(else_branch, depth + 1)?;
 
-                // Return as conditional (we don't evaluate the condition itself)
-                // The actual branching is handled by Z3 or pattern matching
+                if let Some(cond_bool) = self.as_boolean(&eval_cond) {
+                    if cond_bool {
+                        return self.eval_internal(then_branch, depth + 1);
+                    }
+                    return self.eval_internal(else_branch, depth + 1);
+                }
+
                 Ok(Expression::Conditional {
                     condition: Box::new(eval_cond),
-                    then_branch: Box::new(eval_then),
-                    else_branch: Box::new(eval_else),
-                    span: None,
+                    then_branch: then_branch.clone(),
+                    else_branch: else_branch.clone(),
+                    span: span.clone(),
                 })
             }
 
