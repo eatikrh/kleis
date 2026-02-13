@@ -1,5 +1,37 @@
 # Next Session Tasks
 
+## Evaluator Hygiene Plan (Branch: evaluator-hygiene)
+
+Goal: address capture-avoidance, span preservation, and lazy conditionals with full test coverage.
+
+### Scope
+1. **Capture-avoiding substitution for all binders**
+   - Filter substitutions under `Quantifier` variables.
+   - Filter substitutions in `MatchCase` guards and bodies by pattern-bound vars.
+2. **Preserve spans in built-in operations**
+   - Keep original `span` when rebuilding `Expression::Operation` for non-user-defined functions.
+3. **Lazy conditional evaluation in symbolic `eval_internal`**
+   - Evaluate condition only.
+   - If condition reduces to `true/false`, evaluate the selected branch.
+   - Otherwise return a conditional with unevaluated branches (or weak-head as needed).
+
+### Tests to add
+1. **Substitution hygiene**
+   - Quantifier: ensure `∀ x . ...` blocks substitution for `x` in body/where.
+   - MatchCase: ensure pattern-bound vars are not substituted in guard/body.
+2. **Span preservation**
+   - Built-in op span survives `eval_internal` when no user-defined function applies.
+3. **Lazy conditionals**
+   - Branches remain unevaluated when condition is symbolic.
+   - Only selected branch evaluates when condition is concrete `true/false`.
+
+### Steps
+1. Implement binder-filtering helpers in `Evaluator::substitute`.
+2. Preserve span in built-in operation reconstruction.
+3. Make conditional evaluation lazy with truthy short-circuit.
+4. Add tests covering each behavior.
+5. Run test suite for affected modules.
+
 ## Type System Gap: Tensor Operation Signatures
 
 The tensor operations used in the Equation Editor (`index_mixed`, `tensor_lower_pair`, etc.) render correctly but lack type signatures in the stdlib. This causes the type checker to return unresolved type variables like `Var(TypeVar(1))` instead of proper tensor types.

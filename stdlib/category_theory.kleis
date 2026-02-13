@@ -1,0 +1,184 @@
+// Kleis Standard Library - Category Theory (Bourbaki-style structural formalization)
+// Structures define operations and axioms; no global truths.
+
+// ----------------------------------------------------------------------------
+// Category
+// ----------------------------------------------------------------------------
+// A category is given by objects, morphisms, source/target, identity, composition,
+// and axioms (associativity and identity laws).
+//
+// Convention used here:
+// - Obj/Mor with src/tgt/id/comp (first-order, Bourbaki-style)
+// - Composition is total; typing is enforced by comp_defined
+//
+// Alternative (not used here): Hom-typed formulation
+// structure Category(Obj : Type, Hom : Obj × Obj → Type) { ... }
+// Pros:
+// - Composition is inherently typed (no separate comp_defined axiom)
+// - Closer to categorical presentations with hom-sets
+// Cons:
+// - Higher-order/dependent typing in signatures
+// - Less Bourbaki-style; heavier for first-order/Z3-style reasoning
+structure Category(Obj : Type, Mor : Type) {
+    // Source/target of morphisms
+    operation src : Mor → Obj
+    operation tgt : Mor → Obj
+
+    // Identity and composition
+    operation id : Obj → Mor
+    operation comp : Mor → Mor → Mor
+
+    // Typing for composition
+    axiom comp_defined : ∀ f : Mor . ∀ g : Mor .
+        equals(tgt(f), src(g)) →
+        and(equals(src(comp(f, g)), src(f)), equals(tgt(comp(f, g)), tgt(g)))
+
+    // Associativity
+    axiom assoc : ∀ f : Mor . ∀ g : Mor . ∀ h : Mor .
+        and(equals(tgt(f), src(g)), equals(tgt(g), src(h))) →
+        equals(comp(comp(f, g), h), comp(f, comp(g, h)))
+
+    // Identity laws
+    axiom left_id : ∀ f : Mor .
+        equals(comp(id(src(f)), f), f)
+
+    axiom right_id : ∀ f : Mor .
+        equals(comp(f, id(tgt(f))), f)
+}
+
+// ----------------------------------------------------------------------------
+// Functor
+// ----------------------------------------------------------------------------
+// A functor preserves source/target, identities, and composition.
+structure Functor(ObjC : Type, MorC : Type, ObjD : Type, MorD : Type) {
+    // Category C operations
+    operation srcC : MorC → ObjC
+    operation tgtC : MorC → ObjC
+    operation idC : ObjC → MorC
+    operation compC : MorC → MorC → MorC
+
+    // Category D operations
+    operation srcD : MorD → ObjD
+    operation tgtD : MorD → ObjD
+    operation idD : ObjD → MorD
+    operation compD : MorD → MorD → MorD
+
+    // Object and morphism maps
+    operation F_obj : ObjC → ObjD
+    operation F_mor : MorC → MorD
+
+    // Source/target preservation
+    axiom preserves_src : ∀ f : MorC .
+        equals(srcD(F_mor(f)), F_obj(srcC(f)))
+
+    axiom preserves_tgt : ∀ f : MorC .
+        equals(tgtD(F_mor(f)), F_obj(tgtC(f)))
+
+    // Identity preservation
+    axiom preserves_id : ∀ x : ObjC .
+        equals(F_mor(idC(x)), idD(F_obj(x)))
+
+    // Composition preservation
+    axiom preserves_comp : ∀ f : MorC . ∀ g : MorC .
+        equals(F_mor(compC(f, g)), compD(F_mor(f), F_mor(g)))
+}
+
+// ----------------------------------------------------------------------------
+// Natural Transformation
+// ----------------------------------------------------------------------------
+// A natural transformation between functors F and G is a family of morphisms
+// with the naturality condition.
+structure NaturalTransformation(ObjC : Type, MorC : Type, ObjD : Type, MorD : Type) {
+    // Category C operations
+    operation srcC : MorC → ObjC
+    operation tgtC : MorC → ObjC
+
+    // Category D operations
+    operation srcD : MorD → ObjD
+    operation tgtD : MorD → ObjD
+    operation compD : MorD → MorD → MorD
+
+    // Functor data for F
+    operation F_obj : ObjC → ObjD
+    operation F_mor : MorC → MorD
+
+    // Functor data for G
+    operation G_obj : ObjC → ObjD
+    operation G_mor : MorC → MorD
+
+    // Components of the natural transformation
+    operation eta : ObjC → MorD
+
+    // Naturality: η_B ∘ F(f) = G(f) ∘ η_A
+    axiom naturality : ∀ f : MorC .
+        equals(
+            compD(eta(tgtC(f)), F_mor(f)),
+            compD(G_mor(f), eta(srcC(f)))
+        )
+}
+
+// ----------------------------------------------------------------------------
+// Isomorphism (optional, but useful)
+// ----------------------------------------------------------------------------
+structure Isomorphism(Obj : Type, Mor : Type) {
+    // Category operations
+    operation src : Mor → Obj
+    operation tgt : Mor → Obj
+    operation id : Obj → Mor
+    operation comp : Mor → Mor → Mor
+
+    element f : Mor
+    element g : Mor
+
+    axiom inverse_left : equals(comp(f, g), id(src(f)))
+    axiom inverse_right : equals(comp(g, f), id(tgt(f)))
+}
+
+// ----------------------------------------------------------------------------
+// Monad and Kleisli Category
+// ----------------------------------------------------------------------------
+// A monad presents the Kleisli category structure on types.
+structure Monad(M : Type) {
+    operation unit : A → M(A)
+    operation bind : M(A) → (A → M(B)) → M(B)
+
+    // Monad laws
+    axiom left_id : ∀ a : A . ∀ f : A → M(B) .
+        equals(bind(unit(a), f), f(a))
+
+    axiom right_id : ∀ m : M(A) .
+        equals(bind(m, unit), m)
+
+    axiom assoc : ∀ m : M(A) . ∀ f : A → M(B) . ∀ g : B → M(C) .
+        equals(
+            bind(bind(m, f), g),
+            bind(m, λ x . bind(f(x), g))
+        )
+}
+
+// Kleisli category for a monad M
+structure KleisliCategory(M : Type) {
+    operation unit : A → M(A)
+    operation bind : M(A) → (A → M(B)) → M(B)
+
+    // Kleisli identity and composition
+    operation kid : A → M(A)
+    operation kcomp : (A → M(B)) → (B → M(C)) → (A → M(C))
+
+    // Definitions
+    axiom kid_def : ∀ a : A . equals(kid(a), unit(a))
+
+    axiom kcomp_def : ∀ f : A → M(B) . ∀ g : B → M(C) .
+        equals(kcomp(f, g), λ x . bind(f(x), g))
+
+    // Category laws in Kleisli form
+    axiom k_left_id : ∀ f : A → M(B) .
+        equals(kcomp(kid, f), f)
+
+    axiom k_right_id : ∀ f : A → M(B) .
+        equals(kcomp(f, kid), f)
+
+    axiom k_assoc : ∀ f : A → M(B) . ∀ g : B → M(C) . ∀ h : C → M(D) .
+        equals(kcomp(kcomp(f, g), h), kcomp(f, kcomp(g, h)))
+}
+
