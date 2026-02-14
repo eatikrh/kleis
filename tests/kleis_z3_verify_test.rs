@@ -245,10 +245,8 @@ fn z3_verify_kleisli_left_identity() {
         .initialize_from_registry()
         .expect("initialize Z3 from registry");
 
-    let expr = parse_kleis(
-        "∀(A : Type, B : Type). ∀ f : A → M(B) . equals(kcomp(kid, f), f)",
-    )
-    .expect("parse kleisli left identity");
+    let expr = parse_kleis("∀(A : Type, B : Type). ∀ f : A → M(B) . equals(kcomp(kid, f), f)")
+        .expect("parse kleisli left identity");
 
     let result = backend
         .verify_axiom(&expr)
