@@ -132,6 +132,10 @@ pub enum Type {
         args: Vec<Type>,
     },
 
+    /// Type application: F(A)
+    /// Used for higher-kinded type constructors.
+    App(Box<Type>, Box<Type>),
+
     // ===== Function Types =====
     /// Function type: A → B
     /// Enables proper type checking of higher-order functions.
@@ -163,7 +167,16 @@ pub enum Type {
 
 /// Type variable (α, β, γ, etc.)
 #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize)]
-pub struct TypeVar(pub usize);
+pub struct TypeVar {
+    pub id: usize,
+    pub kind: Option<crate::kleis_ast::KindExpr>,
+}
+
+impl TypeVar {
+    pub fn new(id: usize) -> Self {
+        TypeVar { id, kind: None }
+    }
+}
 
 /// Type substitution: maps type variables to types
 /// Example: {α → Scalar, β → Vector(3)}
@@ -211,6 +224,9 @@ impl Substitution {
             }
             Type::Function(from, to) => {
                 Type::Function(Box::new(self.apply(from)), Box::new(self.apply(to)))
+            }
+            Type::App(constructor, arg) => {
+                Type::App(Box::new(self.apply(constructor)), Box::new(self.apply(arg)))
             }
             Type::Product(types) => Type::Product(types.iter().map(|t| self.apply(t)).collect()),
             Type::ForAll(v, t) => Type::ForAll(v.clone(), Box::new(self.apply(t))),
@@ -277,7 +293,7 @@ impl TypeContext {
 
     /// Generate a fresh type variable
     pub fn fresh_var(&mut self) -> Type {
-        let var = TypeVar(self.next_var);
+        let var = TypeVar::new(self.next_var);
         self.next_var += 1;
         Type::Var(var)
     }
@@ -1187,6 +1203,23 @@ impl TypeInference {
                     .collect();
                 let param_types = param_types?;
 
+                if let Some((idx, param)) = type_params
+                    .iter()
+                    .enumerate()
+                    .find(|(_, p)| p.name == *name)
+                {
+                    if matches!(param.kind, Some(crate::kleis_ast::KindExpr::Arrow(_, _))) {
+                        let mut app = type_args
+                            .get(idx)
+                            .ok_or_else(|| format!("Type parameter {} index out of bounds", name))?
+                            .clone();
+                        for arg in param_types {
+                            app = Type::App(Box::new(app), Box::new(arg));
+                        }
+                        return Ok(app);
+                    }
+                }
+
                 Ok(Type::Data {
                     type_name: "Type".to_string(), // Meta-type
                     constructor: name.clone(),
@@ -1243,12 +1276,27 @@ impl TypeInference {
                 let param_types: Result<Vec<Type>, String> =
                     params.iter().map(|p| self.type_expr_to_type(p)).collect();
                 let param_types = param_types?;
-
-                Ok(Type::Data {
-                    type_name: "Type".to_string(), // Meta-type
-                    constructor: name.clone(),
-                    args: param_types,
-                })
+                if self.data_registry.has_type(name) {
+                    Ok(Type::Data {
+                        type_name: "Type".to_string(), // Meta-type
+                        constructor: name.clone(),
+                        args: param_types,
+                    })
+                } else if name.len() == 1 && name.chars().next().unwrap().is_uppercase() {
+                    // Treat unknown single-letter constructor as type-level variable: M(A)
+                    let mut app = self.context.fresh_var();
+                    for arg in param_types {
+                        app = Type::App(Box::new(app), Box::new(arg));
+                    }
+                    Ok(app)
+                } else {
+                    // Fallback: treat as a parametric data type to preserve legacy behavior
+                    Ok(Type::Data {
+                        type_name: "Type".to_string(),
+                        constructor: name.clone(),
+                        args: param_types,
+                    })
+                }
             }
             TypeExpr::Var(_name) => {
                 // Type variable in the definition (e.g., T in Option(T))
@@ -1303,6 +1351,52 @@ impl TypeInference {
         // Unit type: () has type Unit
         if name == "Unit" && args.is_empty() {
             return Ok(Type::Unit);
+        }
+
+        // Matrix value constructor (fixed-arity with List literal)
+        // Matrix(m, n, [elements...]) -> Matrix(m, n, T)
+        if name == "Matrix" && args.len() == 3 {
+            let m = match &args[0] {
+                Expression::Const(s) => s
+                    .parse::<usize>()
+                    .map_err(|_| format!("Matrix dimension m must be a constant Nat, got {}", s))?,
+                _ => {
+                    return Err("Matrix dimension m must be a constant Nat".to_string());
+                }
+            };
+            let n = match &args[1] {
+                Expression::Const(s) => s
+                    .parse::<usize>()
+                    .map_err(|_| format!("Matrix dimension n must be a constant Nat, got {}", s))?,
+                _ => {
+                    return Err("Matrix dimension n must be a constant Nat".to_string());
+                }
+            };
+
+            let elem_type = match &args[2] {
+                Expression::List(elements) => {
+                    let list_type = self.infer_list(elements, context_builder)?;
+                    match list_type {
+                        Type::Data {
+                            constructor, args, ..
+                        } if constructor == "List" => args
+                            .first()
+                            .cloned()
+                            .unwrap_or_else(|| self.context.fresh_var()),
+                        other => {
+                            return Err(format!("Matrix elements must be a list, got {:?}", other));
+                        }
+                    }
+                }
+                other => {
+                    return Err(format!(
+                        "Matrix expects a list of elements as third argument, got {:?}",
+                        other
+                    ));
+                }
+            };
+
+            return Ok(Type::matrix(m, n, elem_type));
         }
 
         // Matrix and Vector are now FIXED-ARITY data constructors using List literals!
@@ -2014,12 +2108,50 @@ fn unify(t1: &Type, t2: &Type) -> Result<Substitution, String> {
             Ok(subst)
         }
 
+        // Type application vs parametric data type: normalize to App form
+        (Type::App(_, _), Type::Data { .. }) | (Type::Data { .. }, Type::App(_, _)) => {
+            fn data_to_app(data: &Type) -> Option<Type> {
+                if let Type::Data {
+                    type_name,
+                    constructor,
+                    args,
+                } = data
+                {
+                    if args.is_empty() {
+                        return None;
+                    }
+                    let mut app = Type::Data {
+                        type_name: type_name.clone(),
+                        constructor: constructor.clone(),
+                        args: vec![],
+                    };
+                    for arg in args {
+                        app = Type::App(Box::new(app), Box::new(arg.clone()));
+                    }
+                    Some(app)
+                } else {
+                    None
+                }
+            }
+
+            let left = data_to_app(t1).unwrap_or_else(|| t1.clone());
+            let right = data_to_app(t2).unwrap_or_else(|| t2.clone());
+            unify(&left, &right)
+        }
+
         // Function types: A → B unifies with C → D if A ~ C and B ~ D
         (Type::Function(from1, to1), Type::Function(from2, to2)) => {
             // Unify domains
             let s1 = unify(from1, from2)?;
             // Unify codomains with substitution applied
             let s2 = unify(&s1.apply(to1), &s1.apply(to2))?;
+            Ok(s1.compose(&s2))
+        }
+
+        // Type application: F(A) unifies with G(B) if F ~ G and A ~ B
+        (Type::App(func1, arg1), Type::App(func2, arg2)) => {
+            let s1 = unify(func1, func2)?;
+            let s2 = unify(&s1.apply(arg1), &s1.apply(arg2))?;
             Ok(s1.compose(&s2))
         }
 
@@ -2064,6 +2196,7 @@ fn occurs(v: &TypeVar, t: &Type) -> bool {
         Type::Var(v2) => v == v2,
         Type::Data { args, .. } => args.iter().any(|arg| occurs(v, arg)),
         Type::Function(from, to) => occurs(v, from) || occurs(v, to),
+        Type::App(func, arg) => occurs(v, func) || occurs(v, arg),
         Type::Product(types) => types.iter().any(|ty| occurs(v, ty)),
         Type::ForAll(_, t) => occurs(v, t),
         // Leaf types (no type variables can occur in them)
@@ -2188,6 +2321,9 @@ impl std::fmt::Display for Type {
                 }
             }
 
+            // Type application
+            Type::App(func, arg) => write!(f, "{}({})", func, arg),
+
             // Symbolic dimension expression (v0.92)
             Type::NatExpr(dim) => write!(f, "{}", format_dim_expr(dim)),
 
@@ -2206,8 +2342,8 @@ impl std::fmt::Display for Type {
             }
 
             // Meta-level types
-            Type::Var(TypeVar(n)) => write!(f, "α{}", n),
-            Type::ForAll(TypeVar(n), t) => write!(f, "∀α{}. {}", n, t),
+            Type::Var(TypeVar { id, .. }) => write!(f, "α{}", id),
+            Type::ForAll(TypeVar { id, .. }, t) => write!(f, "∀α{}. {}", id, t),
         }
     }
 }
@@ -3160,6 +3296,51 @@ mod tests {
             result.is_err(),
             "Matrix(2,3) and Matrix(3,2) should NOT unify"
         );
+    }
+
+    #[test]
+    fn test_matrix_constructor_infers_element_type() {
+        let mut infer = TypeInference::new();
+        let ty = infer
+            .infer(
+                &Expression::Operation {
+                    name: "Matrix".to_string(),
+                    args: vec![
+                        Expression::Const("2".to_string()),
+                        Expression::Const("2".to_string()),
+                        Expression::List(vec![
+                            Expression::Const("1".to_string()),
+                            Expression::Const("2".to_string()),
+                            Expression::Const("3".to_string()),
+                            Expression::Const("4".to_string()),
+                        ]),
+                    ],
+                    span: None,
+                },
+                None,
+            )
+            .unwrap();
+
+        match ty {
+            Type::Data {
+                constructor, args, ..
+            } => {
+                assert_eq!(constructor, "Matrix");
+                assert_eq!(args.len(), 3);
+                assert_eq!(args[0], Type::NatValue(2));
+                assert_eq!(args[1], Type::NatValue(2));
+                match &args[2] {
+                    Type::Data {
+                        constructor: elem_constructor,
+                        ..
+                    } => {
+                        assert_eq!(elem_constructor, "Int");
+                    }
+                    other => panic!("Expected Int element type, got {:?}", other),
+                }
+            }
+            other => panic!("Expected Matrix type, got {:?}", other),
+        }
     }
 
     #[test]

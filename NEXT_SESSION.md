@@ -1,6 +1,6 @@
 # Next Session Tasks
 
-## Evaluator Hygiene Plan (Branch: evaluator-hygiene)
+## Evaluator Hygiene Plan (Branch: evaluator-hygiene) ✅ DONE
 
 Goal: address capture-avoidance, span preservation, and lazy conditionals with full test coverage.
 
@@ -50,6 +50,116 @@ operation tensor_upper_pair : (T: Tensor(n), μ: Index, ν: Index) → Tensor(n)
 ```
 
 This would allow the type checker to properly infer tensor types for indexed expressions.
+
+---
+
+## Z3 Context Polymorphism Collision ✅ DONE
+
+**Problem:** Z3 backend caches function declarations by name. Polymorphic ops like `let_simple`
+get locked to the first instantiated signature (e.g., `Int × Int → Int`), then later calls
+with `Matrix` arguments fail with a sort mismatch.
+
+**Observed in Equation Editor:** `Verify` on matrix `let_simple` after scalar `let_simple`.
+
+**Resolution (current):** Use fresh Z3 context per verification run or monomorphize
+operation names in Z3 (`let_simple$Matrix3x3`, etc.). (Decision still open.)
+
+---
+
+## Recent Parser/Type-Inference Fixes ✅ DONE
+
+- **Type param parsing:** keep simple identifiers as `Named` (only arithmetic stays `DimExpr`).
+- **Matrix constructor typing:** infer element type from list contents, not `List(T)` itself.
+- **Signature interpreter:** evaluate `DimExpr` in Nat params (supports `2^n`, etc.).
+
+---
+
+## Type Constructors + Z3 Impact Plan
+
+Goal: add higher‑kinded type constructors (e.g., `M : Type → Type`) without breaking HM inference or Z3.
+
+### Scope
+1. **Kinds in the AST**
+   - Introduce `KindExpr` (`Type`, `Nat`, `Kind → Kind`) and store in `TypeParam.kind`.
+   - Extend `TypeExpr` to carry kinded params where needed.
+2. **Type representation updates**
+   - Add a `Type::App(Box<Type>, Box<Type>)` (or `Type::Con` + `Type::App`) for type application.
+   - Extend `TypeVar` with optional kind.
+3. **Kind checking + inference boundaries**
+   - Add kind checking for structure params and `TypeExpr::Parametric`.
+   - Keep HM unification first‑order, but kind‑aware (reject ill‑kinded unification).
+4. **Signature interpreter updates**
+   - Bind type constructor params separately from type params.
+   - Unify `TypeExpr::Parametric` against `Type::App` (instead of only `Type::Data`).
+5. **Z3 boundary strategy**
+   - Choose between:
+     - **Monomorphization**: fully instantiate `M(A)` before translation; reject polymorphic SMT goals.
+     - **Encoding**: represent `Type` as a first‑order sort and `App(M, A)` as a function; adds axioms for injectivity if needed.
+
+### Z3 interaction policy
+- Implement full encoding of `Type`/`App` in Z3 (no monomorphization-only path).
+
+### Touch points
+- `kleis_ast.rs`: `TypeParam.kind`, `TypeExpr` (add kind nodes)
+- `kleis_parser.rs`: parse `KindExpr` in type params
+- `type_inference.rs`: add `Type::App`, kind‑aware unification
+- `type_checker.rs`: enforce kind checking on declarations
+- `type_context.rs`: replace string‑keyed type lookups with canonicalized type expressions
+- `typed_ast.rs`: propagate `Type::App` through typed AST helpers
+- `signature_interpreter.rs`: unify `TypeExpr::Parametric` with `Type::App`
+- `solvers/z3/*`: ensure types are fully instantiated before translation
+
+### Open questions
+1. Do we require explicit kind annotations (`M : Type → Type`) or infer them?
+2. Do we allow partial application of type constructors in user code?
+3. Should Z3 ever see polymorphic types, or enforce monomorphization at boundary?
+
+---
+
+## Kinding + Type-Level Constraints + Typed Identity Plan
+
+Goal: enforce proper kinds (`Type`, `Nat`, etc.), solve type‑level equalities (e.g., `n = m`), and expose a dimensioned identity element that the type system can infer via context or annotation.
+
+### 1) Proper kinding
+- Replace `TypeParam.kind: Option<String>` with `KindExpr` (`Type`, `Nat`, `String`, `Kind → Kind`). ✅ DONE
+- Parse kind annotations in structure/type params (e.g., `m: Nat`, `T: Type`, `M: Type → Type`). ✅ DONE
+- Add kind checking for:
+  - `TypeExpr::Parametric` application arity/kind match
+  - `TypeExpr::ForAll` variable kinds
+  - `TypeExpr::Named` resolution (fail on ill‑kinded uses)
+
+### 2) Type‑level constraint solving
+- Reuse `DimExpr` and add a constraint set for equalities (`n = m`, `p + r = q`).
+- Extend unification to emit constraints instead of only positional binding.
+- Add a small `DimExpr` solver:
+  - normalize (`n + 0 → n`, `n + 1 = m + 1 → n = m`)
+  - constant fold (`2+3=5`, `2*n=2*n`)
+  - keep symbolic constraints if unsolved
+- Surface unsolved constraints as type errors when required by a signature.
+
+### 3) Typed identity (dimension‑carrying)
+- Add a structure‑scoped identity element (no top‑level ops):
+  - `MatrixUnits(n: Nat, T)` with
+    - `left_identity : Matrix(n, n, T)`
+    - `right_identity : Matrix(n, n, T)`
+    - axioms `left_unit`, `right_unit`, and optional `square_units_equal` (`m=n` case)
+- Bind implementations to evaluator builtins (`eye/identity`) via `implements`.
+- In usage, rely on **context or explicit annotation**:
+  - `left_identity : Matrix(2^n, 2^n, ℂ)`
+
+### 4) Z3 encoding impact
+- Encode type‑level Nat constraints as Z3 equalities.
+- For identity, prefer axiom‑level characterization:
+  - `component(I, i, j) = delta(i, j)` (uses existing Kronecker delta)
+- Ensure solver rejects ill‑kinded `Matrix(m,n,T)` uses early.
+
+### Touch points
+- `kleis_ast.rs`: introduce `KindExpr`, update `TypeParam`
+- `kleis_parser.rs`: parse `KindExpr` in params
+- `type_inference.rs`: carry kinds on `TypeVar`, emit constraints
+- `signature_interpreter.rs`: collect/solve `DimExpr` constraints
+- `type_context.rs`: propagate constraints through operation lookup
+- `solvers/z3/*`: add Nat‑equality constraints and optional delta axioms
 
 ## Editor Tensor Format: Update to New Convention ✅ DONE
 

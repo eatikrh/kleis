@@ -34,7 +34,7 @@ fn function_type(from: Type, to: Type) -> Type {
 }
 
 fn type_var(n: usize) -> Type {
-    Type::Var(TypeVar(n))
+    Type::Var(TypeVar::new(n))
 }
 
 #[test]

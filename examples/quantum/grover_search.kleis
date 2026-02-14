@@ -27,7 +27,7 @@ structure GroverOracle(n) {
     
     // Oracle is its own inverse (applying twice = identity)
     axiom self_inverse : ∀ O : GroverOracle(n) .
-        compose(oracle(O), oracle(O)) = identity(2^n)
+        compose(oracle(O), oracle(O)) = (identity : Matrix(2^n, 2^n, ℂ))
     
     // Oracle only affects the target state
     axiom phase_flip : ∀ O : GroverOracle(n) . ∀ x : ℕ .
@@ -50,7 +50,7 @@ structure DiffusionOperator(n) {
     define H_all = tensor_n(H, n)
     
     // Reflection about |0...0⟩
-    define reflect_zero = 2 * outer_product(ket_0_n(n), ket_0_n(n)) - identity(2^n)
+    define reflect_zero = 2 * outer_product(ket_0_n(n), ket_0_n(n)) - (identity : Matrix(2^n, 2^n, ℂ))
     
     // Diffusion operator: H⊗n · (2|0⟩⟨0| - I) · H⊗n
     define diffusion = compose(H_all, compose(reflect_zero, H_all))
@@ -59,7 +59,7 @@ structure DiffusionOperator(n) {
     axiom unitary : is_unitary(diffusion(n))
     
     // Diffusion is its own inverse
-    axiom self_inverse : compose(diffusion(n), diffusion(n)) = identity(2^n)
+    axiom self_inverse : compose(diffusion(n), diffusion(n)) = (identity : Matrix(2^n, 2^n, ℂ))
 }
 
 // =============================================================================

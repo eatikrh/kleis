@@ -28,7 +28,7 @@ fn test_nested_matrix_operations() {
     let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
 
     // transpose(transpose(A)) where A is Matrix(2,3,ℝ)
-    // NEW FORMAT: Matrix(m: Nat, n: Nat, T) - 3 args (type constructor)
+    // NEW FORMAT: Matrix(m, n, [elements...]) - 3 args (value constructor)
     let expr = op(
         "transpose",
         vec![op(
@@ -36,9 +36,9 @@ fn test_nested_matrix_operations() {
             vec![op(
                 "Matrix",
                 vec![
-                    c("2"),   // m = 2
-                    c("3"),   // n = 3
-                    var("ℝ"), // T = ℝ (type)
+                    c("2"), // m = 2
+                    c("3"), // n = 3
+                    Expression::List(vec![c("1"), c("2"), c("3"), c("4"), c("5"), c("6")]),
                 ],
             )],
         )],
@@ -102,12 +102,39 @@ fn test_matrix_equation() {
     let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
 
     // B × C where B is 2×3, C is 3×4
-    // NEW FORMAT: Matrix(m: Nat, n: Nat, T) - 3 args
+    // NEW FORMAT: Matrix(m, n, [elements...]) - 3 args
     let expr = op(
         "multiply",
         vec![
-            op("Matrix", vec![c("2"), c("3"), var("ℝ")]), // Matrix(2, 3, ℝ)
-            op("Matrix", vec![c("3"), c("4"), var("ℝ")]), // Matrix(3, 4, ℝ)
+            op(
+                "Matrix",
+                vec![
+                    c("2"),
+                    c("3"),
+                    Expression::List(vec![c("1"), c("2"), c("3"), c("4"), c("5"), c("6")]),
+                ],
+            ),
+            op(
+                "Matrix",
+                vec![
+                    c("3"),
+                    c("4"),
+                    Expression::List(vec![
+                        c("1"),
+                        c("2"),
+                        c("3"),
+                        c("4"),
+                        c("5"),
+                        c("6"),
+                        c("7"),
+                        c("8"),
+                        c("9"),
+                        c("10"),
+                        c("11"),
+                        c("12"),
+                    ]),
+                ],
+            ),
         ],
     );
 
@@ -153,12 +180,47 @@ fn test_dimension_mismatch_error() {
 
     // Try to multiply incompatible matrices: 2×3 × 4×5
     // Inner dimensions don't match (3 ≠ 4) - should fail!
-    // NEW FORMAT: Matrix(m: Nat, n: Nat, T) - 3 args
+    // NEW FORMAT: Matrix(m, n, [elements...]) - 3 args
     let expr = op(
         "multiply",
         vec![
-            op("Matrix", vec![c("2"), c("3"), var("ℝ")]), // Matrix(2, 3, ℝ)
-            op("Matrix", vec![c("4"), c("5"), var("ℝ")]), // Matrix(4, 5, ℝ)
+            op(
+                "Matrix",
+                vec![
+                    c("2"),
+                    c("3"),
+                    Expression::List(vec![c("1"), c("2"), c("3"), c("4"), c("5"), c("6")]),
+                ],
+            ),
+            op(
+                "Matrix",
+                vec![
+                    c("4"),
+                    c("5"),
+                    Expression::List(vec![
+                        c("1"),
+                        c("2"),
+                        c("3"),
+                        c("4"),
+                        c("5"),
+                        c("6"),
+                        c("7"),
+                        c("8"),
+                        c("9"),
+                        c("10"),
+                        c("11"),
+                        c("12"),
+                        c("13"),
+                        c("14"),
+                        c("15"),
+                        c("16"),
+                        c("17"),
+                        c("18"),
+                        c("19"),
+                        c("20"),
+                    ]),
+                ],
+            ),
         ],
     );
 
@@ -184,12 +246,26 @@ fn test_ordering_on_matrices_rejected() {
     let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
 
     // Try A < B where both are matrices (nonsensical)
-    // NEW FORMAT: Matrix(m: Nat, n: Nat, T) - 3 args
+    // NEW FORMAT: Matrix(m, n, [elements...]) - 3 args
     let expr = op(
         "less_than",
         vec![
-            op("Matrix", vec![c("2"), c("2"), var("ℝ")]), // Matrix(2, 2, ℝ)
-            op("Matrix", vec![c("2"), c("2"), var("ℝ")]), // Matrix(2, 2, ℝ)
+            op(
+                "Matrix",
+                vec![
+                    c("2"),
+                    c("2"),
+                    Expression::List(vec![c("1"), c("2"), c("3"), c("4")]),
+                ],
+            ),
+            op(
+                "Matrix",
+                vec![
+                    c("2"),
+                    c("2"),
+                    Expression::List(vec![c("5"), c("6"), c("7"), c("8")]),
+                ],
+            ),
         ],
     );
 

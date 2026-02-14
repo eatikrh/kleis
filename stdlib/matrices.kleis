@@ -84,6 +84,17 @@ implements SquareMatrix(n, ℝ) {
     operation identity = builtin_identity
 }
 
+/* Matrix Units - Identity element for n×n matrices */
+structure MatrixUnits(n: Nat, T: Type) {
+    operation identity : Matrix(n, n, T)
+    axiom left_unit  : ∀ A : Matrix(n, n, T). multiply(identity, A) = A
+    axiom right_unit : ∀ A : Matrix(n, n, T). multiply(A, identity) = A
+}
+
+implements MatrixUnits(n, ℝ) {
+    operation identity = builtin_identity
+}
+
 /* Block Matrix Support
  * 
  * Block matrices (matrices of matrices) work automatically through polymorphism!

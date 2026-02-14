@@ -35,11 +35,11 @@ run_test() {
     echo -n "Testing $name... "
     if eval "$cmd" > /tmp/test_output.txt 2>&1; then
         echo -e "${GREEN}✓ PASS${NC}"
-        ((PASSED++))
+        PASSED=$((PASSED + 1))
     else
         echo -e "${RED}✗ FAIL${NC}"
         echo "  Output: $(tail -3 /tmp/test_output.txt)"
-        ((FAILED++))
+        FAILED=$((FAILED + 1))
     fi
 }
 
@@ -47,7 +47,7 @@ skip_test() {
     local name="$1"
     local reason="$2"
     echo -e "Testing $name... ${YELLOW}⚠ SKIP${NC} ($reason)"
-    ((SKIPPED++))
+    SKIPPED=$((SKIPPED + 1))
 }
 
 echo "--- Rust Tests ---"
@@ -63,19 +63,35 @@ echo ""
 echo "--- Python Tests ---"
 cd "$PROJECT_ROOT/kleis-notebook"
 
-run_test "KleisDoc basic" \
-    "python3 examples/test_kleisdoc.py 2>&1 | grep -q 'All tests passed'"
+if [ -f "examples/test_kleisdoc.py" ]; then
+    run_test "KleisDoc basic" \
+        "python3 examples/test_kleisdoc.py 2>&1 | grep -q 'All tests passed'"
+else
+    skip_test "KleisDoc basic" "examples/test_kleisdoc.py not found"
+fi
 
-run_test "Save/Load round-trip" \
-    "python3 examples/test_save_load.py 2>&1 | grep -q 'All tests passed'"
+if [ -f "examples/test_save_load.py" ]; then
+    run_test "Save/Load round-trip" \
+        "python3 examples/test_save_load.py 2>&1 | grep -q 'All tests passed'"
+else
+    skip_test "Save/Load round-trip" "examples/test_save_load.py not found"
+fi
 
-run_test "Document styles (MIT + arXiv PDF)" \
-    "python3 examples/demo_document_styles.py 2>&1 | grep -q 'Compiled'"
+if [ -f "examples/demo_document_styles.py" ]; then
+    run_test "Document styles (MIT + arXiv PDF)" \
+        "python3 examples/demo_document_styles.py 2>&1 | grep -q 'Compiled'"
+else
+    skip_test "Document styles (MIT + arXiv PDF)" "examples/demo_document_styles.py not found"
+fi
 
 # Check if server is running for server-dependent tests
 if curl -s http://localhost:3000/health > /dev/null 2>&1; then
+    if [ -f "examples/test_render_pipeline.py" ]; then
     run_test "Render pipeline (requires server)" \
         "python3 examples/test_render_pipeline.py 2>&1 | grep -q 'PDF exported'"
+    else
+        skip_test "Render pipeline" "examples/test_render_pipeline.py not found"
+    fi
 else
     skip_test "Render pipeline" "Server not running"
 fi

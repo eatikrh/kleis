@@ -188,8 +188,9 @@ pub fn format_type(ty: &Type) -> String {
             let type_strs: Vec<String> = types.iter().map(format_type).collect();
             format!("({})", type_strs.join(" × "))
         }
-        Type::Var(var) => format!("α{}", var.0),
-        Type::ForAll(var, body) => format!("∀α{}. {}", var.0, format_type(body)),
+        Type::App(func, arg) => format!("{}({})", format_type(func), format_type(arg)),
+        Type::Var(var) => format!("α{}", var.id),
+        Type::ForAll(var, body) => format!("∀α{}. {}", var.id, format_type(body)),
     }
 }
 

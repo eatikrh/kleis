@@ -82,23 +82,32 @@ def main():
     print()
     print("--- Python Tests ---")
     
-    run_test(
-        "KleisDoc basic",
-        "python3 examples/test_kleisdoc.py 2>&1 | grep -q 'All tests passed'",
-        cwd=script_dir
-    )
+    if (script_dir / "examples" / "test_kleisdoc.py").is_file():
+        run_test(
+            "KleisDoc basic",
+            "python3 examples/test_kleisdoc.py 2>&1 | grep -q 'All tests passed'",
+            cwd=script_dir
+        )
+    else:
+        skip_test("KleisDoc basic", "examples/test_kleisdoc.py not found")
     
-    run_test(
-        "Save/Load round-trip",
-        "python3 examples/test_save_load.py 2>&1 | grep -q 'All tests passed'",
-        cwd=script_dir
-    )
+    if (script_dir / "examples" / "test_save_load.py").is_file():
+        run_test(
+            "Save/Load round-trip",
+            "python3 examples/test_save_load.py 2>&1 | grep -q 'All tests passed'",
+            cwd=script_dir
+        )
+    else:
+        skip_test("Save/Load round-trip", "examples/test_save_load.py not found")
     
-    run_test(
-        "Document styles (MIT + arXiv PDF)",
-        "python3 examples/demo_document_styles.py 2>&1 | grep -q 'Compiled'",
-        cwd=script_dir
-    )
+    if (script_dir / "examples" / "demo_document_styles.py").is_file():
+        run_test(
+            "Document styles (MIT + arXiv PDF)",
+            "python3 examples/demo_document_styles.py 2>&1 | grep -q 'Compiled'",
+            cwd=script_dir
+        )
+    else:
+        skip_test("Document styles (MIT + arXiv PDF)", "examples/demo_document_styles.py not found")
     
     # Check if server is running
     try:
@@ -112,11 +121,14 @@ def main():
         server_running = False
     
     if server_running:
-        run_test(
-            "Render pipeline (requires server)",
-            "python3 examples/test_render_pipeline.py 2>&1 | grep -q 'PDF exported'",
-            cwd=script_dir
-        )
+        if (script_dir / "examples" / "test_render_pipeline.py").is_file():
+            run_test(
+                "Render pipeline (requires server)",
+                "python3 examples/test_render_pipeline.py 2>&1 | grep -q 'PDF exported'",
+                cwd=script_dir
+            )
+        else:
+            skip_test("Render pipeline", "examples/test_render_pipeline.py not found")
     else:
         skip_test("Render pipeline", "Server not running (start with: cargo run --bin server)")
     

@@ -19,7 +19,7 @@
 //!
 //! This is SELF-HOSTING: Kleis defines Kleis!
 use crate::data_registry::DataTypeRegistry;
-use crate::kleis_ast::{StructureDef, StructureMember, TypeExpr};
+use crate::kleis_ast::{DimExpr, StructureDef, StructureMember, TypeExpr};
 use crate::structure_registry::StructureRegistry;
 use crate::type_inference::{Type, TypeVar};
 use std::collections::HashMap;
@@ -47,6 +47,9 @@ pub struct SignatureInterpreter {
     /// Example: {TypeVar(0): Scalar, TypeVar(1): Matrix(2,3)}
     substitutions: HashMap<TypeVar, Type>,
 
+    /// Fresh type variable counter for polymorphic type constructors
+    next_type_var: usize,
+
     /// Registry of user-defined data types
     /// Enables looking up types like Currency, Tensor3D, Option, etc.
     data_registry: DataTypeRegistry,
@@ -64,9 +67,16 @@ impl SignatureInterpreter {
             type_bindings: HashMap::new(),
             string_bindings: HashMap::new(),
             substitutions: HashMap::new(),
+            next_type_var: 0,
             data_registry,
             structure_registry,
         }
+    }
+
+    fn fresh_type_var(&mut self) -> Type {
+        let var = TypeVar::new(self.next_type_var);
+        self.next_type_var += 1;
+        Type::Var(var)
     }
 
     /// Interpret an operation's type signature given argument types
@@ -111,7 +121,6 @@ impl SignatureInterpreter {
 
         // Parse the function signature to get expected argument types
         let (expected_arg_types, result_type) = self.parse_function_signature(operation)?;
-
         // If no expected args (signature is just result type), use old binding method
         if expected_arg_types.is_empty() {
             // Fallback to old behavior for signatures without arrows
@@ -124,7 +133,6 @@ impl SignatureInterpreter {
 
         // Now interpret the result type with bound parameters
         let result = self.interpret_type_expr(&result_type)?;
-
         // Apply substitutions to resolve any type variables
         // This is what makes x + 1 correctly infer to Scalar!
         Ok(self.apply_substitution(&result))
@@ -336,7 +344,9 @@ impl SignatureInterpreter {
                 // This is a simple heuristic for backwards compatibility
                 let mut nat_param_idx = 0;
                 for (param_idx, param) in structure.type_params.iter().enumerate() {
-                    if param.kind.as_deref() == Some("Nat") && nat_param_idx < nat_values.len() {
+                    if matches!(param.kind, Some(crate::kleis_ast::KindExpr::Nat))
+                        && nat_param_idx < nat_values.len()
+                    {
                         let value = nat_values[nat_param_idx];
                         self.bind_or_check(
                             &param.name,
@@ -467,6 +477,56 @@ impl SignatureInterpreter {
                     }
                     Ok(())
                 }
+                // Type application vs parametric data type: normalize to App form
+                (Type::App(_, _), Type::Data { .. }) | (Type::Data { .. }, Type::App(_, _)) => {
+                    let to_app = |ty: &Type| match ty {
+                        Type::Data {
+                            type_name,
+                            constructor,
+                            args,
+                        } if !args.is_empty() => {
+                            let mut app = Type::Data {
+                                type_name: type_name.clone(),
+                                constructor: constructor.clone(),
+                                args: vec![],
+                            };
+                            for arg in args {
+                                app = Type::App(Box::new(app), Box::new(arg.clone()));
+                            }
+                            Some(app)
+                        }
+                        _ => None,
+                    };
+
+                    let left = to_app(&resolved_existing).unwrap_or(resolved_existing.clone());
+                    let right = to_app(&resolved_ty).unwrap_or(resolved_ty.clone());
+
+                    match (left, right) {
+                        (Type::App(f1, a1), Type::App(f2, a2)) => {
+                            self.bind_or_check_type(param_name, &f1)?;
+                            self.bind_or_check_type(param_name, &a1)?;
+                            self.bind_or_check_type(param_name, &f2)?;
+                            self.bind_or_check_type(param_name, &a2)?;
+                            Ok(())
+                        }
+                        (a, b) if a == b => Ok(()),
+                        (a, b) => Err(format!(
+                            "Type parameter '{}' mismatch:\n  \
+                             Previously bound to {:?}\n  \
+                             But got {:?}\n  \
+                             All uses of '{}' must have the same type!",
+                            param_name, a, b, param_name
+                        )),
+                    }
+                }
+                // Both are type applications → unify constructor and argument
+                (Type::App(f1, a1), Type::App(f2, a2)) => {
+                    self.bind_or_check_type(param_name, f1)?;
+                    self.bind_or_check_type(param_name, a1)?;
+                    self.bind_or_check_type(param_name, f2)?;
+                    self.bind_or_check_type(param_name, a2)?;
+                    Ok(())
+                }
                 // Otherwise, types must match exactly
                 (a, b) if a == b => Ok(()),
                 (a, b) => Err(format!(
@@ -513,6 +573,10 @@ impl SignatureInterpreter {
                     args: substituted_args,
                 }
             }
+            Type::App(func, arg) => Type::App(
+                Box::new(self.apply_substitution(func)),
+                Box::new(self.apply_substitution(arg)),
+            ),
             // Other types don't contain type variables
             _ => ty.clone(),
         }
@@ -526,7 +590,7 @@ impl SignatureInterpreter {
     ///   Result: Matrix(3, 2, ℝ)  // n and m swapped!
     ///
     /// Public for testing
-    pub fn interpret_type_expr(&self, type_expr: &TypeExpr) -> Result<Type, String> {
+    pub fn interpret_type_expr(&mut self, type_expr: &TypeExpr) -> Result<Type, String> {
         match type_expr {
             TypeExpr::Named(name) => {
                 // 1. Check if this is a bound type parameter
@@ -584,6 +648,58 @@ impl SignatureInterpreter {
             }
 
             TypeExpr::Parametric(name, param_exprs) => {
+                // 0. If this is a bound type constructor, apply it to parameters
+                if let Some(binding) = self.type_bindings.get(name).cloned() {
+                    let args: Result<Vec<Type>, String> = param_exprs
+                        .iter()
+                        .map(|param_expr| self.interpret_type_expr(param_expr))
+                        .collect();
+                    let args = args?;
+
+                    if let Type::Data {
+                        type_name,
+                        constructor,
+                        args: existing_args,
+                    } = &binding
+                    {
+                        if existing_args.is_empty() {
+                            return Ok(Type::Data {
+                                type_name: type_name.clone(),
+                                constructor: constructor.clone(),
+                                args,
+                            });
+                        }
+                    }
+
+                    let mut applied = binding;
+                    for arg in args {
+                        applied = Type::App(Box::new(applied), Box::new(arg));
+                    }
+                    return Ok(applied);
+                }
+
+                // 0b. If this is an unbound type constructor variable (M, F, G),
+                // create a fresh type variable and bind it, then apply.
+                if name.len() == 1 && name.chars().next().unwrap().is_uppercase() {
+                    let entry = if let Some(existing) = self.type_bindings.get(name).cloned() {
+                        existing
+                    } else {
+                        let fresh = self.fresh_type_var();
+                        self.type_bindings.insert(name.clone(), fresh.clone());
+                        fresh
+                    };
+                    let args: Result<Vec<Type>, String> = param_exprs
+                        .iter()
+                        .map(|param_expr| self.interpret_type_expr(param_expr))
+                        .collect();
+                    let args = args?;
+                    let mut applied = entry;
+                    for arg in args {
+                        applied = Type::App(Box::new(applied), Box::new(arg));
+                    }
+                    return Ok(applied);
+                }
+
                 // 0. Handle built-in parametric types first
                 match name.as_str() {
                     // Set(T) - built-in set type backed by Z3
@@ -621,9 +737,10 @@ impl SignatureInterpreter {
 
                 // 1. Check if this is a user-defined parametric type
                 if let Some(data_def) = self.data_registry.get_type(name) {
+                    let type_params = data_def.type_params.clone();
                     // GENERIC handling for ANY arity!
                     // The arity comes from the DataDef, not hardcoded!
-                    let expected_arity = data_def.type_params.len();
+                    let expected_arity = type_params.len();
 
                     if param_exprs.len() != expected_arity {
                         return Err(format!(
@@ -636,24 +753,39 @@ impl SignatureInterpreter {
 
                     // Interpret each parameter based on its kind
                     let mut args = Vec::new();
-                    for (param_def, param_expr) in data_def.type_params.iter().zip(param_exprs) {
-                        let arg = match param_def.kind.as_deref() {
-                            Some("Nat") => {
+                    for (param_def, param_expr) in type_params.iter().zip(param_exprs) {
+                        let arg = match &param_def.kind {
+                            Some(crate::kleis_ast::KindExpr::Nat) => {
                                 // Natural number parameter (dimension, index, etc.)
-                                let n = self.eval_param(param_expr)?;
-                                Type::NatValue(n)
+                                match self.eval_param(param_expr) {
+                                    Ok(n) => Type::NatValue(n),
+                                    Err(msg) if msg.starts_with("Unbound parameter: ") => {
+                                        match param_expr {
+                                            TypeExpr::Named(name) => {
+                                                Type::NatExpr(DimExpr::Var(name.clone()))
+                                            }
+                                            TypeExpr::DimExpr(expr) => Type::NatExpr(expr.clone()),
+                                            _ => {
+                                                return Err(msg);
+                                            }
+                                        }
+                                    }
+                                    Err(msg) => {
+                                        return Err(msg);
+                                    }
+                                }
                             }
-                            Some("String") => {
+                            Some(crate::kleis_ast::KindExpr::String) => {
                                 // String parameter (label, name, etc.)
                                 let s = self.eval_string_param(param_expr)?;
                                 Type::StringValue(s)
                             }
-                            Some("Type") | None => {
+                            Some(crate::kleis_ast::KindExpr::Type)
+                            | Some(crate::kleis_ast::KindExpr::Named(_))
+                            | Some(crate::kleis_ast::KindExpr::Arrow(_, _))
+                            | None => {
                                 // Type parameter - recursively interpret
                                 self.interpret_type_expr(param_expr)?
-                            }
-                            Some(k) => {
-                                return Err(format!("Unknown parameter kind: {}", k));
                             }
                         };
                         args.push(arg);
@@ -670,8 +802,9 @@ impl SignatureInterpreter {
                 // Structure types are defined with `structure` keyword and represent
                 // type classes/interfaces, not concrete data types.
                 if let Some(structure_def) = self.structure_registry.get(name) {
+                    let type_params = structure_def.type_params.clone();
                     // GENERIC handling for ANY parametric structure!
-                    let expected_arity = structure_def.type_params.len();
+                    let expected_arity = type_params.len();
 
                     if param_exprs.len() != expected_arity {
                         return Err(format!(
@@ -684,25 +817,39 @@ impl SignatureInterpreter {
 
                     // Generic handling for ALL structure types
                     let mut args = Vec::new();
-                    for (param_def, param_expr) in structure_def.type_params.iter().zip(param_exprs)
-                    {
-                        let arg = match param_def.kind.as_deref() {
-                            Some("Nat") => {
+                    for (param_def, param_expr) in type_params.iter().zip(param_exprs) {
+                        let arg = match &param_def.kind {
+                            Some(crate::kleis_ast::KindExpr::Nat) => {
                                 // Natural number parameter (dimension, index, etc.)
-                                let n = self.eval_param(param_expr)?;
-                                Type::NatValue(n)
+                                match self.eval_param(param_expr) {
+                                    Ok(n) => Type::NatValue(n),
+                                    Err(msg) if msg.starts_with("Unbound parameter: ") => {
+                                        match param_expr {
+                                            TypeExpr::Named(name) => {
+                                                Type::NatExpr(DimExpr::Var(name.clone()))
+                                            }
+                                            TypeExpr::DimExpr(expr) => Type::NatExpr(expr.clone()),
+                                            _ => {
+                                                return Err(msg);
+                                            }
+                                        }
+                                    }
+                                    Err(msg) => {
+                                        return Err(msg);
+                                    }
+                                }
                             }
-                            Some("String") => {
+                            Some(crate::kleis_ast::KindExpr::String) => {
                                 // String parameter (label, name, etc.)
                                 let s = self.eval_string_param(param_expr)?;
                                 Type::StringValue(s)
                             }
-                            Some("Type") | None => {
+                            Some(crate::kleis_ast::KindExpr::Type)
+                            | Some(crate::kleis_ast::KindExpr::Named(_))
+                            | Some(crate::kleis_ast::KindExpr::Arrow(_, _))
+                            | None => {
                                 // Type parameter - recursively interpret
                                 self.interpret_type_expr(param_expr)?
-                            }
-                            Some(k) => {
-                                return Err(format!("Unknown parameter kind: {}", k));
                             }
                         };
                         args.push(arg);
@@ -751,7 +898,82 @@ impl SignatureInterpreter {
                     Err(format!("Unbound parameter: {}", name))
                 }
             }
+            TypeExpr::DimExpr(expr) => self.eval_dim_expr(expr),
             _ => Err("Complex parameter evaluation not yet supported".to_string()),
+        }
+    }
+
+    fn eval_dim_expr(&self, expr: &DimExpr) -> Result<usize, String> {
+        match expr {
+            DimExpr::Lit(n) => Ok(*n),
+            DimExpr::Var(name) => self
+                .bindings
+                .get(name)
+                .copied()
+                .ok_or_else(|| format!("Unbound parameter: {}", name)),
+            DimExpr::Add(l, r) => Ok(self.eval_dim_expr(l)? + self.eval_dim_expr(r)?),
+            DimExpr::Sub(l, r) => {
+                let left = self.eval_dim_expr(l)?;
+                let right = self.eval_dim_expr(r)?;
+                left.checked_sub(right)
+                    .ok_or_else(|| format!("Dimension underflow: {} - {}", left, right))
+            }
+            DimExpr::Mul(l, r) => Ok(self.eval_dim_expr(l)? * self.eval_dim_expr(r)?),
+            DimExpr::Div(l, r) => {
+                let left = self.eval_dim_expr(l)?;
+                let right = self.eval_dim_expr(r)?;
+                if right == 0 {
+                    return Err("Division by zero in dimension expression".to_string());
+                }
+                if left % right != 0 {
+                    return Err(format!(
+                        "Non-integer dimension division: {} / {}",
+                        left, right
+                    ));
+                }
+                Ok(left / right)
+            }
+            DimExpr::Pow(l, r) => {
+                let base = self.eval_dim_expr(l)?;
+                let exp = self.eval_dim_expr(r)?;
+                Ok(base.pow(exp as u32))
+            }
+            DimExpr::Call(name, args) => {
+                let vals: Result<Vec<_>, _> =
+                    args.iter().map(|arg| self.eval_dim_expr(arg)).collect();
+                let vals = vals?;
+                match name.as_str() {
+                    "min" => vals
+                        .into_iter()
+                        .min()
+                        .ok_or_else(|| "min requires at least one argument".to_string()),
+                    "max" => vals
+                        .into_iter()
+                        .max()
+                        .ok_or_else(|| "max requires at least one argument".to_string()),
+                    "gcd" => {
+                        let mut iter = vals.into_iter();
+                        let mut acc = iter
+                            .next()
+                            .ok_or_else(|| "gcd requires at least one argument".to_string())?;
+                        for v in iter {
+                            acc = gcd(acc, v);
+                        }
+                        Ok(acc)
+                    }
+                    "lcm" => {
+                        let mut iter = vals.into_iter();
+                        let mut acc = iter
+                            .next()
+                            .ok_or_else(|| "lcm requires at least one argument".to_string())?;
+                        for v in iter {
+                            acc = lcm(acc, v)?;
+                        }
+                        Ok(acc)
+                    }
+                    _ => Err(format!("Unknown dimension function: {}", name)),
+                }
+            }
         }
     }
 
@@ -782,6 +1004,25 @@ impl SignatureInterpreter {
             _ => Err("Expected string parameter (simple name or literal)".to_string()),
         }
     }
+}
+
+fn gcd(mut a: usize, mut b: usize) -> usize {
+    while b != 0 {
+        let tmp = b;
+        b = a % b;
+        a = tmp;
+    }
+    a
+}
+
+fn lcm(a: usize, b: usize) -> Result<usize, String> {
+    if a == 0 || b == 0 {
+        return Ok(0);
+    }
+    let g = gcd(a, b);
+    a.checked_div(g)
+        .and_then(|v| v.checked_mul(b))
+        .ok_or_else(|| "lcm overflow in dimension expression".to_string())
 }
 
 #[cfg(test)]
@@ -858,8 +1099,8 @@ mod tests {
         // Simulate: x + 1 where x is Var(0), 1 is Scalar
         use crate::type_inference::TypeVar;
         let arg_types = vec![
-            Type::Var(TypeVar(0)), // x is unbound
-            Type::scalar(),        // 1 is concrete
+            Type::Var(TypeVar::new(0)), // x is unbound
+            Type::scalar(),             // 1 is concrete
         ];
 
         let result = interp
@@ -875,8 +1116,89 @@ mod tests {
 
         // Verify substitution was recorded
         assert_eq!(interp.substitutions.len(), 1);
-        assert_eq!(interp.substitutions.get(&TypeVar(0)), Some(&Type::scalar()));
+        assert_eq!(
+            interp.substitutions.get(&TypeVar::new(0)),
+            Some(&Type::scalar())
+        );
 
         println!("✓ Type variable substitution works: Var(0) + Scalar → Scalar");
+    }
+
+    #[test]
+    fn test_interpret_type_constructor_application() {
+        use crate::structure_registry::StructureRegistry;
+
+        let data_registry = DataTypeRegistry::new();
+        let structure_registry = StructureRegistry::new();
+        let mut interp = SignatureInterpreter::new(data_registry, structure_registry);
+
+        let type_expr = crate::kleis_parser::parse_type_expr("F(ℝ)").unwrap();
+        let result = interp.interpret_type_expr(&type_expr).unwrap();
+
+        match result {
+            Type::App(func, arg) => {
+                assert!(matches!(*func, Type::Var(TypeVar { id: 0, .. })));
+                assert!(matches!(
+                    *arg,
+                    Type::Data {
+                        constructor,
+                        ..
+                    } if constructor == "Scalar"
+                ));
+            }
+            other => panic!("Expected Type::App, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_interpret_type_expr_dimexpr_pow() {
+        use crate::structure_registry::StructureRegistry;
+
+        let types_code = include_str!("../stdlib/types.kleis");
+        let types_program = parse_kleis_program(types_code).unwrap();
+
+        let mut data_registry = DataTypeRegistry::new();
+        for item in types_program.items {
+            if let crate::kleis_ast::TopLevel::DataDef(data_def) = item {
+                data_registry.register(data_def).unwrap();
+            }
+        }
+
+        let matrix_structure_code = r#"
+            structure Matrix(m: Nat, n: Nat, T) {
+                operation transpose : Matrix(n, m, T)
+            }
+        "#;
+        let matrix_program = parse_kleis_program(matrix_structure_code).unwrap();
+        let matrix_structure = matrix_program.structures()[0].clone();
+        let mut structure_registry = StructureRegistry::new();
+        structure_registry.register(matrix_structure).unwrap();
+
+        let mut interp = SignatureInterpreter::new(data_registry, structure_registry);
+        interp.bindings.insert("n".to_string(), 3);
+
+        let pow_expr = TypeExpr::DimExpr(DimExpr::Pow(
+            Box::new(DimExpr::Lit(2)),
+            Box::new(DimExpr::Var("n".to_string())),
+        ));
+
+        let ty = interp
+            .interpret_type_expr(&TypeExpr::Parametric(
+                "Matrix".to_string(),
+                vec![pow_expr.clone(), pow_expr, TypeExpr::Named("ℝ".to_string())],
+            ))
+            .unwrap();
+
+        match ty {
+            Type::Data {
+                constructor, args, ..
+            } => {
+                assert_eq!(constructor, "Matrix");
+                assert_eq!(args.len(), 3);
+                assert_eq!(args[0], Type::NatValue(8));
+                assert_eq!(args[1], Type::NatValue(8));
+            }
+            other => panic!("Expected Matrix type, got {:?}", other),
+        }
     }
 }

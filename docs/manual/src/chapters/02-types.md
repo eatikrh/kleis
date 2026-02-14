@@ -292,6 +292,53 @@ Vector(4)         // 4-dimensional vector
 Set(ℝ)            // Set of real numbers
 ```
 
+## Higher-Order Kinds
+
+Kleis supports **kinded type parameters** so you can distinguish types (`Type`) from dimensions (`Nat`) and type constructors (`Type → Type`).
+
+**Type constructors** are types that take types as arguments. For example, `Option` and `List` are constructors with kind `Type → Type`. When you apply a constructor to a concrete type, you get a new concrete type:
+
+```kleis
+type RealOption = Option(ℝ)  // a concrete type
+type IntList = List(ℤ)       // a concrete type
+
+// M is a type constructor:
+structure Functor(M: Type → Type) {
+    operation map : (A → B) → M(A) → M(B)
+}
+```
+
+Kinds live on type parameters and make higher‑order abstractions explicit:
+
+```kleis
+// Kinded type parameters
+structure Matrix(m: Nat, n: Nat, T: Type) {
+    operation transpose : Matrix(m, n, T) → Matrix(n, m, T)
+}
+
+// Higher-kinded parameter: M takes a Type and returns a Type
+structure Monad(M: Type → Type) {
+    operation unit : A → M(A)
+    operation bind : M(A) → (A → M(B)) → M(B)
+
+    // Monad laws (sketch)
+    axiom left_id  : ∀ a : A . ∀ f : A → M(B) . equals(bind(unit(a), f), f(a))
+    axiom right_id : ∀ m : M(A) . equals(bind(m, unit), m)
+}
+```
+
+You can also use higher-order kinds in type aliases:
+
+```kleis
+type Endo(F: Type) = F → F
+type FunctorF(F: Type → Type) = F
+```
+
+In practice:
+- `T : Type` means a concrete type (e.g., `ℝ`, `Matrix(2,2,ℝ)`).
+- `n : Nat` means a dimension or index.
+- `M : Type → Type` means a type constructor (e.g., `Option`, `List`, `M` in `Monad`).
+
 ## Dimension Expressions
 
 When working with parameterized types like `Matrix(m, n, ℝ)`, the dimension parameters are not just simple numbers — they can be **dimension expressions**. This enables type-safe operations where dimensions depend on each other.

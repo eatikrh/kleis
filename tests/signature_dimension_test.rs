@@ -19,15 +19,15 @@ fn make_matrix_type() -> DataDef {
         type_params: vec![
             TypeParam {
                 name: "m".to_string(),
-                kind: Some("Nat".to_string()),
+                kind: Some(kleis::kleis_ast::KindExpr::Nat),
             },
             TypeParam {
                 name: "n".to_string(),
-                kind: Some("Nat".to_string()),
+                kind: Some(kleis::kleis_ast::KindExpr::Nat),
             },
             TypeParam {
                 name: "T".to_string(),
-                kind: Some("Type".to_string()),
+                kind: Some(kleis::kleis_ast::KindExpr::Type),
             },
         ],
         variants: vec![DataVariant {

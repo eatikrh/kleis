@@ -78,12 +78,26 @@ fn test_ordering_rejected_for_matrices() {
     let operations = vec!["less_than", "greater_than", "less_equal", "greater_equal"];
 
     for op_name in operations {
-        // NEW FORMAT: Matrix(m: Nat, n: Nat, T) - 3 args
+        // NEW FORMAT: Matrix(m, n, [elements...]) - 3 args
         let expr = op(
             op_name,
             vec![
-                op("Matrix", vec![c("2"), c("2"), var("ℝ")]), // Matrix(2, 2, ℝ)
-                op("Matrix", vec![c("2"), c("2"), var("ℝ")]), // Matrix(2, 2, ℝ)
+                op(
+                    "Matrix",
+                    vec![
+                        c("2"),
+                        c("2"),
+                        Expression::List(vec![c("1"), c("2"), c("3"), c("4")]),
+                    ],
+                ),
+                op(
+                    "Matrix",
+                    vec![
+                        c("2"),
+                        c("2"),
+                        Expression::List(vec![c("5"), c("6"), c("7"), c("8")]),
+                    ],
+                ),
             ],
         );
 
@@ -138,12 +152,19 @@ fn test_mixed_types_ordering() {
     let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
 
     // Matrix < Scalar (nonsensical)
-    // NEW FORMAT: Matrix(m: Nat, n: Nat, T) - 3 args
+    // NEW FORMAT: Matrix(m, n, [elements...]) - 3 args
     let expr = op(
         "less_than",
         vec![
-            op("Matrix", vec![c("2"), c("2"), var("ℝ")]), // Matrix(2, 2, ℝ)
-            c("5"),                                       // scalar
+            op(
+                "Matrix",
+                vec![
+                    c("2"),
+                    c("2"),
+                    Expression::List(vec![c("1"), c("2"), c("3"), c("4")]),
+                ],
+            ),
+            c("5"), // scalar
         ],
     );
 
@@ -164,12 +185,26 @@ fn test_error_message_quality() {
     // Verify error messages are helpful
     let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
 
-    // NEW FORMAT: Matrix(m: Nat, n: Nat, T) - 3 args
+    // NEW FORMAT: Matrix(m, n, [elements...]) - 3 args
     let expr = op(
         "less_than",
         vec![
-            op("Matrix", vec![c("2"), c("2"), var("ℝ")]), // Matrix(2, 2, ℝ)
-            op("Matrix", vec![c("2"), c("2"), var("ℝ")]), // Matrix(2, 2, ℝ)
+            op(
+                "Matrix",
+                vec![
+                    c("2"),
+                    c("2"),
+                    Expression::List(vec![c("1"), c("2"), c("3"), c("4")]),
+                ],
+            ),
+            op(
+                "Matrix",
+                vec![
+                    c("2"),
+                    c("2"),
+                    Expression::List(vec![c("5"), c("6"), c("7"), c("8")]),
+                ],
+            ),
         ],
     );
 
@@ -227,15 +262,15 @@ fn test_matrix_operations_still_work() {
     let mut checker = TypeChecker::with_stdlib().expect("Failed to load stdlib");
 
     // Matrix transpose should work
-    // NEW FORMAT: Matrix(m: Nat, n: Nat, T) - 3 args
+    // NEW FORMAT: Matrix(m, n, [elements...]) - 3 args
     let expr = op(
         "transpose",
         vec![op(
             "Matrix",
             vec![
-                c("2"),   // m = 2
-                c("3"),   // n = 3
-                var("ℝ"), // T = ℝ
+                c("2"), // m = 2
+                c("3"), // n = 3
+                Expression::List(vec![c("1"), c("2"), c("3"), c("4"), c("5"), c("6")]),
             ],
         )],
     );

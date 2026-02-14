@@ -566,6 +566,16 @@ impl<'r> Z3Backend<'r> {
                 Sort::uninterpreted(sort_name.into())
             }
 
+            // Type application - treat like parameterized data type
+            Type::App(_, _) => {
+                if let Some((base, args)) = Self::flatten_type_app(ty) {
+                    let sort_name = get_parameterized_sort_name(&base, &args);
+                    Sort::uninterpreted(sort_name.into())
+                } else {
+                    Sort::int()
+                }
+            }
+
             // Primitive types - use Z3 native sorts
             Type::Nat | Type::NatValue(_) | Type::NatExpr(_) => Sort::int(),
             Type::Bool => Sort::bool(),
@@ -574,6 +584,20 @@ impl<'r> Z3Backend<'r> {
             Type::Function(_, _) => Sort::int(), // Functions as uninterpreted (conservative)
             Type::Product(_) => Sort::int(),     // Products as uninterpreted
             Type::Var(_) | Type::ForAll(_, _) => Sort::int(), // Type vars default to Int
+        }
+    }
+
+    fn flatten_type_app(ty: &Type) -> Option<(String, Vec<Type>)> {
+        match ty {
+            Type::App(func, arg) => {
+                let (base, mut args) = Self::flatten_type_app(func)?;
+                args.push((**arg).clone());
+                Some((base, args))
+            }
+            Type::Data {
+                constructor, args, ..
+            } => Some((constructor.clone(), args.clone())),
+            _ => None,
         }
     }
 

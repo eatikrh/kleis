@@ -2001,6 +2001,23 @@ impl KleisParser {
         // (starts with a number, or an identifier followed by an arithmetic op)
         let start_pos = self.pos;
 
+        // Fast path: try parsing a full dimension expression and accept it
+        // only if it ends cleanly before a type-arg delimiter.
+        if let Ok(dim_expr) = self.parse_dim_expr_additive() {
+            self.skip_whitespace();
+            if matches!(self.peek(), Some(',') | Some(')')) {
+                return match dim_expr {
+                    DimExpr::Var(name) => Ok(TypeExpr::Named(name)),
+                    DimExpr::Lit(n) => Ok(TypeExpr::Named(n.to_string())),
+                    _ => Ok(TypeExpr::DimExpr(dim_expr)),
+                };
+            }
+            // Not a clean dim expr in this context; rewind and continue.
+            self.pos = start_pos;
+        } else {
+            self.pos = start_pos;
+        }
+
         // Try to parse a primary (number or identifier)
         let first = if self.peek().is_some_and(|ch| ch.is_ascii_digit()) {
             let num_str = self.parse_number()?;
@@ -2042,9 +2059,13 @@ impl KleisParser {
             self.skip_whitespace();
 
             // Check if followed by arithmetic operator
-            if matches!(self.peek(), Some('+') | Some('-') | Some('*') | Some('/')) {
-                // This is definitely a dimension expression - continue parsing
-                let dim_expr = self.continue_dim_expr(left)?;
+            if matches!(
+                self.peek(),
+                Some('+') | Some('-') | Some('*') | Some('/') | Some('^')
+            ) {
+                // This is definitely a dimension expression - parse from the start
+                self.pos = start_pos;
+                let dim_expr = self.parse_dim_expr_additive()?;
                 return Ok(TypeExpr::DimExpr(dim_expr));
             }
 
@@ -2097,52 +2118,6 @@ impl KleisParser {
 
         // Fallback: parse as regular type
         self.parse_type()
-    }
-
-    /// Continue parsing a dimension expression after the left operand
-    fn continue_dim_expr(&mut self, left: DimExpr) -> Result<DimExpr, KleisParseError> {
-        self.skip_whitespace();
-
-        // Handle additive operators (lowest precedence)
-        let mut result = left;
-
-        loop {
-            self.skip_whitespace();
-
-            match self.peek() {
-                Some('+') => {
-                    self.advance();
-                    self.skip_whitespace();
-                    let right = self.parse_dim_expr_multiplicative()?;
-                    result = DimExpr::Add(Box::new(result), Box::new(right));
-                }
-                Some('-') => {
-                    // Make sure it's not an arrow ->
-                    if self.peek_ahead(1) == Some('>') {
-                        break;
-                    }
-                    self.advance();
-                    self.skip_whitespace();
-                    let right = self.parse_dim_expr_multiplicative()?;
-                    result = DimExpr::Sub(Box::new(result), Box::new(right));
-                }
-                Some('*') => {
-                    self.advance();
-                    self.skip_whitespace();
-                    let right = self.parse_dim_expr_primary()?;
-                    result = DimExpr::Mul(Box::new(result), Box::new(right));
-                }
-                Some('/') => {
-                    self.advance();
-                    self.skip_whitespace();
-                    let right = self.parse_dim_expr_primary()?;
-                    result = DimExpr::Div(Box::new(result), Box::new(right));
-                }
-                _ => break,
-            }
-        }
-
-        Ok(result)
     }
 
     /// Parse additive dimension expression (handles + and -)
@@ -3420,11 +3395,11 @@ impl KleisParser {
                 let param_name = self.parse_identifier()?;
                 self.skip_whitespace();
 
-                // Optional kind annotation: m: Nat
+                // Optional kind annotation: m: Nat, M: Type → Type
                 let kind = if self.peek() == Some(':') {
                     self.advance();
                     self.skip_whitespace();
-                    Some(self.parse_identifier()?)
+                    Some(self.parse_kind_expr()?)
                 } else {
                     None
                 };
@@ -3728,7 +3703,7 @@ impl KleisParser {
             let kind = if self.peek() == Some(':') {
                 self.advance(); // consume ':'
                 self.skip_whitespace();
-                Some(self.parse_identifier()?)
+                Some(self.parse_kind_expr()?)
             } else {
                 None
             };
@@ -3755,6 +3730,55 @@ impl KleisParser {
         }
 
         Ok(params)
+    }
+
+    /// Parse a kind expression: Type, Nat, String, or Type → Type
+    fn parse_kind_expr(&mut self) -> Result<crate::kleis_ast::KindExpr, KleisParseError> {
+        self.skip_whitespace();
+        let left = self.parse_kind_atom()?;
+        self.skip_whitespace();
+
+        if self.peek() == Some('→') || self.peek_word("->") {
+            if self.peek() == Some('→') {
+                self.advance();
+            } else {
+                self.advance();
+                self.advance();
+            }
+            self.skip_whitespace();
+            let right = self.parse_kind_expr()?;
+            Ok(crate::kleis_ast::KindExpr::Arrow(
+                Box::new(left),
+                Box::new(right),
+            ))
+        } else {
+            Ok(left)
+        }
+    }
+
+    /// Parse a kind atom: Type, Nat, String, or parenthesized kind
+    fn parse_kind_atom(&mut self) -> Result<crate::kleis_ast::KindExpr, KleisParseError> {
+        self.skip_whitespace();
+        if self.peek() == Some('(') {
+            self.advance();
+            let inner = self.parse_kind_expr()?;
+            self.skip_whitespace();
+            if self.advance() != Some(')') {
+                return Err(KleisParseError {
+                    message: "Expected ')' after kind expression".to_string(),
+                    position: self.pos,
+                });
+            }
+            return Ok(inner);
+        }
+
+        let name = self.parse_identifier()?;
+        match name.as_str() {
+            "Type" => Ok(crate::kleis_ast::KindExpr::Type),
+            "Nat" => Ok(crate::kleis_ast::KindExpr::Nat),
+            "String" => Ok(crate::kleis_ast::KindExpr::String),
+            _ => Ok(crate::kleis_ast::KindExpr::Named(name)),
+        }
     }
 
     /// Parse function definition (top-level)
@@ -4221,11 +4245,11 @@ impl KleisParser {
                 let param_name = self.parse_identifier()?;
                 self.skip_whitespace();
 
-                // Optional kind annotation: m: Nat
+                // Optional kind annotation: m: Nat, M: Type → Type
                 let kind = if self.peek() == Some(':') {
                     self.advance();
                     self.skip_whitespace();
-                    Some(self.parse_identifier()?)
+                    Some(self.parse_kind_expr()?)
                 } else {
                     None
                 };
@@ -4783,6 +4807,35 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_type_params_named_not_dimexpr() {
+        let result = parse_type_expr("Matrix(m, n, T)").unwrap();
+        match result {
+            TypeExpr::Parametric(name, params) => {
+                assert_eq!(name, "Matrix");
+                assert_eq!(params.len(), 3);
+                assert_eq!(params[0], TypeExpr::Named("m".to_string()));
+                assert_eq!(params[1], TypeExpr::Named("n".to_string()));
+                assert_eq!(params[2], TypeExpr::Named("T".to_string()));
+            }
+            _ => panic!("Expected Parametric"),
+        }
+    }
+
+    #[test]
+    fn test_parse_type_params_dimexpr_power() {
+        let result = parse_type_expr("Matrix(2^n, 2^n, ℝ)").unwrap();
+        match result {
+            TypeExpr::Parametric(name, params) => {
+                assert_eq!(name, "Matrix");
+                assert_eq!(params.len(), 3);
+                assert!(matches!(params[0], TypeExpr::DimExpr(_)));
+                assert!(matches!(params[1], TypeExpr::DimExpr(_)));
+            }
+            _ => panic!("Expected Parametric"),
+        }
+    }
+
+    #[test]
     fn test_parse_function_type() {
         let result = parse_type_expr("ℝ → ℝ").unwrap();
         match result {
@@ -4857,9 +4910,27 @@ mod tests {
         assert_eq!(result.name, "StateSpace");
         assert_eq!(result.params.len(), 2);
         assert_eq!(result.params[0].name, "n");
-        assert_eq!(result.params[0].kind, Some("Nat".to_string()));
+        assert_eq!(result.params[0].kind, Some(crate::kleis_ast::KindExpr::Nat));
         assert_eq!(result.params[1].name, "m");
-        assert_eq!(result.params[1].kind, Some("Nat".to_string()));
+        assert_eq!(result.params[1].kind, Some(crate::kleis_ast::KindExpr::Nat));
+    }
+
+    #[test]
+    fn test_parse_structure_with_higher_kinded_param() {
+        let code = "structure Functor(F: Type → Type) { }";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_structure().unwrap();
+
+        assert_eq!(result.name, "Functor");
+        assert_eq!(result.type_params.len(), 1);
+        assert_eq!(result.type_params[0].name, "F");
+        assert_eq!(
+            result.type_params[0].kind,
+            Some(crate::kleis_ast::KindExpr::Arrow(
+                Box::new(crate::kleis_ast::KindExpr::Type),
+                Box::new(crate::kleis_ast::KindExpr::Type)
+            ))
+        );
     }
 
     // ============================================
@@ -5545,7 +5616,10 @@ mod tests {
         assert_eq!(result.name, "Vector");
         assert_eq!(result.type_params.len(), 1);
         assert_eq!(result.type_params[0].name, "n");
-        assert_eq!(result.type_params[0].kind, Some("Nat".to_string()));
+        assert_eq!(
+            result.type_params[0].kind,
+            Some(crate::kleis_ast::KindExpr::Nat)
+        );
 
         assert_eq!(result.variants.len(), 1);
         let variant = &result.variants[0];

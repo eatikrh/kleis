@@ -531,11 +531,11 @@ mod tests {
             type_params: vec![
                 TypeParam {
                     name: "m".to_string(),
-                    kind: Some("Nat".to_string()),
+                    kind: Some(crate::kleis_ast::KindExpr::Nat),
                 },
                 TypeParam {
                     name: "n".to_string(),
-                    kind: Some("Nat".to_string()),
+                    kind: Some(crate::kleis_ast::KindExpr::Nat),
                 },
                 TypeParam {
                     name: "T".to_string(),
