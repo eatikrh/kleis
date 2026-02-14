@@ -30,7 +30,7 @@ fn product_type(types: Vec<Type>) -> Type {
 }
 
 fn type_var(n: usize) -> Type {
-    Type::Var(TypeVar(n))
+    Type::Var(TypeVar::new(n))
 }
 
 #[test]

@@ -96,11 +96,33 @@ pub struct StructureDef {
     pub over_clause: Option<TypeExpr>,
 }
 
+/// Kind expression for type parameters
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize)]
+pub enum KindExpr {
+    Type,
+    Nat,
+    String,
+    Named(String),
+    Arrow(Box<KindExpr>, Box<KindExpr>),
+}
+
+impl std::fmt::Display for KindExpr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            KindExpr::Type => write!(f, "Type"),
+            KindExpr::Nat => write!(f, "Nat"),
+            KindExpr::String => write!(f, "String"),
+            KindExpr::Named(name) => write!(f, "{}", name),
+            KindExpr::Arrow(from, to) => write!(f, "{} → {}", from, to),
+        }
+    }
+}
+
 /// Type parameter for structures
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeParam {
     pub name: String,
-    pub kind: Option<String>, // e.g., "Nat" for natural number parameters
+    pub kind: Option<KindExpr>, // e.g., Nat, Type, Type → Type
 }
 
 /// Structure member (field, operation, or axiom)
@@ -174,7 +196,7 @@ pub struct TypeAlias {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeAliasParam {
     pub name: String,
-    pub kind: Option<String>, // "Nat", "Type", etc.
+    pub kind: Option<KindExpr>, // Nat, Type, Type → Type, etc.
 }
 
 /// Data type definition: data Name(T, U) = Variant1 | Variant2(T) | ...

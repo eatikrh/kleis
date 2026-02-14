@@ -123,7 +123,7 @@ structure TrescaYieldCriterion {
 
 structure IsotropicElasticity {
     // Lamé parameters
-    element lambda : ℝ  // First Lamé parameter
+    element lam : ℝ     // First Lamé parameter (Lamé λ)
     element mu : ℝ      // Shear modulus (second Lamé parameter)
     
     // Engineering constants
@@ -133,14 +133,14 @@ structure IsotropicElasticity {
     
     // Relationships (scaled to avoid division):
     // E = μ(3λ + 2μ)/(λ + μ)  →  E(λ + μ) = μ(3λ + 2μ)
-    axiom E_from_lame : times(E, plus(lambda, mu)) = 
-        times(mu, plus(times(3, lambda), times(2, mu)))
+    axiom E_from_lame : times(E, plus(lam, mu)) =
+        times(mu, plus(times(3, lam), times(2, mu)))
     
     // ν = λ/(2(λ + μ))  →  2ν(λ + μ) = λ
-    axiom nu_from_lame : times(times(2, nu), plus(lambda, mu)) = lambda
+    axiom nu_from_lame : times(times(2, nu), plus(lam, mu)) = lam
     
     // K = λ + (2/3)μ  →  3K = 3λ + 2μ
-    axiom K_from_lame : times(3, K) = plus(times(3, lambda), times(2, mu))
+    axiom K_from_lame : times(3, K) = plus(times(3, lam), times(2, mu))
 }
 
 structure MohrCoulombCriterion {

@@ -248,6 +248,13 @@ fn get_sort_kind_for_type(ty: &Type) -> Z3SortKind {
         Type::Data {
             type_name, args, ..
         } => get_sort_kind(type_name, args),
+        Type::App(_, _) => {
+            if let Some((base, args)) = flatten_type_app(ty) {
+                get_sort_kind(&base, &args)
+            } else {
+                Z3SortKind::UserDefined
+            }
+        }
         _ => Z3SortKind::Int, // Default fallback
     }
 }
@@ -285,10 +292,31 @@ pub fn get_parameterized_sort_name(type_name: &str, args: &[Type]) -> String {
                 Type::Data { type_name, .. } => type_name.clone(),
                 Type::Nat => "n".to_string(),
                 Type::Bool => "bool".to_string(),
+                Type::App(_, _) => {
+                    if let Some((base, args)) = flatten_type_app(arg) {
+                        get_parameterized_sort_name(&base, &args)
+                    } else {
+                        "_".to_string()
+                    }
+                }
                 _ => "_".to_string(),
             })
             .collect();
         format!("{}_{}", type_name, param_strs.join("x"))
+    }
+}
+
+fn flatten_type_app(ty: &Type) -> Option<(String, Vec<Type>)> {
+    match ty {
+        Type::App(func, arg) => {
+            let (base, mut args) = flatten_type_app(func)?;
+            args.push((**arg).clone());
+            Some((base, args))
+        }
+        Type::Data {
+            constructor, args, ..
+        } => Some((constructor.clone(), args.clone())),
+        _ => None,
     }
 }
 
@@ -537,6 +565,20 @@ mod tests {
         assert_eq!(
             get_parameterized_sort_name("Matrix", &args),
             "Matrix_3x3xComplex"
+        );
+    }
+
+    #[test]
+    fn test_parameterized_sort_name_with_type_app() {
+        let matrix_ctor = Type::Data {
+            type_name: "Matrix".to_string(),
+            constructor: "Matrix".to_string(),
+            args: vec![],
+        };
+        let matrix_app = Type::App(Box::new(matrix_ctor), Box::new(Type::NatValue(2)));
+        assert_eq!(
+            get_parameterized_sort_name("Wrapper", &[matrix_app]),
+            "Wrapper_Matrix_2"
         );
     }
 

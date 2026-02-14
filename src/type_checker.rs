@@ -237,7 +237,7 @@ impl TypeChecker {
         // Add parameters to context with fresh type variables
         // Wire 3 TODO: Use parameter type annotations from func_def.type_annotation
         for param in &func_def.params {
-            let param_ty = Type::Var(TypeVar(self.inference.next_var_id()));
+            let param_ty = Type::Var(TypeVar::new(self.inference.next_var_id()));
             self.inference.bind(param.clone(), param_ty);
         }
 

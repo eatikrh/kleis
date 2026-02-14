@@ -1,9 +1,19 @@
 # Grammar Synchronization Status
 
-**Date:** January 9, 2026  
-**Status:** 🆕 v0.98 Released (Parametric Types in Quantifiers - Documentation)
+**Date:** February 13, 2026  
+**Status:** 🆕 v0.99 Released (Kinded Type Parameters - Documentation)
 
-## Current Version: v0.98
+## Current Version: v0.99
+
+### What's New in v0.99
+
+**Kinded Type Parameters** - Documents explicit kinds for type params:
+
+```kleis
+structure Functor(F : Type → Type) {
+    operation fmap : (A → B) → F(A) → F(B)
+}
+```
 
 ### What's New in v0.98
 
@@ -90,8 +100,9 @@ example "complex arithmetic" {
 
 | File | Version | Last Updated | Status |
 |------|---------|--------------|--------|
-| `kleis_grammar_v098.ebnf` | v0.98 | Jan 9, 2026 | ✅ Current |
-| `kleis_grammar_v098.md` | v0.98 | Jan 9, 2026 | ✅ Documented |
+| `kleis_grammar_v099.md` | v0.99 | Feb 13, 2026 | ✅ Documented |
+| `kleis_grammar_v098.ebnf` | v0.98 | Jan 9, 2026 | ✅ Current (EBNF) |
+| `kleis_grammar_v098.md` | v0.98 | Jan 9, 2026 | ✅ Previous |
 | `kleis_grammar_v097.ebnf` | v0.97 | Jan 9, 2026 | ✅ Previous |
 | `kleis_grammar_v097.md` | v0.97 | Jan 9, 2026 | ✅ Previous |
 | `kleis_grammar_v096.ebnf` | v0.96 | Jan 1, 2026 | ✅ Previous |

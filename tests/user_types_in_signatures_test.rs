@@ -44,7 +44,7 @@ fn make_nat_parametric_type(name: &str, param_names: Vec<&str>) -> DataDef {
             .iter()
             .map(|p| TypeParam {
                 name: p.to_string(),
-                kind: Some("Nat".to_string()),
+                kind: Some(kleis::kleis_ast::KindExpr::Nat),
             })
             .collect(),
         variants: vec![DataVariant {
@@ -62,7 +62,7 @@ fn make_type_parametric_type(name: &str, param_names: Vec<&str>) -> DataDef {
             .iter()
             .map(|p| TypeParam {
                 name: p.to_string(),
-                kind: Some("Type".to_string()),
+                kind: Some(kleis::kleis_ast::KindExpr::Type),
             })
             .collect(),
         variants: vec![DataVariant {
@@ -453,7 +453,7 @@ fn make_string_type_parametric(
     for p in string_params {
         params.push(TypeParam {
             name: p.to_string(),
-            kind: Some("String".to_string()),
+            kind: Some(kleis::kleis_ast::KindExpr::String),
         });
     }
 
@@ -461,7 +461,7 @@ fn make_string_type_parametric(
     for p in type_params {
         params.push(TypeParam {
             name: p.to_string(),
-            kind: Some("Type".to_string()),
+            kind: Some(kleis::kleis_ast::KindExpr::Type),
         });
     }
 
@@ -645,19 +645,19 @@ fn test_mixed_string_and_nat_parameters() {
     let params = vec![
         TypeParam {
             name: "label".to_string(),
-            kind: Some("String".to_string()),
+            kind: Some(kleis::kleis_ast::KindExpr::String),
         },
         TypeParam {
             name: "m".to_string(),
-            kind: Some("Nat".to_string()),
+            kind: Some(kleis::kleis_ast::KindExpr::Nat),
         },
         TypeParam {
             name: "n".to_string(),
-            kind: Some("Nat".to_string()),
+            kind: Some(kleis::kleis_ast::KindExpr::Nat),
         },
         TypeParam {
             name: "T".to_string(),
-            kind: Some("Type".to_string()),
+            kind: Some(kleis::kleis_ast::KindExpr::Type),
         },
     ];
 

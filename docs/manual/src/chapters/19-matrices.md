@@ -16,7 +16,8 @@ Examples:
 
 ## Creating Matrices
 
-Use the `Matrix` constructor with dimensions and a list of elements (row-major order):
+Use the `Matrix` constructor with dimensions and a list of elements (row-major order).
+The element type is inferred from the list contents:
 
 ```kleis
 // 2×2 matrix: [[1, 2], [3, 4]]
@@ -305,7 +306,6 @@ multiply(Matrix(2, 2, [...]), Matrix(3, 2, [...]))
 | `matrix([[...], [...]])` | `matrix([[1,2],[3,4]])` | **Nested list syntax** (recommended) |
 | `Matrix(m, n, [...])` | `Matrix(2, 2, [1,2,3,4])` | Explicit dimensions + flat list |
 | `eye(n)` | `eye(3)` → 3×3 identity | n×n identity matrix |
-| `identity(n)` | `identity(2)` → 2×2 identity | Alias for `eye` |
 | `zeros(n)` | `zeros(3)` → 3×3 zeros | n×n zero matrix |
 | `zeros(m, n)` | `zeros(2, 3)` → 2×3 zeros | m×n zero matrix |
 | `ones(n)` | `ones(3)` → 3×3 ones | n×n matrix of ones |
@@ -323,6 +323,13 @@ multiply(Matrix(2, 2, [...]), Matrix(3, 2, [...]))
 
 λ> :eval eigenvalues(matrix([[0, -1], [1, 0]]))
 ✅ [complex(0, 1), complex(0, -1)]
+```
+
+Typed identity is a structure element (no top-level operation). Use a type annotation
+to pick the dimension:
+
+```
+(identity : Matrix(3, 3, ℝ))
 ```
 
 Other constructors:

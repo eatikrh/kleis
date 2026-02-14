@@ -51,7 +51,7 @@ structure UnitaryGate {
     
     // Unitarity: U†U = I (preserves normalization)
     axiom unitary : ∀ U : UnitaryGate .
-        multiply(dagger(U), U) = identity(dim(U))
+        multiply(dagger(U), U) = (identity : Matrix(dim(U), dim(U), ℂ))
     
     // Reversibility: every unitary has an inverse
     axiom reversible : ∀ U : UnitaryGate .

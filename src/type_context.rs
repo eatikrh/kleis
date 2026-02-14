@@ -931,6 +931,13 @@ impl TypeContextBuilder {
                 }
             }
 
+            // Type application
+            Type::App(func, arg) => {
+                let func_name = self.type_to_name(func)?;
+                let arg_name = self.type_to_name(arg)?;
+                Some(format!("{}({})", func_name, arg_name))
+            }
+
             // Symbolic dimension expression
             Type::NatExpr(dim) => Some(format!("{}", dim)),
 
@@ -1203,7 +1210,7 @@ impl TypeContextBuilder {
             }
             TypeExpr::Var(_) => {
                 // Type variable - return as fresh variable
-                Ok(Type::Var(crate::type_inference::TypeVar(0)))
+                Ok(Type::Var(crate::type_inference::TypeVar::new(0)))
             }
             TypeExpr::ForAll { body, .. } => {
                 // Quantified type - unwrap and interpret the body
