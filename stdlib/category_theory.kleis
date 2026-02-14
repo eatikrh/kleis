@@ -138,18 +138,18 @@ structure Isomorphism(Obj : Type, Mor : Type) {
 // Monad and Kleisli Category
 // ----------------------------------------------------------------------------
 // A monad presents the Kleisli category structure on types.
-structure Monad(M : Type) {
-    operation unit : A → M(A)
-    operation bind : M(A) → (A → M(B)) → M(B)
+structure Monad(M : Type → Type) {
+    operation unit : ∀(A : Type). A → M(A)
+    operation bind : ∀(A : Type, B : Type). M(A) → (A → M(B)) → M(B)
 
     // Monad laws
-    axiom left_id : ∀ a : A . ∀ f : A → M(B) .
+    axiom left_id : ∀(A : Type, B : Type). ∀ a : A . ∀ f : A → M(B) .
         equals(bind(unit(a), f), f(a))
 
-    axiom right_id : ∀ m : M(A) .
+    axiom right_id : ∀(A : Type). ∀ m : M(A) .
         equals(bind(m, unit), m)
 
-    axiom assoc : ∀ m : M(A) . ∀ f : A → M(B) . ∀ g : B → M(C) .
+    axiom assoc : ∀(A : Type, B : Type, C : Type). ∀ m : M(A) . ∀ f : A → M(B) . ∀ g : B → M(C) .
         equals(
             bind(bind(m, f), g),
             bind(m, λ x . bind(f(x), g))
@@ -157,28 +157,29 @@ structure Monad(M : Type) {
 }
 
 // Kleisli category for a monad M
-structure KleisliCategory(M : Type) {
-    operation unit : A → M(A)
-    operation bind : M(A) → (A → M(B)) → M(B)
-
+structure KleisliCategory(M : Type → Type) extends Monad(M) {
     // Kleisli identity and composition
-    operation kid : A → M(A)
-    operation kcomp : (A → M(B)) → (B → M(C)) → (A → M(C))
+    operation kid : ∀(A : Type). A → M(A)
+    operation kcomp : ∀(A : Type, B : Type, C : Type).
+        (A → M(B)) → (B → M(C)) → (A → M(C))
 
     // Definitions
-    axiom kid_def : ∀ a : A . equals(kid(a), unit(a))
+    axiom kid_def : ∀(A : Type). ∀ a : A . equals(kid(a), unit(a))
 
-    axiom kcomp_def : ∀ f : A → M(B) . ∀ g : B → M(C) .
+    axiom kcomp_def : ∀(A : Type, B : Type, C : Type). ∀ f : A → M(B) . ∀ g : B → M(C) .
         equals(kcomp(f, g), λ x . bind(f(x), g))
 
     // Category laws in Kleisli form
-    axiom k_left_id : ∀ f : A → M(B) .
+    axiom k_left_id : ∀(A : Type, B : Type). ∀ f : A → M(B) .
         equals(kcomp(kid, f), f)
 
-    axiom k_right_id : ∀ f : A → M(B) .
+    axiom k_right_id : ∀(A : Type, B : Type). ∀ f : A → M(B) .
         equals(kcomp(f, kid), f)
 
-    axiom k_assoc : ∀ f : A → M(B) . ∀ g : B → M(C) . ∀ h : C → M(D) .
+    axiom k_assoc : ∀(A : Type, B : Type, C : Type, D : Type).
+        ∀ f : A → M(B) . ∀ g : B → M(C) . ∀ h : C → M(D) .
         equals(kcomp(kcomp(f, g), h), kcomp(f, kcomp(g, h)))
 }
+
+
 

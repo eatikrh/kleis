@@ -14,7 +14,7 @@
 use kleis::ast::Expression;
 use kleis::kleis_parser::parse_kleis;
 use kleis::render::{build_default_context, render_expression, RenderTarget};
-use kleis::solvers::backend::SolverBackend;
+use kleis::solvers::backend::{SolverBackend, VerificationResult};
 use kleis::solvers::z3::backend::Z3Backend;
 use kleis::structure_registry::StructureRegistry;
 
@@ -193,6 +193,70 @@ fn z3_verify_limit() {
     assert!(
         rendered.contains("lim("),
         "Should render as lim function call"
+    );
+}
+
+// ============================================================
+// LEVEL 3: CATEGORY THEORY (Monad axioms)
+// ============================================================
+
+#[test]
+fn z3_verify_monad_left_identity() {
+    let mut registry = StructureRegistry::new();
+    registry
+        .load_from_file("stdlib/minimal_prelude.kleis")
+        .expect("load minimal_prelude.kleis");
+    registry
+        .load_from_file("stdlib/category_theory.kleis")
+        .expect("load category_theory.kleis");
+
+    let mut backend = Z3Backend::new(&registry).expect("create Z3 backend");
+    backend
+        .initialize_from_registry()
+        .expect("initialize Z3 from registry");
+
+    let expr = parse_kleis(
+        "∀(A : Type, B : Type). ∀ a : A . ∀ f : A → M(B) . equals(bind(unit(a), f), f(a))",
+    )
+    .expect("parse monad left identity");
+
+    let result = backend
+        .verify_axiom(&expr)
+        .expect("verify monad left identity");
+
+    assert!(
+        matches!(result, VerificationResult::Valid),
+        "expected Valid, got {result:?}"
+    );
+}
+
+#[test]
+fn z3_verify_kleisli_left_identity() {
+    let mut registry = StructureRegistry::new();
+    registry
+        .load_from_file("stdlib/minimal_prelude.kleis")
+        .expect("load minimal_prelude.kleis");
+    registry
+        .load_from_file("stdlib/category_theory.kleis")
+        .expect("load category_theory.kleis");
+
+    let mut backend = Z3Backend::new(&registry).expect("create Z3 backend");
+    backend
+        .initialize_from_registry()
+        .expect("initialize Z3 from registry");
+
+    let expr = parse_kleis(
+        "∀(A : Type, B : Type). ∀ f : A → M(B) . equals(kcomp(kid, f), f)",
+    )
+    .expect("parse kleisli left identity");
+
+    let result = backend
+        .verify_axiom(&expr)
+        .expect("verify kleisli left identity");
+
+    assert!(
+        matches!(result, VerificationResult::Valid),
+        "expected Valid, got {result:?}"
     );
 }
 
