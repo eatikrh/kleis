@@ -43,7 +43,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-09bb98e4.js";
+            window.path_to_searchindex_js = "../searchindex-664ac972.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b275a7b0.js"></script>
@@ -439,6 +439,43 @@ Matrix(3, 3, ℝ)   // 3×3 matrix of reals
 Vector(4)         // 4-dimensional vector
 Set(ℝ)            // Set of real numbers
 </code></pre>
+<h2 id="higher-order-kinds"><a class="header" href="#higher-order-kinds">Higher-Order Kinds</a></h2>
+<p>Kleis supports <strong>kinded type parameters</strong> so you can distinguish types (<code>Type</code>) from dimensions (<code>Nat</code>) and type constructors (<code>Type → Type</code>).</p>
+<p><strong>Type constructors</strong> are types that take types as arguments. For example, <code>Option</code> and <code>List</code> are constructors with kind <code>Type → Type</code>. When you apply a constructor to a concrete type, you get a new concrete type:</p>
+<pre><code class="language-kleis">type RealOption = Option(ℝ)  // a concrete type
+type IntList = List(ℤ)       // a concrete type
+
+// M is a type constructor:
+structure Functor(M: Type → Type) {
+    operation map : (A → B) → M(A) → M(B)
+}
+</code></pre>
+<p>Kinds live on type parameters and make higher‑order abstractions explicit:</p>
+<pre><code class="language-kleis">// Kinded type parameters
+structure Matrix(m: Nat, n: Nat, T: Type) {
+    operation transpose : Matrix(m, n, T) → Matrix(n, m, T)
+}
+
+// Higher-kinded parameter: M takes a Type and returns a Type
+structure Monad(M: Type → Type) {
+    operation unit : A → M(A)
+    operation bind : M(A) → (A → M(B)) → M(B)
+
+    // Monad laws (sketch)
+    axiom left_id  : ∀ a : A . ∀ f : A → M(B) . equals(bind(unit(a), f), f(a))
+    axiom right_id : ∀ m : M(A) . equals(bind(m, unit), m)
+}
+</code></pre>
+<p>You can also use higher-order kinds in type aliases:</p>
+<pre><code class="language-kleis">type Endo(F: Type) = F → F
+type FunctorF(F: Type → Type) = F
+</code></pre>
+<p>In practice:</p>
+<ul>
+<li><code>T : Type</code> means a concrete type (e.g., <code>ℝ</code>, <code>Matrix(2,2,ℝ)</code>).</li>
+<li><code>n : Nat</code> means a dimension or index.</li>
+<li><code>M : Type → Type</code> means a type constructor (e.g., <code>Option</code>, <code>List</code>, <code>M</code> in <code>Monad</code>).</li>
+</ul>
 <h2 id="dimension-expressions"><a class="header" href="#dimension-expressions">Dimension Expressions</a></h2>
 <p>When working with parameterized types like <code>Matrix(m, n, ℝ)</code>, the dimension parameters are not just simple numbers — they can be <strong>dimension expressions</strong>. This enables type-safe operations where dimensions depend on each other.</p>
 <h3 id="supported-dimension-expressions"><a class="header" href="#supported-dimension-expressions">Supported Dimension Expressions</a></h3>

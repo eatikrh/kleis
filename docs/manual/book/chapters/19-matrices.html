@@ -43,7 +43,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-09bb98e4.js";
+            window.path_to_searchindex_js = "../searchindex-664ac972.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-b275a7b0.js"></script>
@@ -200,7 +200,8 @@
 <li><code>Matrix(3, 4, ℂ)</code> - 3×4 matrix of complex numbers</li>
 </ul>
 <h2 id="creating-matrices"><a class="header" href="#creating-matrices">Creating Matrices</a></h2>
-<p>Use the <code>Matrix</code> constructor with dimensions and a list of elements (row-major order):</p>
+<p>Use the <code>Matrix</code> constructor with dimensions and a list of elements (row-major order).
+The element type is inferred from the list contents:</p>
 <pre><code class="language-kleis">// 2×2 matrix: [[1, 2], [3, 4]]
 Matrix(2, 2, [1, 2, 3, 4])
 
@@ -429,7 +430,6 @@ multiply(Matrix(2, 2, [...]), Matrix(3, 2, [...]))
 <tr><td><code>matrix([[...], [...]])</code></td><td><code>matrix([[1,2],[3,4]])</code></td><td><strong>Nested list syntax</strong> (recommended)</td></tr>
 <tr><td><code>Matrix(m, n, [...])</code></td><td><code>Matrix(2, 2, [1,2,3,4])</code></td><td>Explicit dimensions + flat list</td></tr>
 <tr><td><code>eye(n)</code></td><td><code>eye(3)</code> → 3×3 identity</td><td>n×n identity matrix</td></tr>
-<tr><td><code>identity(n)</code></td><td><code>identity(2)</code> → 2×2 identity</td><td>Alias for <code>eye</code></td></tr>
 <tr><td><code>zeros(n)</code></td><td><code>zeros(3)</code> → 3×3 zeros</td><td>n×n zero matrix</td></tr>
 <tr><td><code>zeros(m, n)</code></td><td><code>zeros(2, 3)</code> → 2×3 zeros</td><td>m×n zero matrix</td></tr>
 <tr><td><code>ones(n)</code></td><td><code>ones(3)</code> → 3×3 ones</td><td>n×n matrix of ones</td></tr>
@@ -447,6 +447,10 @@ multiply(Matrix(2, 2, [...]), Matrix(3, 2, [...]))
 
 λ&gt; :eval eigenvalues(matrix([[0, -1], [1, 0]]))
 ✅ [complex(0, 1), complex(0, -1)]
+</code></pre>
+<p>Typed identity is a structure element (no top-level operation). Use a type annotation
+to pick the dimension:</p>
+<pre><code>(identity : Matrix(3, 3, ℝ))
 </code></pre>
 <p>Other constructors:</p>
 <pre><code>λ&gt; :eval eye(3)
