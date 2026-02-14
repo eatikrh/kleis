@@ -299,8 +299,8 @@ Kleis supports **kinded type parameters** so you can distinguish types (`Type`) 
 **Type constructors** are types that take types as arguments. For example, `Option` and `List` are constructors with kind `Type → Type`. When you apply a constructor to a concrete type, you get a new concrete type:
 
 ```kleis
-Option(ℝ)   // a concrete type
-List(ℤ)     // a concrete type
+type RealOption = Option(ℝ)  // a concrete type
+type IntList = List(ℤ)       // a concrete type
 
 // M is a type constructor:
 structure Functor(M: Type → Type) {
