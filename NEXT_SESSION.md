@@ -698,3 +698,23 @@ structure Derivative(F : Field) {
 
 Clean, no workarounds, no parser changes needed.
 
+---
+
+## Category Theory Notes: Monad/Kleisli Cleanup (Feedback)
+
+1. **Avoid duplicating `unit`/`bind` in `KleisliCategory`**
+   - Use `extends Monad(M)` instead of re-declaring ops.
+   - Prevents a “Kleisli category” whose `unit/bind` don’t satisfy monad laws.
+
+2. **Prefer definitional equality for `kid`/`kcomp`**
+   - If definitional equality is not available, keep axioms.
+   - Use function extensional equality where possible: `equals(kid, unit)` rather than pointwise `kid(a)=unit(a)`.
+
+3. **Composition order**
+   - Current `kcomp(f, g) = λ x . bind(f(x), g)` is fine if interpreted as
+     “first f then g”. Identity laws should match this convention.
+
+4. **Optional Bourbaki purity**
+   - Long-term: replace `Type → Type` with an explicit object carrier and
+     `M : Obj → Obj`, if we move toward fully internalized CT.
+
