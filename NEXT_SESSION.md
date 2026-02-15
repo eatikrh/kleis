@@ -718,3 +718,58 @@ Clean, no workarounds, no parser changes needed.
    - Long-term: replace `Type → Type` with an explicit object carrier and
      `M : Obj → Obj`, if we move toward fully internalized CT.
 
+---
+
+## First-Class Structure Instances (Discussion)
+
+**Current state:** Structures are global via `implements`; instances are not first-class values.
+
+**Why it matters:**
+- Multiple structures over the same carrier (e.g., `Nat` as `(+, 0)` vs `(*, 1)`).
+- Local reasoning in axioms/lemmas about a specific instance.
+- Generic category theory (functors/natural transformations over arbitrary categories).
+
+**What it would require:**
+- Passing `mon : Monad(M)` as a value (dictionary/record of ops + axioms).
+- Z3 encoding: create fresh symbols for instance ops and assert instance axioms
+  scoped with push/pop.
+
+**Not a must-have** unless we want multiple instances per type or local CT reasoning.
+
+### Additional notes (ChatGPT feedback)
+- This is an architectural fork: global structures (DSL) vs parametric universes (meta-theory).
+- First-class instances move structures from meta-level to term-level (values + scoped axioms).
+- Z3 impact: fresh symbols per instance + push/pop-scoped axioms; naming discipline required.
+  - **⚠️ Known risk:** Z3 `push/pop` does NOT reset function declarations—only assertions. We already hit this with the Equation Editor (`let_simple` polymorphic collision). Fresh symbol names per instance avoid declaration conflicts, but axiom scoping via push/pop must be tested carefully to ensure declarations don't leak or conflict across instances.
+- CT motivation: enables generic `Functor(C, D)`, `NaturalTransformation(F, G)`, `Adjunction`.
+- Design choice:
+  - Dictionary-passing (Haskell-style): easier, SMT-friendly.
+  - Packed structures (Lean/Coq-style): principled, heavier.
+- Recommendation: model structures internally as records now, delay exposing as values until CT layer demands it.
+
+---
+
+## Type Promotion Consistency Gap
+
+**Current state:** Implicit type promotion (e.g., `Int` → `Scalar`) is **not consistent** across the language.
+
+**Where promotion works:**
+- Arithmetic operators (`plus`, `minus`, `times`, `divide`, `scalar_divide`) — the `infer_operation` path calls `find_common_supertype`, which checks user-defined `Promotes(From, To)` from the registry, then falls back to the hardcoded hierarchy `Nat → Int → Rational → Scalar → Complex`.
+
+**Where promotion does NOT work:**
+- Core HM `unify()` — strict; `Int` ≠ `Scalar` fails immediately.
+- Function arguments — `f(42)` where `f : ℝ → ℝ` uses unification, not operator overloading.
+- Let bindings — `let x : ℝ = 42` goes through unification.
+- Pattern matching — same; no promotion path.
+
+**User-visible inconsistency:**
+- `3 + 3.14` ✅ works (arithmetic promotion)
+- `f(3)` where `f : ℝ → ℝ` ❌ may fail (unification, no promotion)
+
+**Options:**
+1. **Keep as-is** — promotion only for arithmetic. Pragmatic; Kleis is mostly symbolic. Users learn the boundary.
+2. **Add promotion to `unify()`** — check the `Promotes` graph before failing. Consistent, but muddies HM purity and may cause surprising inferences.
+3. **No implicit promotion** (Haskell-style) — require explicit `lift` everywhere. Pure, but verbose.
+
+**Decision:** TBD. Document and revisit when users hit this.
+
