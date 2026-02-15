@@ -75,13 +75,11 @@ implements MatrixMultipliable(m, n, p, ℝ) {
 structure SquareMatrix(n: Nat, T) {
     operation det : Matrix(n, n, T) → T
     operation trace : Matrix(n, n, T) → T
-    operation identity : Matrix(n, n, T)
 }
 
 implements SquareMatrix(n, ℝ) {
     operation det = builtin_determinant
     operation trace = builtin_trace
-    operation identity = builtin_identity
 }
 
 /* Matrix Units - Identity element for n×n matrices */
