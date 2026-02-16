@@ -121,6 +121,23 @@ if [ -f "$BINARY" ]; then
     echo ""
     echo -e "${GREEN}✓ Build successful!${NC}"
     echo "  Binary: $BINARY"
+
+    # Install to PATH locations so the LSP extension picks up the latest binary
+    if [ "$BUILD_TYPE" = "release" ]; then
+        INSTALLED=()
+        if [ -d "$HOME/.cargo/bin" ]; then
+            cp "$BINARY" "$HOME/.cargo/bin/kleis"
+            INSTALLED+=("~/.cargo/bin/kleis")
+        fi
+        if [ -d "$HOME/bin" ]; then
+            ln -sf "$(cd "$(dirname "$BINARY")" && pwd)/$(basename "$BINARY")" "$HOME/bin/kleis"
+            INSTALLED+=("~/bin/kleis")
+        fi
+        if [ ${#INSTALLED[@]} -gt 0 ]; then
+            echo -e "${GREEN}✓ Installed to:${NC} ${INSTALLED[*]}"
+        fi
+    fi
+
     echo ""
     echo "Usage:"
     echo "  $BINARY server          # Start LSP + DAP server"

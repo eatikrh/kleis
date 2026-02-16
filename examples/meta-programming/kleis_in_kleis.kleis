@@ -614,9 +614,11 @@ structure ErrorTheorems {
 //
 // ============================================================================
 
-data Program =
-    Source(code: String)                          // The source code as a string
-  | AST(declarations
+// (Program is defined above in Part 1)
+//   data Program =
+//       Source(code: String)
+//     | AST(declarations: List(Declaration))
+//     | Parsed(code: String, ast: List(Declaration))
 
 
 // THE FIBONACCI EXAMPLE - The Core Insight

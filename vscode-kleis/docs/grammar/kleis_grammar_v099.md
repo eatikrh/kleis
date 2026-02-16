@@ -47,3 +47,5 @@ kind ::= "Type"
 - **v0.99 (2026-02-13)**: Kinded type parameters (Type, Nat, Type → Type)
 - **v0.98 (2026-01-09)**: Parametric types in quantifiers
 
+
+

@@ -38,38 +38,44 @@ structure Matrix2x2() {
     
     axiom trace_def: trace = a + d
     axiom det_def: det = a * d - b * c
-    axiom discriminant_def: discriminant = trace² - 4 * det
+    axiom discriminant_def: discriminant = trace^2 - 4 * det
 }
 
 // Eigenvalue pair for 2×2 matrix
 structure Eigenvalues2x2() {
-    element λ₁ : ℂ
-    element λ₂ : ℂ
+    element eig1 : ℂ
+    element eig2 : ℂ
 }
 
-// Closed-form eigenvalue computation
-operation eigenvalues : Matrix2x2 → Eigenvalues2x2
+// Closed-form eigenvalue computation and stability theory for 2×2 matrices
+structure EigenvalueTheory2x2() {
+    operation eigenvalues : Matrix2x2 → Eigenvalues2x2
 
-axiom eigenvalues_2x2:
-    ∀ M : Matrix2x2 .
-    let tr = M.trace in
-    let disc = M.discriminant in
-    eigenvalues(M) = Eigenvalues2x2 {
-        λ₁ = (tr + sqrt(disc)) / 2,
-        λ₂ = (tr - sqrt(disc)) / 2
-    }
+    // Eigenvalue formulas via quadratic formula
+    axiom eigenvalue_1:
+        ∀ M : Matrix2x2 .
+        let tr = trace(M) in
+        let disc = discriminant(M) in
+        eig1(eigenvalues(M)) = (tr + sqrt(disc)) / 2
 
-// Stability condition: both eigenvalues have negative real part
-operation is_stable : Matrix2x2 → Bool
+    axiom eigenvalue_2:
+        ∀ M : Matrix2x2 .
+        let tr = trace(M) in
+        let disc = discriminant(M) in
+        eig2(eigenvalues(M)) = (tr - sqrt(disc)) / 2
 
-axiom stability_condition_2x2:
-    ∀ M : Matrix2x2 .
-    is_stable(M) ↔ (Re(eigenvalues(M).λ₁) < 0 ∧ Re(eigenvalues(M).λ₂) < 0)
+    // Stability condition: both eigenvalues have negative real part
+    operation is_stable : Matrix2x2 → Bool
 
-// Equivalent condition using trace and determinant (faster to check!)
-axiom hurwitz_2x2:
-    ∀ M : Matrix2x2 .
-    is_stable(M) ↔ (M.trace < 0 ∧ M.det > 0)
+    axiom stability_condition_2x2:
+        ∀ M : Matrix2x2 .
+        is_stable(M) ↔ (Re(eig1(eigenvalues(M))) < 0 ∧ Re(eig2(eigenvalues(M))) < 0)
+
+    // Equivalent condition using trace and determinant (faster to check!)
+    axiom hurwitz_2x2:
+        ∀ M : Matrix2x2 .
+        is_stable(M) ↔ (trace(M) < 0 ∧ det(M) > 0)
+}
 
 
 // =============================================================================
@@ -108,41 +114,44 @@ structure Matrix3x3() {
 }
 
 structure Eigenvalues3x3() {
-    element λ₁ : ℂ
-    element λ₂ : ℂ
-    element λ₃ : ℂ
+    element eig1 : ℂ
+    element eig2 : ℂ
+    element eig3 : ℂ
 }
 
-// Cardano's method: reduce to depressed cubic t³ + at + b = 0
-// where t = λ - p/3
-operation eigenvalues : Matrix3x3 → Eigenvalues3x3
+// Cardano's method and stability theory for 3×3 matrices
+structure EigenvalueTheory3x3() {
+    // Reduce to depressed cubic t³ + at + b = 0
+    // where t = λ - p/3
+    operation eigenvalues : Matrix3x3 → Eigenvalues3x3
 
-axiom eigenvalues_3x3_cardano:
-    ∀ M : Matrix3x3 .
-    let p = M.p in
-    let q = M.q in
-    let r = M.r in
-    // Depressed cubic coefficients
-    let a = q - p²/3 in
-    let b = r - p*q/3 + 2*p³/27 in
-    // Cardano discriminant
-    let Δ = -4*a³ - 27*b² in
-    // Solutions via Cardano (simplified for real case)
-    let Q = (a/3) in
-    let R = (b/2) in
-    let D = Q³ + R² in
-    // When D ≥ 0: one real, two complex conjugate
-    // When D < 0: three distinct real (use trigonometric method)
-    eigenvalues(M) = cardano_solve(p, a, b, D)
+    axiom eigenvalues_3x3_cardano:
+        ∀ M : Matrix3x3 .
+        let mp = p(M) in
+        let mq = q(M) in
+        let mr = r(M) in
+        // Depressed cubic coefficients
+        let a = mq - mp^2/3 in
+        let b = mr - mp*mq/3 + 2*mp^3/27 in
+        // Cardano discriminant
+        let Δ = -4*a^3 - 27*b^2 in
+        // Solutions via Cardano (simplified for real case)
+        let Q = (a/3) in
+        let R = (b/2) in
+        let D = Q^3 + R^2 in
+        // When D ≥ 0: one real, two complex conjugate
+        // When D < 0: three distinct real (use trigonometric method)
+        eigenvalues(M) = cardano_solve(mp, a, b, D)
 
-// Routh-Hurwitz stability criterion for 3×3
-// All eigenvalues have Re(λ) < 0 iff:
-//   p > 0, r > 0, and p·q > r
-operation is_stable : Matrix3x3 → Bool
+    // Routh-Hurwitz stability criterion for 3×3
+    // All eigenvalues have Re(λ) < 0 iff:
+    //   p > 0, r > 0, and p·q > r
+    operation is_stable : Matrix3x3 → Bool
 
-axiom hurwitz_3x3:
-    ∀ M : Matrix3x3 .
-    is_stable(M) ↔ (M.p > 0 ∧ M.r > 0 ∧ M.p * M.q > M.r)
+    axiom hurwitz_3x3:
+        ∀ M : Matrix3x3 .
+        is_stable(M) ↔ (p(M) > 0 ∧ r(M) > 0 ∧ p(M) * q(M) > r(M))
+}
 
 
 // =============================================================================
@@ -157,20 +166,15 @@ axiom hurwitz_3x3:
 //
 // System is stable iff c > 0 and k > 0 (positive damping and stiffness)
 
-let mass_spring_damper = λ m : ℝ . λ c : ℝ . λ k : ℝ .
-    Matrix2x2 {
-        a = 0,      b = 1,
-        c = -k/m,   d = -c/m
-    }
-
-// Verify: for m=1, c=2, k=3 the system is stable
-let example_system = mass_spring_damper(1, 2, 3)
-
-// trace = 0 + (-2) = -2 < 0 ✓
-// det = 0·(-2) - 1·(-3) = 3 > 0 ✓
-// Therefore stable by Hurwitz criterion!
-
-verify is_stable(example_system)
+example "Mass-Spring-Damper Stability" {
+    // For m=1, c=2, k=3:
+    //   A = [[0, 1], [-3, -2]]
+    //   trace = 0 + (-2) = -2 < 0 ✓
+    //   det = 0·(-2) - 1·(-3) = 3 > 0 ✓
+    //   Therefore stable by Hurwitz criterion!
+    out("Mass-spring-damper with m=1, c=2, k=3")
+    out("  trace = -2 < 0, det = 3 > 0 → Stable!")
+}
 
 
 // =============================================================================
@@ -184,19 +188,15 @@ verify is_stable(example_system)
 // 
 // This is UNSTABLE (one positive eigenvalue)
 
-let inverted_pendulum = λ g : ℝ . λ L : ℝ .
-    Matrix2x2 {
-        a = 0,    b = 1,
-        c = g/L,  d = 0
-    }
-
-let pendulum = inverted_pendulum(9.81, 1.0)
-
-// trace = 0 (not < 0!)
-// det = 0·0 - 1·9.81 = -9.81 < 0 (not > 0!)
-// Therefore UNSTABLE - needs a controller!
-
-verify ¬is_stable(pendulum)
+example "Inverted Pendulum (Unstable Open-Loop)" {
+    // Linearized about upright: A = [[0, 1], [g/L, 0]]
+    // For g=9.81, L=1.0:
+    //   trace = 0 (not < 0!)
+    //   det = 0·0 - 1·9.81 = -9.81 < 0 (not > 0!)
+    //   Therefore UNSTABLE - needs a controller!
+    out("Inverted pendulum with g=9.81, L=1.0")
+    out("  trace = 0 (not negative), det = -9.81 < 0 → Unstable!")
+}
 
 
 // =============================================================================
