@@ -5,7 +5,7 @@
 // Classic mutual exclusion protocol modeled as a Petri net.
 // Two processes compete for a shared resource (critical section).
 //
-why are//        ┌─────────────────────────────────────┐
+//        ┌─────────────────────────────────────┐
 //        │                                     │
 //   [P1_idle]──▶(enter1)──▶[P1_critical]──▶(exit1)
 //        │         │              │           │

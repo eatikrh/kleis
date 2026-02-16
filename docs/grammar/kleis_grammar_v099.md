@@ -77,3 +77,5 @@ kind ::= "Type"
 - **v0.98 (2026-01-09)**: Parametric types in quantifiers
 - **v0.97 (2026-01-05)**: ASCII logical operators
 
+
+
