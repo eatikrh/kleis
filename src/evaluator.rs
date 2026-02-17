@@ -34,6 +34,7 @@ use crate::debug::{DebugHook, SourceLocation};
 use crate::kleis_ast::{ExampleBlock, ExampleStatement, FunctionDef, Program, TopLevel};
 use crate::kleis_parser::SourceSpan;
 use crate::pattern_matcher::PatternMatcher;
+use crate::solvers::backend::Witness;
 use crate::structure_registry::StructureRegistry;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -59,15 +60,17 @@ pub struct ExampleResult {
 pub enum AssertResult {
     /// Assertion passed (concrete equality)
     Passed,
-    /// Assertion verified by Z3 (symbolic proof)
-    Verified,
+    /// Assertion verified by Z3 (symbolic proof).
+    /// For existential quantifiers, `witness` contains a satisfying assignment.
+    Verified { witness: Option<Witness> },
     /// Assertion failed with concrete values (boxed to reduce enum size)
     Failed {
         expected: Box<Expression>,
         actual: Box<Expression>,
     },
-    /// Assertion disproved by Z3 with counterexample
-    Disproved { counterexample: String },
+    /// Assertion disproved by Z3 — the `witness` contains variable assignments
+    /// (as Kleis expressions) that violate the property.
+    Disproved { witness: Witness },
     /// Assertion couldn't be evaluated (symbolic)
     Unknown(String),
 }
@@ -938,7 +941,7 @@ impl Evaluator {
     /// - `Passed` — concrete evaluation confirmed truth
     /// - `Verified` — Z3 proved the proposition
     /// - `Failed` — concrete evaluation returned false
-    /// - `Disproved { counterexample }` — Z3 found a counterexample
+    /// - `Disproved { witness }` — Z3 found a counterexample (Kleis expressions)
     /// - `Unknown(msg)` — could not determine
     pub fn verify_proposition(&self, condition: &Expression) -> AssertResult {
         self.eval_assert(condition)
@@ -1158,8 +1161,13 @@ impl Evaluator {
                                         0,
                                     );
                                 }
-                                AssertResult::Verified => {
-                                    hook.on_assert_verified(condition, true, "Verified by Z3 ✓", 0);
+                                AssertResult::Verified { witness } => {
+                                    let msg = if let Some(w) = witness {
+                                        format!("Verified by Z3 ✓ (witness: {})", w)
+                                    } else {
+                                        "Verified by Z3 ✓".to_string()
+                                    };
+                                    hook.on_assert_verified(condition, true, &msg, 0);
                                 }
                                 AssertResult::Failed { expected, actual } => {
                                     hook.on_assert_verified(
@@ -1172,11 +1180,11 @@ impl Evaluator {
                                         0,
                                     );
                                 }
-                                AssertResult::Disproved { counterexample } => {
+                                AssertResult::Disproved { witness } => {
                                     hook.on_assert_verified(
                                         condition,
                                         false,
-                                        &format!("Disproved by Z3: {}", counterexample),
+                                        &format!("Disproved by Z3: {}", witness),
                                         0,
                                     );
                                 }
@@ -1196,7 +1204,7 @@ impl Evaluator {
                         AssertResult::Passed => {
                             assertions_passed += 1;
                         }
-                        AssertResult::Verified => {
+                        AssertResult::Verified { .. } => {
                             // Z3 verified the symbolic assertion!
                             assertions_passed += 1;
                         }
@@ -1214,7 +1222,7 @@ impl Evaluator {
                                 assertions_total,
                             };
                         }
-                        AssertResult::Disproved { counterexample } => {
+                        AssertResult::Disproved { witness } => {
                             // Z3 found a counterexample!
                             self.bindings = saved_bindings;
                             return ExampleResult {
@@ -1222,7 +1230,7 @@ impl Evaluator {
                                 passed: false,
                                 error: Some(format!(
                                     "Assertion disproved by Z3. Counterexample: {}",
-                                    counterexample
+                                    witness
                                 )),
                                 assertions_passed,
                                 assertions_total,
@@ -1376,9 +1384,14 @@ impl Evaluator {
 
                 match verifier.verify_axiom(condition) {
                     Ok(result) => match result {
-                        VerificationResult::Valid => Some(AssertResult::Verified),
-                        VerificationResult::Invalid { counterexample } => {
-                            Some(AssertResult::Disproved { counterexample })
+                        VerificationResult::Valid => Some(AssertResult::Verified { witness: None }),
+                        VerificationResult::ValidWithWitness { witness } => {
+                            Some(AssertResult::Verified {
+                                witness: Some(witness),
+                            })
+                        }
+                        VerificationResult::Invalid { witness } => {
+                            Some(AssertResult::Disproved { witness })
                         }
                         VerificationResult::Unknown => None, // Fall back to simple eval
                         VerificationResult::Disabled => None, // Feature not enabled

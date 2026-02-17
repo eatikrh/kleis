@@ -25,6 +25,7 @@ use crate::evaluator::{AssertResult, Evaluator};
 use crate::kleis_ast::{Program, StructureMember, TopLevel};
 use crate::kleis_parser::{parse_kleis_program, KleisParser};
 use crate::pretty_print::PrettyPrinter;
+use crate::solvers::backend::Witness;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -740,7 +741,7 @@ impl PolicyEngine {
                 return EvalResult {
                     value: None,
                     verified: None,
-                    counterexample: None,
+                    witness: None,
                     error: Some(format!("Parse error: {}", e.message)),
                 };
             }
@@ -758,13 +759,13 @@ impl PolicyEngine {
             Ok(result) => EvalResult {
                 value: Some(Self::expression_to_string(&result)),
                 verified: None,
-                counterexample: None,
+                witness: None,
                 error: None,
             },
             Err(e) => EvalResult {
                 value: None,
                 verified: None,
-                counterexample: None,
+                witness: None,
                 error: Some(format!("Evaluation error: {}", e)),
             },
         }
@@ -805,13 +806,13 @@ impl PolicyEngine {
             AssertResult::Passed => EvalResult {
                 value: Some("true".to_string()),
                 verified: Some(true),
-                counterexample: None,
+                witness: None,
                 error: None,
             },
-            AssertResult::Verified => EvalResult {
+            AssertResult::Verified { witness } => EvalResult {
                 value: Some("true (proved by Z3)".to_string()),
                 verified: Some(true),
-                counterexample: None,
+                witness: witness.clone(),
                 error: None,
             },
             AssertResult::Failed {
@@ -823,19 +824,19 @@ impl PolicyEngine {
                     Self::expression_to_string(actual)
                 )),
                 verified: Some(false),
-                counterexample: None,
+                witness: None,
                 error: None,
             },
-            AssertResult::Disproved { counterexample } => EvalResult {
+            AssertResult::Disproved { witness } => EvalResult {
                 value: Some("false (disproved by Z3)".to_string()),
                 verified: Some(false),
-                counterexample: Some(counterexample.clone()),
+                witness: Some(witness.clone()),
                 error: None,
             },
             AssertResult::Unknown(msg) => EvalResult {
                 value: None,
                 verified: None,
-                counterexample: None,
+                witness: None,
                 error: Some(format!("Unknown: {}", msg)),
             },
         }
@@ -860,7 +861,7 @@ impl PolicyEngine {
 ///
 /// Covers both concrete evaluation and proposition verification:
 /// - For concrete expressions: `value` is set, `verified` is None
-/// - For propositions: `verified` is set (true/false), `counterexample` on disproof
+/// - For propositions: `verified` is set (true/false), `witness` on disproof
 /// - On error: `error` is set
 #[derive(Debug, Clone)]
 pub struct EvalResult {
@@ -868,8 +869,9 @@ pub struct EvalResult {
     pub value: Option<String>,
     /// Whether the proposition was verified (None for non-propositions)
     pub verified: Option<bool>,
-    /// Z3 counterexample (if proposition was disproved)
-    pub counterexample: Option<String>,
+    /// Structured Z3 witness (if proposition was disproved).
+    /// Contains Kleis expression bindings for each quantified variable.
+    pub witness: Option<Witness>,
     /// Error message (parse error, evaluation error, etc.)
     pub error: Option<String>,
 }

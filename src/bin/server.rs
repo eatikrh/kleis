@@ -1683,8 +1683,11 @@ async fn verify_handler(
             use kleis::solvers::backend::VerificationResult;
             let (result_str, counterexample) = match result {
                 VerificationResult::Valid => ("valid".to_string(), None),
-                VerificationResult::Invalid { counterexample } => {
-                    ("invalid".to_string(), Some(counterexample))
+                VerificationResult::ValidWithWitness { witness } => {
+                    ("valid".to_string(), Some(format!("Witness: {}", witness)))
+                }
+                VerificationResult::Invalid { witness } => {
+                    ("invalid".to_string(), Some(witness.to_string()))
                 }
                 VerificationResult::Unknown => ("unknown".to_string(), None),
             };
@@ -1827,8 +1830,8 @@ async fn check_sat_handler(
         Ok(result) => {
             use kleis::solvers::backend::SatisfiabilityResult;
             let (result_str, example) = match result {
-                SatisfiabilityResult::Satisfiable { example } => {
-                    ("satisfiable".to_string(), Some(example))
+                SatisfiabilityResult::Satisfiable { witness } => {
+                    ("satisfiable".to_string(), Some(witness.to_string()))
                 }
                 SatisfiabilityResult::Unsatisfiable => ("unsatisfiable".to_string(), None),
                 SatisfiabilityResult::Unknown => ("unknown".to_string(), None),

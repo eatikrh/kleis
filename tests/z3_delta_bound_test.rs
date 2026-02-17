@@ -115,9 +115,9 @@ fn test_delta_lower_bound_n3() {
             println!("✓ UNSAT: δ > -1 holds for all 0 < a < b!");
             println!("  This proves: (b³-a³)^(1/3) > b-1 always");
         }
-        Ok(SatisfiabilityResult::Satisfiable { example }) => {
+        Ok(SatisfiabilityResult::Satisfiable { witness }) => {
             println!("✗ SAT: Found counterexample!");
-            println!("  {}", example);
+            println!("  {}", witness);
             println!("  The bound δ > -1 does NOT hold universally");
         }
         Ok(SatisfiabilityResult::Unknown) => {

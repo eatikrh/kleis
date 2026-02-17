@@ -179,14 +179,11 @@ fn test_de_morgan_law_verification() {
         let verification_result = verifier.verify_axiom(&axiom);
 
         match verification_result {
-            Ok(VerificationResult::Valid) => {
+            Ok(VerificationResult::Valid) | Ok(VerificationResult::ValidWithWitness { .. }) => {
                 println!("✅ De Morgan's Law verified by Z3!");
             }
-            Ok(VerificationResult::Invalid { counterexample }) => {
-                println!(
-                    "❌ De Morgan's Law violated! Counterexample: {}",
-                    counterexample
-                );
+            Ok(VerificationResult::Invalid { witness }) => {
+                println!("❌ De Morgan's Law violated! Counterexample: {}", witness);
                 panic!("De Morgan's Law should be valid!");
             }
             Ok(VerificationResult::Unknown) => {
@@ -240,14 +237,11 @@ fn test_de_morgan_law_and_variant() {
         let verification_result = verifier.verify_axiom(&axiom);
 
         match verification_result {
-            Ok(VerificationResult::Valid) => {
+            Ok(VerificationResult::Valid) | Ok(VerificationResult::ValidWithWitness { .. }) => {
                 println!("✅ De Morgan's Law (AND variant) verified by Z3!");
             }
-            Ok(VerificationResult::Invalid { counterexample }) => {
-                println!(
-                    "❌ De Morgan's Law violated! Counterexample: {}",
-                    counterexample
-                );
+            Ok(VerificationResult::Invalid { witness }) => {
+                println!("❌ De Morgan's Law violated! Counterexample: {}", witness);
                 panic!("De Morgan's Law (AND variant) should be valid!");
             }
             Ok(VerificationResult::Unknown) => {

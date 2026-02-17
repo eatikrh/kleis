@@ -134,14 +134,14 @@ fn test_ring_distributivity_with_dependencies() {
         let verification = verifier.verify_axiom(&axiom);
 
         match verification {
-            Ok(VerificationResult::Valid) => {
+            Ok(VerificationResult::Valid) | Ok(VerificationResult::ValidWithWitness { .. }) => {
                 println!("   ✅ Z3 verified (all axioms loaded correctly)");
             }
-            Ok(VerificationResult::Invalid { counterexample }) => {
+            Ok(VerificationResult::Invalid { witness }) => {
                 println!(
                     "   ℹ️  Z3 found counterexample (expected - axiom not provable from itself)"
                 );
-                println!("      Counterexample: {}", counterexample);
+                println!("      Counterexample: {}", witness);
                 println!("   ✅ Test passes: Z3 communication works, structures loaded");
             }
             Ok(VerificationResult::Unknown) => {
@@ -214,14 +214,14 @@ fn test_group_inverse_with_monoid_dependencies() {
         // BEFORE: Expected Valid (passed due to placeholder code returning true)
         // AFTER:  Accept Invalid/Unknown (correct Z3 behavior - axioms are assumptions, not theorems)
         match verification {
-            Ok(VerificationResult::Valid) => {
+            Ok(VerificationResult::Valid) | Ok(VerificationResult::ValidWithWitness { .. }) => {
                 println!("   ✅ Z3 verified (all structures loaded correctly)");
             }
-            Ok(VerificationResult::Invalid { counterexample }) => {
+            Ok(VerificationResult::Invalid { witness }) => {
                 println!(
                     "   ℹ️  Z3 found counterexample (expected - axiom not provable from itself)"
                 );
-                println!("      Counterexample: {}", counterexample);
+                println!("      Counterexample: {}", witness);
                 println!("   ✅ Test passes: Z3 communication works, structures loaded");
             }
             Ok(VerificationResult::Unknown) => {
@@ -282,12 +282,12 @@ fn test_multiple_structure_dependency_chain() {
         let verification = verifier.verify_axiom(&axiom);
 
         match verification {
-            Ok(VerificationResult::Valid) => {
+            Ok(VerificationResult::Valid) | Ok(VerificationResult::ValidWithWitness { .. }) => {
                 println!("   ✅ Multi-structure axiom verified!");
                 println!("   Z3 successfully handled complex dependency chain");
             }
-            Ok(VerificationResult::Invalid { counterexample }) => {
-                println!("   ❌ Counterexample: {}", counterexample);
+            Ok(VerificationResult::Invalid { witness }) => {
+                println!("   ❌ Counterexample: {}", witness);
                 // This might fail if structures aren't properly integrated
                 println!("   Note: This tests deep dependency chains");
             }
@@ -344,14 +344,14 @@ fn test_monoid_associativity_basic() {
         let verification = verifier.verify_axiom(&axiom);
 
         match verification {
-            Ok(VerificationResult::Valid) => {
+            Ok(VerificationResult::Valid) | Ok(VerificationResult::ValidWithWitness { .. }) => {
                 println!("   ✅ Z3 verified (structures loaded correctly)");
             }
-            Ok(VerificationResult::Invalid { counterexample }) => {
+            Ok(VerificationResult::Invalid { witness }) => {
                 println!(
                     "   ℹ️  Z3 found counterexample (expected - axiom is assumption, not theorem)"
                 );
-                println!("      Counterexample: {}", counterexample);
+                println!("      Counterexample: {}", witness);
                 println!("   ✅ Test passes: Z3 communication works");
             }
             Ok(VerificationResult::Unknown) => {
@@ -430,12 +430,12 @@ fn test_field_multiplicative_inverse_depends_on_ring() {
         let verification = verifier.verify_axiom(&axiom);
 
         match verification {
-            Ok(VerificationResult::Valid) => {
+            Ok(VerificationResult::Valid) | Ok(VerificationResult::ValidWithWitness { .. }) => {
                 println!("   ✅ Field inverse axiom verified!");
                 println!("   🏆 Successfully handled complex multi-level dependencies!");
             }
-            Ok(VerificationResult::Invalid { counterexample }) => {
-                println!("   ❌ Counterexample: {}", counterexample);
+            Ok(VerificationResult::Invalid { witness }) => {
+                println!("   ❌ Counterexample: {}", witness);
                 println!("   Note: This tests the deepest dependency chain");
             }
             Ok(VerificationResult::Unknown) => {
