@@ -104,8 +104,8 @@ fn test_verify_infix_axiom_with_z3() {
                     println!("   ✅ VERIFIED with infix notation!");
                     println!("   This means we CAN use mathematical notation!");
                 }
-                Ok(VerificationResult::Invalid { counterexample }) => {
-                    println!("   ⚠️ Verification failed: {}", counterexample);
+                Ok(VerificationResult::Invalid { witness }) => {
+                    println!("   ⚠️ Verification failed: {}", witness);
                 }
                 Err(e) => {
                     println!("   ⚠️ Translation error: {}", e);

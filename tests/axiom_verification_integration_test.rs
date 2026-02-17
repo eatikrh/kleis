@@ -106,11 +106,11 @@ fn test_identity_axiom_simple() {
     {
         let verification = result.unwrap();
         match verification {
-            VerificationResult::Valid => {
+            VerificationResult::Valid | VerificationResult::ValidWithWitness { .. } => {
                 println!("✅ Identity axiom verified!");
             }
-            VerificationResult::Invalid { counterexample } => {
-                println!("❌ Axiom violated! Counterexample: {}", counterexample);
+            VerificationResult::Invalid { witness } => {
+                println!("❌ Axiom violated! Counterexample: {}", witness);
                 panic!("Identity axiom should be valid");
             }
             VerificationResult::Unknown => {
@@ -147,11 +147,11 @@ fn test_commutativity_axiom() {
     #[cfg(feature = "axiom-verification")]
     {
         match result.unwrap() {
-            VerificationResult::Valid => {
+            VerificationResult::Valid | VerificationResult::ValidWithWitness { .. } => {
                 println!("✅ Commutativity verified!");
             }
-            VerificationResult::Invalid { counterexample } => {
-                println!("❌ Counterexample: {}", counterexample);
+            VerificationResult::Invalid { witness } => {
+                println!("❌ Counterexample: {}", witness);
                 panic!("Commutativity should be valid");
             }
             VerificationResult::Unknown => {
@@ -179,11 +179,11 @@ fn test_associativity_axiom() {
     #[cfg(feature = "axiom-verification")]
     {
         match result.unwrap() {
-            VerificationResult::Valid => {
+            VerificationResult::Valid | VerificationResult::ValidWithWitness { .. } => {
                 println!("✅ Associativity verified!");
             }
-            VerificationResult::Invalid { counterexample } => {
-                println!("❌ Counterexample: {}", counterexample);
+            VerificationResult::Invalid { witness } => {
+                println!("❌ Counterexample: {}", witness);
                 panic!("Associativity should be valid");
             }
             VerificationResult::Unknown => {
@@ -257,12 +257,12 @@ fn test_invalid_axiom_detection() {
     #[cfg(feature = "axiom-verification")]
     {
         match result.unwrap() {
-            VerificationResult::Valid => {
+            VerificationResult::Valid | VerificationResult::ValidWithWitness { .. } => {
                 panic!("False axiom should NOT be valid!");
             }
-            VerificationResult::Invalid { counterexample } => {
+            VerificationResult::Invalid { witness } => {
                 println!("✅ Correctly detected invalid axiom!");
-                println!("   Counterexample: {}", counterexample);
+                println!("   Counterexample: {}", witness);
             }
             VerificationResult::Unknown => {
                 println!("⚠️ Z3 could not determine (acceptable)");
@@ -327,11 +327,11 @@ fn test_distributivity_axiom() {
     #[cfg(feature = "axiom-verification")]
     {
         match result.unwrap() {
-            VerificationResult::Valid => {
+            VerificationResult::Valid | VerificationResult::ValidWithWitness { .. } => {
                 println!("✅ Distributivity verified!");
             }
-            VerificationResult::Invalid { counterexample } => {
-                println!("❌ Counterexample: {}", counterexample);
+            VerificationResult::Invalid { witness } => {
+                println!("❌ Counterexample: {}", witness);
                 panic!("Distributivity should be valid");
             }
             VerificationResult::Unknown => {

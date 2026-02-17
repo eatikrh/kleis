@@ -1152,8 +1152,11 @@ fn verify_expression(input: &str, registry: &StructureRegistry, evaluator: &Eval
                             VerificationResult::Valid => {
                                 println!("✅ Valid");
                             }
-                            VerificationResult::Invalid { counterexample } => {
-                                println!("❌ Invalid - Counterexample: {}", counterexample);
+                            VerificationResult::ValidWithWitness { witness } => {
+                                println!("✅ Valid — Witness: {}", witness);
+                            }
+                            VerificationResult::Invalid { witness } => {
+                                println!("❌ Invalid — Counterexample: {}", witness);
                             }
                             VerificationResult::Unknown => {
                                 println!("❓ Unknown (Z3 couldn't determine)");
@@ -1222,9 +1225,9 @@ fn sat_expression(input: &str, registry: &StructureRegistry, evaluator: &Evaluat
 
                     match verifier.check_satisfiability(&lowered) {
                         Ok(result) => match result {
-                            SatisfiabilityResult::Satisfiable { example } => {
+                            SatisfiabilityResult::Satisfiable { witness } => {
                                 println!("✅ Satisfiable");
-                                println!("   Witness: {}", example);
+                                println!("   Witness: {}", witness);
                             }
                             SatisfiabilityResult::Unsatisfiable => {
                                 println!("❌ Unsatisfiable (no solution exists)");

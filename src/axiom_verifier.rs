@@ -24,6 +24,7 @@
 //! let result = verifier.verify_axiom(&axiom)?;
 //! ```
 use crate::ast::Expression;
+use crate::solvers::backend::Witness;
 use crate::structure_registry::StructureRegistry;
 use std::collections::HashSet;
 
@@ -38,8 +39,13 @@ pub enum VerificationResult {
     /// Axiom is valid (holds for all inputs)
     Valid,
 
-    /// Axiom is invalid (counterexample found)
-    Invalid { counterexample: String },
+    /// Axiom is valid AND we have a satisfying witness.
+    /// Used for existential quantifiers: ∃(x). P(x) is valid, and here's an x that works.
+    ValidWithWitness { witness: Witness },
+
+    /// Axiom is invalid — the `witness` contains variable assignments (as Kleis expressions)
+    /// that violate the property.
+    Invalid { witness: Witness },
 
     /// Z3 couldn't determine (timeout, too complex, etc.)
     Unknown,
@@ -470,8 +476,8 @@ impl<'r> AxiomVerifier<'r> {
     /// let result = verifier.verify_axiom(&axiom_expr)?;
     /// match result {
     ///     VerificationResult::Valid => println!("✅ Axiom verified!"),
-    ///     VerificationResult::Invalid { counterexample } => {
-    ///         println!("❌ Counterexample: {}", counterexample)
+    ///     VerificationResult::Invalid { witness } => {
+    ///         println!("❌ Counterexample: {}", witness)
     ///     }
     ///     _ => {}
     /// }
@@ -527,9 +533,10 @@ impl<'r> AxiomVerifier<'r> {
         // Convert backend result to AxiomVerifier result
         Ok(match backend_result {
             BackendResult::Valid => VerificationResult::Valid,
-            BackendResult::Invalid { counterexample } => {
-                VerificationResult::Invalid { counterexample }
+            BackendResult::ValidWithWitness { witness } => {
+                VerificationResult::ValidWithWitness { witness }
             }
+            BackendResult::Invalid { witness } => VerificationResult::Invalid { witness },
             BackendResult::Unknown => VerificationResult::Unknown,
         })
     }
@@ -702,7 +709,7 @@ mod tests {
     fn test_verification_result_types() {
         let valid = VerificationResult::Valid;
         let invalid = VerificationResult::Invalid {
-            counterexample: "x=1".to_string(),
+            witness: Witness::from_raw("x=1".to_string()),
         };
         let unknown = VerificationResult::Unknown;
 

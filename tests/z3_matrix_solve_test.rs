@@ -104,14 +104,15 @@ fn test_z3_solves_matrix_linear_system() {
     println!("Result: {:?}", result);
 
     match result {
-        SatisfiabilityResult::Satisfiable { example } => {
-            println!("✅ SATISFIABLE! Solution: {}", example);
+        SatisfiabilityResult::Satisfiable { witness } => {
+            println!("✅ SATISFIABLE! Solution: {}", witness);
             // The solution should contain x and y values
             // x = 1, y = 2 satisfies:
             //   1*1 + 2*2 = 5 ✓
             //   3*1 + 4*2 = 11 ✓
+            let witness_str = witness.to_string();
             assert!(
-                example.contains("1") || example.contains("2"),
+                witness_str.contains("1") || witness_str.contains("2"),
                 "Solution should contain the values 1 and 2"
             );
         }
@@ -181,9 +182,9 @@ fn test_z3_solves_with_natural_number_constraint() {
     println!("Result: {:?}", result);
 
     match result {
-        SatisfiabilityResult::Satisfiable { example } => {
+        SatisfiabilityResult::Satisfiable { witness } => {
             println!("✅ SATISFIABLE! Natural number solution found:");
-            println!("{}", example);
+            println!("{}", witness);
             // x=1, y=2 are both natural numbers
         }
         SatisfiabilityResult::Unsatisfiable => {
@@ -285,8 +286,8 @@ fn test_z3_no_integer_solution() {
     println!("Result (integer domain): {:?}", result);
 
     match result {
-        SatisfiabilityResult::Satisfiable { example } => {
-            println!("Found integer solution: {}", example);
+        SatisfiabilityResult::Satisfiable { witness } => {
+            println!("Found integer solution: {}", witness);
             println!("(This would mean Z3 found integers that work)");
         }
         SatisfiabilityResult::Unsatisfiable => {

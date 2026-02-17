@@ -17,7 +17,7 @@ use crate::ast::{Expression, MatchCase, Pattern, QuantifiedVar, QuantifierKind};
 use crate::evaluator::Evaluator;
 use crate::kleis_ast::TypeExpr;
 use crate::solvers::backend::{
-    SatisfiabilityResult, SolverBackend, SolverStats, VerificationResult,
+    SatisfiabilityResult, SolverBackend, SolverStats, VerificationResult, Witness,
 };
 use crate::solvers::capabilities::SolverCapabilities;
 use crate::solvers::result_converter::ResultConverter;
@@ -79,6 +79,16 @@ pub struct Z3Backend<'r> {
     /// Maps expression signatures to their inferred types
     /// Used for type-dispatched operations (e.g., plus on Matrix vs plus on Real)
     inferred_types: Option<HashMap<String, crate::type_inference::Type>>,
+
+    /// Quantifier variable tracking for witness extraction.
+    ///
+    /// During `translate_quantifier`, we save (Kleis name, Z3 Dynamic) pairs.
+    /// After `get_model()`, we use `model.eval()` on each Z3 variable
+    /// and `Z3ResultConverter` to produce structured `Witness` bindings.
+    ///
+    /// Cleared before each `verify_axiom` / `check_satisfiability` call
+    /// and populated during the `kleis_to_z3` translation pass.
+    quantifier_vars: Vec<(String, Dynamic)>,
 }
 
 /// Complex number Z3 datatype
@@ -229,6 +239,7 @@ impl<'r> Z3Backend<'r> {
             declared_data_types: HashMap::new(),
             warnings: Vec::new(),
             inferred_types: None,
+            quantifier_vars: Vec::new(),
         };
 
         // Initialize complex number constant 'i' as complex(0, 1)
@@ -1450,6 +1461,9 @@ impl<'r> Z3Backend<'r> {
                 Int::fresh_const(&var.name).into()
             };
             bound_vars.push(z3_var.clone());
+            // Track for witness extraction: Kleis name → Z3 variable
+            self.quantifier_vars
+                .push((var.name.clone(), z3_var.clone()));
             var_map.insert(var.name.clone(), z3_var);
         }
 
@@ -3691,6 +3705,9 @@ impl<'r> Z3Backend<'r> {
                 Int::fresh_const(&var.name).into()
             };
             bound_vars.push(z3_var.clone());
+            // Track for witness extraction: Kleis name → Z3 variable
+            self.quantifier_vars
+                .push((var.name.clone(), z3_var.clone()));
             new_vars.insert(var.name.clone(), z3_var);
         }
 
@@ -4115,6 +4132,101 @@ impl<'r> Z3Backend<'r> {
             Dynamic::fresh_const(name, &cdt.sort.sort)
         })
     }
+
+    /// Verify an existential quantifier ∃(vars). body by direct satisfiability check.
+    ///
+    /// Unlike universals (which negate and check for counterexamples), existentials
+    /// are checked directly: translate the body with free variables and check Sat.
+    /// - **Sat** → Valid (existential is true), with a **witness** (satisfying assignment)
+    /// - **Unsat** → Invalid (no satisfying assignment exists)
+    /// - **Unknown** → Z3 can't decide
+    fn verify_existential(
+        &mut self,
+        variables: &[QuantifiedVar],
+        body: &Expression,
+        where_clause: Option<&Expression>,
+    ) -> Result<VerificationResult, String> {
+        self.quantifier_vars.clear();
+        self.solver.push();
+
+        // Create free variables (NOT bound by exists_const) so they appear in the model
+        let mut var_map: HashMap<String, Dynamic> = HashMap::new();
+        for var in variables {
+            let z3_var: Dynamic = if let Some(type_annotation) = &var.type_annotation {
+                match type_annotation.as_str() {
+                    "Bool" | "Boolean" => Bool::fresh_const(&var.name).into(),
+                    "ℝ" | "Real" => Real::fresh_const(&var.name).into(),
+                    "ℚ" | "Rational" | "Q" => Real::fresh_const(&var.name).into(),
+                    "ℤ" | "Int" | "Z" | "Integer" | "ℕ" | "Nat" | "Natural" => {
+                        Int::fresh_const(&var.name).into()
+                    }
+                    "String" | "Str" => z3::ast::String::fresh_const(&var.name).into(),
+                    type_name => {
+                        if let Some(dt_sort) = self.declared_data_types.get(type_name) {
+                            Dynamic::fresh_const(&var.name, &dt_sort.sort)
+                        } else {
+                            Int::fresh_const(&var.name).into()
+                        }
+                    }
+                }
+            } else {
+                Int::fresh_const(&var.name).into()
+            };
+            // Track for witness extraction
+            self.quantifier_vars
+                .push((var.name.clone(), z3_var.clone()));
+            var_map.insert(var.name.clone(), z3_var);
+        }
+
+        // Translate the body with free variables
+        let body_z3 = self.kleis_to_z3(body, &var_map)?;
+        let body_bool = body_z3
+            .as_bool()
+            .ok_or_else(|| "Existential body must be boolean".to_string())?;
+
+        // Handle where clause: assert where_clause AND body
+        let formula = if let Some(condition) = where_clause {
+            let cond_z3 = self.kleis_to_z3(condition, &var_map)?;
+            let cond_bool = cond_z3
+                .as_bool()
+                .ok_or_else(|| "Where clause must be boolean".to_string())?;
+            Bool::and(&[&cond_bool, &body_bool])
+        } else {
+            body_bool
+        };
+
+        // Assert directly (NOT negated) — we want to find a satisfying assignment
+        self.solver.assert(&formula);
+
+        let result = match self.solver.check() {
+            SatResult::Sat => {
+                // Existential is satisfiable → Valid, with a witness
+                let witness = if let Some(model) = self.solver.get_model() {
+                    super::witness::model_to_witness(
+                        &model,
+                        &self.quantifier_vars,
+                        &self.converter,
+                        &self.declared_data_types,
+                    )
+                } else {
+                    Witness::from_raw("Satisfiable (no model details)".to_string())
+                };
+                VerificationResult::ValidWithWitness { witness }
+            }
+            SatResult::Unsat => {
+                // No satisfying assignment → existential is false
+                VerificationResult::Invalid {
+                    witness: Witness::from_raw(
+                        "No satisfying assignment exists for the existential".to_string(),
+                    ),
+                }
+            }
+            SatResult::Unknown => VerificationResult::Unknown,
+        };
+
+        self.solver.pop(1);
+        Ok(result)
+    }
 }
 
 impl<'r> SolverBackend for Z3Backend<'r> {
@@ -4127,43 +4239,63 @@ impl<'r> SolverBackend for Z3Backend<'r> {
     }
 
     fn verify_axiom(&mut self, axiom: &Expression) -> Result<VerificationResult, String> {
-        // Use push/pop for incremental solving
+        // For existential quantifiers, use direct satisfiability check to extract witnesses.
+        // ∃(x,y). P(x,y) — translate body with free variables and check Sat directly.
+        // This produces a model with concrete values (the satisfying witness).
+        if let Expression::Quantifier {
+            quantifier: QuantifierKind::Exists,
+            variables,
+            body,
+            where_clause,
+            ..
+        } = axiom
+        {
+            return self.verify_existential(variables, body, where_clause.as_deref());
+        }
+
+        // --- Universal / non-quantified: standard negate-and-check ---
+        self.quantifier_vars.clear();
         self.solver.push();
 
-        // Translate to Z3
+        // Translate to Z3 (populates self.quantifier_vars via translate_quantifier)
         let z3_expr = self.kleis_to_z3(axiom, &HashMap::new())?;
         let z3_bool = z3_expr
             .as_bool()
             .ok_or_else(|| "Axiom must be a boolean expression".to_string())?;
 
-        // Assert negation
+        // Assert negation: if ¬φ is Unsat, then φ is Valid
         self.solver.assert(z3_bool.not());
 
-        // Check satisfiability
         let result = match self.solver.check() {
             SatResult::Unsat => VerificationResult::Valid,
             SatResult::Sat => {
-                let counterexample = if let Some(model) = self.solver.get_model() {
-                    format!("{}", model)
+                let witness = if let Some(model) = self.solver.get_model() {
+                    super::witness::model_to_witness(
+                        &model,
+                        &self.quantifier_vars,
+                        &self.converter,
+                        &self.declared_data_types,
+                    )
                 } else {
-                    "No model available".to_string()
+                    Witness::from_raw("No model available".to_string())
                 };
-                VerificationResult::Invalid { counterexample }
+                VerificationResult::Invalid { witness }
             }
             SatResult::Unknown => VerificationResult::Unknown,
         };
 
-        // Pop the assertion
         self.solver.pop(1);
-
         Ok(result)
     }
 
     fn check_satisfiability(&mut self, expr: &Expression) -> Result<SatisfiabilityResult, String> {
+        // Clear quantifier variable tracking for this satisfiability pass
+        self.quantifier_vars.clear();
+
         // Use push/pop for incremental solving
         self.solver.push();
 
-        // Translate to Z3
+        // Translate to Z3 (populates self.quantifier_vars via translate_quantifier)
         let z3_expr = self.kleis_to_z3(expr, &HashMap::new())?;
         let z3_bool = z3_expr
             .as_bool()
@@ -4175,12 +4307,17 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         // Check satisfiability
         let result = match self.solver.check() {
             SatResult::Sat => {
-                let example = if let Some(model) = self.solver.get_model() {
-                    format!("{}", model)
+                let witness = if let Some(model) = self.solver.get_model() {
+                    super::witness::model_to_witness(
+                        &model,
+                        &self.quantifier_vars,
+                        &self.converter,
+                        &self.declared_data_types,
+                    )
                 } else {
-                    "Satisfiable (no model details)".to_string()
+                    Witness::from_raw("Satisfiable (no model details)".to_string())
                 };
-                SatisfiabilityResult::Satisfiable { example }
+                SatisfiabilityResult::Satisfiable { witness }
             }
             SatResult::Unsat => SatisfiabilityResult::Unsatisfiable,
             SatResult::Unknown => SatisfiabilityResult::Unknown,

@@ -522,14 +522,15 @@ fn test_z3_verifies_metric_symmetry_axiom() {
 
     // The axiom should be valid (or at least not error)
     match &result {
-        Ok(kleis::axiom_verifier::VerificationResult::Valid) => {
+        Ok(kleis::axiom_verifier::VerificationResult::Valid)
+        | Ok(kleis::axiom_verifier::VerificationResult::ValidWithWitness { .. }) => {
             println!("   ✅ Axiom verified as VALID by Z3!");
         }
         Ok(kleis::axiom_verifier::VerificationResult::Unknown) => {
             println!("   ⚠️ Z3 returned Unknown (may need more axioms loaded)");
         }
-        Ok(kleis::axiom_verifier::VerificationResult::Invalid { counterexample }) => {
-            println!("   ❌ Z3 found counterexample: {}", counterexample);
+        Ok(kleis::axiom_verifier::VerificationResult::Invalid { witness }) => {
+            println!("   ❌ Z3 found counterexample: {}", witness);
         }
         Ok(kleis::axiom_verifier::VerificationResult::Disabled) => {
             println!("   ⚠️ Axiom verification feature disabled");
@@ -589,9 +590,9 @@ fn test_z3_raise_lower_tensor_index() {
     );
 
     match &result {
-        Ok(SatisfiabilityResult::Satisfiable { example }) => {
+        Ok(SatisfiabilityResult::Satisfiable { witness }) => {
             println!("   ✅ Satisfiable with assignment:");
-            for line in example.lines().take(5) {
+            for line in witness.to_string().lines().take(5) {
                 println!("      {}", line);
             }
         }
@@ -624,9 +625,9 @@ fn test_z3_raise_lower_tensor_index() {
             Ok(kleis::axiom_verifier::VerificationResult::Valid) => {
                 println!("   ✅ raise_lower_identity axiom is VALID!");
             }
-            Ok(kleis::axiom_verifier::VerificationResult::Invalid { counterexample }) => {
+            Ok(kleis::axiom_verifier::VerificationResult::Invalid { witness }) => {
                 println!("   ⚠️ Z3 found counterexample (expected - axiom defines behavior):");
-                for line in counterexample.lines().take(3) {
+                for line in witness.to_string().lines().take(3) {
                     println!("      {}", line);
                 }
             }

@@ -84,8 +84,8 @@ fn test_structure_axioms_actually_loaded() {
             Ok(VerificationResult::Valid) => {
                 println!("\n   ✅ Axiom verified as valid!");
             }
-            Ok(VerificationResult::Invalid { ref counterexample }) => {
-                println!("\n   ℹ️  Counterexample found: {}", counterexample);
+            Ok(VerificationResult::Invalid { ref witness }) => {
+                println!("\n   ℹ️  Counterexample found: {}", witness);
                 println!("   (This is OK - we're testing structure loading, not validity)");
             }
             _ => {}

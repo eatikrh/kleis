@@ -19,6 +19,103 @@
 use crate::ast::Expression;
 use crate::kleis_ast::TypeExpr;
 use crate::solvers::capabilities::SolverCapabilities;
+use std::fmt;
+
+/// A single binding in a witness: variable name → Kleis value.
+///
+/// When Z3 finds a counterexample or satisfying assignment, the witness
+/// contains one `WitnessBinding` per quantified variable with its concrete value
+/// expressed as a Kleis `Expression`.
+///
+/// # Example
+/// For `∀(x : ℤ). x * x > 0`, a counterexample witness would contain:
+/// ```ignore
+/// WitnessBinding { name: "x".into(), value: Expression::Const("0".into()) }
+/// ```
+#[derive(Debug, Clone, PartialEq)]
+pub struct WitnessBinding {
+    /// Original Kleis variable name (e.g., "x", not Z3's "x!0")
+    pub name: String,
+    /// Concrete value as a Kleis expression
+    pub value: Expression,
+}
+
+/// Structured witness from a solver — a set of variable assignments that
+/// either violate a universally quantified property (counterexample) or
+/// satisfy an existentially quantified one (satisfying assignment).
+///
+/// The `bindings` field holds Kleis-native `Expression` values, enabling:
+/// - **Round-tripping**: feed witness values back into `evaluate` for further reasoning
+/// - **Composition**: use witness bindings in `let` expressions
+/// - **Pretty-printing**: render in Kleis syntax via `PrettyPrinter`
+/// - **CEGAR loops**: verify → get witness → refine property → verify again
+///
+/// The `raw` field preserves the original solver model output for debugging.
+///
+/// # Display
+/// Formats as `x = 0, y = 42` — a comma-separated list of bindings.
+/// For richer formatting (e.g., Kleis syntax with Unicode operators),
+/// consumers should use `PrettyPrinter` on individual `binding.value` expressions.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Witness {
+    /// Variable bindings: Kleis name → Kleis expression value
+    pub bindings: Vec<WitnessBinding>,
+    /// Original solver model output (for debugging / fallback display)
+    pub raw: String,
+}
+
+impl Witness {
+    /// Create a witness with no structured bindings, only a raw string.
+    ///
+    /// Used as a fallback when the solver model cannot be decomposed into
+    /// individual variable assignments (e.g., uninterpreted function tables).
+    pub fn from_raw(raw: String) -> Self {
+        Witness {
+            bindings: Vec::new(),
+            raw,
+        }
+    }
+
+    /// Check if the witness has any structured bindings.
+    pub fn has_bindings(&self) -> bool {
+        !self.bindings.is_empty()
+    }
+}
+
+impl fmt::Display for WitnessBinding {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.value {
+            Expression::Const(s) => write!(f, "{} = {}", self.name, s),
+            Expression::String(s) => write!(f, "{} = \"{}\"", self.name, s),
+            Expression::Object(s) => write!(f, "{} = {}", self.name, s),
+            Expression::Operation { name, args, .. } => {
+                let arg_strs: Vec<String> = args
+                    .iter()
+                    .map(|a| match a {
+                        Expression::Const(s) => s.clone(),
+                        Expression::Object(s) => s.clone(),
+                        Expression::String(s) => format!("\"{}\"", s),
+                        other => format!("{:?}", other),
+                    })
+                    .collect();
+                write!(f, "{} = {}({})", self.name, name, arg_strs.join(", "))
+            }
+            other => write!(f, "{} = {:?}", self.name, other),
+        }
+    }
+}
+
+impl fmt::Display for Witness {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.bindings.is_empty() {
+            // No structured bindings — fall back to raw solver output
+            write!(f, "{}", self.raw)
+        } else {
+            let parts: Vec<String> = self.bindings.iter().map(|b| b.to_string()).collect();
+            write!(f, "{}", parts.join(", "))
+        }
+    }
+}
 
 /// Result of axiom verification
 #[derive(Debug, Clone, PartialEq)]
@@ -26,8 +123,13 @@ pub enum VerificationResult {
     /// Axiom is valid (holds for all inputs)
     Valid,
 
-    /// Axiom is invalid (counterexample found)
-    Invalid { counterexample: String },
+    /// Axiom is valid AND we have a satisfying witness.
+    /// Used for existential quantifiers: ∃(x). P(x) is valid, and here's an x that works.
+    ValidWithWitness { witness: Witness },
+
+    /// Axiom is invalid — the `witness` contains variable assignments
+    /// that violate the property. The witness bindings are Kleis expressions.
+    Invalid { witness: Witness },
 
     /// Solver couldn't determine (timeout, too complex, etc.)
     Unknown,
@@ -36,8 +138,9 @@ pub enum VerificationResult {
 /// Result of satisfiability check
 #[derive(Debug, Clone, PartialEq)]
 pub enum SatisfiabilityResult {
-    /// Expression is satisfiable (there exists an assignment that makes it true)
-    Satisfiable { example: String },
+    /// Expression is satisfiable — the `witness` contains variable assignments
+    /// that make the expression true. The witness bindings are Kleis expressions.
+    Satisfiable { witness: Witness },
 
     /// Expression is unsatisfiable (no assignment can make it true)
     Unsatisfiable,
@@ -57,8 +160,11 @@ pub enum SatisfiabilityResult {
 /// let result = backend.verify_axiom(&axiom_expr)?;
 /// match result {
 ///     VerificationResult::Valid => println!("✅ Verified!"),
-///     VerificationResult::Invalid { counterexample } => {
-///         println!("❌ Counterexample: {}", counterexample)
+///     VerificationResult::Invalid { witness } => {
+///         println!("❌ Counterexample: {}", witness);
+///         for binding in &witness.bindings {
+///             println!("  {} = {:?}", binding.name, binding.value);
+///         }
 ///     }
 ///     VerificationResult::Unknown => println!("⚠️ Unknown"),
 /// }
@@ -90,7 +196,7 @@ pub trait SolverBackend {
     ///
     /// # Returns
     /// - `Valid` - Axiom holds for all inputs
-    /// - `Invalid { counterexample }` - Found assignment that violates axiom
+    /// - `Invalid { witness }` - Found assignment that violates axiom (Kleis expressions)
     /// - `Unknown` - Solver couldn't determine (timeout, too complex)
     fn verify_axiom(&mut self, axiom: &Expression) -> Result<VerificationResult, String>;
 
@@ -104,7 +210,7 @@ pub trait SolverBackend {
     /// * `expr` - Kleis expression (should be a boolean proposition)
     ///
     /// # Returns
-    /// - `Satisfiable { example }` - Found assignment that makes it true
+    /// - `Satisfiable { witness }` - Found assignment that makes it true (Kleis expressions)
     /// - `Unsatisfiable` - No assignment can make it true
     /// - `Unknown` - Solver couldn't determine
     fn check_satisfiability(&mut self, expr: &Expression) -> Result<SatisfiabilityResult, String>;

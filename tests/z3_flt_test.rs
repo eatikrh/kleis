@@ -94,8 +94,8 @@ fn test_z3_flt_n3_satisfiability() {
     println!("Z3 result: {:?}", result);
 
     match result {
-        Ok(SatisfiabilityResult::Satisfiable { example }) => {
-            println!("Z3 found: {:?}", example);
+        Ok(SatisfiabilityResult::Satisfiable { witness }) => {
+            println!("Z3 found: {:?}", witness);
             println!("Note: May include trivial solutions with zeros");
         }
         Ok(SatisfiabilityResult::Unsatisfiable) => {

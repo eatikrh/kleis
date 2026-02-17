@@ -635,9 +635,46 @@ impl McpServer {
                 emoji, status, expr_str, value_str
             );
 
-            if let Some(ref cx) = result.counterexample {
-                text.push_str(&format!("\n\nCounterexample:\n{}", cx));
-            }
+            // Render structured witness as Kleis expressions
+            // For verified existentials: "Witness" (satisfying assignment)
+            // For disproved universals: "Counterexample" (violating assignment)
+            let (witness_str, witness_bindings) = if let Some(ref w) = result.witness {
+                let pp = crate::pretty_print::PrettyPrinter::new();
+                let binding_strs: Vec<String> = w
+                    .bindings
+                    .iter()
+                    .map(|b| format!("{} = {}", b.name, pp.format_expression(&b.value)))
+                    .collect();
+                let binding_json: Vec<serde_json::Value> = w
+                    .bindings
+                    .iter()
+                    .map(|b| {
+                        serde_json::json!({
+                            "variable": b.name,
+                            "value": pp.format_expression(&b.value),
+                        })
+                    })
+                    .collect();
+
+                let label = if verified {
+                    "Witness"
+                } else {
+                    "Counterexample"
+                };
+                if binding_strs.is_empty() {
+                    // No structured bindings — fall back to raw
+                    text.push_str(&format!("\n\n{} (raw):\n{}", label, w.raw));
+                    (Some(w.raw.clone()), binding_json)
+                } else {
+                    text.push_str(&format!("\n\n{} (Kleis):", label));
+                    for s in &binding_strs {
+                        text.push_str(&format!("\n  {}", s));
+                    }
+                    (Some(binding_strs.join(", ")), binding_json)
+                }
+            } else {
+                (None, Vec::new())
+            };
 
             let content = McpToolContent {
                 content_type: "text".to_string(),
@@ -647,7 +684,8 @@ impl McpServer {
             return serde_json::json!({
                 "content": [content],
                 "verified": verified,
-                "counterexample": result.counterexample,
+                "witness": witness_str,
+                "witness_bindings": witness_bindings,
             });
         }
 

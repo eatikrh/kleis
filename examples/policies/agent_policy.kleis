@@ -98,9 +98,11 @@ define check_file_edit(path) =
 // Rule: Block Z3 evaluation with quantified axioms (causes hangs)
 //   From .cursorrules: "Never call Z3 evaluate() with quantified axioms loaded"
 define check_run_command(cmd) =
-    if contains(cmd, "scripts/policy.sh") then "allow"
-    else if contains(cmd, "rm -rf /") then "deny"
-    else if contains(cmd, "rm -rf ~") then "deny"
+    // ── Deny-first: dangerous patterns are blocked before any whitelist ──
+    // Z3 audit: "rm -rf" without "/" or "~" suffix slipped through (e.g. "rm -rf ./src")
+    // Z3 audit: "scripts/policy.shrm -rf" exploited allow-before-deny ordering
+    if contains(cmd, "rm -rf") then "deny"
+    else if contains(cmd, "rm -r") then "deny"
     else if contains(cmd, "> /dev/") then "deny"
     else if contains(cmd, "mkfs") then "deny"
     else if contains(cmd, "dd if=") then "deny"
@@ -110,6 +112,8 @@ define check_run_command(cmd) =
     else if contains(cmd, "wget | sh") then "deny"
     else if contains(cmd, "pkill") then "deny"
     else if contains(cmd, "killall") then "deny"
+    // ── Allow-list: safe commands (checked after deny rules) ──
+    else if contains(cmd, "scripts/policy.sh") then "allow"
     else "allow"
 
 
