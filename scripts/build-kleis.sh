@@ -6,6 +6,8 @@
 #   ./scripts/build-kleis.sh --debug      # Debug build
 #   ./scripts/build-kleis.sh --numerical  # With numerical features (BLAS/LAPACK)
 #   ./scripts/build-kleis.sh --minimal    # Without Z3 (no axiom verification)
+#   ./scripts/build-kleis.sh --clean      # Full cargo clean before build
+#   ./scripts/build-kleis.sh --no-gc      # Skip automatic stale artifact cleanup
 
 set -e
 
@@ -19,6 +21,8 @@ NC='\033[0m' # No Color
 BUILD_TYPE="release"
 FEATURES=""
 EXTRA_FLAGS=""
+DO_CLEAN=false
+SKIP_GC=false
 
 for arg in "$@"; do
     case $arg in
@@ -31,6 +35,12 @@ for arg in "$@"; do
         --minimal)
             EXTRA_FLAGS="--no-default-features"
             ;;
+        --clean)
+            DO_CLEAN=true
+            ;;
+        --no-gc)
+            SKIP_GC=true
+            ;;
         --help|-h)
             echo "Build the unified kleis binary"
             echo ""
@@ -40,12 +50,15 @@ for arg in "$@"; do
             echo "  --debug      Build debug version (faster compile, slower runtime)"
             echo "  --numerical  Enable numerical features (eigenvalues, SVD, Schur)"
             echo "  --minimal    Disable Z3 (no axiom verification)"
+            echo "  --clean      Full cargo clean before building"
+            echo "  --no-gc      Skip automatic stale artifact cleanup"
             echo "  --help       Show this help"
             echo ""
             echo "Examples:"
             echo "  $0                      # Standard release build"
             echo "  $0 --numerical          # With BLAS/LAPACK support"
             echo "  $0 --debug --numerical  # Debug build with numerical"
+            echo "  $0 --clean              # Clean rebuild"
             exit 0
             ;;
     esac
@@ -84,6 +97,60 @@ if [ "$EXTRA_FLAGS" != "--no-default-features" ]; then
         echo -e "${YELLOW}⚠${NC} Z3 not found. Building without axiom verification."
         echo "  Install Z3: brew install z3 (macOS) or apt install libz3-dev (Linux)"
         EXTRA_FLAGS="--no-default-features"
+    fi
+fi
+
+# ---- Artifact cleanup ----
+# Rust's target/ grows unboundedly with incremental builds and can reach tens of
+# GB / hundreds of thousands of files, which chokes editors that scan the workspace.
+
+TARGET_SIZE_LIMIT_GB=5  # warn & gc above this
+
+if [ "$DO_CLEAN" = true ]; then
+    echo -e "${YELLOW}♻${NC}  --clean: running cargo clean"
+    cargo clean 2>/dev/null || true
+elif [ "$SKIP_GC" = false ] && [ -d "target" ]; then
+    # Measure target/ size (in GB, macOS + Linux compatible)
+    TARGET_KB=$(du -sk target 2>/dev/null | awk '{print $1}')
+    TARGET_GB=$(( TARGET_KB / 1048576 ))
+
+    if [ "$TARGET_GB" -ge "$TARGET_SIZE_LIMIT_GB" ]; then
+        echo -e "${YELLOW}♻${NC}  target/ is ${TARGET_GB}GB (limit: ${TARGET_SIZE_LIMIT_GB}GB) — cleaning stale artifacts"
+
+        # For release builds: purge debug artifacts (the bulk of the bloat)
+        if [ "$BUILD_TYPE" = "release" ] && [ -d "target/debug" ]; then
+            DU_DEBUG=$(du -sh target/debug 2>/dev/null | awk '{print $1}')
+            echo -e "   Removing target/debug/ (${DU_DEBUG})..."
+            rm -rf target/debug
+        fi
+
+        # For debug builds: purge release artifacts
+        if [ "$BUILD_TYPE" = "debug" ] && [ -d "target/release" ]; then
+            DU_RELEASE=$(du -sh target/release 2>/dev/null | awk '{print $1}')
+            echo -e "   Removing target/release/ (${DU_RELEASE})..."
+            rm -rf target/release
+        fi
+
+        # Always clean incremental caches older than 7 days
+        if [ -d "target" ]; then
+            STALE=$(find target -name "incremental" -type d -maxdepth 3 2>/dev/null)
+            if [ -n "$STALE" ]; then
+                for dir in $STALE; do
+                    OLD_FILES=$(find "$dir" -type f -mtime +7 2>/dev/null | wc -l | tr -d ' ')
+                    if [ "$OLD_FILES" -gt 0 ]; then
+                        echo -e "   Pruning $dir ($OLD_FILES stale files)..."
+                        find "$dir" -type f -mtime +7 -delete 2>/dev/null
+                        find "$dir" -type d -empty -delete 2>/dev/null
+                    fi
+                done
+            fi
+        fi
+
+        # Report new size
+        NEW_KB=$(du -sk target 2>/dev/null | awk '{print $1}')
+        NEW_GB=$(( NEW_KB / 1048576 ))
+        NEW_MB=$(( NEW_KB / 1024 ))
+        echo -e "${GREEN}✓${NC}  target/ now ${NEW_MB}MB"
     fi
 fi
 

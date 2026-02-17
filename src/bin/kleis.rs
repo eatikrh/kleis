@@ -93,6 +93,20 @@ enum Commands {
         #[arg(short, long)]
         verbose: bool,
     },
+
+    /// Start MCP (Model Context Protocol) server for formal policy enforcement
+    ///
+    /// Exposes Kleis formal verification as tools that LLM agents must call
+    /// before performing actions. Uses JSON-RPC 2.0 over stdio.
+    Mcp {
+        /// Path to the Kleis policy file
+        #[arg(short, long)]
+        policy: PathBuf,
+
+        /// Enable verbose logging (to stderr)
+        #[arg(short, long)]
+        verbose: bool,
+    },
 }
 
 #[tokio::main]
@@ -127,6 +141,9 @@ async fn main() {
         }
         Commands::Dap { verbose } => {
             run_dap(verbose);
+        }
+        Commands::Mcp { policy, verbose } => {
+            run_mcp(policy, verbose);
         }
     }
 }
@@ -492,6 +509,29 @@ fn run_dap(verbose: bool) {
 
     if let Err(e) = run_stdio_server() {
         eprintln!("[kleis-dap] Error: {}", e);
+        std::process::exit(1);
+    }
+}
+
+/// Run MCP (Model Context Protocol) server for formal policy enforcement
+fn run_mcp(policy: PathBuf, verbose: bool) {
+    use kleis::mcp::server::McpServer;
+
+    if verbose {
+        eprintln!("[kleis-mcp] Starting MCP Policy Server");
+        eprintln!("[kleis-mcp] Policy file: {}", policy.display());
+    }
+
+    let server = match McpServer::new(&policy, verbose) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("[kleis-mcp] Failed to load policy: {}", e);
+            std::process::exit(1);
+        }
+    };
+
+    if let Err(e) = server.run() {
+        eprintln!("[kleis-mcp] Server error: {}", e);
         std::process::exit(1);
     }
 }

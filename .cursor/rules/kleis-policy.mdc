@@ -1,0 +1,70 @@
+---
+alwaysApply: false
+---
+# Kleis Policy Awareness
+
+This project has a formal policy engine powered by Kleis.
+The MCP server is configured in [mcp.json](mdc:.cursor/mcp.json) and loads
+rules from [agent_policy.kleis](mdc:examples/policies/agent_policy.kleis).
+
+## How to enable / disable
+
+```bash
+scripts/policy.sh on      # Enable (alwaysApply: true)
+scripts/policy.sh off     # Disable (alwaysApply: false)
+scripts/policy.sh status  # Show current state
+```
+
+You can also mention "use kleis policy" in a prompt to activate for one chat.
+
+## Behavior
+
+Call `check_action` before file edits, file creates, file deletes, terminal
+commands, and git pushes.
+
+- **ALLOWED** → proceed normally.
+- **DENIED** → tell the user which rule flagged it and why, then **ask whether
+  to proceed anyway**. The user has the final say.
+- **Preconditions** → if the response includes precondition steps, run them
+  first before the main action. Example: "run `cargo test` before pushing."
+
+This is a "check and warn" model.  The policy surfaces risks, it does not
+lock anyone out.
+
+## Preconditions (before_* functions)
+
+The policy defines `before_*` functions alongside `check_*` functions.
+When `check_action` returns preconditions, execute them in order before
+proceeding with the original action.
+
+Example response with a precondition:
+```
+✅ ALLOWED git_push
+
+⚠️ Preconditions (run these first):
+  1. cargo test
+```
+
+→ Run `cargo test` first, then push.
+
+## Available MCP Tools
+
+| Tool | Purpose |
+|------|---------|
+| `check_action` | Check whether an action is allowed + get preconditions |
+| `list_rules` | Show all loaded policy rules |
+| `explain_rule` | Explain a specific rule in detail |
+| `describe_schema` | Learn the Kleis vocabulary: structures, data types, functions, axioms |
+| `evaluate` | Evaluate any Kleis expression or verify a proposition via Z3 |
+
+## Reasoning Partner Model
+
+The policy engine is not just a yes/no gatekeeper. Use `describe_schema` to
+learn the policy vocabulary, then use `evaluate` to reason about it:
+
+- **Concrete calls**: `evaluate("check_file_delete(\"src/main.rs\")")` → "deny"
+- **Universal properties**: `evaluate("∀(b : String). check_git_push(b, 1) = \"deny\"")` → Z3 verification
+- **Precondition queries**: `evaluate("before_git_push(\"main\", 0)")` → quality gate commands
+
+This lets you understand *why* rules exist and verify properties about the
+policy before acting.

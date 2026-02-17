@@ -1,0 +1,192 @@
+// ============================================================================
+// Agent Policy — Formal Rules for LLM Agent Actions
+// ============================================================================
+//
+// This policy is enforced by the Kleis MCP server. The agent MUST call
+// `check_action` before performing any file edit, file creation, file
+// deletion, terminal command, or git operation.
+//
+// Convention:
+//   check_* functions return "allow" or "deny"
+//   before_* functions return "none" or a command/description to run first
+//   Multiple preconditions separated by " && "
+//   Uses Kleis built-in string functions: hasPrefix, hasSuffix, contains
+//
+// The agent can call `describe_schema` to learn this policy's vocabulary,
+// then use `evaluate` to reason about it — including verifying universal
+// properties via Z3 (e.g. "is force-push always denied?").
+//
+// Usage:
+//   kleis mcp --policy examples/policies/agent_policy.kleis --verbose
+//
+// ============================================================================
+
+
+// ============================================================================
+// Session Rules
+// ============================================================================
+
+// Precondition: At the start of every session, read context and check status
+//   From .cursorrules: "read NEXT_SESSION.md at the start of each session"
+//   From .cursorrules: "run validate_manual_examples.py periodically"
+//   From .cursorrules: "update kleis.io stats at session start"
+define before_session_start() =
+    "cat docs/NEXT_SESSION.md && python3 scripts/validate_manual_examples.py --strict --verbose"
+
+
+// ============================================================================
+// File Deletion Rules
+// ============================================================================
+
+// Rule: Cannot delete source files, test files, or config files
+define check_file_delete(path) =
+    if hasPrefix(path, "src/") then "deny"
+    else if hasPrefix(path, "tests/") then "deny"
+    else if hasPrefix(path, ".github/") then "deny"
+    else if path = "Cargo.toml" then "deny"
+    else if path = "Cargo.lock" then "deny"
+    else if path = ".gitignore" then "deny"
+    else "allow"
+
+
+// ============================================================================
+// File Creation Rules
+// ============================================================================
+
+// Rule: Can only create files in recognized project directories
+// Rule: No loose .md files in project root (except README, CHANGELOG, LICENSE)
+//   From .cursorrules: "No loose markdown files in root"
+define check_file_create(path) =
+    if hasPrefix(path, "src/") then "allow"
+    else if hasPrefix(path, "examples/") then "allow"
+    else if hasPrefix(path, "tests/") then "allow"
+    else if hasPrefix(path, "docs/") then "allow"
+    else if hasPrefix(path, "scripts/") then "allow"
+    else if hasPrefix(path, "vscode-kleis/") then "allow"
+    else if hasPrefix(path, "stdlib/") then "allow"
+    else if hasPrefix(path, ".cursor/") then "allow"
+    else if path = "README.md" then "allow"
+    else if path = "CHANGELOG.md" then "allow"
+    else if path = "LICENSE" then "allow"
+    else if path = "CONTRIBUTING.md" then "allow"
+    else if path = "PARSER_TODO.md" then "allow"
+    else if hasSuffix(path, ".md") then "deny"
+    else "deny"
+
+
+// ============================================================================
+// File Edit Rules
+// ============================================================================
+
+// Rule: Cannot edit lock files or generated files
+define check_file_edit(path) =
+    if path = "Cargo.lock" then "deny"
+    else if hasPrefix(path, "target/") then "deny"
+    else if hasPrefix(path, "node_modules/") then "deny"
+    else "allow"
+
+
+// ============================================================================
+// Command Execution Rules
+// ============================================================================
+
+// Rule: Always allow the policy toggle script
+// Rule: Block dangerous shell commands
+//   From .cursorrules: "Never use pkill or killall (imprecise)"
+// Rule: Block wasteful compilation patterns
+//   From .cursorrules: "Don't run cargo check before cargo test — wasteful"
+// Rule: Block Z3 evaluation with quantified axioms (causes hangs)
+//   From .cursorrules: "Never call Z3 evaluate() with quantified axioms loaded"
+define check_run_command(cmd) =
+    if contains(cmd, "scripts/policy.sh") then "allow"
+    else if contains(cmd, "rm -rf /") then "deny"
+    else if contains(cmd, "rm -rf ~") then "deny"
+    else if contains(cmd, "> /dev/") then "deny"
+    else if contains(cmd, "mkfs") then "deny"
+    else if contains(cmd, "dd if=") then "deny"
+    else if contains(cmd, "chmod 777") then "deny"
+    else if contains(cmd, "curl | sh") then "deny"
+    else if contains(cmd, "curl | bash") then "deny"
+    else if contains(cmd, "wget | sh") then "deny"
+    else if contains(cmd, "pkill") then "deny"
+    else if contains(cmd, "killall") then "deny"
+    else "allow"
+
+
+// ============================================================================
+// Git Push Rules
+// ============================================================================
+
+// Rule: NEVER force-push (to ANY branch)
+//   From .cursorrules: "You must NEVER run git push --force (EVER)"
+// Rule: Never push to production
+// Rule: Always ask for explicit user permission before pushing
+//   From .cursorrules: "Stop after committing and ask"
+define check_git_push(branch, force) =
+    if force = 1 then "deny"
+    else if branch = "production" then "deny"
+    else "allow"
+
+
+// ============================================================================
+// Git Commit Rules
+// ============================================================================
+
+// Rule: Always allow commits (the pre-push hook handles quality)
+define check_git_commit(description) = "allow"
+
+
+// ============================================================================
+// Preconditions — "always check X before doing Y"
+// ============================================================================
+//
+// Convention:
+//   before_* functions return "none" or a command/description to run first.
+//   Multiple preconditions can be separated by " && ".
+//
+//   The MCP server evaluates these alongside check_* and includes them in
+//   the response so the agent knows what to run first.
+//
+// ============================================================================
+
+// Before publishing, run tests
+// Before starting a server, kill any existing process on the port
+//   From .cursorrules: "Always use lsof to find and kill processes on ports"
+define before_run_command(cmd) =
+    if contains(cmd, "cargo publish") then "cargo test"
+    else if contains(cmd, "npm publish") then "npm test"
+    else if contains(cmd, "cargo run --bin server") then "lsof -ti:3000 | xargs kill -9"
+    else "none"
+
+// Before pushing, run full quality gates
+//   From .cursorrules: "cargo fmt, cargo clippy, cargo test before pushing"
+define before_git_push(branch, force) =
+    "cargo fmt --all && cargo clippy --all-targets --all-features && cargo test"
+
+// Before committing, run quality gates and check documentation links
+//   From .cursorrules: "Run quality checks before committing .rs files"
+//   From .cursorrules: "Check markdown links before committing .md files"
+define before_git_commit(description) =
+    "cargo fmt --all && cargo test && python3 scripts/check_markdown_links.py"
+
+// Before editing parser code, read the grammar and run parser tests
+//   From .cursorrules: "Parser changes must align with formal grammar"
+//   From .cursorrules: "Check against formal grammar in docs/grammar/"
+// Before editing evaluator, run evaluator tests
+// Before editing type inference, run type tests
+// Before editing documentation, read the source first
+//   From .cursorrules: "Read the actual code before documenting"
+define before_file_edit(path) =
+    if hasPrefix(path, "src/kleis_parser") then "cargo test parser && cat docs/grammar/kleis_grammar_v05.ebnf"
+    else if hasPrefix(path, "src/parser") then "cargo test parser && cat docs/grammar/kleis_grammar_v05.ebnf"
+    else if hasPrefix(path, "src/evaluator") then "cargo test evaluator"
+    else if hasPrefix(path, "src/type_") then "cargo test type"
+    else if hasPrefix(path, "src/dap") then "cargo test dap"
+    else if hasSuffix(path, ".md") then "Read the relevant source files before writing documentation"
+    else "none"
+
+// Before creating documentation files, read the related source
+//   From .cursorrules: "Read the actual code before documenting or describing it"
+define before_file_create(path) =
+    if hasSuffix(path, ".md") then "Read the relevant source files before writing documentation"
+    else "none"
