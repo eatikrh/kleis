@@ -1,0 +1,7 @@
+---
+globs: src/evaluator*.rs
+---
+# Evaluator precondition
+
+Before editing evaluator files, run `cargo test evaluator` to establish a baseline.
+After editing, run `cargo test evaluator` again to verify nothing broke.

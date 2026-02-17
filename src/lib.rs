@@ -17,6 +17,7 @@ pub mod kleist_parser; // .kleist template file parser
 pub mod logging; // File-based logging (avoids stdio interference)
 pub mod lowering;
 pub mod math_layout;
+pub mod mcp; // MCP server for formal policy enforcement
 #[cfg(feature = "numerical")]
 pub mod numerical; // BLAS/LAPACK backend for numerical linear algebra
 pub mod ode; // ODE solvers (Runge-Kutta)

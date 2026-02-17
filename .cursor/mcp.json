@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "kleis-policy": {
+      "command": "/Users/eatik_1/bin/kleis",
+      "args": [
+        "mcp",
+        "--verbose",
+        "--policy",
+        "/Users/eatik_1/git/cee/kleis/examples/policies/agent_policy.kleis"
+      ]
+    }
+  }
+}

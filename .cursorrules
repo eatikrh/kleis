@@ -14,6 +14,44 @@ This document contains:
 
 ---
 
+## Kleis Policy Engine (Formal Rules)
+
+**Many rules that were previously in this file are now formalized in the Kleis
+policy: `examples/policies/agent_policy.kleis`.**
+
+The policy engine is a reasoning partner, not just a gatekeeper. Use these
+MCP tools to interact with it:
+
+| Tool | What it does |
+|------|-------------|
+| `check_action` | Check whether an action is allowed + get preconditions |
+| `list_rules` | Show all loaded policy rules |
+| `explain_rule` | Explain a specific rule in detail |
+| `describe_schema` | Learn the full Kleis vocabulary: structures, functions, axioms |
+| `evaluate` | Evaluate any Kleis expression or verify a proposition via Z3 |
+
+**Rules now in Kleis policy (not repeated here):**
+- Git push / force-push / production branch restrictions
+- Server process management (lsof before starting servers, no pkill/killall)
+- Dangerous command blocking (rm -rf, chmod 777, curl|sh, etc.)
+- Quality gates before commit/push (fmt, clippy, test, link check)
+- Parser preconditions (run tests + read grammar before editing)
+- Evaluator/type/DAP preconditions (run relevant tests before editing)
+- File creation rules (no loose .md in root, allowed directories)
+- File deletion rules (protect src/, tests/, config)
+- File edit rules (protect lock files, generated files)
+- Documentation preconditions (read source before writing docs)
+- Session start preconditions (read NEXT_SESSION.md, validate examples)
+
+**Toggle enforcement:**
+```bash
+scripts/policy.sh on      # Enable (alwaysApply: true)
+scripts/policy.sh off     # Disable (alwaysApply: false)
+scripts/policy.sh status  # Show current state
+```
+
+---
+
 ## The Philosophy of Kleis (Level 3)
 
 **CRITICAL: Kleis is not a "math tool" or a "proof assistant."**
@@ -58,43 +96,6 @@ Level 1: IMPLEMENTATION
 
 ---
 
-## Read Code Before Writing Documentation
-
-**CRITICAL: Read the actual code before documenting or describing it.**
-
-### The Problem
-
-Claude tends to generate plausible-sounding documentation without first reading the implementation. This leads to:
-- Inaccurate descriptions of what code does
-- Missing features that are actually implemented
-- Aspirational documentation that doesn't match reality
-
-### The Rule
-
-**Before writing documentation for any component:**
-
-1. **Read the source file(s)** using `read_file` or `grep`
-2. **Understand the actual API** - method signatures, types, return values
-3. **Note what's implemented vs planned** - check for TODOs, feature flags
-4. **Then write** documentation that matches what exists
-
-### Example
-
-❌ **Wrong:** "The solver abstraction probably has a verify method..."
-✅ **Right:** *reads src/solvers/backend.rs* → "The SolverBackend trait defines verify_axiom(), check_satisfiability(), evaluate()..."
-
-### Applies To
-
-- Manual chapters
-- Code comments
-- API documentation
-- Architecture descriptions
-- Any explanation of existing code
-
-**"Claude is learning to read before writing."**
-
----
-
 ## DAP Debugger Context - CRITICAL
 
 **REMINDER: Debugging is about Expression::Operation and its span. NOT about functions or substitution.**
@@ -130,17 +131,8 @@ Claude tends to generate plausible-sounding documentation without first reading 
 
 **Substitution does NOT modify spans. The span is just NUMBERS and a filename.**
 
-- Line number = a number
-- Column number = a number  
-- File path = a path string (the filename)
-
 The parser puts these numbers in the Expression. Nothing else changes them.
 Substitution creates new expressions but PRESERVES the original span.
-
-**STOP fixating on "functions" and "substitution"!**
-- When you think "function call" → think "Expression::Operation"
-- When you think "substitution" → remember the span is UNCHANGED
-- The span already has the file. Just read it and report it.
 
 **If you find yourself writing code about:**
 - "find_definition_line" → STOP. The span has the line.
@@ -150,103 +142,6 @@ Substitution creates new expressions but PRESERVES the original span.
 The span. Has. Everything. Just. Use. It.
 
 ---
-
-## Git Repository Rules
-
-**CRITICAL: NEVER push to any git repository without explicit user permission.**
-
-### Why This Is Critical - The Safe Harbor Principle
-
-Local commits are "safe harbors" - checkpoints the user can return to.
-
-**If LLM can push:**
-- Current safe harbor destroyed (work becomes public)
-- ALL safe harbors at risk (force push could rewrite history)
-- Psychological safety lost (can't experiment freely)
-- Entire repository integrity threatened
-
-**The human must control the boundary between:**
-- Private (local repo) ← LLM can work here
-- Public (remote repo) ← Only human crosses this line
-
-### Rules
-
-- You may stage files (`git add`)
-- You may commit files (`git commit`)
-- You must ALWAYS ask before running `git push`
-- You must NEVER run `git push --force` (EVER)
-- Stop after committing and ask: "The changes are committed. Would you like me to push to GitHub now?"
-- Wait for explicit "yes" or "push" command from the user before executing any `git push` operation
-- This rule applies to ALL branches and ALL remotes
-- No exceptions, no shortcuts, no "just this once"
-
-**Push is the irreversible action - human must control it.**
-
-## General Guidelines
-
-- Follow user instructions carefully
-- Ask for clarification when uncertain
-- Be respectful of the user's workflow and preferences
-
-## Server Process Management
-
-**Always use `lsof` to find and kill processes on specific ports.**
-
-```bash
-# Kill process on port 3000
-lsof -ti:3000 | xargs kill -9
-
-# Then start new server
-cargo run --bin server
-```
-
-**Why:**
-- `pkill` may not find the right process
-- `lsof -ti:PORT` reliably finds the exact process using that port
-- Avoids "Address already in use" errors
-
-**Never use:**
-- `pkill -f server` (too broad, may miss the target)
-- `killall` (imprecise)
-
-## Z3 and Equation Editor Performance Rules
-
-**CRITICAL: The Equation Editor MUST NOT hang waiting for Z3.**
-
-### The Problem: Universal Quantifiers + Evaluation = HANG
-
-When Z3 has axioms with universal quantifiers (∀), asking it to **evaluate** 
-concrete expressions causes a combinatorial explosion:
-
-```
-Axiom: ∀ x . ∀ xs . nth(cons(x, xs), 0) = x
-Query: evaluate(nth([1,2,3], 1))
-
-Z3 E-matching tries ALL possible instantiations of x and xs...
-Result: HANGS FOREVER
-```
-
-### What Works vs What Hangs
-
-| Operation | Method | Result |
-|-----------|--------|--------|
-| **Evaluate** `nth([1,2,3], 1)` | Z3 + ∀ axioms | ❌ HANGS |
-| **Evaluate** `nth([1,2,3], 1)` | Inline Rust expansion | ✅ Fast |
-| **Verify** `g(μ,ν) = g(ν,μ)` satisfiable? | Z3 + ∀ axioms | ✅ Fast |
-| **Verify** complex theorem | Z3 + ∀ axioms | ⚠️ May be slow |
-
-### Rules
-
-1. **For concrete computation in Equation Editor:** Use inline Rust expansion
-2. **For verification/satisfiability:** Z3 with axioms is OK (with timeout)
-3. **Never call Z3 evaluate() with quantified axioms loaded**
-4. **Always add timeout for Z3 operations exposed to users**
-
-### Architecture Decision
-
-Axioms are for VERIFICATION ("is this true?"), not EVALUATION ("what is 2+2?").
-
-For evaluation, Rust computes directly and tells Z3 the answer.
 
 ## Editor AST vs Kleis AST Architecture
 
@@ -287,337 +182,30 @@ For evaluation, Rust computes directly and tells Z3 the answer.
 
 ### Key Rules
 
-1. **Editor AST uses semantic operation names**
-   - `gamma` NOT `Γ`
-   - `riemann` NOT `R`
-   - `index_mixed` NOT `T`
-   - These names are keys for Typst/LaTeX/HTML templates
+1. **Editor AST uses semantic operation names** — `gamma` NOT `Γ`
+2. **xAct notation belongs in Kleis text output only** — NOT in Editor AST
+3. **Changing Editor AST requires updating ALL renderers** (5 targets + server + tests)
+4. **Templates are keyed by semantic names** — if you change to symbols, rendering breaks
 
-2. **xAct notation (`Γ(λ, -μ, -ν)`) belongs in Kleis text output only**
-   - NOT in Editor AST
-   - Generated by Kleis Renderer when target is `RenderTarget::Kleis`
+---
 
-3. **Changing Editor AST requires updating ALL renderers**
-   - `src/render.rs` (5 targets: Unicode, LaTeX, HTML, Typst, Kleis)
-   - `src/typst_renderer.rs`
-   - `static/index.html` (JavaScript)
-   - Server API endpoints
-   - Tests
+## Z3 and Equation Editor Performance Rules
 
-4. **Templates are keyed by semantic names**
-   - Typst templates expect `gamma(base, upper, lower1, lower2)`
-   - If you change Editor AST to use `Γ`, Typst rendering breaks
+**CRITICAL: The Equation Editor MUST NOT hang waiting for Z3.**
 
-### Common Mistake (Don't Do This)
+### What Works vs What Hangs
 
-❌ **WRONG:** Changing Editor AST to use symbols instead of semantic names
-```javascript
-// DON'T DO THIS - breaks Typst/LaTeX templates
-christoffel: { Operation: { name: 'Γ', args: [...] } }
-```
+| Operation | Method | Result |
+|-----------|--------|--------|
+| **Evaluate** `nth([1,2,3], 1)` | Z3 + ∀ axioms | ❌ HANGS |
+| **Evaluate** `nth([1,2,3], 1)` | Inline Rust expansion | ✅ Fast |
+| **Verify** `g(μ,ν) = g(ν,μ)` satisfiable? | Z3 + ∀ axioms | ✅ Fast |
 
-✅ **CORRECT:** Editor AST uses semantic names, renderer outputs symbols
-```javascript
-// Editor AST (JavaScript)
-christoffel: { Operation: { name: 'gamma', args: [...] } }
+**Architecture Decision:**
+Axioms are for VERIFICATION ("is this true?"), not EVALUATION ("what is 2+2?").
+For evaluation, Rust computes directly and tells Z3 the answer.
 
-// Kleis Renderer outputs xAct notation for Kleis target
-// Typst Renderer uses 'gamma' template
-```
-
-### Reference
-
-See `docs/NEXT_SESSION.md` for detailed architecture notes and lessons learned.
-
-## Refactoring and Code Quality Rules
-
-**CRITICAL: No shortcuts, no technical debt, no half-measures.**
-
-### Rule: Actually Use What You Build
-
-**When implementing abstractions or refactoring:**
-
-❌ **WRONG - Adding alongside old code:**
-```rust
-struct MyModule {
-    old_impl: OldWay,      // Keep old code
-    new_backend: NewWay,   // Add new abstraction alongside
-}
-// Result: Duplication, unclear which is used, technical debt
-```
-
-✅ **CORRECT - Replace, don't duplicate:**
-```rust
-struct MyModule {
-    backend: NewWay,       // Only the new abstraction
-}
-// Old code DELETED, not commented out
-// All tests verify the new way works
-```
-
-**Key Principles:**
-
-1. **Test the abstraction immediately** - Don't just build it, USE it
-2. **Remove old code** - Delete it entirely, don't leave it "just in case"
-3. **Run full test suite** - Not just unit tests, run ALL tests (cargo test, not --lib)
-4. **Verify through tests** - Tests must exercise the new code path
-
-**Example from Session:**
-- Built Z3Backend abstraction
-- Initially just added it alongside old Solver
-- User caught it: "You didn't actually switch to using it!"
-- Fixed: Removed 642 lines of duplicate code, all tests through abstraction
-
-### Rule: Remove Dead Code Systematically
-
-**When refactoring, identify what's actually used:**
-
-**Process:**
-```
-1. Comment out old code (to see what breaks)
-2. Run cargo check - see compilation errors
-3. Fix each error by using new abstraction
-4. Verify with cargo test (ALL tests!)
-5. Delete old code completely (don't leave commented out)
-6. Run quality gates (fmt, clippy, test)
-```
-
-**Don't guess - Let the compiler tell you:**
-- Compiler errors show exactly what's still used
-- Dead code warnings show what can be deleted
-- Don't leave "just in case" code behind
-
-**Why this matters:**
-- Technical debt compounds over time
-- Unclear which code path is active
-- Future maintainers confused
-- Tests might not cover new code
-
-### Rule: Think Through Architecture
-
-**Before implementing, ask:**
-
-1. **"What if the feature is disabled?"**
-   - Check `#[cfg(not(feature = "..."))]` case
-   - Ensure struct fields are properly feature-gated
-   
-2. **"What state belongs where?"**
-   - Backend state vs. high-level state
-   - Who owns what data?
-   
-3. **"Can this be misused?"**
-   - Abstraction boundaries clear?
-   - Types prevent invalid usage?
-
-**Example from Session:**
-- User asked: "What happens if we don't have a backend?"
-- Made me realize declared_ops should be in backend, not verifier
-- Proper ownership: backend tracks its own state
-
-### Rule: Quality Gates Are Not Optional
-
-**NEVER skip quality checks to "save time":**
-
-```bash
-# ALWAYS run all three:
-cargo fmt --all
-cargo clippy --all-targets --all-features  
-cargo test  # NOT cargo test --lib, run ALL tests!
-```
-
-**Why each matters:**
-- **fmt:** Pre-push hook will reject unformatted code
-- **clippy:** Catches bugs and anti-patterns
-- **test:** Proves your changes actually work
-
-**If you skip them:**
-- GitHub CI will fail (wastes time)
-- Pre-push hook blocks you (embarrassing)
-- Bugs slip through (costly)
-
-**The Architect's Motto:**
-"No shortcuts for getting a clean build or saving time. Don't make tests lenient. If you're about to change or delete tests, ask first."
-
-## Website Stats Update Rule
-
-**CRITICAL: Update kleis.io landing page stats at the start of each session.**
-
-### Rule: Update GitHub Traffic Stats
-
-**At the beginning of each session (or when requested):**
-
-1. **Check GitHub Traffic** 
-   - Visit: https://github.com/eatikrh/kleis/graphs/traffic
-   - Note current "Unique cloners" count
-   - Note current "Commits" count from main page
-
-2. **Count Research Papers**
-   - Count PDF files in `docs/mathematics/`
-   - Current count should match dynamic counter
-
-3. **Update Landing Page Static Stats** (if needed)
-   - File: `index.html`
-   - Update any hardcoded numbers or date references
-   - Example: "286+ Cloners (Dec 2024)" → new count
-
-4. **Document the update**
-   - Log format: "Updated kleis.io stats: X cloners, Y commits, Z papers"
-
-**Current stats (as of Dec 11, 2024):**
-- Unique Cloners: 310+ (was 286+ this morning, 297+, 306+ - rapid growth!)
-- GitHub Stars: 0
-- Commits: 504
-- Architecture Decisions: 22 ADRs
-
-**Why this matters:**
-- Shows active development and community interest
-- Cloner count is private (requires auth) - must be manually updated
-- Other stats (stars, commits, papers) are dynamic via GitHub API
-- Helps track project growth over time
-
-## Efficient Test Running
-
-**CRITICAL: Don't recompile the entire project when running a single test.**
-
-### Rules
-
-1. **Don't run `cargo check` before `cargo test`** - wasteful, test compiles anyway
-2. **Run tests directly:** `cargo test --test test_name -- --nocapture`
-3. **If only the test file changed** - compilation should be fast (seconds, not minutes)
-4. **If library files changed** - recompilation is unavoidable, but only run once
-
-### What Triggers Full Recompilation
-
-| Change | Recompile? |
-|--------|-----------|
-| Test file only (`tests/*.rs`) | NO - just recompile test |
-| Library file (`src/*.rs`) | YES - must recompile library |
-| `cargo check` then `cargo test` | YES - different profiles! |
-
-### Avoid This Pattern
-
-```bash
-# WASTEFUL - compiles twice!
-cargo check
-cargo test --test my_test
-```
-
-### Do This Instead
-
-```bash
-# Just run the test directly
-cargo test --test my_test -- --nocapture
-```
-
-## Rust Code Quality Rules
-
-**CRITICAL: Run quality checks before committing .rs files.**
-
-### Rule: Pre-Commit Quality Gates
-
-**Before committing any Rust code changes:**
-
-1. **Format code** (required)
-   ```bash
-   cargo fmt --all
-   ```
-   - Ensures consistent code style across ALL crates (including render/)
-   - GitHub CI will fail if formatting is incorrect
-   - Run automatically before every commit
-   - **CRITICAL:** Use `--all` flag to format workspace members
-
-2. **Run clippy** (required)
-   ```bash
-   export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h && cargo clippy --all-targets --all-features
-   ```
-   - **Note:** Z3 environment variable required for build
-   - Catches common mistakes and anti-patterns
-   - Fix all clippy warnings before committing
-   - GitHub CI runs this check
-   - **macOS Intel:** Use `/usr/local/opt/z3/include/z3.h`
-   - **Linux:** Use `/usr/include/z3.h`
-
-3. **Run tests** (required)
-   ```bash
-   export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h && cargo test
-   ```
-   - **Note:** Z3 environment variable required for build
-   - Runs ALL tests: unit tests + integration tests
-   - Ensures no regressions in any component
-   - Must pass (421+ unit tests, all integration tests as of Dec 11, 2024)
-   - **CRITICAL:** Do NOT use `--lib` flag - it skips integration tests!
-   - GitHub CI runs both unit and integration tests
-   - **macOS Intel:** Use `/usr/local/opt/z3/include/z3.h`
-   - **Linux:** Use `/usr/include/z3.h`
-
-**Process:**
-```
-Before committing .rs files:
-→ Run: cargo fmt --all
-→ Run: export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h && cargo clippy --all-targets --all-features
-→ Run: export Z3_SYS_Z3_HEADER=/opt/homebrew/opt/z3/include/z3.h && cargo test
-→ Fix any errors/warnings
-→ Then commit
-
-If tests fail:
-→ Fix the code OR
-→ Document why test should be ignored
-→ Never commit broken tests
-```
-
-**Why this matters:**
-- Prevents CI failures
-- Maintains code quality
-- Catches bugs early
-- Ensures consistent style
-- Professional development practice
-
-**GitHub CI checks these exact commands:**
-- `cargo fmt -- --check` (formatting)
-- `cargo clippy --all-targets --all-features -- -D warnings` (linting)
-- `cargo test --lib --verbose` (tests)
-
-**Exceptions:**
-- Quick documentation-only commits (no .rs files changed): skip
-- Clippy warnings in legacy code: can continue-on-error, but fix if possible
-- Known test failures: documented in test files with `#[ignore]`
-
-## Parser Development Rules
-
-**CRITICAL: Parser changes must align with formal grammar.**
-
-### Rule: Grammar Consistency Check
-
-**When modifying `src/kleis_parser.rs`:**
-
-1. **Check against formal grammar** in `docs/grammar/kleis_grammar_v05.ebnf` or `docs/grammar/Kleis_v05.g4`
-2. **Verify change is valid** according to formal specification
-3. **Document any deviations** with rationale
-4. **Update grammar if needed** (requires ADR if significant)
-
-**Grammar files:**
-- `docs/grammar/kleis_grammar_v05.ebnf` - EBNF specification (source of truth)
-- `docs/grammar/Kleis_v05.g4` - ANTLR4 grammar
-- `docs/grammar/kleis_grammar_v05.md` - Human-readable explanation
-
-**Process:**
-```
-Before changing parser:
-→ Read relevant grammar section
-→ Verify change matches specification
-→ If deviation needed, document why
-
-After changing parser:
-→ Test with examples from grammar
-→ Update grammar docs if specification changed
-→ Note any limitations in parser file comments
-```
-
-**Why this matters:**
-- Parser is ~30% of full grammar (by design, POC)
-- Must stay aligned with formal specification
-- Prevents drift between implementation and design
-- Makes future full parser implementation easier
+---
 
 ## Type System Rules
 
@@ -634,39 +222,15 @@ After changing parser:
 3. **No shortcuts** - Don't bypass unification or constraint solving
 4. **Context threading** - Pass `context_builder` through call chain
 
-**❌ WRONG - Bypassing type inference:**
-```rust
-// Hardcoding result type without inference
-fn check_multiply(t1: Type, t2: Type) -> Type {
-    Type::Matrix(2, 2)  // BAD! Ignores actual dimensions
-}
-
-// Skipping constraint generation
-let t1 = self.infer(&args[0], context_builder)?;
-// Just return without adding constraints  // BAD!
-return Ok(Type::Scalar);
-```
-
-**✅ CORRECT - Proper HM inference:**
-```rust
-// Generate constraints
-let t1 = self.infer(&args[0], context_builder)?;
-let t2 = self.infer(&args[1], context_builder)?;
-self.add_constraint(t1.clone(), t2.clone());
-
-// Delegate to context_builder for operation types
-if let Some(builder) = context_builder {
-    builder.infer_operation_type(name, &[t1, t2])
-} else {
-    Ok(self.context.fresh_var())
-}
-```
-
 **When modifying type inference:**
-1. **Always generate constraints** - Don't hardcode results
-2. **Always delegate operations** - Use `context_builder.infer_operation_type()`
-3. **Always thread context** - Pass `context_builder` through recursive calls
-4. **Always unify** - Let the solver determine types
+1. Always generate constraints — don't hardcode results
+2. Always delegate operations — use `context_builder.infer_operation_type()`
+3. Always thread context — pass `context_builder` through recursive calls
+4. Always unify — let the solver determine types
+
+### Rule: No Hardcoding Types (ADR-016)
+
+**Types and operations MUST be defined in Kleis structures, NOT hardcoded in Rust.**
 
 **Key Files:**
 - `src/type_inference.rs` - Core HM algorithm
@@ -674,207 +238,96 @@ if let Some(builder) = context_builder {
 - `src/type_checker.rs` - Combines inference + registry
 - `stdlib/*.kleis` - Type definitions (source of truth)
 
-**Related ADRs:**
-- ADR-014: Hindley-Milner Type System (the algorithm)
-- ADR-016: Operations in Structures (the architecture)
-- ADR-015: Text as Source of Truth (where types are defined)
+**Exceptions:** Built-in primitives only (Scalar, basic arithmetic).
+Everything else must be defined in `stdlib/*.kleis` structures.
 
 ---
 
-### Rule: No Hardcoding Types (ADR-016)
+## Refactoring and Code Quality Rules
 
-**Types and operations MUST be defined in Kleis structures, NOT hardcoded in Rust.**
+**CRITICAL: No shortcuts, no technical debt, no half-measures.**
 
-**❌ WRONG - Hardcoded in type_inference.rs:**
-```rust
-"matrix2x3" => Ok(Type::Matrix(2, 3))  // BAD!
-"matmul" => /* hardcoded matrix multiplication logic */  // BAD!
-```
+### Rule: Actually Use What You Build
 
-**✅ CORRECT - Defined in stdlib/*.kleis:**
-```kleis
-structure Matrix(m: Nat, n: Nat, T) {
-    operation transpose : Matrix(n, m, T)
-}
+When implementing abstractions or refactoring:
+- **Test the abstraction immediately** - Don't just build it, USE it
+- **Remove old code** - Delete it entirely, don't leave it "just in case"
+- **Run full test suite** - Not just unit tests, run ALL tests (`cargo test`, not `--lib`)
+- **Verify through tests** - Tests must exercise the new code path
 
-implements Matrix(m, n, ℝ) {
-    operation transpose = builtin_transpose
-}
-```
-
-**Then type inference queries the registry:**
-```rust
-// Query: What type does "matrix2x3" produce?
-let ty = type_checker.infer_from_registry("matrix2x3", args)?;
-
-// Query: Does Matrix(2,3) support multiply with Matrix(3,2)?  
-let result_ty = type_checker.check_operation("multiply", &[t1, t2])?;
-```
-
-**Why this matters:**
-- **Extensibility:** Users can define custom types without changing Rust code
-- **Consistency:** Single source of truth (stdlib/*.kleis files)
-- **Self-hosting:** Kleis defines itself in Kleis (ADR-003)
-- **Maintainability:** Type rules live with their structures
-
-**Exceptions:**
-- **Built-in primitives only:** Scalar, basic arithmetic (+, -, *, /)
-- **Everything else:** Define in stdlib/*.kleis structures
-
-**When tempted to hardcode:**
-1. Stop and ask: "Should this be a structure?"
-2. If yes: Create/update stdlib/*.kleis file
-3. Make type inference query the registry
-4. Document the structure with axioms
-
-**Related ADRs:**
-- ADR-016: Operations in Structures (the foundation)
-- ADR-015: Text as Source of Truth (applies to types too)
-- ADR-003: Self-Hosting Strategy (Kleis defines Kleis)
-
-## Documentation Link Quality Gate
-
-**CRITICAL: All markdown links must be valid before committing documentation.**
-
-### Rule: Check Markdown Links
-
-**Before committing any .md files:**
-
-```bash
-python3 scripts/check_markdown_links.py
-```
-
-- Must show **0 broken links**
-- Script checks all .md files (excluding node_modules, target)
-- Ignores code blocks and mathematical notation
-- Only checks actual documentation links (.md, .rs, .kleis, etc.)
-
-**Why this matters:**
-- Documentation moves and reorganizes frequently
-- Broken links create poor user experience
-- Quality standard prevents documentation rot
-- Maintains professional appearance
+### Rule: Remove Dead Code Systematically
 
 **Process:**
-```
-Before committing .md files:
-→ Run: python3 scripts/check_markdown_links.py
-→ If any broken links found:
-   - Fix all broken links
-   - Re-run check until 0 broken links
-→ Only then commit
-→ Never commit with broken links
-```
+1. Comment out old code (to see what breaks)
+2. Run `cargo check` - see compilation errors
+3. Fix each error by using new abstraction
+4. Verify with `cargo test` (ALL tests!)
+5. Delete old code completely (don't leave commented out)
+6. Run quality gates (fmt, clippy, test)
 
-**Link Checker Features:**
-- Excludes code blocks (``````...```````)
-- Ignores inline code (`...`)  
-- Skips mathematical notation ([f](x), [exp(-t²)](ω))
-- Validates file extensions (.md, .rs, .kleis, .html, .pdf, etc.)
-- Reports exact file location and target path for each broken link
+**Don't guess - Let the compiler tell you.**
+
+### Rule: Think Through Architecture
+
+**Before implementing, ask:**
+1. "What if the feature is disabled?" — Check `#[cfg(not(feature = "..."))]` case
+2. "What state belongs where?" — Backend state vs. high-level state
+3. "Can this be misused?" — Abstraction boundaries clear?
+
+**The Architect's Motto:**
+"No shortcuts for getting a clean build or saving time. Don't make tests lenient. If you're about to change or delete tests, ask first."
+
+---
+
+## Read Code Before Writing Documentation
+
+**CRITICAL: Read the actual code before documenting or describing it.**
+
+Claude tends to generate plausible-sounding documentation without first reading the implementation.
+
+**Before writing documentation for any component:**
+1. **Read the source file(s)** using `read_file` or `grep`
+2. **Understand the actual API** - method signatures, types, return values
+3. **Note what's implemented vs planned** - check for TODOs, feature flags
+4. **Then write** documentation that matches what exists
+
+**"Claude is learning to read before writing."**
+
+---
+
+## Parser Development Rules
+
+**CRITICAL: Parser changes must align with formal grammar.**
+
+**Grammar files (source of truth):**
+- `docs/grammar/kleis_grammar_v05.ebnf` - EBNF specification
+- `docs/grammar/Kleis_v05.g4` - ANTLR4 grammar
+- `docs/grammar/kleis_grammar_v05.md` - Human-readable explanation
+
+**Process:** Read relevant grammar section → verify change matches spec → if deviation needed, document why → test with grammar examples → update grammar docs if spec changed.
+
+---
 
 ## Documentation Organization Rules
 
 **When creating documentation during a session:**
 
-1. **Combine overlapping content** - Review documents for redundancy and consolidate
-2. **Check for obsolete documents** - Remove or archive documents that are superseded
-3. **Organize into subdirectories** - Don't leave many documents in root `docs/`
-   - Use `docs/session-YYYY-MM-DD/` for session-specific work
-   - Use `docs/notation/`, `docs/parser-implementation/`, `docs/type-system/` etc. for topic-specific docs
-   - Keep only ADRs and main reference docs in root
-4. **Create session README** - Summarize session work in `docs/session-YYYY-MM-DD/README.md`
-5. **Update main README** - Keep `docs/README.md` as the navigation index
-
-**Session archival policy:**
-
-Sessions should be moved to `docs/archive/sessions/` after ~2 weeks:
-
-```bash
-# At start of session, check session folder dates
-cd docs && ls -lt session-* | head -5
-
-# If sessions older than 2 weeks exist, archive them:
-cd docs && mv session-YYYY-MM-DD archive/sessions/
-
-# Update docs/archive/sessions/README.md with archived session info
-```
-
-**Keep in docs/ root:**
-- Last 2-3 active sessions only
-- Current work-in-progress
-
-**Move to archive when:**
-- ✅ Content consolidated into permanent docs (ADRs, reference docs)
-- ✅ Key findings captured elsewhere
-- ✅ No longer actively referenced
-- ✅ Older than ~2 weeks
-
-**Benefits:**
-- Clean docs/ directory
-- Recent sessions easily discoverable
-- Historical sessions preserved but not cluttering
-- Clear signal of what's current vs historical
+1. **Combine overlapping content** - Review documents for redundancy
+2. **Organize into subdirectories** - `docs/session-YYYY-MM-DD/` for session work
+3. **Session archival** - Move to `docs/archive/sessions/` after ~2 weeks
+4. **Keep docs/ root clean** - Only last 2-3 active sessions + permanent docs
 
 **Cleanup checklist before ending session:**
 - [ ] Consolidate overlapping documents
 - [ ] Move session-specific docs to session folder
-- [ ] Move technical docs to appropriate subdirectories  
 - [ ] Delete obsolete/temporary documents
-- [ ] Update docs/README.md with navigation
-- [ ] Create session README summarizing work
-- [ ] **Check for sessions older than 2 weeks and archive them**
+- [ ] Update docs/README.md
+- [ ] Archive sessions older than 2 weeks
 
-## Project Root Organization Rules
+---
 
-**Keep project root clean:**
+## General Guidelines
 
-1. **Generated reports** - Keep in root if they show current state
-   - `comparison_report.html` - Test comparison (useful for viewing)
-   - `html_gallery.html` - Rendering gallery (useful for viewing)
-   - `template_coverage_report.html` - Template coverage (useful for viewing)
-   - These are snapshots showing current system state
-
-2. **No loose markdown files in root** - Except:
-   - README.md
-   - CHANGELOG.md
-   - LICENSE
-   - CONTRIBUTING.md (if exists)
-   - PARSER_TODO.md, SERVER_README.md (project docs)
-
-3. **Temporary files** - Add to .gitignore:
-   - `tmp_*.html`, `tmp_*.pdf`
-   - Build artifacts
-   - Editor temp files
-
-## Aspirational Documentation Check
-
-**Periodically check that manual examples match parser implementation.**
-
-The Kleis manual may contain "aspirational" code examples - syntax that is
-documented but not yet implemented in the parser. Use this command to find them:
-
-```bash
-python3 scripts/validate_manual_examples.py --strict --verbose
-```
-
-**Options:**
-- `--strict`: Actually run `kleis --check` on each code block
-- `--verbose`: Show temp file paths and commands being run
-- `--show`: Display all extracted code blocks for review
-
-**What it catches:**
-- Unicode operators (∧, ∨) not yet in parser
-- `where` clauses in structures
-- Parameterized data types
-- Dot notation in imports
-- Any syntax in the book that the parser can't parse
-
-**Policy:**
-- Aspirational docs don't block pushing (pre-push hook uses non-strict mode)
-- Run `--strict` periodically to track implementation gaps
-- When implementing a feature, check if manual already documents it
-- When documenting a feature, ensure parser supports it first
-
-**Suggested frequency:** Run at start of each session or before major releases.
-
+- Follow user instructions carefully
+- Ask for clarification when uncertain
+- Be respectful of the user's workflow and preferences

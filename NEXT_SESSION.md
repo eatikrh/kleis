@@ -773,3 +773,122 @@ Clean, no workarounds, no parser changes needed.
 
 **Decision:** TBD. Document and revisit when users hit this.
 
+---
+
+## MCP Policy Engine: Tests, Bug Fix, Agent Proposition Synthesis ✅ DONE
+
+### Context
+
+The Kleis MCP server exposes 5 tools to LLM agents: `check_action`, `list_rules`, `explain_rule`, `describe_schema`, `evaluate`. Prior to this work there were **zero tests** for the MCP policy engine.
+
+### Tests Added (`tests/mcp_policy_test.rs`)
+
+**39 tests** covering the full MCP pipeline:
+
+| Category | Count | What's covered |
+|----------|-------|----------------|
+| Policy Loading | 3 | Empty policy, check functions, preconditions |
+| check_action | 8 | file_delete, file_create, file_edit, run_command, git_push, git_commit, unknown action, default allow |
+| Preconditions | 5 | before_*, multiple steps via `&&`, "none" → empty, conditional, preconditions with denied action |
+| evaluate_expression (concrete) | 5 | Function calls, arithmetic, parse errors, undefined functions |
+| evaluate_expression (Z3) | 2 | `∀(x : ℝ). x + 0 = x`, verifying policy function properties via Z3 |
+| describe_schema | 9 | Functions, structures, data types, params, empty, Kleis-syntax bodies, axiom rendering, verifiable propositions, propositions from axioms |
+| Synthesized proposition round-trip | 1 | Schema → pick proposition → evaluate it successfully |
+| list_rules / explain_rule | 3 | Listing, found, not found |
+| Real agent_policy.kleis | 1 | End-to-end with the actual policy file |
+
+### Bug Fixed: `"equals"` Missing from `apply_builtin`
+
+**Root cause:** The Kleis parser emits `"equals"` as the operator name for `=`, but `apply_builtin` in `evaluator.rs` only matched `"eq" | "=" | "=="`. The `"equals"` variant was missing.
+
+**Impact:** All equality comparisons in policy conditionals (`if force = 1`, `if path = "Cargo.lock"`, `if branch = "production"`) were **silently failing** — the condition never reduced to a boolean, so the conditional returned its full symbolic AST, which `is_allowed()` treated as `false`, denying everything by default.
+
+**Fix:** One-line change in `evaluator.rs`:
+
+```rust
+// Before
+"eq" | "=" | "==" => { ... }
+
+// After
+"eq" | "=" | "==" | "equals" => { ... }
+```
+
+**Note:** `eval_assert` (line 1284) already handled `"equals"` — the mismatch was only in `apply_builtin` (concrete evaluation path).
+
+### Agent Proposition Synthesis
+
+Enhanced the MCP so that an LLM agent can **infer semantics from the Kleis schema and synthesize Z3 propositions** to verify.
+
+#### The Agent's Reasoning Loop
+
+1. **`describe_schema`** → agent learns the domain vocabulary
+2. **Agent reasons** about function bodies and axioms (now in Kleis syntax)
+3. **Agent synthesizes a proposition** → sends to `evaluate`
+4. **Kleis routes to Z3** automatically for ∀/∃ claims → returns VERIFIED/DISPROVED
+
+#### Changes to `describe_schema` (policy.rs)
+
+| Before | After |
+|--------|-------|
+| Axiom propositions: Rust `Debug` format (`Operation { name: "equals", ... }`) | **Kleis syntax** via `PrettyPrinter` (`∀(x : M). combine(unit, x) = x`) |
+| Functions: name + param names only | **Full body** + **complete `define` statement** in Kleis syntax |
+| No guidance for the agent | **`verifiable_propositions`** array — synthesized examples inferred from schema |
+
+The `synthesize_propositions` method generates:
+- For each `check_*` function: ∀-quantified "always allowed?" and "always denied?" propositions
+- For each `check_*` function: concrete spot-check with sample arguments
+- For each structure axiom: the axiom's Kleis expression as a verifiable proposition
+
+#### Changes to `handle_describe_schema` (server.rs)
+
+The server now renders a **rich Markdown document** the agent can reason from, with sections for:
+- Structures (with operations and axioms in Kleis syntax)
+- Data types (with variants)
+- Policy check functions (full Kleis source in code blocks)
+- Precondition functions (full Kleis source)
+- Verifiable propositions (with hints: `[verify]` vs `[evaluate]`)
+- Guidance on synthesizing custom propositions
+
+#### Changes to `evaluate` tool description (protocol.rs)
+
+Added a **syntax guide** teaching the agent:
+- Universal/existential quantifiers: `∀(x : Type). ...`, `∃(x : Type). ...`
+- Equality: `a = b`
+- Logical connectives: `and(a, b)`, `or(a, b)`, `implies(a, b)`, `not(a)`
+- String operations: `hasPrefix(s, p)`, `contains(s, sub)`
+- Recommended workflow: `describe_schema` → pick/synthesize proposition → `evaluate`
+
+#### Example: Full Round-Trip (tested)
+
+```
+Agent calls describe_schema → sees:
+  define check_git_push(branch, force) = if force = 1 then "deny" else "allow"
+
+  verifiable_propositions:
+    - ∀(branch : String, force : String). check_git_push(branch, force) = "allow"
+    - ∀(branch : String, force : String). check_git_push(branch, force) = "deny"
+    - check_git_push("test_branch", 1)
+
+Agent synthesizes: ∀(b : String). check_git_push(b, 1) = "deny"
+Agent calls evaluate with that proposition
+Kleis detects ∀ → routes to eval_assert → Z3
+Result: ✅ VERIFIED
+```
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `src/evaluator.rs` | Added `"equals"` to `apply_builtin` match arm |
+| `src/mcp/policy.rs` | `describe_schema`: Kleis-syntax rendering, function bodies, `synthesize_propositions` |
+| `src/mcp/server.rs` | `handle_describe_schema`: rich Markdown output with all sections |
+| `src/mcp/protocol.rs` | `evaluate` tool: expanded description with syntax guide and workflow |
+| `tests/mcp_policy_test.rs` | **New file** — 39 tests for the full MCP pipeline |
+
+### Test Results
+
+- **39 MCP policy tests**: all pass (including 2 Z3 proposition verification tests)
+- **830 library tests**: all pass (no regressions from `"equals"` fix)
+- **39 eval_concrete tests**: all pass
+
+

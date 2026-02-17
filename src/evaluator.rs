@@ -928,6 +928,22 @@ impl Evaluator {
         self.functions.keys().cloned().collect()
     }
 
+    /// Verify a proposition (public wrapper around eval_assert).
+    ///
+    /// Tries concrete evaluation first; falls back to Z3 for quantified
+    /// or symbolic expressions. This is the same pipeline that `assert()`
+    /// uses inside example blocks.
+    ///
+    /// Returns the `AssertResult` which may be:
+    /// - `Passed` — concrete evaluation confirmed truth
+    /// - `Verified` — Z3 proved the proposition
+    /// - `Failed` — concrete evaluation returned false
+    /// - `Disproved { counterexample }` — Z3 found a counterexample
+    /// - `Unknown(msg)` — could not determine
+    pub fn verify_proposition(&self, condition: &Expression) -> AssertResult {
+        self.eval_assert(condition)
+    }
+
     // =========================================================================
     // Definition Removal (for :unload/:reload/:reset)
     // =========================================================================
@@ -2674,7 +2690,7 @@ impl Evaluator {
             }
 
             // === Comparison ===
-            "eq" | "=" | "==" => {
+            "eq" | "=" | "==" | "equals" => {
                 if args.len() != 2 {
                     return Ok(None);
                 }
