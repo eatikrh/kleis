@@ -2511,7 +2511,17 @@ impl<'r> Z3Backend<'r> {
             "re_empty" | "re_none" => Ok(Dynamic::from_ast(&z3::ast::Regexp::empty())),
 
             // re_allchar() — matches any single character
-            "re_allchar" | "re_any" => Ok(Dynamic::from_ast(&z3::ast::Regexp::allchar())),
+            // Use re_range('\x00', '\xff') for portability across Z3 versions
+            // (Z3_mk_re_allchar requires Z3 ≥ 4.8.13, not available on all CI runners)
+            "re_allchar" | "re_any" => {
+                // Use union of two ranges to cover full Latin-1 without multi-byte encoding issues:
+                // U+0001..U+007F (ASCII) ∪ U+0080..U+00FF (Latin-1 supplement)
+                let ascii = z3::ast::Regexp::range(&'\x01', &'\x7f');
+                let latin1 = z3::ast::Regexp::range(&'\u{80}', &'\u{ff}');
+                Ok(Dynamic::from_ast(&z3::ast::Regexp::union(&[
+                    &ascii, &latin1,
+                ])))
+            }
 
             // re_loop(re, lo, hi) — matches re between lo and hi times
             "re_loop" => {

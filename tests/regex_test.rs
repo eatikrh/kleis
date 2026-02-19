@@ -710,6 +710,7 @@ fn test_re_allchar_single_char() {
     // "x" (single char) matches
     let expr = op("matches", vec![str_lit("x"), op("re_allchar", vec![])]);
     let result = backend.verify_axiom(&expr).unwrap();
+    println!("   DEBUG re_allchar matches 'x': {:?}", result);
     assert!(matches!(
         result,
         VerificationResult::Valid | VerificationResult::ValidWithWitness { .. }
