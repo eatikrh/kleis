@@ -136,8 +136,17 @@ define check_git_push(branch, force) =
 // Git Commit Rules
 // ============================================================================
 
-// Rule: Always allow commits (the pre-push hook handles quality)
-define check_git_commit(description) = "allow"
+// Rule: Commit messages must be ASCII-only (no emojis, no Unicode decorations)
+//   Enforced via Z3 regex: isAscii checks every character is in printable ASCII range [ -~]
+//   This ensures clean, grep-friendly, cross-platform commit messages.
+//
+// Verifiable:
+//   ∀(d : String). implies(check_git_commit(d) = "allow", isAscii(d))   → should be VERIFIED
+//   check_git_commit("fix: resolve parsing bug")                         → "allow"
+//   check_git_commit("🎉 initial commit")                               → "deny"
+define check_git_commit(description) =
+    if isAscii(description) then "allow"
+    else "deny"
 
 
 // ============================================================================

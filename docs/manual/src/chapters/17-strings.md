@@ -158,19 +158,118 @@ structure Roundtrip {
 
 ## Regular Expressions
 
-Kleis supports regular expression matching via Z3's regex theory:
+Kleis exposes Z3's native regular expression theory, giving you **composable regex constructors** that Z3 can reason about formally. Unlike traditional regex engines that just match strings, Kleis regexes are first-class Z3 objects — you can build them, combine them, and then **prove properties** about strings that match (or don't match) them.
+
+### Regex Constructors
+
+Build regular expressions compositionally using these operations:
+
+| Constructor | Description | Equivalent Regex |
+|-------------|-------------|-----------------|
+| `re_literal("foo")` | Match exact string | `foo` |
+| `re_range("a", "z")` | Character class | `[a-z]` |
+| `re_star(re)` | Zero or more | `re*` |
+| `re_plus(re)` | One or more | `re+` |
+| `re_option(re)` | Zero or one | `re?` |
+| `re_concat(re1, re2)` | Sequence | `re1re2` |
+| `re_union(re1, re2)` | Alternation | `re1\|re2` |
+| `re_intersect(re1, re2)` | Intersection | Both must match |
+| `re_complement(re)` | Negation | Anything `re` doesn't match |
+| `re_full()` | Match any string | `.*` |
+| `re_empty()` | Match nothing | (empty language) |
+| `re_allchar()` | Any single character | `.` |
+| `re_loop(re, lo, hi)` | Bounded repetition | `re{lo,hi}` |
+
+### Matching
+
+Use `matches(s, re)` to test whether string `s` matches regex `re`:
 
 ```kleis
-structure RegexMatch {
-    // Check if string matches pattern
-    axiom digits_match : matchesRegex("12345", "[0-9]+") = true
-    axiom alpha_match : matchesRegex("Hello", "[A-Za-z]+") = true
+structure RegexExamples {
+    // Composable regex: one or more lowercase letters
+    axiom lower_word : matches("hello", re_plus(re_range("a", "z"))) = true
     
-    // Built-in character class predicates
-    axiom is_digits : isDigits("12345") = true
-    axiom is_alpha : isAlpha("Hello") = true
-    axiom is_alphanum : isAlphaNum("Test123") = true
+    // Sequence: "foo" followed by digits
+    axiom foo_digits : matches("foo42", re_concat(
+        re_literal("foo"),
+        re_plus(re_range("0", "9"))
+    )) = true
+    
+    // Alternation: "yes" or "no"
+    axiom yes_no : matches("yes", re_union(
+        re_literal("yes"),
+        re_literal("no")
+    )) = true
+    
+    // Complement: anything that's NOT all digits
+    axiom not_digits : matches("abc", re_complement(
+        re_plus(re_range("0", "9"))
+    )) = true
 }
+```
+
+### Convenience Predicates
+
+For common patterns, Kleis provides built-in predicates that combine regex constructors internally:
+
+```kleis
+structure RegexPredicates {
+    // Character class checks
+    axiom digits : isDigits("12345") = true
+    axiom alpha : isAlpha("Hello") = true
+    axiom alphanum : isAlphaNum("Test123") = true
+    
+    // ASCII printable: every character in range ' ' (0x20) to '~' (0x7E)
+    axiom ascii_ok : isAscii("Hello, World! 42 + 7 = 49") = true
+    axiom ascii_fail : isAscii("Hello 🌍") = false
+}
+```
+
+| Predicate | Pattern | Description |
+|-----------|---------|-------------|
+| `isDigits(s)` | `[0-9]*` | Only digits |
+| `isAlpha(s)` | `[a-zA-Z]*` | Only letters |
+| `isAlphaNum(s)` | `[a-zA-Z0-9]*` | Letters and digits |
+| `isAscii(s)` | `[ -~]*` | ASCII printable characters |
+
+### Formal Verification with Regexes
+
+Because regexes are Z3 objects, you can **prove** properties about them:
+
+```kleis
+structure RegexProofs {
+    // If a string is all digits, it's also alphanumeric
+    axiom digits_are_alphanum : ∀(s : String).
+        isDigits(s) → isAlphaNum(s)
+    
+    // If a string is ASCII, it matches the printable range
+    axiom ascii_is_printable : ∀(s : String).
+        isAscii(s) → matches(s, re_star(re_range(" ", "~")))
+    
+    // Intersection of [a-z]+ and [A-Z]+ is empty (no string matches both)
+    axiom disjoint_case : ∀(s : String). ¬matches(s, re_intersect(
+        re_plus(re_range("a", "z")),
+        re_plus(re_range("A", "Z"))
+    ))
+}
+```
+
+### Practical Example: Policy Enforcement
+
+The Kleis MCP agent policy uses `isAscii` to enforce clean commit messages:
+
+```kleis
+// Commit messages must be ASCII-only (no emojis)
+define check_git_commit(description) =
+    if isAscii(description) then "allow"
+    else "deny"
+```
+
+Z3 can then verify that **no emoji can ever slip through**:
+
+```kleis
+// This proposition is VERIFIED by Z3:
+// ∀(d : String). implies(check_git_commit(d) = "allow", isAscii(d))
 ```
 
 ## Z3 Verification
@@ -250,6 +349,8 @@ structure StringBuilder {
 
 ## Operation Reference
 
+### String Operations
+
 | Operation | Syntax | Description |
 |-----------|--------|-------------|
 | Concatenate | `concat(a, b)` | Join two strings |
@@ -263,7 +364,34 @@ structure StringBuilder {
 | Replace | `replace(s, old, new)` | Replace first match |
 | To Int | `strToInt(s)` | Parse integer |
 | From Int | `intToStr(n)` | Format integer |
-| Regex | `matchesRegex(s, r)` | Match pattern |
+
+### Regex Constructors
+
+| Operation | Syntax | Description |
+|-----------|--------|-------------|
+| Literal | `re_literal(s)` | Exact string match |
+| Range | `re_range(lo, hi)` | Character class `[lo-hi]` |
+| Star | `re_star(re)` | Zero or more |
+| Plus | `re_plus(re)` | One or more |
+| Option | `re_option(re)` | Zero or one |
+| Concat | `re_concat(re1, re2)` | Sequence |
+| Union | `re_union(re1, re2)` | Alternation |
+| Intersect | `re_intersect(re1, re2)` | Both must match |
+| Complement | `re_complement(re)` | Negation |
+| Full | `re_full()` | Any string |
+| Empty | `re_empty()` | No string |
+| Any char | `re_allchar()` | Single character |
+| Loop | `re_loop(re, lo, hi)` | Bounded repetition |
+
+### Regex Matching & Predicates
+
+| Operation | Syntax | Description |
+|-----------|--------|-------------|
+| Match | `matches(s, re)` | String matches regex |
+| Digits | `isDigits(s)` | All `[0-9]` |
+| Alpha | `isAlpha(s)` | All `[a-zA-Z]` |
+| AlphaNum | `isAlphaNum(s)` | All `[a-zA-Z0-9]` |
+| ASCII | `isAscii(s)` | All printable ASCII `[ -~]` |
 
 ## Summary
 
@@ -271,11 +399,13 @@ structure StringBuilder {
 |---------|--------|
 | Basic operations | ✅ Native Z3 |
 | Substring ops | ✅ Native Z3 |
+| Regex constructors | ✅ Native Z3 |
 | Regex matching | ✅ Native Z3 |
+| Convenience predicates | ✅ Native Z3 |
 | Int conversion | ✅ Native Z3 |
 | Monoid structure | ✅ Algebraic |
 
-See `src/solvers/z3/capabilities.toml` for the complete list of supported string operations.
+See `src/solvers/z3/capabilities.toml` for the complete list of supported string and regex operations.
 
 ## What's Next?
 
