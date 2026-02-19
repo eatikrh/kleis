@@ -2932,6 +2932,63 @@ impl Evaluator {
                 }
             }
 
+            // === String predicates (concrete evaluation of Z3 regex primitives) ===
+            // These mirror the Z3 regex-based predicates so that the evaluator
+            // can reduce them without invoking Z3 (needed for check_action).
+            "isAscii" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some(s) = self.as_string(&args[0]) {
+                    // ASCII printable: every char in 0x20..=0x7E (space through tilde)
+                    let ok = s.chars().all(|c| (' '..='~').contains(&c));
+                    Ok(Some(Expression::Object(
+                        if ok { "true" } else { "false" }.to_string(),
+                    )))
+                } else {
+                    Ok(None)
+                }
+            }
+            "isDigits" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some(s) = self.as_string(&args[0]) {
+                    let ok = !s.is_empty() && s.chars().all(|c| c.is_ascii_digit());
+                    Ok(Some(Expression::Object(
+                        if ok { "true" } else { "false" }.to_string(),
+                    )))
+                } else {
+                    Ok(None)
+                }
+            }
+            "isAlpha" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some(s) = self.as_string(&args[0]) {
+                    let ok = !s.is_empty() && s.chars().all(|c| c.is_ascii_alphabetic());
+                    Ok(Some(Expression::Object(
+                        if ok { "true" } else { "false" }.to_string(),
+                    )))
+                } else {
+                    Ok(None)
+                }
+            }
+            "isAlphaNum" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some(s) = self.as_string(&args[0]) {
+                    let ok = !s.is_empty() && s.chars().all(|c| c.is_ascii_alphanumeric());
+                    Ok(Some(Expression::Object(
+                        if ok { "true" } else { "false" }.to_string(),
+                    )))
+                } else {
+                    Ok(None)
+                }
+            }
+
             // === List operations ===
             "Cons" | "cons" => {
                 // Cons(head, tail) - construct a list

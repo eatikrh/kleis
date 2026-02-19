@@ -189,6 +189,21 @@ impl<'r> Z3Backend<'r> {
         }
     }
 
+    /// Helper function to convert a Dynamic to a Regexp.
+    /// Z3's Regexp sort is used for regular expression AST nodes.
+    /// We check the sort kind to ensure the Dynamic actually wraps a regex.
+    fn dynamic_to_regexp(d: &Dynamic) -> Option<z3::ast::Regexp> {
+        use z3::SortKind;
+        let sort = d.get_sort();
+        // Z3 regex sort kind is Re
+        if sort.kind() == SortKind::RE {
+            let ctx = &z3::Context::thread_local();
+            unsafe { Some(z3::ast::Regexp::wrap(ctx, d.get_z3_ast())) }
+        } else {
+            None
+        }
+    }
+
     /// Create a new Z3 backend
     ///
     /// # Arguments
@@ -2312,52 +2327,248 @@ impl<'r> Z3Backend<'r> {
             // ============================================
             // REGULAR EXPRESSION OPERATIONS
             // ============================================
+            //
+            // Two levels of API:
+            //   1. Composable regex constructors (re_literal, re_range, re_star, etc.)
+            //      These return Regexp-typed Dynamic values that can be combined.
+            //   2. Convenience predicates (isDigits, isAlpha, isAscii, etc.)
+            //      These build regexes internally and return Bool.
+            //
+            // Usage:
+            //   matches(s, re_plus(re_range("a", "z")))   — composable
+            //   isAscii(s)                                  — convenience
+            // ============================================
 
-            // Check if string matches regex: matchesRegex("hello", "hello")
-            // Note: The pattern is a literal string that must match exactly
-            // For more complex patterns, use the isDigits/isAlpha helpers
+            // --- String-to-regex matching ---
+            // matches(s, re) — check if string s matches regex re
+            // Accepts either a composed regex (Dynamic with Re sort) or a
+            // literal string pattern (for backward compatibility).
             "matchesRegex" | "matches" | "str_in_re" => {
                 if args.len() != 2 {
-                    return Err("matchesRegex requires 2 arguments (string, pattern)".to_string());
+                    return Err("matches requires 2 arguments (string, regex)".to_string());
                 }
                 let s = Self::dynamic_to_string(&args[0])
-                    .ok_or_else(|| "matchesRegex first argument must be a string".to_string())?;
-                let pattern = Self::dynamic_to_string(&args[1])
-                    .ok_or_else(|| "matchesRegex second argument must be a string".to_string())?;
-                // Get the pattern as a Rust string and create a literal regex
-                // Note: This treats the pattern as a literal string match
-                if let Some(pattern_str) = pattern.as_string() {
-                    let re = z3::ast::Regexp::literal(&pattern_str);
+                    .ok_or_else(|| "matches first argument must be a string".to_string())?;
+                // Try as composed regex first
+                if let Some(re) = Self::dynamic_to_regexp(&args[1]) {
                     Ok(s.regex_matches(&re).into())
+                } else if let Some(pattern) = Self::dynamic_to_string(&args[1]) {
+                    // Backward compatible: treat string as literal regex
+                    if let Some(pattern_str) = pattern.as_string() {
+                        let re = z3::ast::Regexp::literal(&pattern_str);
+                        Ok(s.regex_matches(&re).into())
+                    } else {
+                        // Symbolic string — use uninterpreted function
+                        let func_decl = self.declare_uninterpreted("matchesRegex", 2);
+                        let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                        Ok(func_decl.apply(&ast_args))
+                    }
                 } else {
-                    // Pattern is symbolic - use uninterpreted function
-                    let func_decl = self.declare_uninterpreted("matchesRegex", 2);
-                    let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
-                    Ok(func_decl.apply(&ast_args))
+                    Err("matches second argument must be a regex or string".to_string())
                 }
             }
 
-            // Check if string contains only digits: isDigits("123") = True
+            // --- Regex constructors (composable) ---
+
+            // re_literal(s) — regex matching exactly the string s
+            "re_literal" | "re_str" | "str_to_re" => {
+                if args.len() != 1 {
+                    return Err("re_literal requires 1 argument (string)".to_string());
+                }
+                let s = Self::dynamic_to_string(&args[0])
+                    .ok_or_else(|| "re_literal argument must be a string".to_string())?;
+                if let Some(s_str) = s.as_string() {
+                    Ok(Dynamic::from_ast(&z3::ast::Regexp::literal(&s_str)))
+                } else {
+                    Err("re_literal requires a concrete string".to_string())
+                }
+            }
+
+            // re_range(lo, hi) — character class [lo-hi]
+            // lo and hi are single-character strings, e.g. re_range("a", "z")
+            "re_range" => {
+                if args.len() != 2 {
+                    return Err("re_range requires 2 arguments (lo_char, hi_char)".to_string());
+                }
+                let lo = Self::dynamic_to_string(&args[0])
+                    .and_then(|s| s.as_string())
+                    .ok_or_else(|| {
+                        "re_range first argument must be a single-char string".to_string()
+                    })?;
+                let hi = Self::dynamic_to_string(&args[1])
+                    .and_then(|s| s.as_string())
+                    .ok_or_else(|| {
+                        "re_range second argument must be a single-char string".to_string()
+                    })?;
+                let lo_char = lo
+                    .chars()
+                    .next()
+                    .ok_or_else(|| "re_range lo must be a non-empty string".to_string())?;
+                let hi_char = hi
+                    .chars()
+                    .next()
+                    .ok_or_else(|| "re_range hi must be a non-empty string".to_string())?;
+                Ok(Dynamic::from_ast(&z3::ast::Regexp::range(
+                    &lo_char, &hi_char,
+                )))
+            }
+
+            // re_star(re) — Kleene star: zero or more repetitions
+            "re_star" => {
+                if args.len() != 1 {
+                    return Err("re_star requires 1 argument (regex)".to_string());
+                }
+                let re = Self::dynamic_to_regexp(&args[0])
+                    .ok_or_else(|| "re_star argument must be a regex".to_string())?;
+                Ok(Dynamic::from_ast(&re.star()))
+            }
+
+            // re_plus(re) — one or more repetitions
+            "re_plus" => {
+                if args.len() != 1 {
+                    return Err("re_plus requires 1 argument (regex)".to_string());
+                }
+                let re = Self::dynamic_to_regexp(&args[0])
+                    .ok_or_else(|| "re_plus argument must be a regex".to_string())?;
+                Ok(Dynamic::from_ast(&re.plus()))
+            }
+
+            // re_option(re) — optional: zero or one
+            "re_option" | "re_opt" => {
+                if args.len() != 1 {
+                    return Err("re_option requires 1 argument (regex)".to_string());
+                }
+                let re = Self::dynamic_to_regexp(&args[0])
+                    .ok_or_else(|| "re_option argument must be a regex".to_string())?;
+                Ok(Dynamic::from_ast(&re.option()))
+            }
+
+            // re_concat(re1, re2, ...) — sequence: re1 followed by re2
+            "re_concat" => {
+                if args.len() < 2 {
+                    return Err("re_concat requires at least 2 arguments".to_string());
+                }
+                let regexes: Result<Vec<z3::ast::Regexp>, String> = args
+                    .iter()
+                    .map(|a| {
+                        Self::dynamic_to_regexp(a)
+                            .ok_or_else(|| "re_concat arguments must be regexes".to_string())
+                    })
+                    .collect();
+                let regexes = regexes?;
+                let refs: Vec<&z3::ast::Regexp> = regexes.iter().collect();
+                Ok(Dynamic::from_ast(&z3::ast::Regexp::concat(&refs)))
+            }
+
+            // re_union(re1, re2, ...) — alternation: re1 or re2
+            "re_union" => {
+                if args.len() < 2 {
+                    return Err("re_union requires at least 2 arguments".to_string());
+                }
+                let regexes: Result<Vec<z3::ast::Regexp>, String> = args
+                    .iter()
+                    .map(|a| {
+                        Self::dynamic_to_regexp(a)
+                            .ok_or_else(|| "re_union arguments must be regexes".to_string())
+                    })
+                    .collect();
+                let regexes = regexes?;
+                let refs: Vec<&z3::ast::Regexp> = regexes.iter().collect();
+                Ok(Dynamic::from_ast(&z3::ast::Regexp::union(&refs)))
+            }
+
+            // re_intersect(re1, re2, ...) — intersection: matches both
+            "re_intersect" | "re_inter" => {
+                if args.len() < 2 {
+                    return Err("re_intersect requires at least 2 arguments".to_string());
+                }
+                let regexes: Result<Vec<z3::ast::Regexp>, String> = args
+                    .iter()
+                    .map(|a| {
+                        Self::dynamic_to_regexp(a)
+                            .ok_or_else(|| "re_intersect arguments must be regexes".to_string())
+                    })
+                    .collect();
+                let regexes = regexes?;
+                let refs: Vec<&z3::ast::Regexp> = regexes.iter().collect();
+                Ok(Dynamic::from_ast(&z3::ast::Regexp::intersect(&refs)))
+            }
+
+            // re_complement(re) — matches anything re doesn't
+            "re_complement" | "re_comp" => {
+                if args.len() != 1 {
+                    return Err("re_complement requires 1 argument (regex)".to_string());
+                }
+                let re = Self::dynamic_to_regexp(&args[0])
+                    .ok_or_else(|| "re_complement argument must be a regex".to_string())?;
+                Ok(Dynamic::from_ast(&re.complement()))
+            }
+
+            // re_full() — matches any string
+            "re_full" | "re_all" => Ok(Dynamic::from_ast(&z3::ast::Regexp::full())),
+
+            // re_empty() — matches no string
+            "re_empty" | "re_none" => Ok(Dynamic::from_ast(&z3::ast::Regexp::empty())),
+
+            // re_allchar() — matches any single character
+            // Use re_range('\x00', '\xff') for portability across Z3 versions
+            // (Z3_mk_re_allchar requires Z3 ≥ 4.8.13, not available on all CI runners)
+            "re_allchar" | "re_any" => {
+                // Use union of two ranges to cover full Latin-1 without multi-byte encoding issues:
+                // U+0001..U+007F (ASCII) ∪ U+0080..U+00FF (Latin-1 supplement)
+                let ascii = z3::ast::Regexp::range(&'\x01', &'\x7f');
+                let latin1 = z3::ast::Regexp::range(&'\u{80}', &'\u{ff}');
+                Ok(Dynamic::from_ast(&z3::ast::Regexp::union(&[
+                    &ascii, &latin1,
+                ])))
+            }
+
+            // re_loop(re, lo, hi) — matches re between lo and hi times
+            "re_loop" => {
+                if args.len() != 3 {
+                    return Err("re_loop requires 3 arguments (regex, lo, hi)".to_string());
+                }
+                let re = Self::dynamic_to_regexp(&args[0])
+                    .ok_or_else(|| "re_loop first argument must be a regex".to_string())?;
+                let lo = args[1]
+                    .as_int()
+                    .ok_or_else(|| "re_loop second argument (lo) must be an integer".to_string())?;
+                let hi = args[2]
+                    .as_int()
+                    .ok_or_else(|| "re_loop third argument (hi) must be an integer".to_string())?;
+                // Extract concrete values (Z3 loop requires u32)
+                let lo_val = lo
+                    .as_u64()
+                    .ok_or_else(|| "re_loop lo must be a concrete integer".to_string())?
+                    as u32;
+                let hi_val = hi
+                    .as_u64()
+                    .ok_or_else(|| "re_loop hi must be a concrete integer".to_string())?
+                    as u32;
+                Ok(Dynamic::from_ast(&re.r#loop(lo_val, hi_val)))
+            }
+
+            // --- Convenience predicates (built-in regex patterns) ---
+
+            // isDigits(s) — string contains only digits [0-9]*
             "isDigits" | "is_digits" => {
                 if args.len() != 1 {
                     return Err("isDigits requires 1 argument".to_string());
                 }
                 let s = Self::dynamic_to_string(&args[0])
                     .ok_or_else(|| "isDigits argument must be a string".to_string())?;
-                // Regex for zero or more digits: [0-9]*
                 let digit = z3::ast::Regexp::range(&'0', &'9');
                 let digits_re = z3::ast::Regexp::star(&digit);
                 Ok(s.regex_matches(&digits_re).into())
             }
 
-            // Check if string contains only letters: isAlpha("abc") = True
+            // isAlpha(s) — string contains only letters [a-zA-Z]*
             "isAlpha" | "is_alpha" => {
                 if args.len() != 1 {
                     return Err("isAlpha requires 1 argument".to_string());
                 }
                 let s = Self::dynamic_to_string(&args[0])
                     .ok_or_else(|| "isAlpha argument must be a string".to_string())?;
-                // Regex for letters: [a-zA-Z]*
                 let lower = z3::ast::Regexp::range(&'a', &'z');
                 let upper = z3::ast::Regexp::range(&'A', &'Z');
                 let letter = z3::ast::Regexp::union(&[&lower, &upper]);
@@ -2365,20 +2576,33 @@ impl<'r> Z3Backend<'r> {
                 Ok(s.regex_matches(&letters_re).into())
             }
 
-            // Check if string is alphanumeric: isAlphaNum("abc123") = True
+            // isAlphaNum(s) — string contains only [a-zA-Z0-9]*
             "isAlphaNum" | "is_alphanum" => {
                 if args.len() != 1 {
                     return Err("isAlphaNum requires 1 argument".to_string());
                 }
                 let s = Self::dynamic_to_string(&args[0])
                     .ok_or_else(|| "isAlphaNum argument must be a string".to_string())?;
-                // Regex for alphanumeric: [a-zA-Z0-9]*
                 let lower = z3::ast::Regexp::range(&'a', &'z');
                 let upper = z3::ast::Regexp::range(&'A', &'Z');
                 let digit = z3::ast::Regexp::range(&'0', &'9');
                 let alphanum = z3::ast::Regexp::union(&[&lower, &upper, &digit]);
                 let alphanum_re = z3::ast::Regexp::star(&alphanum);
                 Ok(s.regex_matches(&alphanum_re).into())
+            }
+
+            // isAscii(s) — string contains only ASCII printable characters
+            // ASCII printable range: space (0x20 = ' ') through tilde (0x7E = '~')
+            "isAscii" | "is_ascii" | "isAsciiPrintable" | "is_ascii_printable" => {
+                if args.len() != 1 {
+                    return Err("isAscii requires 1 argument".to_string());
+                }
+                let s = Self::dynamic_to_string(&args[0])
+                    .ok_or_else(|| "isAscii argument must be a string".to_string())?;
+                // ASCII printable: [ -~] which is 0x20 to 0x7E
+                let ascii_char = z3::ast::Regexp::range(&' ', &'~');
+                let ascii_re = z3::ast::Regexp::star(&ascii_char);
+                Ok(s.regex_matches(&ascii_re).into())
             }
 
             // ============================================

@@ -146,16 +146,45 @@ int_to_str = { arity = 1, theory = "String", native = true }
 fromInt = { arity = 1, theory = "String", native = true }
 intToString = { arity = 1, theory = "String", native = true }
 
-# Regular expression operations
-matchesRegex = { arity = 2, theory = "Regex", native = true }
-matches = { arity = 2, theory = "Regex", native = true }
-str_in_re = { arity = 2, theory = "Regex", native = true }
-isDigits = { arity = 1, theory = "Regex", native = true }
-is_digits = { arity = 1, theory = "Regex", native = true }
-isAlpha = { arity = 1, theory = "Regex", native = true }
-is_alpha = { arity = 1, theory = "Regex", native = true }
-isAlphaNum = { arity = 1, theory = "Regex", native = true }
-is_alphanum = { arity = 1, theory = "Regex", native = true }
+# Regular expression operations — matching
+matchesRegex = { arity = 2, theory = "Regex", native = true, description = "Check if string matches regex: matches(s, re)" }
+matches = { arity = 2, theory = "Regex", native = true, description = "Alias for matchesRegex" }
+str_in_re = { arity = 2, theory = "Regex", native = true, description = "SMT-LIB style alias" }
+
+# Regular expression constructors (composable)
+re_literal = { arity = 1, theory = "Regex", native = true, description = "Regex from literal string: re_literal(\"foo\")" }
+re_str = { arity = 1, theory = "Regex", native = true, description = "Alias for re_literal" }
+str_to_re = { arity = 1, theory = "Regex", native = true, description = "SMT-LIB style alias" }
+re_range = { arity = 2, theory = "Regex", native = true, description = "Character class: re_range(\"a\", \"z\") = [a-z]" }
+re_star = { arity = 1, theory = "Regex", native = true, description = "Kleene star: zero or more" }
+re_plus = { arity = 1, theory = "Regex", native = true, description = "One or more repetitions" }
+re_option = { arity = 1, theory = "Regex", native = true, description = "Optional: zero or one" }
+re_opt = { arity = 1, theory = "Regex", native = true, description = "Alias for re_option" }
+re_concat = { arity = 2, theory = "Regex", native = true, description = "Sequence: re1 then re2" }
+re_union = { arity = 2, theory = "Regex", native = true, description = "Alternation: re1 or re2" }
+re_intersect = { arity = 2, theory = "Regex", native = true, description = "Intersection: matches both" }
+re_inter = { arity = 2, theory = "Regex", native = true, description = "Alias for re_intersect" }
+re_complement = { arity = 1, theory = "Regex", native = true, description = "Complement: matches anything re doesn't" }
+re_comp = { arity = 1, theory = "Regex", native = true, description = "Alias for re_complement" }
+re_full = { arity = 0, theory = "Regex", native = true, description = "Matches any string" }
+re_all = { arity = 0, theory = "Regex", native = true, description = "Alias for re_full" }
+re_empty = { arity = 0, theory = "Regex", native = true, description = "Matches no string" }
+re_none = { arity = 0, theory = "Regex", native = true, description = "Alias for re_empty" }
+re_allchar = { arity = 0, theory = "Regex", native = true, description = "Matches any single character" }
+re_any = { arity = 0, theory = "Regex", native = true, description = "Alias for re_allchar" }
+re_loop = { arity = 3, theory = "Regex", native = true, description = "Bounded repetition: re_loop(re, lo, hi)" }
+
+# Regular expression convenience predicates
+isDigits = { arity = 1, theory = "Regex", native = true, description = "String is all digits [0-9]*" }
+is_digits = { arity = 1, theory = "Regex", native = true, description = "Alias for isDigits" }
+isAlpha = { arity = 1, theory = "Regex", native = true, description = "String is all letters [a-zA-Z]*" }
+is_alpha = { arity = 1, theory = "Regex", native = true, description = "Alias for isAlpha" }
+isAlphaNum = { arity = 1, theory = "Regex", native = true, description = "String is alphanumeric [a-zA-Z0-9]*" }
+is_alphanum = { arity = 1, theory = "Regex", native = true, description = "Alias for isAlphaNum" }
+isAscii = { arity = 1, theory = "Regex", native = true, description = "String is ASCII printable [ -~]*" }
+is_ascii = { arity = 1, theory = "Regex", native = true, description = "Alias for isAscii" }
+isAsciiPrintable = { arity = 1, theory = "Regex", native = true, description = "Alias for isAscii" }
+is_ascii_printable = { arity = 1, theory = "Regex", native = true, description = "Alias for isAscii" }
 
 # Complex number operations (ENCODED as Real pairs - NOT native Z3)
 # Z3 does NOT have a native Complex sort. We encode ℂ as (re: Real, im: Real)
