@@ -393,6 +393,110 @@ structure StringBuilder {
 | AlphaNum | `isAlphaNum(s)` | All `[a-zA-Z0-9]` |
 | ASCII | `isAscii(s)` | All printable ASCII `[ -~]` |
 
+## Why Strings Don't Need Kleis Axioms
+
+You may notice that `stdlib/text.kleis` declares string axioms like:
+
+```kleis
+structure TextOps {
+    axiom concat_assoc : ∀ a : String . ∀ b : String . ∀ c : String .
+        equals(concat(concat(a, b), c), concat(a, concat(b, c)))
+
+    axiom hasPrefix_empty : ∀ s : String .
+        equals(hasPrefix(s, ""), True)
+}
+```
+
+Yet when the MCP agent sends a proposition like `∀(s : String). implies(isDigits(s), isAlphaNum(s))` to Z3, **none of these axioms are loaded**. The MCP policy engine only loads the policy file — not stdlib. And it still works. Why?
+
+### Z3's Built-in String Theory
+
+Z3 has a **native string theory** (QF_SLIA — Quantifier-Free Strings and Linear Integer Arithmetic). It already knows the semantics of concatenation, length, prefix, suffix, contains, regex matching, and all the operations listed in this chapter. The Kleis Z3 backend translates operations directly to Z3's API:
+
+```
+Kleis expression          →  Z3 native operation
+─────────────────────────────────────────────────
+contains(s, "foo")        →  z3::ast::String::contains()
+hasPrefix(s, "bar")       →  z3::ast::String::prefix()
+isDigits(s)               →  regex_matches(s, re_plus(re_range("0","9")))
+matches(s, re_star(re))   →  z3::ast::String::regex_matches(Regexp::star())
+```
+
+Z3 doesn't learn that `concat("", s) = s` from a Kleis axiom — it already knows this as a built-in theorem of its string theory. The axiom in `stdlib/text.kleis` is **redundant for Z3** but serves other purposes.
+
+### Native Theories vs. Uninterpreted Functions
+
+This is the fundamental architectural distinction in Kleis's solver integration:
+
+| Domain | Z3 Knowledge | Needs Kleis Axioms? | Example |
+|--------|-------------|---------------------|---------|
+| **Strings** | Built-in native theory | ❌ No | `contains`, `hasPrefix`, `re_star` |
+| **Integers** | Built-in native theory | ❌ No | `+`, `*`, `<`, `≥` |
+| **Booleans** | Built-in native theory | ❌ No | `and`, `or`, `not`, `implies` |
+| **Bitvectors** | Built-in native theory | ❌ No | `bvand`, `bvxor`, `bvshl` |
+| **Tensors** | No built-in knowledge | ✅ Yes | `contract`, `trace`, `wedge` |
+| **Groups** | No built-in knowledge | ✅ Yes | `•`, `inv`, `e` |
+| **Manifolds** | No built-in knowledge | ✅ Yes | `christoffel`, `riemann` |
+
+When you write `axiom commutativity : ∀(x y : G). x • y = y • x` in a Group structure, that axiom is **essential** — Z3 has no built-in theory of abstract algebra. Without it, Z3 treats `•` as an uninterpreted function and can't prove anything about it. The axiom teaches Z3 the rule.
+
+But when you write `axiom concat_empty_right : ∀(s : String). concat(s, "") = s`, you're stating something Z3 already knows. The axiom is a **Kleis-level declaration**, not a Z3-level requirement.
+
+### A Note on What Axioms Are
+
+In general, axioms are **not** documentation — they are the primary mechanism by which Z3 learns the rules of a domain. When you write:
+
+```kleis
+structure AbelianGroup(G) {
+    axiom commutativity : ∀(x y : G). x • y = y • x
+}
+```
+
+This is the **only way** Z3 learns that `•` is commutative. Without it, `•` is an uninterpreted function — Z3 can't prove anything about it. Axioms are the substance of formal reasoning, not a comment beside it.
+
+Strings are a **special case**. Because Z3 has a built-in string theory, the axioms in `stdlib/text.kleis` happen to restate what Z3 already knows. They still serve purposes, but different ones than axioms in other domains:
+
+1. **Type checking** — The `structure TextOps` declares operations with type signatures (`operation concat : String → String → String`). The type checker uses these to verify that string operations are used correctly in `.kleis` files.
+
+2. **Machine-checked specification** — Kleis can verify its own string axioms against Z3 (`cargo test`). If someone writes an incorrect axiom, Z3 will disprove it. The stdlib is a formal contract that the implementation must satisfy.
+
+3. **Portability** — If a future solver backend doesn't have a native string theory, it would need these axioms to reason about strings. The axioms make the semantics explicit and backend-independent.
+
+4. **Uniformity** — Every domain in Kleis follows the same pattern: structures declare operations, axioms declare their properties. String axioms maintain this pattern even when Z3 doesn't strictly need them.
+
+### When You Would Need Axioms
+
+Custom string predicates that aren't hardcoded in the Z3 backend **do** need axioms. For example:
+
+```kleis
+// Z3 backend knows isDigits natively — no axiom needed for verification
+isDigits("123")  // → Z3 translates to regex_matches(s, re_plus(re_range("0","9")))
+
+// But a custom predicate is opaque to Z3 without a definition
+define isHexColor(s) = and(
+    strlen(s) = 7,
+    and(charAt(s, 0) = "#",
+        matches(substr(s, 1, 6), re_plus(
+            re_union(re_range("0", "9"),
+            re_union(re_range("a", "f"), re_range("A", "F")))
+        )))
+)
+```
+
+Here `isHexColor` is defined in terms of operations Z3 already knows, so Z3 can reason about it by expanding the definition. But if you declared `isHexColor` as an uninterpreted function (no body), Z3 would need axioms:
+
+```kleis
+structure HexColors {
+    operation isHexColor : String → Bool
+
+    // Without this axiom, Z3 knows nothing about isHexColor
+    axiom hex_length : ∀(s : String). isHexColor(s) → strlen(s) = 7
+    axiom hex_prefix : ∀(s : String). isHexColor(s) → charAt(s, 0) = "#"
+}
+```
+
+**Rule of thumb:** If an operation maps to a Z3 native theory, no axioms needed for verification. If it's an uninterpreted function, axioms are the only way Z3 learns its properties.
+
 ## Summary
 
 | Feature | Status |
