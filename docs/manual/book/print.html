@@ -44,7 +44,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-664ac972.js";
+            window.path_to_searchindex_js = "searchindex-10a9353d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-b275a7b0.js"></script>
@@ -6540,17 +6540,109 @@ define empty : String = ""
 }
 </code></pre>
 <h2 id="regular-expressions"><a class="header" href="#regular-expressions">Regular Expressions</a></h2>
-<p>Kleis supports regular expression matching via Z3’s regex theory:</p>
-<pre><code class="language-kleis">structure RegexMatch {
-    // Check if string matches pattern
-    axiom digits_match : matchesRegex("12345", "[0-9]+") = true
-    axiom alpha_match : matchesRegex("Hello", "[A-Za-z]+") = true
+<p>Kleis exposes Z3’s native regular expression theory, giving you <strong>composable regex constructors</strong> that Z3 can reason about formally. Unlike traditional regex engines that just match strings, Kleis regexes are first-class Z3 objects — you can build them, combine them, and then <strong>prove properties</strong> about strings that match (or don’t match) them.</p>
+<h3 id="regex-constructors"><a class="header" href="#regex-constructors">Regex Constructors</a></h3>
+<p>Build regular expressions compositionally using these operations:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Constructor</th><th>Description</th><th>Equivalent Regex</th></tr>
+</thead>
+<tbody>
+<tr><td><code>re_literal("foo")</code></td><td>Match exact string</td><td><code>foo</code></td></tr>
+<tr><td><code>re_range("a", "z")</code></td><td>Character class</td><td><code>[a-z]</code></td></tr>
+<tr><td><code>re_star(re)</code></td><td>Zero or more</td><td><code>re*</code></td></tr>
+<tr><td><code>re_plus(re)</code></td><td>One or more</td><td><code>re+</code></td></tr>
+<tr><td><code>re_option(re)</code></td><td>Zero or one</td><td><code>re?</code></td></tr>
+<tr><td><code>re_concat(re1, re2)</code></td><td>Sequence</td><td><code>re1re2</code></td></tr>
+<tr><td><code>re_union(re1, re2)</code></td><td>Alternation</td><td><code>re1|re2</code></td></tr>
+<tr><td><code>re_intersect(re1, re2)</code></td><td>Intersection</td><td>Both must match</td></tr>
+<tr><td><code>re_complement(re)</code></td><td>Negation</td><td>Anything <code>re</code> doesn’t match</td></tr>
+<tr><td><code>re_full()</code></td><td>Match any string</td><td><code>.*</code></td></tr>
+<tr><td><code>re_empty()</code></td><td>Match nothing</td><td>(empty language)</td></tr>
+<tr><td><code>re_allchar()</code></td><td>Any single character</td><td><code>.</code></td></tr>
+<tr><td><code>re_loop(re, lo, hi)</code></td><td>Bounded repetition</td><td><code>re{lo,hi}</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="matching"><a class="header" href="#matching">Matching</a></h3>
+<p>Use <code>matches(s, re)</code> to test whether string <code>s</code> matches regex <code>re</code>:</p>
+<pre><code class="language-kleis">structure RegexExamples {
+    // Composable regex: one or more lowercase letters
+    axiom lower_word : matches("hello", re_plus(re_range("a", "z"))) = true
     
-    // Built-in character class predicates
-    axiom is_digits : isDigits("12345") = true
-    axiom is_alpha : isAlpha("Hello") = true
-    axiom is_alphanum : isAlphaNum("Test123") = true
+    // Sequence: "foo" followed by digits
+    axiom foo_digits : matches("foo42", re_concat(
+        re_literal("foo"),
+        re_plus(re_range("0", "9"))
+    )) = true
+    
+    // Alternation: "yes" or "no"
+    axiom yes_no : matches("yes", re_union(
+        re_literal("yes"),
+        re_literal("no")
+    )) = true
+    
+    // Complement: anything that's NOT all digits
+    axiom not_digits : matches("abc", re_complement(
+        re_plus(re_range("0", "9"))
+    )) = true
 }
+</code></pre>
+<h3 id="convenience-predicates"><a class="header" href="#convenience-predicates">Convenience Predicates</a></h3>
+<p>For common patterns, Kleis provides built-in predicates that combine regex constructors internally:</p>
+<pre><code class="language-kleis">structure RegexPredicates {
+    // Character class checks
+    axiom digits : isDigits("12345") = true
+    axiom alpha : isAlpha("Hello") = true
+    axiom alphanum : isAlphaNum("Test123") = true
+    
+    // ASCII printable: every character in range ' ' (0x20) to '~' (0x7E)
+    axiom ascii_ok : isAscii("Hello, World! 42 + 7 = 49") = true
+    axiom ascii_fail : isAscii("Hello 🌍") = false
+}
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Predicate</th><th>Pattern</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>isDigits(s)</code></td><td><code>[0-9]*</code></td><td>Only digits</td></tr>
+<tr><td><code>isAlpha(s)</code></td><td><code>[a-zA-Z]*</code></td><td>Only letters</td></tr>
+<tr><td><code>isAlphaNum(s)</code></td><td><code>[a-zA-Z0-9]*</code></td><td>Letters and digits</td></tr>
+<tr><td><code>isAscii(s)</code></td><td><code>[ -~]*</code></td><td>ASCII printable characters</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="formal-verification-with-regexes"><a class="header" href="#formal-verification-with-regexes">Formal Verification with Regexes</a></h3>
+<p>Because regexes are Z3 objects, you can <strong>prove</strong> properties about them:</p>
+<pre><code class="language-kleis">structure RegexProofs {
+    // If a string is all digits, it's also alphanumeric
+    axiom digits_are_alphanum : ∀(s : String).
+        isDigits(s) → isAlphaNum(s)
+    
+    // If a string is ASCII, it matches the printable range
+    axiom ascii_is_printable : ∀(s : String).
+        isAscii(s) → matches(s, re_star(re_range(" ", "~")))
+    
+    // Intersection of [a-z]+ and [A-Z]+ is empty (no string matches both)
+    axiom disjoint_case : ∀(s : String). ¬matches(s, re_intersect(
+        re_plus(re_range("a", "z")),
+        re_plus(re_range("A", "Z"))
+    ))
+}
+</code></pre>
+<h3 id="practical-example-policy-enforcement"><a class="header" href="#practical-example-policy-enforcement">Practical Example: Policy Enforcement</a></h3>
+<p>The Kleis MCP agent policy uses <code>isAscii</code> to enforce clean commit messages:</p>
+<pre><code class="language-kleis">// Commit messages must be ASCII-only (no emojis)
+define check_git_commit(description) =
+    if isAscii(description) then "allow"
+    else "deny"
+</code></pre>
+<p>Z3 can then verify that <strong>no emoji can ever slip through</strong>:</p>
+<pre><code class="language-kleis">// This proposition is VERIFIED by Z3:
+// ∀(d : String). implies(check_git_commit(d) = "allow", isAscii(d))
 </code></pre>
 <h2 id="z3-verification-3"><a class="header" href="#z3-verification-3">Z3 Verification</a></h2>
 <p>String properties are verified using Z3’s native string theory:</p>
@@ -6610,6 +6702,7 @@ define empty : String = ""
 }
 </code></pre>
 <h2 id="operation-reference-1"><a class="header" href="#operation-reference-1">Operation Reference</a></h2>
+<h3 id="string-operations"><a class="header" href="#string-operations">String Operations</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -6627,10 +6720,135 @@ define empty : String = ""
 <tr><td>Replace</td><td><code>replace(s, old, new)</code></td><td>Replace first match</td></tr>
 <tr><td>To Int</td><td><code>strToInt(s)</code></td><td>Parse integer</td></tr>
 <tr><td>From Int</td><td><code>intToStr(n)</code></td><td>Format integer</td></tr>
-<tr><td>Regex</td><td><code>matchesRegex(s, r)</code></td><td>Match pattern</td></tr>
 </tbody>
 </table>
 </div>
+<h3 id="regex-constructors-1"><a class="header" href="#regex-constructors-1">Regex Constructors</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operation</th><th>Syntax</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Literal</td><td><code>re_literal(s)</code></td><td>Exact string match</td></tr>
+<tr><td>Range</td><td><code>re_range(lo, hi)</code></td><td>Character class <code>[lo-hi]</code></td></tr>
+<tr><td>Star</td><td><code>re_star(re)</code></td><td>Zero or more</td></tr>
+<tr><td>Plus</td><td><code>re_plus(re)</code></td><td>One or more</td></tr>
+<tr><td>Option</td><td><code>re_option(re)</code></td><td>Zero or one</td></tr>
+<tr><td>Concat</td><td><code>re_concat(re1, re2)</code></td><td>Sequence</td></tr>
+<tr><td>Union</td><td><code>re_union(re1, re2)</code></td><td>Alternation</td></tr>
+<tr><td>Intersect</td><td><code>re_intersect(re1, re2)</code></td><td>Both must match</td></tr>
+<tr><td>Complement</td><td><code>re_complement(re)</code></td><td>Negation</td></tr>
+<tr><td>Full</td><td><code>re_full()</code></td><td>Any string</td></tr>
+<tr><td>Empty</td><td><code>re_empty()</code></td><td>No string</td></tr>
+<tr><td>Any char</td><td><code>re_allchar()</code></td><td>Single character</td></tr>
+<tr><td>Loop</td><td><code>re_loop(re, lo, hi)</code></td><td>Bounded repetition</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="regex-matching--predicates"><a class="header" href="#regex-matching--predicates">Regex Matching &amp; Predicates</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Operation</th><th>Syntax</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>Match</td><td><code>matches(s, re)</code></td><td>String matches regex</td></tr>
+<tr><td>Digits</td><td><code>isDigits(s)</code></td><td>All <code>[0-9]</code></td></tr>
+<tr><td>Alpha</td><td><code>isAlpha(s)</code></td><td>All <code>[a-zA-Z]</code></td></tr>
+<tr><td>AlphaNum</td><td><code>isAlphaNum(s)</code></td><td>All <code>[a-zA-Z0-9]</code></td></tr>
+<tr><td>ASCII</td><td><code>isAscii(s)</code></td><td>All printable ASCII <code>[ -~]</code></td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="why-strings-dont-need-kleis-axioms"><a class="header" href="#why-strings-dont-need-kleis-axioms">Why Strings Don’t Need Kleis Axioms</a></h2>
+<p>You may notice that <code>stdlib/text.kleis</code> declares string axioms like:</p>
+<pre><code class="language-kleis">structure TextOps {
+    axiom concat_assoc : ∀ a : String . ∀ b : String . ∀ c : String .
+        equals(concat(concat(a, b), c), concat(a, concat(b, c)))
+
+    axiom hasPrefix_empty : ∀ s : String .
+        equals(hasPrefix(s, ""), True)
+}
+</code></pre>
+<p>Yet when the MCP agent sends a proposition like <code>∀(s : String). implies(isDigits(s), isAlphaNum(s))</code> to Z3, <strong>none of these axioms are loaded</strong>. The MCP policy engine only loads the policy file — not stdlib. And it still works. Why?</p>
+<h3 id="z3s-built-in-string-theory"><a class="header" href="#z3s-built-in-string-theory">Z3’s Built-in String Theory</a></h3>
+<p>Z3 has a <strong>native string theory</strong> (QF_SLIA — Quantifier-Free Strings and Linear Integer Arithmetic). It already knows the semantics of concatenation, length, prefix, suffix, contains, regex matching, and all the operations listed in this chapter. The Kleis Z3 backend translates operations directly to Z3’s API:</p>
+<pre><code>Kleis expression          →  Z3 native operation
+─────────────────────────────────────────────────
+contains(s, "foo")        →  z3::ast::String::contains()
+hasPrefix(s, "bar")       →  z3::ast::String::prefix()
+isDigits(s)               →  regex_matches(s, re_plus(re_range("0","9")))
+matches(s, re_star(re))   →  z3::ast::String::regex_matches(Regexp::star())
+</code></pre>
+<p>Z3 doesn’t learn that <code>concat("", s) = s</code> from a Kleis axiom — it already knows this as a built-in theorem of its string theory. The axiom in <code>stdlib/text.kleis</code> is <strong>redundant for Z3</strong> but serves other purposes.</p>
+<h3 id="native-theories-vs-uninterpreted-functions"><a class="header" href="#native-theories-vs-uninterpreted-functions">Native Theories vs. Uninterpreted Functions</a></h3>
+<p>This is the fundamental architectural distinction in Kleis’s solver integration:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Domain</th><th>Z3 Knowledge</th><th>Needs Kleis Axioms?</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Strings</strong></td><td>Built-in native theory</td><td>❌ No</td><td><code>contains</code>, <code>hasPrefix</code>, <code>re_star</code></td></tr>
+<tr><td><strong>Integers</strong></td><td>Built-in native theory</td><td>❌ No</td><td><code>+</code>, <code>*</code>, <code>&lt;</code>, <code>≥</code></td></tr>
+<tr><td><strong>Booleans</strong></td><td>Built-in native theory</td><td>❌ No</td><td><code>and</code>, <code>or</code>, <code>not</code>, <code>implies</code></td></tr>
+<tr><td><strong>Bitvectors</strong></td><td>Built-in native theory</td><td>❌ No</td><td><code>bvand</code>, <code>bvxor</code>, <code>bvshl</code></td></tr>
+<tr><td><strong>Tensors</strong></td><td>No built-in knowledge</td><td>✅ Yes</td><td><code>contract</code>, <code>trace</code>, <code>wedge</code></td></tr>
+<tr><td><strong>Groups</strong></td><td>No built-in knowledge</td><td>✅ Yes</td><td><code>•</code>, <code>inv</code>, <code>e</code></td></tr>
+<tr><td><strong>Manifolds</strong></td><td>No built-in knowledge</td><td>✅ Yes</td><td><code>christoffel</code>, <code>riemann</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>When you write <code>axiom commutativity : ∀(x y : G). x • y = y • x</code> in a Group structure, that axiom is <strong>essential</strong> — Z3 has no built-in theory of abstract algebra. Without it, Z3 treats <code>•</code> as an uninterpreted function and can’t prove anything about it. The axiom teaches Z3 the rule.</p>
+<p>But when you write <code>axiom concat_empty_right : ∀(s : String). concat(s, "") = s</code>, you’re stating something Z3 already knows. The axiom is a <strong>Kleis-level declaration</strong>, not a Z3-level requirement.</p>
+<h3 id="a-note-on-what-axioms-are"><a class="header" href="#a-note-on-what-axioms-are">A Note on What Axioms Are</a></h3>
+<p>In general, axioms are <strong>not</strong> documentation — they are the primary mechanism by which Z3 learns the rules of a domain. When you write:</p>
+<pre><code class="language-kleis">structure AbelianGroup(G) {
+    axiom commutativity : ∀(x y : G). x • y = y • x
+}
+</code></pre>
+<p>This is the <strong>only way</strong> Z3 learns that <code>•</code> is commutative. Without it, <code>•</code> is an uninterpreted function — Z3 can’t prove anything about it. Axioms are the substance of formal reasoning, not a comment beside it.</p>
+<p>Strings are a <strong>special case</strong>. Because Z3 has a built-in string theory, the axioms in <code>stdlib/text.kleis</code> happen to restate what Z3 already knows. They still serve purposes, but different ones than axioms in other domains:</p>
+<ol>
+<li>
+<p><strong>Type checking</strong> — The <code>structure TextOps</code> declares operations with type signatures (<code>operation concat : String → String → String</code>). The type checker uses these to verify that string operations are used correctly in <code>.kleis</code> files.</p>
+</li>
+<li>
+<p><strong>Machine-checked specification</strong> — Kleis can verify its own string axioms against Z3 (<code>cargo test</code>). If someone writes an incorrect axiom, Z3 will disprove it. The stdlib is a formal contract that the implementation must satisfy.</p>
+</li>
+<li>
+<p><strong>Portability</strong> — If a future solver backend doesn’t have a native string theory, it would need these axioms to reason about strings. The axioms make the semantics explicit and backend-independent.</p>
+</li>
+<li>
+<p><strong>Uniformity</strong> — Every domain in Kleis follows the same pattern: structures declare operations, axioms declare their properties. String axioms maintain this pattern even when Z3 doesn’t strictly need them.</p>
+</li>
+</ol>
+<h3 id="when-you-would-need-axioms"><a class="header" href="#when-you-would-need-axioms">When You Would Need Axioms</a></h3>
+<p>Custom string predicates that aren’t hardcoded in the Z3 backend <strong>do</strong> need axioms. For example:</p>
+<pre><code class="language-kleis">// Z3 backend knows isDigits natively — no axiom needed for verification
+isDigits("123")  // → Z3 translates to regex_matches(s, re_plus(re_range("0","9")))
+
+// But a custom predicate is opaque to Z3 without a definition
+define isHexColor(s) = and(
+    strlen(s) = 7,
+    and(charAt(s, 0) = "#",
+        matches(substr(s, 1, 6), re_plus(
+            re_union(re_range("0", "9"),
+            re_union(re_range("a", "f"), re_range("A", "F")))
+        )))
+)
+</code></pre>
+<p>Here <code>isHexColor</code> is defined in terms of operations Z3 already knows, so Z3 can reason about it by expanding the definition. But if you declared <code>isHexColor</code> as an uninterpreted function (no body), Z3 would need axioms:</p>
+<pre><code class="language-kleis">structure HexColors {
+    operation isHexColor : String → Bool
+
+    // Without this axiom, Z3 knows nothing about isHexColor
+    axiom hex_length : ∀(s : String). isHexColor(s) → strlen(s) = 7
+    axiom hex_prefix : ∀(s : String). isHexColor(s) → charAt(s, 0) = "#"
+}
+</code></pre>
+<p><strong>Rule of thumb:</strong> If an operation maps to a Z3 native theory, no axioms needed for verification. If it’s an uninterpreted function, axioms are the only way Z3 learns its properties.</p>
 <h2 id="summary-2"><a class="header" href="#summary-2">Summary</a></h2>
 <div class="table-wrapper">
 <table>
@@ -6640,13 +6858,15 @@ define empty : String = ""
 <tbody>
 <tr><td>Basic operations</td><td>✅ Native Z3</td></tr>
 <tr><td>Substring ops</td><td>✅ Native Z3</td></tr>
+<tr><td>Regex constructors</td><td>✅ Native Z3</td></tr>
 <tr><td>Regex matching</td><td>✅ Native Z3</td></tr>
+<tr><td>Convenience predicates</td><td>✅ Native Z3</td></tr>
 <tr><td>Int conversion</td><td>✅ Native Z3</td></tr>
 <tr><td>Monoid structure</td><td>✅ Algebraic</td></tr>
 </tbody>
 </table>
 </div>
-<p>See <code>src/solvers/z3/capabilities.toml</code> for the complete list of supported string operations.</p>
+<p>See <code>src/solvers/z3/capabilities.toml</code> for the complete list of supported string and regex operations.</p>
 <h2 id="whats-next-18"><a class="header" href="#whats-next-18">What’s Next?</a></h2>
 <p>Explore set theory operations and Z3’s set reasoning:</p>
 <p>→ <a href="#set-theory">Sets</a></p>
@@ -9031,7 +9251,7 @@ let p = Pair(1, "a") in snd(p)  // → "a"
 </tbody>
 </table>
 </div>
-<h2 id="string-operations"><a class="header" href="#string-operations">String Operations</a></h2>
+<h2 id="string-operations-1"><a class="header" href="#string-operations-1">String Operations</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
