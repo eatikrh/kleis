@@ -213,7 +213,22 @@ pub fn tool_definitions() -> Vec<McpTool> {
                          - Equality: `a = b` \
                          - Logical: `and(a, b)`, `or(a, b)`, `implies(a, b)`, `not(a)` \
                          - Strings: `\"value\"`, `hasPrefix(s, p)`, `contains(s, sub)` \
-                         - Numbers: `0`, `1`, `+`, `-`, `*`, `<`, `>`"
+                         - Numbers: `0`, `1`, `+`, `-`, `*`, `<`, `>` \
+                         \n\n\
+                         **Regex operations** (Z3 native regex theory): \
+                         - Match: `matches(s, re)` — does string s match regex re? Returns Bool \
+                         - Literal: `re_literal(\"foo\")` — matches exactly \"foo\" \
+                         - Char range: `re_range(\"a\", \"z\")` — matches one char in [a-z] \
+                         - Repetition: `re_star(re)` (0+), `re_plus(re)` (1+), `re_option(re)` (0 or 1) \
+                         - Compose: `re_concat(re1, re2)` (sequence), `re_union(re1, re2)` (alternation) \
+                         - Negate: `re_complement(re)` — matches anything re doesn't \
+                         - Predicates: `isDigits(s)`, `isAlpha(s)`, `isAlphaNum(s)`, `isAscii(s)` \
+                         \n\n\
+                         **Regex examples**: \
+                         - `isAscii(\"hello\")` → true (concrete check) \
+                         - `∀(s : String). implies(isDigits(s), isAlphaNum(s))` → VERIFIED (digits ⊂ alphanum) \
+                         - `∀(s : String). implies(matches(s, re_plus(re_range(\"a\", \"z\"))), isAlpha(s))` → VERIFIED \
+                         - `∃(s : String). and(isAlpha(s), not(isAscii(s)))` → find non-ASCII letters"
                 .to_string(),
             input_schema: serde_json::json!({
                 "type": "object",

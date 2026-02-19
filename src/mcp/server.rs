@@ -567,7 +567,27 @@ impl McpServer {
                 text.push('\n');
                 text.push_str(
                     "You can also synthesize your own propositions using the same syntax.\n\
-                     Use ∀(x : Type). ... for universal claims, function calls for concrete checks.\n"
+                     Use ∀(x : Type). ... for universal claims, function calls for concrete checks.\n\n"
+                );
+                text.push_str("### Regex in Propositions\n\n");
+                text.push_str(
+                    "Z3 has native regex support. You can use regex operations in propositions:\n\n\
+                     **Matching:** `matches(s, re)` — check if string matches regex\n\n\
+                     **Constructors (composable):**\n\
+                     - `re_literal(\"foo\")` — exact string\n\
+                     - `re_range(\"a\", \"z\")` — character class [a-z]\n\
+                     - `re_star(re)` — zero or more (Kleene star)\n\
+                     - `re_plus(re)` — one or more\n\
+                     - `re_option(re)` — zero or one\n\
+                     - `re_concat(re1, re2)` — sequence (re1 then re2)\n\
+                     - `re_union(re1, re2)` — alternation (re1 or re2)\n\
+                     - `re_complement(re)` — negation (anything re doesn't match)\n\
+                     - `re_intersect(re1, re2)` — intersection\n\n\
+                     **Convenience predicates:** `isDigits(s)`, `isAlpha(s)`, `isAlphaNum(s)`, `isAscii(s)`\n\n\
+                     **Example propositions:**\n\
+                     - `isAscii(\"hello\")` — concrete check [evaluate]\n\
+                     - `∀(s : String). implies(isDigits(s), isAlphaNum(s))` — subset proof [verify]\n\
+                     - `matches(\"foo42\", re_concat(re_literal(\"foo\"), re_plus(re_range(\"0\", \"9\"))))` [evaluate]\n\n"
                 );
             }
         }

@@ -687,6 +687,28 @@ impl PolicyEngine {
             }));
         }
 
+        // ---- Regex examples (teach the agent regex syntax) ----
+        props.push(serde_json::json!({
+            "kleis": "isAscii(\"hello world\")",
+            "description": "Check if a concrete string is ASCII printable",
+            "hint": "evaluate",
+        }));
+        props.push(serde_json::json!({
+            "kleis": "matches(\"foo42\", re_concat(re_literal(\"foo\"), re_plus(re_range(\"0\", \"9\"))))",
+            "description": "Check if \"foo42\" matches pattern foo[0-9]+",
+            "hint": "evaluate",
+        }));
+        props.push(serde_json::json!({
+            "kleis": "∀(s : String). implies(isDigits(s), isAlphaNum(s))",
+            "description": "Prove: all-digit strings are also alphanumeric",
+            "hint": "verify",
+        }));
+        props.push(serde_json::json!({
+            "kleis": "∀(s : String). implies(isAlphaNum(s), isAscii(s))",
+            "description": "Prove: all alphanumeric strings are ASCII printable",
+            "hint": "verify",
+        }));
+
         // ---- From structure axioms ----
         for s in structures {
             let s_name = s.get("name").and_then(|n| n.as_str()).unwrap_or("?");
