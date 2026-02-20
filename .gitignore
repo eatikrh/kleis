@@ -34,6 +34,9 @@ PITCH_*.md
 /pot_video_90/
 kleis_doc_example.html
 
+# Theory MCP session/scratch files (ephemeral)
+.theory-sessions/
+
 # Python / Jupyter (kleis-notebook)
 __pycache__/
 *.py[cod]

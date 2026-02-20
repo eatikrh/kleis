@@ -20,4 +20,12 @@ ipc_short_ms = 500
 ipc_medium_ms = 5000
 ipc_long_ms = 30000
 
-
+[theory]
+# Directory for theory MCP session and scratch files.
+# Relative paths are resolved from the project root.
+# Default: .theory-sessions/
+workspace_dir = ".theory-sessions"
+# Directory for saved theories (agent's persistent work).
+# These are meant to be version-controlled and importable.
+# Default: theories/
+save_dir = "theories"
