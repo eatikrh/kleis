@@ -49,13 +49,135 @@
 |--------|--------|-------------------|
 | **Flat rotation curves** | ✅ PROVED + Paper | Done — 7 theorems, numerical curves, arXiv paper |
 | **Tully-Fisher relation** | ✅ PROVED | M = a·v⁴ verified by Z3 |
-| **SR from projection slicing** | Not started | Formalize observer-dependent kernels, prove Lorentz invariance is a *theorem* of projection |
-| **Neutrino oscillations** | Not started | Formalize C3 codomain, axiomatize mass matrix structure |
-| **Schwarzschild weak-field** | Not started | Axiomatize vortex modal structure |
+| **SR from projection slicing** | Conceptual work done | Formalize observer-dependent slicing kernels (see notes below) |
+| **Neutrino oscillations** | Conceptual work done | Matrix-valued Green's function projection of enriched modal flow (see notes below) |
+| **Schwarzschild weak-field** | Conceptual work done | Axiomatize vortex modal structure (see notes below) |
+| **Einstein Cross / gravitational lensing** | Conceptual work done | Project lensing from Hont; needs analyticity + band-limitation constraints (see notes below) |
 | **Quantitative galaxy fits** | Not started | Fit SPARC survey data, test R_c ∝ v² prediction |
 | **Bullet Cluster** | Not started | Multi-kernel / extended coherence model |
+| **Entanglement / non-locality** | Conceptual work done | Shared flow ⟹ correlated projections; sidesteps Bell (see notes below) |
+| **Mass as spectral residue** | Conceptual work done | m = R/G_c from pole of modal Green's function (see notes below) |
+| **Charge as phase winding** | Conceptual work done | Quantized winding number → Coulomb 1/r² (see notes below) |
 
-### Also Needed: Spectral Residues
+### Neutrino Oscillations as Modal Beating (from prior work)
+
+**Core insight:** Neutrino flavor oscillations are interference patterns from
+a matrix-valued Green's function projection of an enriched modal flow.
+
+**Already derived conceptually:**
+- The flow in Hont is not scalar but vector-valued (C³ codomain for 3 flavors)
+- The projection kernel is a 3x3 matrix-valued Green's function (the PMNS
+  mixing matrix is a property of this kernel, not a separate postulate)
+- Flavor oscillations = beating patterns between eigenmodes of the matrix kernel
+- Mass differences between neutrino species arise from different spectral
+  residues of the matrix-valued kernel's poles
+
+**Kleis formalization plan:**
+1. Define `MatrixKernel` structure extending `GreenKernel` with matrix-valued output
+2. Define `FlavorState` as C³-valued flow
+3. Prove: oscillation probability P(ν_e → ν_μ) follows from kernel eigenvalues
+4. Derive: mass splittings from spectral residue differences
+5. Show PMNS matrix emerges from kernel diagonalization
+
+### Special Relativity from Projection Slicing (from prior work)
+
+**Core insight:** SR is not a postulate — it is a *theorem* of observer-dependent
+projection. Different observers correspond to different slicing kernels that
+aggregate modal information from Hont into their respective spacetimes.
+
+**Already derived conceptually:**
+- Time dilation: arises from different observers slicing the same modal flow
+  at different angles — a tilted slice aggregates more modal cycles per
+  projected second
+- Invariant spacetime interval: the interval ds² is invariant because it
+  measures a property of the *flow itself*, not of any particular slice —
+  all slicing kernels preserve it
+- Lorentz transformations: the group of transformations that relate different
+  slicing kernels while preserving the interval — emerges from the geometry
+  of projection, not postulated
+
+**The key reframing:**
+- Standard SR: "The speed of light is constant" (postulate) → derive everything
+- POT SR: "Observers are projection slices of modal flow" (structural) →
+  constant c, time dilation, length contraction, and Lorentz invariance
+  are all *theorems*
+
+**Kleis formalization plan:**
+1. Define `Observer` structure with slicing kernel and projection axis
+2. Define `Interval(f, x1, x2)` as a flow-intrinsic quantity
+3. Prove: interval is invariant under change of observer (change of slicing kernel)
+4. Derive time dilation factor γ = 1/√(1 - v²/c²) as a projection geometry result
+5. Prove Lorentz group emerges as the symmetry group of admissible slicing kernels
+
+### Schwarzschild Metric & Gravitational Lensing Notes (from prior work)
+
+**Schwarzschild weak-field (already derived conceptually):**
+- Defined a "vortex" (phase singularity) in the modal phase of Hont
+- Successfully derived the weak-field limit of the Schwarzschild metric
+- Curvature is NOT an independent geometric property — it is a *projected
+  artifact of modal shear*: when modal flow lines in Hont diverge or
+  converge, their projection into R^4 produces curved geodesics
+- The effective line element induced by modal flow causes deviated light paths
+- Observer perceives deviations as spatial curvature and time dilation —
+  standard GR characteristics, recovered as emergent phenomena from POT
+
+**Einstein Cross ("four-piece-bagel" experiment):**
+- Performed numerical calculations to project a gravitational lensing
+  structure from Hont into R^4
+- Initial result: "Einstein's four-piece-bagel" — recognizable but imperfect
+- This was a *diagnostic signal*: the modal structure needs additional
+  constraints (analyticity and band-limitation) to project into physically
+  accurate forms
+- These constraints are not ad hoc — they are the modal equivalent of
+  regularity conditions on Green's functions
+
+**Mass as source:**
+- Localized distortions in the projected field require mass-like residues
+  as ontological sources — connecting to Postulate 4 (Spectral Residues)
+- This links gravitational lensing to the mass/charge emergence program
+
+**Kleis formalization plan:**
+1. Define `VortexMode` structure with phase singularity axioms
+2. Derive weak-field Schwarzschild metric as a theorem of modal shear
+3. Prove light deflection angle matches GR prediction (1.75 arcsec at solar limb)
+4. Add analyticity/band-limitation axioms to `AdmissibleKernel`
+5. Reproduce Einstein Cross geometry from constrained projection
+
+### Entanglement Formalization Notes (from prior work)
+
+**Core insight (Standing Wave Realism):** Entangled particles A and B are not
+correlated separate systems — they are spatial manifestations of a *single
+ontological standing wave* expressed at multiple spacetime coordinates in the
+projected universe.
+
+**Rejection of separability:** The standard framing assumes A and B are
+independent entities that must be reconnected by some causal or probabilistic
+bridge. POT denies this premise — A and B share a single flow `f`, and
+`G[f]` evaluated at two locations is one field, not two correlated fields.
+
+**Analogies (from author's notes):**
+- *Violin string:* Two nodes on one string vibrate in harmony because they
+  are part of the same physical mode, not because a signal travels between them.
+- *Ocean swell:* Two valleys of the same swell at distant shores are connected
+  in the body of the wave, not through point-to-point signaling.
+
+**Sidesteps Bell's theorem:** Bell assumes distinct systems with local hidden
+variables. POT has one system projected to two locations. The theorem's
+separability premise does not hold, so its inequalities are irrelevant.
+
+**Kleis formalization plan:**
+1. Define `Entangled(G, f, x1, x2)` — two observations from the same flow
+2. Prove: correlated outcomes are a consequence of kernel linearity (A1-A3)
+3. Key theorem: "separability is NOT derivable from POT axioms" — Z3 should
+   show that no axiom implies O_1 and O_2 are independent
+4. Show Bell-type inequalities do not apply when separability is absent
+
+**What this eliminates (no need for):**
+- Magical observers collapsing reality (Copenhagen)
+- Universe-branching at every measurement (Many-Worlds)
+- Fine-tuned hidden variables (Superdeterminism)
+
+### Spectral Residues: Mass and Charge as Projection Invariants (from prior work)
 
 The `residue` operation is already in `pot_foundations_kernel_projection.kleis`:
 ```
@@ -64,8 +186,43 @@ axiom survival_principle: ∀(G : GreenKernel, a b : Flow, e : Event, c : Channe
         residue(apply_kernel(G, a), e, c) = residue(apply_kernel(G, b), e, c)
 ```
 
-Need to define: `Event`, `Channel`, `Residue` structures. Axiomatize spectral
-extraction. This connects to Emergence of Mass and Charge (POT Postulate 4).
+**Point Mass as Spectral Residue (already derived conceptually):**
+- Started from Poisson equation: ∇²Φ = 4πG_c ρ
+- Used Divergence Theorem: flux of gravitational field through closed surface
+  yields enclosed mass
+- Defined Residue: R = -(1/4π) ∮_S g⃗ · dS⃗
+- Derived strict equality: **m = R / G_c**
+- Was one of the first concepts encoded in Kleis (v0.2) using symbolic operations
+- Ontological axiom: "no sharp objects in Hont" — a point mass in R^4 is a
+  collapsed residue of a smooth modal flow in Hilbert space
+
+**Electric Charge as Phase Winding (already derived conceptually):**
+- Every mode in Hont carries a complex phase (e^{iθ})
+- Total charge = topological winding number of this phase evolution
+- **Quantization explained:** winding number must be an integer → charge is quantized
+- **Polarity explained:** direction of phase circulation → positive or negative charge
+- **Coulomb's Law recovered:** if the projection kernel matches a Laplace Green's
+  function in 3D for phase singularities, the projected field obeys 1/r² force law
+- Explored modal coupling between opposite charges (stationary charge induces
+  rotation in opposite charge) — shelved because it yielded a "free rotor"
+  spectrum found unsatisfactory
+
+**Summary — both are projection-surviving invariants:**
+| Property | Mechanism in Hont | Mathematical form |
+|----------|------------------|-------------------|
+| **Mass** | Pole in modal Green's function | Spectral residue R/G_c |
+| **Charge** | Phase singularity winding | Topological winding number |
+
+Both survive the "structure-losing" projection from Hont into R^4 because they
+are topological/spectral invariants — robust enough to persist through projection.
+
+**Kleis formalization plan:**
+1. Define `SpectralResidue` structure with pole/residue axioms
+2. Define `PhaseWinding` structure with integer-valued winding number
+3. Prove m = R/G_c as a theorem of the residue axioms
+4. Prove charge quantization as a theorem of winding number integrality
+5. Derive Coulomb 1/r² from Laplace Green's function projection
+6. Connect to existing `Event`, `Channel`, `Residue` primitives
 
 ### BUG STATUS: Z3 crash — RESOLVED
 
@@ -3113,6 +3270,34 @@ Long-term: ZFC foundations
     ↓ New backend
 Ultimate: Induction, transfinite, category theory
 ```
+
+---
+
+## IDEA: Data-Driven Policy Action Registry
+
+**Problem:** Adding a new policy action type (e.g., `git_pr_create`) currently
+requires editing Rust code in `src/mcp/policy.rs` and `src/mcp/protocol.rs` —
+the action-to-function dispatch and the JSON schema enum are both hardcoded.
+This means every new action type is a code change + recompile.
+
+**Inspiration:** The Z3 backend uses `src/solvers/z3/capabilities.toml` to
+declare its capabilities declaratively. The policy system should follow the
+same pattern.
+
+**Proposed design:** A `policy_actions.toml` (or similar) that declares:
+- Action name (e.g., `git_pr_create`)
+- Parameters and their types (e.g., `branch: String`)
+- Which Kleis functions to call (`check_git_pr_create`, `before_git_pr_create`)
+- The mapping from JSON fields to function arguments
+
+The Rust dispatcher would read this file at startup and dynamically build the
+action routing — no code changes needed to add new action types. The policy
+`.kleis` file already defines the `check_*` / `before_*` functions; the TOML
+just tells the MCP server how to wire JSON requests to those functions.
+
+**Concrete trigger:** We wanted to add a `git_pr_create` rule (agent must
+inform user before creating a PR) but realized it required touching Rust code
+in three places. That's wrong — policy should be entirely in Kleis + config.
 
 ---
 
