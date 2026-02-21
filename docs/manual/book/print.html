@@ -44,10 +44,10 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-10a9353d.js";
+            window.path_to_searchindex_js = "searchindex-3af4630c.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-b275a7b0.js"></script>
+        <script src="toc-89399ff3.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -8405,7 +8405,295 @@ example "pendulum control design" {
 <p>See <a href="#appendix-lapack-functions">LAPACK Functions appendix</a> for complete documentation.</p>
 <h2 id="whats-next-22"><a class="header" href="#whats-next-22">What’s Next</a></h2>
 <p>Explore more examples:</p>
-<p>→ <a href="#appendix-ode-solver">ODE Solver appendix</a> — detailed ode45 documentation<br>→ <a href="#appendix-lapack-functions">LAPACK Functions</a> — numerical linear algebra<br>→ <a href="#appendix-cartan-geometry-and-tensor-computation">Cartan Geometry</a> — differential geometry</p>
+<p>→ <a href="#appendix-ode-solver">ODE Solver appendix</a> — detailed ode45 documentation<br>→ <a href="#appendix-lapack-functions">LAPACK Functions</a> — numerical linear algebra<br>→ <a href="#appendix-cartan-geometry-and-tensor-computation">Cartan Geometry</a> — differential geometry<br>→ <a href="#interactive-theory-building">Next: Interactive Theory Building</a> — AI-assisted formal theory development</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="interactive-theory-building"><a class="header" href="#interactive-theory-building">Interactive Theory Building</a></h1>
+<p>Kleis is not just a language for writing mathematics — it is a substrate for
+<strong>producing</strong> mathematics. This chapter shows how an AI agent can co-author
+formal theories with a human researcher, using the kleis-theory MCP to submit
+definitions, check consistency, and derive verified theorems in real time.</p>
+<h2 id="the-idea"><a class="header" href="#the-idea">The Idea</a></h2>
+<p>Traditional theorem provers require the human to write everything. The agent
+workflow is different:</p>
+<ol>
+<li><strong>Human</strong> describes the mathematical concepts informally</li>
+<li><strong>Agent</strong> formalizes them as Kleis structures with operations and axioms</li>
+<li><strong>Kleis + Z3</strong> validates each submission (parsing, loading, consistency)</li>
+<li><strong>Agent</strong> proposes conjectures and Z3 either verifies or rejects them</li>
+<li><strong>Human</strong> guides the exploration — “what about nullspaces?” “try composing kernels”</li>
+</ol>
+<p>The result is a <code>.kleis</code> file containing a verified theory that neither the
+human nor the agent could have produced as efficiently alone.</p>
+<h2 id="the-kleis-theory-mcp"><a class="header" href="#the-kleis-theory-mcp">The kleis-theory MCP</a></h2>
+<p>The theory-building workflow is powered by a Model Context Protocol server that
+exposes nine tools:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tool</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>submit_structure</code></td><td>Add a structure (with operations and axioms) to the theory</td></tr>
+<tr><td><code>submit_define</code></td><td>Add a function definition</td></tr>
+<tr><td><code>submit_data</code></td><td>Add algebraic data types</td></tr>
+<tr><td><code>try_structure</code></td><td>Dry-run a submission without modifying the theory</td></tr>
+<tr><td><code>evaluate</code></td><td>Evaluate an expression or verify a proposition via Z3</td></tr>
+<tr><td><code>describe_schema</code></td><td>List everything currently loaded</td></tr>
+<tr><td><code>list_session</code></td><td>Show the history of agent submissions</td></tr>
+<tr><td><code>load_theory</code></td><td>Reset and load a saved theory</td></tr>
+<tr><td><code>save_theory</code></td><td>Save the current theory to a <code>.kleis</code> file</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="try-before-commit"><a class="header" href="#try-before-commit">Try-Before-Commit</a></h3>
+<p>Every submission goes through a three-stage pipeline:</p>
+<pre><code>Agent submits Kleis source
+        │
+   ┌────▼────┐
+   │  Parse   │──── Syntax error? → reject, theory unchanged
+   └────┬────┘
+        │
+   ┌────▼────┐
+   │  Load    │──── Name conflict? → reject, theory unchanged
+   └────┬────┘
+        │
+   ┌────▼────┐
+   │ Verify   │──── Inconsistent axioms? → reject, theory unchanged
+   └────┬────┘
+        │
+   ┌────▼────┐
+   │ Commit   │──── Append to session.kleis, rebuild evaluator
+   └─────────┘
+</code></pre>
+<p>The agent’s proposed code is first written to a scratch file and validated
+against a fresh evaluator. Only on success does it become part of the theory.
+This prevents a bad submission from corrupting accumulated work.</p>
+<h2 id="walkthrough-admissible-kernels-in-projected-ontology-theory"><a class="header" href="#walkthrough-admissible-kernels-in-projected-ontology-theory">Walkthrough: Admissible Kernels in Projected Ontology Theory</a></h2>
+<p>This section reproduces an actual theory-building session. The goal: formalize
+the concept of admissible kernels from Projected Ontology Theory (POT) and
+discover what theorems follow from the axioms.</p>
+<h3 id="step-1-data-types"><a class="header" href="#step-1-data-types">Step 1: Data Types</a></h3>
+<p>Every formalization starts with the types. POT has three:</p>
+<pre><code class="language-kleis">data GreenKernel = GK(ℤ)
+data Flow = Fl(ℤ)
+data FieldR4 = FR4(ℤ)
+</code></pre>
+<p>These are “uninterpreted” types — Kleis and Z3 know they exist and are distinct,
+but nothing about their internal structure. This is deliberate: POT is meant to
+be general, not tied to specific representations.</p>
+<h3 id="step-2-algebraic-structures"><a class="header" href="#step-2-algebraic-structures">Step 2: Algebraic Structures</a></h3>
+<p>Flows and fields need additive structure:</p>
+<pre><code class="language-kleis">structure FlowAlgebra {
+    operation flow_add : Flow -&gt; Flow -&gt; Flow
+    operation flow_smul : ℂ -&gt; Flow -&gt; Flow
+    element flow_zero : Flow
+    axiom flow_add_comm : ∀(a b : Flow). flow_add(a, b) = flow_add(b, a)
+    axiom flow_add_id : ∀(a : Flow). flow_add(a, flow_zero) = a
+}
+
+structure FieldAlgebra {
+    operation field_add : FieldR4 -&gt; FieldR4 -&gt; FieldR4
+    operation field_smul : ℂ -&gt; FieldR4 -&gt; FieldR4
+    element field_zero : FieldR4
+    axiom field_add_comm : ∀(f g : FieldR4). field_add(f, g) = field_add(g, f)
+    axiom field_add_id : ∀(f : FieldR4). field_add(f, field_zero) = f
+}
+</code></pre>
+<p>Each submission is validated before it enters the theory. If you wrote
+<code>flow_add_comm</code> with a typo in the operation name, the pipeline would catch
+it at the Load stage.</p>
+<h3 id="step-3-the-core-axioms"><a class="header" href="#step-3-the-core-axioms">Step 3: The Core Axioms</a></h3>
+<p>Now the heart of the theory — what makes a kernel “admissible”:</p>
+<pre><code class="language-kleis">operation apply_kernel : GreenKernel -&gt; Flow -&gt; FieldR4
+
+structure AdmissibleKernel {
+    operation is_admissible : GreenKernel -&gt; Bool
+
+    axiom kernel_lin_add : ∀(G : GreenKernel, a b : Flow).
+        implies(is_admissible(G),
+            apply_kernel(G, flow_add(a, b))
+              = field_add(apply_kernel(G, a), apply_kernel(G, b)))
+
+    axiom kernel_lin_smul : ∀(G : GreenKernel, c : ℂ, a : Flow).
+        implies(is_admissible(G),
+            apply_kernel(G, flow_smul(c, a))
+              = field_smul(c, apply_kernel(G, a)))
+
+    axiom kernel_maps_zero : ∀(G : GreenKernel).
+        implies(is_admissible(G),
+            apply_kernel(G, flow_zero) = field_zero)
+}
+</code></pre>
+<p>Three axioms: linearity over addition (K1a), linearity over scalar
+multiplication (K1b), and zero preservation (K2). These are the weakest
+constraints that make the kernel “transform-like” without hardcoding any
+specific physics.</p>
+<h3 id="step-4-projective-equivalence"><a class="header" href="#step-4-projective-equivalence">Step 4: Projective Equivalence</a></h3>
+<p>Two flows are equivalent under a kernel if they project to the same field:</p>
+<pre><code class="language-kleis">structure ProjectiveEquivalence {
+    operation equiv : GreenKernel -&gt; Flow -&gt; Flow -&gt; Bool
+    axiom equiv_intro : ∀(G : GreenKernel, a b : Flow).
+        implies(apply_kernel(G, a) = apply_kernel(G, b), equiv(G, a, b))
+    axiom equiv_elim : ∀(G : GreenKernel, a b : Flow).
+        implies(equiv(G, a, b), apply_kernel(G, a) = apply_kernel(G, b))
+}
+</code></pre>
+<p>We axiomatized only the <strong>definition</strong> — <code>equiv</code> holds if and only if the
+kernel maps agree. We did <strong>not</strong> axiomatize reflexivity, symmetry, or
+transitivity. Those should follow.</p>
+<h3 id="step-5-derived-theorems"><a class="header" href="#step-5-derived-theorems">Step 5: Derived Theorems</a></h3>
+<p>Now the agent asks Z3 to verify consequences:</p>
+<pre><code>evaluate: ∀(G : GreenKernel, a : Flow). equiv(G, a, a)
+→ ✅ VERIFIED (reflexivity)
+
+evaluate: ∀(G : GreenKernel, a b : Flow).
+    implies(equiv(G, a, b), equiv(G, b, a))
+→ ✅ VERIFIED (symmetry)
+
+evaluate: ∀(G : GreenKernel, a b c : Flow).
+    implies(and(equiv(G, a, b), equiv(G, b, c)), equiv(G, a, c))
+→ ✅ VERIFIED (transitivity)
+</code></pre>
+<p>Z3 proves all three. The proof chain: <code>equiv(G, a, b)</code> →
+<code>apply_kernel(G, a) = apply_kernel(G, b)</code> (by <code>equiv_elim</code>) → equality is
+an equivalence relation → <code>equiv(G, a, a)</code> (by <code>equiv_intro</code>). We derived
+that projective equivalence is a proper equivalence relation without ever
+stating it as an axiom.</p>
+<h3 id="step-6-nullspace"><a class="header" href="#step-6-nullspace">Step 6: Nullspace</a></h3>
+<p>The nullspace of a kernel is the set of flows it kills:</p>
+<pre><code class="language-kleis">structure Nullspace {
+    operation in_null : GreenKernel -&gt; Flow -&gt; Bool
+    axiom null_def : ∀(G : GreenKernel, a : Flow).
+        implies(in_null(G, a), apply_kernel(G, a) = field_zero)
+    axiom null_intro : ∀(G : GreenKernel, a : Flow).
+        implies(apply_kernel(G, a) = field_zero, in_null(G, a))
+    axiom null_closed_add : ∀(G : GreenKernel, a b : Flow).
+        implies(is_admissible(G),
+            implies(and(in_null(G, a), in_null(G, b)),
+                in_null(G, flow_add(a, b))))
+    axiom null_closed_smul : ∀(G : GreenKernel, c : ℂ, a : Flow).
+        implies(is_admissible(G),
+            implies(in_null(G, a), in_null(G, flow_smul(c, a))))
+}
+</code></pre>
+<p>More derived theorems:</p>
+<pre><code>evaluate: ∀(G : GreenKernel, a b : Flow).
+    implies(and(is_admissible(G), and(in_null(G, a), in_null(G, b))),
+        equiv(G, a, b))
+→ ✅ VERIFIED (nullspace elements are projectively equivalent)
+
+evaluate: ∀(G : GreenKernel). in_null(G, flow_zero)
+→ ❌ UNKNOWN
+</code></pre>
+<p>The second query returns Unknown. Why? Because <code>kernel_maps_zero</code> only applies
+to <strong>admissible</strong> kernels. The correct formulation is:</p>
+<pre><code>evaluate: ∀(G : GreenKernel).
+    implies(is_admissible(G), in_null(G, flow_zero))
+→ ✅ VERIFIED
+</code></pre>
+<p>This is not a failure — it’s the system working as intended. Z3 caught a
+missing precondition that a human might overlook. The “Unknown” result tells
+the theorist: your axioms don’t support this claim as stated.</p>
+<h3 id="step-7-kernel-composition"><a class="header" href="#step-7-kernel-composition">Step 7: Kernel Composition</a></h3>
+<p>Can admissible kernels be composed while preserving admissibility?</p>
+<pre><code class="language-kleis">structure KernelComposition {
+    operation compose_kernel : GreenKernel -&gt; GreenKernel -&gt; GreenKernel
+    axiom compose_admissible : ∀(G1 G2 : GreenKernel).
+        implies(and(is_admissible(G1), is_admissible(G2)),
+            is_admissible(compose_kernel(G1, G2)))
+}
+</code></pre>
+<pre><code>evaluate: ∀(G1 G2 : GreenKernel).
+    implies(and(is_admissible(G1), is_admissible(G2)),
+        in_null(compose_kernel(G1, G2), flow_zero))
+→ ✅ VERIFIED
+</code></pre>
+<p>Z3 chains the reasoning: two admissible kernels compose to an admissible kernel
+(axiom), admissible kernels map zero to zero (axiom), zero-mapping implies
+nullspace membership (axiom). Three hops, fully automatic.</p>
+<h3 id="step-8-save"><a class="header" href="#step-8-save">Step 8: Save</a></h3>
+<pre><code>save_theory(name: "pot_admissible_kernels")
+→ ✅ Saved to theories/pot_admissible_kernels.kleis
+</code></pre>
+<p>The theory is now a plain <code>.kleis</code> file that can be imported, extended,
+or loaded into a future session.</p>
+<h2 id="what-makes-this-different"><a class="header" href="#what-makes-this-different">What Makes This Different</a></h2>
+<h3 id="from-a-chat-about-math"><a class="header" href="#from-a-chat-about-math">From a Chat About Math</a></h3>
+<p>A language model can talk about admissible kernels all day. It can generate
+plausible-sounding theorems. But it cannot <strong>verify</strong> them. With kleis-theory,
+every claim the agent makes passes through Z3. When the agent proposed
+<code>in_null(G, flow_zero)</code> without the admissibility precondition, Z3 said no.
+The agent had to correct its reasoning.</p>
+<h3 id="from-a-traditional-proof-assistant"><a class="header" href="#from-a-traditional-proof-assistant">From a Traditional Proof Assistant</a></h3>
+<p>In Lean, Coq, or Isabelle, the human writes everything. The assistant checks.
+With kleis-theory, the agent writes the formalizations. The human says “what
+about nullspaces?” and the agent produces the structure, the axioms, and the
+verification queries. The human guides; the agent formalizes; Z3 verifies.</p>
+<h3 id="from-a-notebook"><a class="header" href="#from-a-notebook">From a Notebook</a></h3>
+<p>A Jupyter notebook runs code. It doesn’t accumulate verified knowledge. Each
+cell is independent. In kleis-theory, each submission builds on everything
+before it. The theory grows monotonically. Nothing is forgotten, nothing
+contradicts.</p>
+<h2 id="the-theory-file"><a class="header" href="#the-theory-file">The Theory File</a></h2>
+<p>The saved theory is a standard Kleis file:</p>
+<pre><code class="language-kleis">import "stdlib/prelude.kleis"
+
+data GreenKernel = GK(ℤ)
+data Flow = Fl(ℤ)
+data FieldR4 = FR4(ℤ)
+
+structure FlowAlgebra {
+    operation flow_add : Flow -&gt; Flow -&gt; Flow
+    operation flow_smul : ℂ -&gt; Flow -&gt; Flow
+    element flow_zero : Flow
+    axiom flow_add_comm : ∀(a b : Flow). flow_add(a, b) = flow_add(b, a)
+    axiom flow_add_id : ∀(a : Flow). flow_add(a, flow_zero) = a
+}
+
+// ... AdmissibleKernel, ProjectiveEquivalence, Nullspace, KernelComposition
+</code></pre>
+<p>It can be imported into other Kleis files, loaded into the REPL, or used as
+the starting point for a future theory session:</p>
+<pre><code>load_theory(imports: ["theories/pot_admissible_kernels.kleis"])
+</code></pre>
+<h2 id="summary-of-verified-results"><a class="header" href="#summary-of-verified-results">Summary of Verified Results</a></h2>
+<p>From the axioms of admissible kernels, Z3 derived:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>Theorem</th><th>Status</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td><code>equiv(G, a, a)</code> — reflexivity</td><td>✅ Verified</td></tr>
+<tr><td>2</td><td><code>equiv(G, a, b) → equiv(G, b, a)</code> — symmetry</td><td>✅ Verified</td></tr>
+<tr><td>3</td><td><code>equiv(G, a, b) ∧ equiv(G, b, c) → equiv(G, a, c)</code> — transitivity</td><td>✅ Verified</td></tr>
+<tr><td>4</td><td><code>in_null(G, a) ∧ in_null(G, b) → equiv(G, a, b)</code> — null equivalence</td><td>✅ Verified</td></tr>
+<tr><td>5</td><td><code>is_admissible(G) → in_null(G, flow_zero)</code> — zero in nullspace</td><td>✅ Verified</td></tr>
+<tr><td>6</td><td>Composed admissible kernels preserve nullspace of zero</td><td>✅ Verified</td></tr>
+<tr><td>7</td><td><code>in_null(G, flow_zero)</code> without admissibility precondition</td><td>❌ Unknown</td></tr>
+</tbody>
+</table>
+</div>
+<p>The “Unknown” in row 7 is not a bug — it’s Z3 correctly identifying that the
+axioms don’t support the claim as stated. This kind of feedback is what makes
+interactive theory building productive.</p>
+<h2 id="enabling-the-kleis-theory-mcp"><a class="header" href="#enabling-the-kleis-theory-mcp">Enabling the kleis-theory MCP</a></h2>
+<p>Toggle it with:</p>
+<pre><code class="language-bash">scripts/theory.sh on      # Enable
+scripts/theory.sh off     # Disable
+scripts/theory.sh status  # Check
+</code></pre>
+<p>When enabled, the nine tools become available to the AI agent in Cursor.</p>
+<h2 id="whats-next-23"><a class="header" href="#whats-next-23">What’s Next</a></h2>
+<p>The theory file is the beginning, not the end. Future sessions can:</p>
+<ul>
+<li><strong>Extend</strong> the theory with new structures (e.g., <code>PhaseErasure</code>, <code>Residues</code>)</li>
+<li><strong>Specialize</strong> to specific physics (GR kernels, QM propagators)</li>
+<li><strong>Connect</strong> multiple theories via imports</li>
+<li><strong>Compute</strong> with numerical methods (LAPACK, ODE solver) on concrete instances</li>
+</ul>
+<p>The substrate is ready. Build on it.</p>
+<p>→ <a href="#control-systems">Previous: Control Systems</a></p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="appendix-a-grammar-reference"><a class="header" href="#appendix-a-grammar-reference">Appendix A: Grammar Reference</a></h1>
 <p>This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.97).</p>
