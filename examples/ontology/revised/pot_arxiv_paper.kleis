@@ -302,6 +302,8 @@ define ref5 = ArxivReference("moura2008", "de Moura, L., & Bjorner, N. (2008). Z
 define ref6 = ArxivReference("clowe2006", "Clowe, D., et al. (2006). A Direct Empirical Proof of the Existence of Dark Matter. ApJ, 648, L109-L113.")
 define ref7 = ArxivReference("nfw1997", "Navarro, J. F., Frenk, C. S., & White, S. D. M. (1997). A Universal Density Profile from Hierarchical Clustering. ApJ, 490, 493-508.")
 define ref8 = ArxivReference("ciotti2022", "Ciotti, L., Mancino, A., & Pellegrini, S. (2022). On the rotation curve of disk galaxies in General Relativity. arXiv:2207.09736.")
+define ref9 = ArxivReference("obrien2024", "O'Brien, J. G., Chiarelli, T. L., & Kerin, A. D. (2024). Galactic Rotation Curves with No Dark Matter. APS April Meeting, R03.009.")
+define ref10 = ArxivReference("mistele2024", "Mistele, T., McGaugh, S., Lelli, F., Schombert, J., & Li, P. (2024). Indefinitely Flat Circular Velocities and the Baryonic Tully-Fisher Relation from Weak Lensing. ApJL, 969, L3. arXiv:2406.09685.")
 
 // =============================================================================
 // Appendix: Full Axiom List
@@ -345,7 +347,7 @@ define all_elements = [
     sec_discussion, subsec_predictions, subsec_limitations,
     sec_conclusion,
     ack,
-    ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8,
+    ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, ref10,
     appendix_axioms
 ]
 
