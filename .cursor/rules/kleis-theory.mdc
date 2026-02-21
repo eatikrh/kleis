@@ -1,0 +1,58 @@
+---
+alwaysApply: false
+---
+# Kleis Theory MCP — Interactive Theory Building
+
+This project has a theory MCP server that lets you co-author formal Kleis
+theories interactively, with Z3 consistency checking at every step.
+
+The MCP server is configured in [mcp.json](mdc:.cursor/mcp.json) and starts
+with `stdlib/prelude.kleis` loaded by default.
+
+## How to enable / disable
+
+```bash
+scripts/theory.sh on      # Enable (alwaysApply: true)
+scripts/theory.sh off     # Disable (alwaysApply: false)
+scripts/theory.sh status  # Show current state
+```
+
+You can also mention "use kleis theory" in a prompt to activate for one chat.
+
+## Available MCP Tools
+
+| Tool | Purpose |
+|------|---------|
+| `evaluate` | Evaluate a Kleis expression or verify a proposition via Z3 |
+| `describe_schema` | Show everything loaded: structures, data types, functions, axioms |
+| `submit_structure` | Add a structure (with fields, operations, axioms) to the theory |
+| `submit_define` | Add a function definition to the theory |
+| `submit_data` | Add a data type definition to the theory |
+| `try_structure` | Dry-run: check if code would be accepted without committing |
+| `list_session` | Show what you've submitted in this session, in order |
+| `load_theory` | Start a new session with specified imports (new universe) |
+| `save_theory` | Persist the session to a named `.kleis` file |
+
+## Workflow
+
+1. **Explore**: call `describe_schema` to learn what's loaded.
+2. **Build**: use `submit_structure` / `submit_define` / `submit_data` to add
+   your own definitions. Each submission is validated (parsed, loaded,
+   Z3-checked) before being committed to the session.
+3. **Verify**: use `evaluate` to test propositions about your theory.
+   Propositions with quantifiers (∀/∃) are routed to Z3 automatically.
+4. **Iterate**: if a submission is rejected, the error message tells you what
+   went wrong. Use `try_structure` to test ideas without committing.
+5. **Save**: use `save_theory` to persist your work for future sessions.
+
+## Try Before Commit
+
+Use `try_structure` to validate code without modifying the session. This is
+useful for testing whether new axioms are consistent before committing them.
+
+## Session Management
+
+- `load_theory(imports: ["stdlib/prelude.kleis"])` — fresh start with prelude
+- `load_theory(imports: ["theories/my_saved.kleis"])` — reload a saved theory
+- `load_theory(imports: [])` — empty universe (no imports)
+- `save_theory(name: "my_theory")` — saves to `theories/my_theory.kleis`

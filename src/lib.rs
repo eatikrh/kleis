@@ -34,6 +34,7 @@ pub mod solvers; // Pluggable solver backends (Z3, CVC5, etc.)
 pub mod structure_registry;
 pub mod template_inference;
 pub mod templates;
+pub mod theory_mcp; // Theory MCP for interactive theory building (ADR-031)
 pub mod type_checker;
 pub mod type_context;
 pub mod type_inference;

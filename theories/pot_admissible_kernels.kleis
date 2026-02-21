@@ -1,0 +1,60 @@
+import "stdlib/prelude.kleis"
+
+data GreenKernel = GK(ℤ)
+data Flow = Fl(ℤ)
+data FieldR4 = FR4(ℤ)
+
+structure FlowAlgebra {
+    operation flow_add : Flow -> Flow -> Flow
+    operation flow_smul : ℂ -> Flow -> Flow
+    element flow_zero : Flow
+    axiom flow_add_comm : ∀(a b : Flow). flow_add(a, b) = flow_add(b, a)
+    axiom flow_add_id : ∀(a : Flow). flow_add(a, flow_zero) = a
+}
+
+structure FieldAlgebra {
+    operation field_add : FieldR4 -> FieldR4 -> FieldR4
+    operation field_smul : ℂ -> FieldR4 -> FieldR4
+    element field_zero : FieldR4
+    axiom field_add_comm : ∀(f g : FieldR4). field_add(f, g) = field_add(g, f)
+    axiom field_add_id : ∀(f : FieldR4). field_add(f, field_zero) = f
+}
+
+operation apply_kernel : GreenKernel -> Flow -> FieldR4
+
+structure AdmissibleKernel {
+    operation is_admissible : GreenKernel -> Bool
+    axiom kernel_lin_add : ∀(G : GreenKernel, a b : Flow).
+        implies(is_admissible(G),
+            apply_kernel(G, flow_add(a, b)) = field_add(apply_kernel(G, a), apply_kernel(G, b)))
+    axiom kernel_lin_smul : ∀(G : GreenKernel, c : ℂ, a : Flow).
+        implies(is_admissible(G),
+            apply_kernel(G, flow_smul(c, a)) = field_smul(c, apply_kernel(G, a)))
+    axiom kernel_maps_zero : ∀(G : GreenKernel).
+        implies(is_admissible(G), apply_kernel(G, flow_zero) = field_zero)
+}
+
+structure ProjectiveEquivalence {
+    operation equiv : GreenKernel -> Flow -> Flow -> Bool
+    axiom equiv_intro : ∀(G : GreenKernel, a b : Flow).
+        implies(apply_kernel(G, a) = apply_kernel(G, b), equiv(G, a, b))
+    axiom equiv_elim : ∀(G : GreenKernel, a b : Flow).
+        implies(equiv(G, a, b), apply_kernel(G, a) = apply_kernel(G, b))
+}
+
+structure Nullspace {
+    operation in_nullspace : GreenKernel -> Flow -> Bool
+    axiom nullspace_intro : ∀(G : GreenKernel, a : Flow).
+        implies(apply_kernel(G, a) = field_zero, in_nullspace(G, a))
+    axiom nullspace_elim : ∀(G : GreenKernel, a : Flow).
+        implies(in_nullspace(G, a), apply_kernel(G, a) = field_zero)
+}
+
+structure UniverseRefinement {
+    operation refines : GreenKernel -> GreenKernel -> Bool
+    axiom refines_refl : ∀(G : GreenKernel). refines(G, G)
+    axiom refines_trans : ∀(G1 G2 G3 : GreenKernel).
+        implies(and(refines(G2, G1), refines(G3, G2)), refines(G3, G1))
+    axiom refines_nullspace : ∀(G1 G2 : GreenKernel, a : Flow).
+        implies(and(refines(G2, G1), in_nullspace(G1, a)), in_nullspace(G2, a))
+}

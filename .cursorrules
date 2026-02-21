@@ -45,9 +45,13 @@ MCP tools to interact with it:
 
 **Toggle enforcement:**
 ```bash
-scripts/policy.sh on      # Enable (alwaysApply: true)
-scripts/policy.sh off     # Disable (alwaysApply: false)
+scripts/policy.sh on      # Enable policy MCP (alwaysApply: true)
+scripts/policy.sh off     # Disable policy MCP (alwaysApply: false)
 scripts/policy.sh status  # Show current state
+
+scripts/theory.sh on      # Enable theory MCP (alwaysApply: true)
+scripts/theory.sh off     # Disable theory MCP (alwaysApply: false)
+scripts/theory.sh status  # Show current state
 ```
 
 ---
