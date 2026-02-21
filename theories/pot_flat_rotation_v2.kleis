@@ -1,4 +1,4 @@
-import "/Users/eatik_1/git/cee/kleis/theories/pot_flat_rotation_v1.kleis"
+import "pot_flat_rotation_v1.kleis"
 
 structure GalacticTransition {
     operation core_radius : GreenKernel -> Flow -> ℝ
