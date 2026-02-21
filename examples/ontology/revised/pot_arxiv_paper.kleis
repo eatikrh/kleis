@@ -13,6 +13,7 @@
 
 import "stdlib/prelude.kleis"
 import "stdlib/templates/arxiv_paper.kleis"
+import "../../../theories/pot_flat_rotation_v3.kleis"
 
 // =============================================================================
 // Paper Metadata
@@ -340,6 +341,34 @@ define pot_paper = arxiv_paper(
     paper_keywords,
     all_elements
 )
+
+// =============================================================================
+// Z3 Theorem Verification — these re-prove every claim in the paper
+// =============================================================================
+
+example "theorem1_flat_rotation" {
+    assert(∀(G : GreenKernel, f : Flow, r : ℝ). implies(and(is_admissible(G), r >= core_radius(G, f)), v_squared(G, f, r) = mass_rate(G, f)))
+    out("Theorem 1: v²(r) = λ for r ≥ R_c — VERIFIED")
+}
+
+example "theorem2_rising_inner" {
+    assert(∀(G : GreenKernel, f : Flow, r : ℝ). implies(and(is_admissible(G), and(r > 0, r < core_radius(G, f))), v_squared(G, f, r) > mass_rate(G, f)))
+    out("Theorem 2: v²(r) > λ for 0 < r < R_c — VERIFIED")
+}
+
+example "theorem3_outer_flatness" {
+    assert(∀(G : GreenKernel, f : Flow, r1 r2 : ℝ). implies(and(is_admissible(G), and(r1 >= core_radius(G, f), r2 >= core_radius(G, f))), v_squared(G, f, r1) = v_squared(G, f, r2)))
+    out("Theorem 3: v²(r₁) = v²(r₂) for r₁, r₂ ≥ R_c — VERIFIED")
+}
+
+example "theorem4_tully_fisher" {
+    assert(∀(G : GreenKernel, f : Flow, r : ℝ). implies(and(is_admissible(G), r >= core_radius(G, f)), baryonic_mass(G, f) = tf_constant * v_squared(G, f, r) * v_squared(G, f, r)))
+    out("Theorem 4: M_b = a · v⁴ (Tully-Fisher) — VERIFIED")
+}
+
+// =============================================================================
+// Paper Compilation and Validation
+// =============================================================================
 
 example "compile_paper" {
     let typst_output = compile_arxiv_paper(pot_paper) in
