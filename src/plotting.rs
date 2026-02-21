@@ -564,15 +564,15 @@ pub fn generate_lilaq_code(x_data: &[f64], y_data: &[f64], config: &PlotConfig) 
 
     // Add title if present
     if let Some(title) = &config.title {
-        code.push_str(&format!("  title: \"{}\",\n", title));
+        code.push_str(&format!("  title: [{}],\n", title));
     }
 
     // Add axis labels if present
     if let Some(xlabel) = &config.xlabel {
-        code.push_str(&format!("  x-label: \"{}\",\n", xlabel));
+        code.push_str(&format!("  x-label: [{}],\n", xlabel));
     }
     if let Some(ylabel) = &config.ylabel {
-        code.push_str(&format!("  y-label: \"{}\",\n", ylabel));
+        code.push_str(&format!("  y-label: [{}],\n", ylabel));
     }
 
     // Plot command based on type
@@ -728,13 +728,13 @@ pub fn generate_fill_between_code(x_data: &[f64], y_data: &[f64], config: &PlotC
     code.push_str("#lq.diagram(\n");
 
     if let Some(title) = &config.title {
-        code.push_str(&format!("  title: \"{}\",\n", title));
+        code.push_str(&format!("  title: [{}],\n", title));
     }
     if let Some(xlabel) = &config.xlabel {
-        code.push_str(&format!("  x-label: \"{}\",\n", xlabel));
+        code.push_str(&format!("  x-label: [{}],\n", xlabel));
     }
     if let Some(ylabel) = &config.ylabel {
-        code.push_str(&format!("  y-label: \"{}\",\n", ylabel));
+        code.push_str(&format!("  y-label: [{}],\n", ylabel));
     }
 
     // Lilaq fill-between takes: x, y and fills to y=0
@@ -755,7 +755,7 @@ pub fn generate_boxplot_code(datasets: &[Vec<f64>], config: &PlotConfig) -> Stri
     code.push_str("#lq.diagram(\n");
 
     if let Some(title) = &config.title {
-        code.push_str(&format!("  title: \"{}\",\n", title));
+        code.push_str(&format!("  title: [{}],\n", title));
     }
 
     let cmd = match config.plot_type {
@@ -781,7 +781,7 @@ pub fn generate_heatmap_code(matrix: &[Vec<f64>], config: &PlotConfig) -> String
     code.push_str("#lq.diagram(\n");
 
     if let Some(title) = &config.title {
-        code.push_str(&format!("  title: \"{}\",\n", title));
+        code.push_str(&format!("  title: [{}],\n", title));
     }
 
     // Lilaq colormesh needs x, y coordinates matching matrix dimensions
@@ -821,7 +821,7 @@ pub fn generate_contour_code(
     code.push_str("#lq.diagram(\n");
 
     if let Some(title) = &config.title {
-        code.push_str(&format!("  title: \"{}\",\n", title));
+        code.push_str(&format!("  title: [{}],\n", title));
     }
 
     // Lilaq contour needs x, y, z coordinates (like colormesh)
@@ -866,13 +866,13 @@ pub fn generate_quiver_code(
     code.push_str("#lq.diagram(\n");
 
     if let Some(title) = &config.title {
-        code.push_str(&format!("  title: \"{}\",\n", title));
+        code.push_str(&format!("  title: [{}],\n", title));
     }
     if let Some(xlabel) = &config.xlabel {
-        code.push_str(&format!("  x-label: \"{}\",\n", xlabel));
+        code.push_str(&format!("  x-label: [{}],\n", xlabel));
     }
     if let Some(ylabel) = &config.ylabel {
-        code.push_str(&format!("  y-label: \"{}\",\n", ylabel));
+        code.push_str(&format!("  y-label: [{}],\n", ylabel));
     }
 
     code.push_str("  lq.quiver(\n");
@@ -907,7 +907,7 @@ pub fn generate_bar_chart_code(x_data: &[f64], heights: &[f64], config: &PlotCon
     code.push_str("#lq.diagram(\n");
 
     if let Some(title) = &config.title {
-        code.push_str(&format!("  title: \"{}\",\n", title));
+        code.push_str(&format!("  title: [{}],\n", title));
     }
 
     let cmd = match config.plot_type {
@@ -968,7 +968,7 @@ pub fn generate_grouped_bar_code(
 
     // Diagram-level options
     if let Some(title) = &config.title {
-        code.push_str(&format!("  title: \"{}\",\n", title));
+        code.push_str(&format!("  title: [{}],\n", title));
     }
 
     // Calculate bar width and offsets based on number of series
