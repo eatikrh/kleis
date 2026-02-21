@@ -33,11 +33,21 @@ PRIORITY_MAP = {
     "appendix/": 0.7,
 }
 
+# Additional resources not discovered from SUMMARY.md (PDFs, data files, etc.)
+# Format: (source_description, url_path, priority)
+EXTRA_ENTRIES = [
+    ("docs/papers/pot_flat_rotation_curves.pdf",
+     "/docs/papers/pot_flat_rotation_curves.pdf", 1.0),
+]
+
 
 def get_priority(path: str) -> float:
     """Determine priority based on path patterns."""
     if path == "/":
         return 1.0
+    for _, url, pri in EXTRA_ENTRIES:
+        if path == url:
+            return pri
     for pattern, priority in PRIORITY_MAP.items():
         if pattern in path:
             return priority
@@ -130,7 +140,11 @@ def main():
     manual_pages = parse_summary()
     print(f"   Found {len(manual_pages)} manual pages in SUMMARY.md")
     
-    all_pages = static_pages + manual_pages
+    # Extra entries (PDFs, research papers, etc.)
+    extra_pages = [(src, url) for src, url, _ in EXTRA_ENTRIES]
+    print(f"   Found {len(extra_pages)} extra entries (papers, etc.)")
+
+    all_pages = static_pages + manual_pages + extra_pages
     
     print(f"\n📝 Generating sitemap...")
     sitemap_content = generate_sitemap(all_pages)
