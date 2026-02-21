@@ -44,19 +44,19 @@ Every submission goes through a three-stage pipeline:
 Agent submits Kleis source
         │
    ┌────▼────┐
-   │  Parse   │──── Syntax error? → reject, theory unchanged
+   │  Parse  │──── Syntax error? → reject, theory unchanged
    └────┬────┘
         │
    ┌────▼────┐
-   │  Load    │──── Name conflict? → reject, theory unchanged
+   │  Load   │──── Name conflict? → reject, theory unchanged
    └────┬────┘
         │
    ┌────▼────┐
-   │ Verify   │──── Inconsistent axioms? → reject, theory unchanged
+   │ Verify  │──── Inconsistent axioms? → reject, theory unchanged
    └────┬────┘
         │
    ┌────▼────┐
-   │ Commit   │──── Append to session.kleis, rebuild evaluator
+   │ Commit  │──── Append to session.kleis, rebuild evaluator
    └─────────┘
 ```
 
