@@ -1,6 +1,6 @@
 # Next Session Notes
 
-**Last Updated:** February 21, 2026 (session 2)
+**Last Updated:** February 21, 2026 (session 3)
 
 ---
 
@@ -40,8 +40,19 @@
 - `examples/ontology/revised/pot_arxiv_paper.kleis`
 - Compiles to PDF via Typst with live-computed rotation curve plots
 - PDF at `examples/ontology/revised/pot_flat_rotation_paper.pdf`
+- Live at https://kleis.io/docs/papers/pot_flat_rotation_curves.pdf
 - Proper math typesetting (subscripts, display equations)
 - Title: "Flat Galactic Rotation Curves as a Theorem of Projected Ontology"
+- 10 references including recent weak-lensing and modified gravity results
+
+**Session 3 additions (Feb 21, 2026):**
+- Added two new references to the paper:
+  - O'Brien, Chiarelli & Kerin (2024) — empirical MOND/conformal gravity fits (APS April Meeting)
+  - Mistele, McGaugh, Lelli, Schombert & Li (2024) — weak lensing shows flat curves to 1 Mpc, BTFR at large radii (ApJL 969, L3)
+- The Mistele paper is particularly relevant: NFW dark matter halos predict declining velocities beyond virial radius, but observations show no decline out to 1 Mpc — consistent with POT's logarithmic kernel which has no built-in truncation
+- Compared POT with O'Brien et al. (2024) approach: they fit existing modified gravity models (MOND, conformal gravity) empirically; POT derives flat curves axiomatically from projection
+- Compared POT with "Galactic Pizza" (Novais & Ribeiro, 2025 CTEC): literal mass growth over cosmic time vs POT's static geometric projection
+- POT parameter count: 1 free parameter per galaxy (λ or equivalently R_c) vs dark matter's 2-3, MOND's 1 universal + 1 per galaxy
 
 ### Next: Continue POT Physics Formalization
 
