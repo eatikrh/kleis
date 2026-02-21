@@ -103,6 +103,24 @@ the MCP server. Also improve `func_decl.rs` to not unwrap None (done: added
 
 ---
 
+## 💡 IDEA: Paper Review Rules as Kleis Policy
+
+**Origin:** The POT arXiv paper went through ~6 rounds of peer review (by the author), each catching substantive issues. The review process surfaced implicit quality rules that could be formalized as Kleis policies — enabling Z3-backed verification of scientific papers.
+
+**Rules that emerged from the review:**
+
+1. **Dimensional Consistency** — Every axiom must be scale-free. No magic constants (e.g., `r > 1`) that depend on unit choice.
+2. **Physical Honesty** — If a plot contradicts intuition, the paper must explain why. Don't hide assumptions (e.g., uniform-density core).
+3. **Ontological Precision** — Distinguish measured quantities (baryonic mass) from computed quantities (projected mass). Never conflate the two.
+4. **Concrete Grounding** — Abstract axioms are necessary but not sufficient. Numerical results must trace to an explicit kernel/function.
+5. **Counter-theory Acknowledgment** — If replacing Theory X, acknowledge whether the dominant theory (e.g., GR) also fails in the same regime.
+6. **Presentation as Rigor** — Formatting errors are conceptual errors in disguise. No tooling artifacts in output.
+7. **Intellectual Sovereignty** — Don't bind to labels ("open source") that constrain future decisions.
+
+**Potential formalization:** These are axiomatizable as structural checks on a document AST. Z3 could verify, e.g., that every axiom used in a numerical section has a concrete instantiation, or that every claim about Theory X references a counter-theory. A `paper_review_policy.kleis` could enforce these during paper generation.
+
+---
+
 ## PREVIOUS: Equation Editor Enhancements (Jan 3-4, 2026)
 
 ### Branch: `feature/copy-typst-button`
