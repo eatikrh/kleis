@@ -5,6 +5,7 @@ pub struct KleisConfig {
     pub server: ServerConfig,
     pub z3: Z3Config,
     pub timeouts: TimeoutConfig,
+    pub theory: TheoryConfig,
 }
 
 #[derive(Debug, Clone)]
@@ -32,6 +33,14 @@ pub struct TimeoutConfig {
     pub ipc_long_ms: u64,
 }
 
+#[derive(Debug, Clone)]
+pub struct TheoryConfig {
+    /// Directory for ephemeral session/scratch files (gitignored)
+    pub workspace_dir: String,
+    /// Directory for saved theories (version-controlled, importable)
+    pub save_dir: String,
+}
+
 impl Default for KleisConfig {
     fn default() -> Self {
         Self {
@@ -44,6 +53,10 @@ impl Default for KleisConfig {
                 ipc_short_ms: 500,
                 ipc_medium_ms: 5_000,
                 ipc_long_ms: 30_000,
+            },
+            theory: TheoryConfig {
+                workspace_dir: ".theory-sessions".to_string(),
+                save_dir: "theories".to_string(),
             },
         }
     }
@@ -94,6 +107,7 @@ struct PartialConfig {
     server: Option<PartialServer>,
     z3: Option<PartialZ3>,
     timeouts: Option<PartialTimeouts>,
+    theory: Option<PartialTheory>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -112,6 +126,12 @@ struct PartialTimeouts {
     ipc_short_ms: Option<u64>,
     ipc_medium_ms: Option<u64>,
     ipc_long_ms: Option<u64>,
+}
+
+#[derive(Debug, Deserialize)]
+struct PartialTheory {
+    workspace_dir: Option<String>,
+    save_dir: Option<String>,
 }
 
 fn read_partial(path: &std::path::Path) -> Option<PartialConfig> {
@@ -145,6 +165,15 @@ impl KleisConfig {
             }
             if let Some(v) = t.ipc_long_ms {
                 self.timeouts.ipc_long_ms = v;
+            }
+        }
+
+        if let Some(t) = partial.theory {
+            if let Some(workspace_dir) = t.workspace_dir {
+                self.theory.workspace_dir = workspace_dir;
+            }
+            if let Some(save_dir) = t.save_dir {
+                self.theory.save_dir = save_dir;
             }
         }
     }

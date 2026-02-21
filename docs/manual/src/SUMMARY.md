@@ -49,6 +49,10 @@
 - [Physics Applications](./chapters/25-physics-applications.md)
 - [Control Systems](./chapters/26-control-systems.md)
 
+# Theory Building
+
+- [Interactive Theory Building](./chapters/27-theory-building.md)
+
 # Appendices
 
 - [Grammar Reference](./appendix/grammar.md)

@@ -8,6 +8,13 @@
         "--policy",
         "/Users/eatik_1/git/cee/kleis/examples/policies/agent_policy.kleis"
       ]
+    },
+    "kleis-theory": {
+      "command": "/Users/eatik_1/bin/kleis",
+      "args": [
+        "theory-mcp",
+        "--verbose"
+      ]
     }
   }
 }

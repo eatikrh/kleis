@@ -369,5 +369,6 @@ Explore more examples:
 
 → [ODE Solver appendix](../appendix/ode-solver.md) — detailed ode45 documentation  
 → [LAPACK Functions](../appendix/lapack.md) — numerical linear algebra  
-→ [Cartan Geometry](../appendix/cartan-geometry.md) — differential geometry
+→ [Cartan Geometry](../appendix/cartan-geometry.md) — differential geometry  
+→ [Next: Interactive Theory Building](./27-theory-building.md) — AI-assisted formal theory development
 

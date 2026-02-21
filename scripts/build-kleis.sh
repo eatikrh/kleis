@@ -11,6 +11,9 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -154,6 +157,9 @@ elif [ "$SKIP_GC" = false ] && [ -d "target" ]; then
     fi
 fi
 
+# Force target directory to be the project's own target/, not any sandbox redirect
+export CARGO_TARGET_DIR="$PROJECT_ROOT/target"
+
 # Build command
 BUILD_CMD="cargo build --bin kleis"
 
@@ -207,10 +213,12 @@ if [ -f "$BINARY" ]; then
 
     echo ""
     echo "Usage:"
-    echo "  $BINARY server          # Start LSP + DAP server"
-    echo "  $BINARY eval '1 + 2'    # Evaluate expression"
-    echo "  $BINARY check file.kleis # Check file for errors"
-    echo "  $BINARY repl            # Interactive REPL"
+    echo "  $BINARY server                              # Start LSP + DAP server"
+    echo "  $BINARY eval '1 + 2'                        # Evaluate expression"
+    echo "  $BINARY check file.kleis                    # Check file for errors"
+    echo "  $BINARY repl                                # Interactive REPL"
+    echo "  $BINARY mcp -p policy.kleis -v              # Policy MCP server (ADR-030)"
+    echo "  $BINARY theory-mcp -v                       # Theory MCP server (ADR-031)"
 else
     echo -e "${RED}✗ Build failed${NC}"
     exit 1

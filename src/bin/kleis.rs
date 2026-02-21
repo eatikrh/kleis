@@ -107,6 +107,16 @@ enum Commands {
         #[arg(short, long)]
         verbose: bool,
     },
+
+    /// Start Theory MCP server for interactive theory building (ADR-031)
+    ///
+    /// Lets agents co-author Kleis theories interactively, submitting
+    /// structures, definitions, and data types with Z3 consistency checking.
+    TheoryMcp {
+        /// Enable verbose logging (to stderr)
+        #[arg(short, long)]
+        verbose: bool,
+    },
 }
 
 #[tokio::main]
@@ -144,6 +154,9 @@ async fn main() {
         }
         Commands::Mcp { policy, verbose } => {
             run_mcp(policy, verbose);
+        }
+        Commands::TheoryMcp { verbose } => {
+            run_theory_mcp(verbose, &config);
         }
     }
 }
@@ -532,6 +545,32 @@ fn run_mcp(policy: PathBuf, verbose: bool) {
 
     if let Err(e) = server.run() {
         eprintln!("[kleis-mcp] Server error: {}", e);
+        std::process::exit(1);
+    }
+}
+
+/// Run Theory MCP server for interactive theory building (ADR-031)
+fn run_theory_mcp(verbose: bool, config: &kleis::config::KleisConfig) {
+    use kleis::theory_mcp::server::TheoryMcpServer;
+
+    if verbose {
+        eprintln!("[kleis-theory] Starting Theory MCP Server");
+        eprintln!(
+            "[kleis-theory] Workspace: {}, Save dir: {}",
+            config.theory.workspace_dir, config.theory.save_dir
+        );
+    }
+
+    let mut server = match TheoryMcpServer::new(&config.theory, verbose) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("[kleis-theory] Failed to start: {}", e);
+            std::process::exit(1);
+        }
+    };
+
+    if let Err(e) = server.run() {
+        eprintln!("[kleis-theory] Server error: {}", e);
         std::process::exit(1);
     }
 }
