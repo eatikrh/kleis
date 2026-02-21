@@ -339,7 +339,7 @@ define compile_arxiv_element(elem) = match elem {
   | ArxivAlgorithm(label, caption, pseudocode) =>
         concat(concat(concat("#figure(\n  rect(stroke: 0.5pt, inset: 10pt)[\n    ", pseudocode), "\n  ],\n  caption: ["), concat(concat(caption, "]\n) <"), concat(label, ">")))
   | ArxivReference(key, citation) =>
-        concat(concat(concat("[", key), "] "), citation)
+        concat(concat(concat("#par(hanging-indent: 1.5em)[\\[", key), "\\] "), concat(citation, "]"))
   | ArxivAcknowledgments(text) =>
         ""  // Handled separately
   | ArxivAppendix(letter, title, content) =>
