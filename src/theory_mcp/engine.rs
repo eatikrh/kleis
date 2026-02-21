@@ -107,22 +107,60 @@ impl TheoryEngine {
             .map_err(|e| format!("Cannot read '{}': {}", file_path.display(), e))?;
 
         let file_path_str = file_path.to_string_lossy().to_string();
-        let program = parse_kleis_program_with_file(&source, &file_path_str)
-            .map_err(|e| format!("Parse error: {}", e.message))?;
-
-        let mut evaluator = Evaluator::new();
-        let mut loaded_files = HashSet::new();
+        let parse_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            parse_kleis_program_with_file(&source, &file_path_str)
+        }));
+        let program = match parse_result {
+            Ok(Ok(prog)) => prog,
+            Ok(Err(e)) => return Err(format!("Parse error: {}", e.message)),
+            Err(panic_info) => {
+                let msg = if let Some(s) = panic_info.downcast_ref::<String>() {
+                    s.clone()
+                } else if let Some(s) = panic_info.downcast_ref::<&str>() {
+                    s.to_string()
+                } else {
+                    "Unknown panic".to_string()
+                };
+                return Err(format!("Parser panic: {}", msg));
+            }
+        };
 
         let canonical = file_path
             .canonicalize()
             .unwrap_or_else(|_| file_path.to_path_buf());
-        loaded_files.insert(canonical.clone());
 
-        load_imports_recursive(&program, &canonical, &mut evaluator, &mut loaded_files)?;
-        evaluator.load_program_with_file(&program, Some(canonical))?;
+        // Z3 axiom verification can panic on unsupported operations (e.g.,
+        // transcendental functions causing sort mismatches in Z3_mk_app).
+        // Wrap the entire load path so the MCP server stays alive.
+        let load_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let mut evaluator = Evaluator::new();
+            let mut loaded_files = HashSet::new();
+            loaded_files.insert(canonical.clone());
+            load_imports_recursive(&program, &canonical, &mut evaluator, &mut loaded_files)?;
+            evaluator.load_program_with_file(&program, Some(canonical))?;
+            Ok(evaluator)
+        }));
 
-        self.evaluator = evaluator;
-        Ok(())
+        match load_result {
+            Ok(Ok(evaluator)) => {
+                self.evaluator = evaluator;
+                Ok(())
+            }
+            Ok(Err(e)) => Err(e),
+            Err(panic_info) => {
+                let msg = if let Some(s) = panic_info.downcast_ref::<String>() {
+                    s.clone()
+                } else if let Some(s) = panic_info.downcast_ref::<&str>() {
+                    s.to_string()
+                } else {
+                    "Unknown panic in Z3 backend".to_string()
+                };
+                Err(format!(
+                    "Z3 backend error (axiom verification failed): {}",
+                    msg
+                ))
+            }
+        }
     }
 
     /// Submit Kleis source code to the theory (structure, define, or data).
@@ -314,7 +352,27 @@ impl TheoryEngine {
         };
 
         if is_proposition(&expr) {
-            return proposition_result(&self.evaluator.verify_proposition(&expr));
+            let verify_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                self.evaluator.verify_proposition(&expr)
+            }));
+            return match verify_result {
+                Ok(r) => proposition_result(&r),
+                Err(panic_info) => {
+                    let msg = if let Some(s) = panic_info.downcast_ref::<String>() {
+                        s.clone()
+                    } else if let Some(s) = panic_info.downcast_ref::<&str>() {
+                        s.to_string()
+                    } else {
+                        "Unknown panic in Z3 backend".to_string()
+                    };
+                    EvalResult {
+                        value: None,
+                        verified: None,
+                        witness: None,
+                        error: Some(format!("Z3 backend error: {}", msg)),
+                    }
+                }
+            };
         }
 
         match self.evaluator.eval_concrete(&expr) {

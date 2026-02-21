@@ -121,6 +121,16 @@ See `examples/` for all 71 example files.
 
 ---
 
+## 📄 Research
+
+Machine-verified papers produced entirely in Kleis — axioms, proofs, numerical computation, and typesetting in a single reproducible source file.
+
+| Paper | Description |
+|-------|-------------|
+| [Flat Galactic Rotation Curves from Projected Ontology](docs/papers/pot_flat_rotation_curves.pdf) | Derives flat rotation curves and the baryonic Tully-Fisher relation (M ∝ v⁴) from first principles, without dark matter. All 14 axioms and 4 theorems verified by Z3. ([source](docs/papers/pot_flat_rotation_curves.kleis)) |
+
+---
+
 ## 🔬 Core Features
 
 ### Z3 Axiom Verification

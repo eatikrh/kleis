@@ -209,20 +209,30 @@ impl FuncDecl {
     ///
     /// Note that `args` should have the types corresponding to the `domain` of the `FuncDecl`.
     pub fn apply(&self, args: &[&dyn ast::Ast]) -> ast::Dynamic {
+        self.try_apply(args).unwrap_or_else(|| {
+            panic!(
+                "Z3_mk_app failed for function '{}' with {} args (possible sort mismatch)",
+                self.name(),
+                args.len()
+            )
+        })
+    }
+
+    /// Like `apply`, but returns `None` instead of panicking if Z3 cannot
+    /// create the function application (e.g., sort mismatch).
+    pub fn try_apply(&self, args: &[&dyn ast::Ast]) -> Option<ast::Dynamic> {
         assert!(args.iter().all(|s| s.get_ctx().z3_ctx == self.ctx.z3_ctx));
 
         let args: Vec<_> = args.iter().map(|a| a.get_z3_ast()).collect();
 
         unsafe {
-            ast::Dynamic::wrap(&self.ctx, {
-                Z3_mk_app(
-                    self.ctx.z3_ctx.0,
-                    self.z3_func_decl,
-                    args.len().try_into().unwrap(),
-                    args.as_ptr(),
-                )
-                .unwrap()
-            })
+            Z3_mk_app(
+                self.ctx.z3_ctx.0,
+                self.z3_func_decl,
+                args.len().try_into().unwrap(),
+                args.as_ptr(),
+            )
+            .map(|ast| ast::Dynamic::wrap(&self.ctx, ast))
         }
     }
 
