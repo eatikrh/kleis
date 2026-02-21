@@ -221,8 +221,8 @@ define fig_rotation = ArxivDiagram("fig:rotation",
         plot(rc_radii, rc_v_pot, color = "blue", label = "POT (projected mass)"),
         plot(rc_radii, rc_v_newton, color = "red", label = "Newtonian (finite core)"),
         title = "Universal Rotation Curve: POT vs Newtonian",
-        xlabel = "ξ = r / R_c",
-        ylabel = "v / v_max",
+        xlabel = "$xi = r / R_c$",
+        ylabel = "$v / v_(\"max\")$",
         legend_position = "right + top",
         width = 10
     )
@@ -234,9 +234,9 @@ define fig_mass = ArxivDiagram("fig:mass",
     export_typst_fragment(
         plot(rc_radii, rc_m_pot, color = "blue", label = "POT: projected mass grows"),
         plot(rc_radii, rc_m_newton, color = "red", label = "Newton: baryonic mass only"),
-        title = "Normalized Mass Profile: M(r) / M_b",
-        xlabel = "ξ = r / R_c",
-        ylabel = "M(r) / M_b",
+        title = "Normalized Mass Profile: $M(r) / M_b$",
+        xlabel = "$xi = r / R_c$",
+        ylabel = "$M(r) / M_b$",
         legend_position = "left + top",
         width = 10
     )
