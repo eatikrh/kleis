@@ -53,6 +53,87 @@
 - Compared POT with O'Brien et al. (2024) approach: they fit existing modified gravity models (MOND, conformal gravity) empirically; POT derives flat curves axiomatically from projection
 - Compared POT with "Galactic Pizza" (Novais & Ribeiro, 2025 CTEC): literal mass growth over cosmic time vs POT's static geometric projection
 - POT parameter count: 1 free parameter per galaxy (λ or equivalently R_c) vs dark matter's 2-3, MOND's 1 universal + 1 per galaxy
+- Clarified Hont → R⁴ → R³ projection language in paper: "one natural interpretation" (not a POT assertion), removed factorization-independence claim (inconsistent with FieldR4 in Kleis axioms)
+
+### Related Work to Review
+
+- **François, J. & Ravera, L. (2025).** "Raising galaxy rotation curves via dressing." Phys. Rev. D 112(8). DOI: 10.1103/m9xl-9vvk
+  - Uses the Dressing Field Method (DFM) to extract gauge-invariant corrections from GR + scalar fields
+  - Produces flat rotation curves without dark matter; tested against SPARC database
+  - Published in Phys. Rev. D — shows mainstream journals accepting "no dark matter" rotation curve papers
+  - Key difference from POT: DFM works within GR (dressing the metric), POT works from a deeper projection framework
+  - **TODO:** Get full PDF and compare in detail — does it derive Tully-Fisher? How many free parameters?
+
+### Key Philosophical Principle: Why No Lagrangian (applies to ALL POT papers)
+
+**The projection is lossy and we exist inside it.**
+
+POT's refusal to postulate a Lagrangian for Hont is not a gap — it is a
+consequence of the theory's own axioms. The projection Π is many-to-one
+and non-invertible (Axiom: Irreversible Projection). Information is destroyed.
+
+Both the theorist and any reasoning tool (human or AI) exist as outputs
+of the projection — we ARE the projection. Therefore we cannot reconstruct
+the complete dynamics (Lagrangian) of the source space Hont. Claiming to
+know a specific Lagrangian would require information that the projection
+provably destroyed. Any specific Lagrangian we write down would be one of
+infinitely many consistent with the same projected observables.
+
+What we CAN do: find the *constraints* (axioms) that the projection
+preserves. These are the limiting conditions on the class of possible
+dynamics in Hont. Everything beyond these constraints is in the nullspace
+— epistemically inaccessible from within the projection.
+
+This is POT's epistemological boundary — analogous to Godel's incompleteness
+(can't fully describe the system you're in) or the halting problem (can't
+predict behavior from inside). The axioms are the strongest statements
+possible from this side of the projection.
+
+**This applies to both the rotation curves paper and the entanglement paper.**
+Both should reference this principle in their "Limitations" sections.
+The rotation curves paper's "What This Paper Does Not Do" should be
+updated to match the entanglement paper's treatment.
+
+### Entanglement Paper: Formalization Plan (from prior notes)
+
+**Core axioms to formalize in Kleis (ready for kleis-theory MCP):**
+
+1. **Non-Separability Axiom**: ψ_AB is a single vector in Hont, NOT ψ_A ⊗ ψ_B.
+   Denies the standard separability assumption. This is the axiom that sidesteps Bell.
+
+2. **Enriched Modal Flow**: φ: X × R_τ → Cⁿ (vector-valued codomain for spin/flavor).
+   Internal degrees of freedom encoded directly in the value type of the flow.
+
+3. **Unified Projection**: π_A and π_B are the SAME operator Π evaluated at different
+   spatial arguments. "Non-local" correlation = consistency condition of singular projection.
+
+4. **Kernel Factorization**: K(x,ξ) = K_univ · K_dyn · K_rep
+   - K_univ: universal structural sector
+   - K_dyn: dynamical sector (elliptic for gravity, hyperbolic for propagation)
+   - K_rep: representation-dependent sector (spin, flavor)
+   This unifies the rotation curve kernel G with measurement kernel K(θ).
+
+5. **Measurement as Kernel Parameterization**: Detector angle = alignment of projection
+   operator. "Collapse" = context-dependent change in which modal components survive projection.
+
+6. **Bell's Step Rejected**: POT rejects the factorization P(a,b) = ∫ A(a,λ)B(b,λ)ρ(λ)dλ.
+   Since A and B are not separable systems, there is no independent "outcome A" to factorize.
+
+7. **Interference Formula** (from neutrino work):
+   P_{α→β}(t) = |Σᵢ U_{βi} e^{-iωᵢt} U*_{αi}|²
+   Entangled measurements = different spatial samplings of same rotating modal vector.
+
+**Proof strategy for Kleis:**
+1. Define `EntangledState` as single vector in Hont (not tensor product)
+2. Define projection operators π_A, π_B as same Π at different coordinates
+3. Prove: correlation E(a,b) = -cos(θ) for spin-½ singlet follows from kernel structure
+4. Show: Bell inequality |E(a,b) - E(a,c)| ≤ 1 + E(b,c) is violated
+5. But without non-locality — because π_A and π_B are local projections of shared state
+
+**Key distinction from rotation curves paper:**
+- Rotation curves used scalar kernel (coherence function h(G,r))
+- Entanglement uses matrix-valued kernel sector K_rep acting on spinor representation
+- Both are sectors of the SAME unified kernel K — this is the Kernel Unification Theorem
 
 ### Next: Continue POT Physics Formalization
 
