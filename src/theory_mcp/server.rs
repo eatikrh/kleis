@@ -466,11 +466,8 @@ impl TheoryMcpServer {
             .and_then(|k| k.as_str())
             .unwrap_or("");
 
-        self.log(&format!(
-            "submit_{}: {}",
-            kind,
-            &kleis_source[..kleis_source.len().min(80)]
-        ));
+        let truncated: String = kleis_source.chars().take(80).collect();
+        self.log(&format!("submit_{}: {}[...]", kind, truncated));
 
         let result = self.engine.submit_kleis(kleis_source);
 
@@ -539,10 +536,8 @@ impl TheoryMcpServer {
             .and_then(|k| k.as_str())
             .unwrap_or("");
 
-        self.log(&format!(
-            "try_structure: {}",
-            &kleis_source[..kleis_source.len().min(80)]
-        ));
+        let truncated: String = kleis_source.chars().take(80).collect();
+        self.log(&format!("try_structure: {}[...]", truncated));
 
         let result = self.engine.try_kleis(kleis_source);
 
@@ -610,8 +605,8 @@ impl TheoryMcpServer {
         } else {
             let mut t = format!("📋 Session history ({} items)\n\n", history.len());
             for (i, item) in history.iter().enumerate() {
-                let preview = if item.len() > 100 {
-                    format!("{}...", &item[..100])
+                let preview: String = if item.chars().count() > 100 {
+                    format!("{}...", item.chars().take(100).collect::<String>())
                 } else {
                     item.clone()
                 };

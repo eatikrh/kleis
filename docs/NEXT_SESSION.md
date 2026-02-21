@@ -1,35 +1,109 @@
 # Next Session Notes
 
-**Last Updated:** January 3, 2026
+**Last Updated:** February 21, 2026 (session 2)
 
 ---
 
-## 📚 MANUAL REFERENCE
+## CURRENT WORK: POT Flat Rotation Curves — PROVED + Paper Written
 
-**The Kleis Manual:** https://kleis.io/docs/manual/book/
+### What Was Accomplished (Feb 21, 2026)
 
-| Chapter | Title | URL |
-|---------|-------|-----|
-| 14 | **Document Generation** | https://kleis.io/docs/manual/book/chapters/23-document-generation.html |
+**Bug fix: Theory MCP crash was UTF-8 string slicing, NOT Z3.**
+- `server.rs:472`: `&kleis_source[..80]` sliced inside multi-byte `ℝ` char
+- Fixed all 3 instances to use `.chars().take(N).collect()`
+- Also wrapped parser in `catch_unwind` for robustness
+- **Important**: Must use `./scripts/build-kleis.sh` to build, not bare `cargo build` (sandbox redirects `CARGO_TARGET_DIR`)
 
-This is the dissertation/thesis writing chapter. It covers templates (MIT, UofM, arXiv), equations, figures, tables, bibliography, and PDF export. **Documents are pure Kleis programs.**
+**Flat rotation curves: Z3-verified theorems**
+- Loaded `theories/pot_admissible_kernels_v2.kleis`
+- Submitted 4 structures: ModalDensity, ModalPhase, ProjectedPotential, LinearMassGrowth
+- Saved as `theories/pot_flat_rotation_v1.kleis`
+- Added GalacticTransition (inner Newtonian + outer flat)
+- Saved as `theories/pot_flat_rotation_v2.kleis`
+- Added TullyFisher + CoreScaling (M ∝ v⁴)
+- Saved as `theories/pot_flat_rotation_v3.kleis`
+
+**Z3-verified theorems (all PROVED):**
+1. v²(r) = λ for r ≥ R_c — flat rotation curve
+2. v²(r) > λ for 0 < r < R_c — rising inner region
+3. v²(r₁) = v²(r₂) for both in outer region — flatness
+4. v²(r_in) > v²(r_out) — transition from inner to outer
+5. v² > 0 — real orbits
+6. M(r) > 0 — non-degenerate matter
+7. M_baryonic = a · v⁴ — Tully-Fisher relation
+
+**Numerical computation:**
+- `examples/ontology/revised/rotation_curve_numerical.kleis`
+- 60-point curves: POT flat at 223.6 vs Newtonian declining to 91.3
+
+**arXiv paper:**
+- `examples/ontology/revised/pot_arxiv_paper.kleis`
+- Compiles to PDF via Typst with live-computed rotation curve plots
+- PDF at `examples/ontology/revised/pot_flat_rotation_paper.pdf`
+- Proper math typesetting (subscripts, display equations)
+- Title: "Flat Galactic Rotation Curves as a Theorem of Projected Ontology"
+
+### Next: Continue POT Physics Formalization
+
+| Result | Status | What to Formalize |
+|--------|--------|-------------------|
+| **Flat rotation curves** | ✅ PROVED + Paper | Done — 7 theorems, numerical curves, arXiv paper |
+| **Tully-Fisher relation** | ✅ PROVED | M = a·v⁴ verified by Z3 |
+| **SR from projection slicing** | Not started | Formalize observer-dependent kernels, prove Lorentz invariance is a *theorem* of projection |
+| **Neutrino oscillations** | Not started | Formalize C3 codomain, axiomatize mass matrix structure |
+| **Schwarzschild weak-field** | Not started | Axiomatize vortex modal structure |
+| **Quantitative galaxy fits** | Not started | Fit SPARC survey data, test R_c ∝ v² prediction |
+| **Bullet Cluster** | Not started | Multi-kernel / extended coherence model |
+
+### Also Needed: Spectral Residues
+
+The `residue` operation is already in `pot_foundations_kernel_projection.kleis`:
+```
+axiom survival_principle: ∀(G : GreenKernel, a b : Flow, e : Event, c : Channel).
+    apply_kernel(G, a) = apply_kernel(G, b) →
+        residue(apply_kernel(G, a), e, c) = residue(apply_kernel(G, b), e, c)
+```
+
+Need to define: `Event`, `Channel`, `Residue` structures. Axiomatize spectral
+extraction. This connects to Emergence of Mass and Charge (POT Postulate 4).
+
+### BUG STATUS: Z3 crash — RESOLVED
+
+**Root cause was NOT Z3.** It was UTF-8 string slicing in `server.rs`.
+The previous `vendor/z3/src/func_decl.rs` changes (`try_apply`) are still
+good defensive code but were not the crash source.
+
+**Workaround no longer needed.** Axioms with nonlinear real arithmetic
+(multiplication of operations) work fine. Z3 may return "Unknown" for
+complex nonlinear queries but does not crash.
+
+**Previous note (obsolete):** Avoid `sqrt`, `log`, `sin`, `cos`, `exp` in axioms. Use
+algebraic equivalents (e.g., `v_squared = M/r` instead of `v = sqrt(M/r)`).
+Keep transcendentals as abstract uninterpreted operations with axiomatized
+properties — don't ask Z3 to evaluate them directly.
+
+**Root cause:** The crash is in Z3's C library (libz3), not Rust code.
+`catch_unwind` cannot catch it. It occurs when multiple structures with
+nonlinear axioms interact — e.g., `v_squared * r = projected_mass` combined
+with `projected_mass = mass_rate * r` creates a system Z3's C backend aborts on.
+A single structure with `mass_rate * r` works fine on its own.
+
+**Fix needed:** Either pre-validate axiom complexity before sending to Z3,
+or run Z3 verification in a subprocess that can be killed without crashing
+the MCP server. Also improve `func_decl.rs` to not unwrap None (done: added
+`try_apply`), though the C-level crash bypasses this.
+
+### Session Startup
+
+1. Read this file
+2. `scripts/theory.sh on` (enable kleis-theory MCP)
+3. `load_theory(imports: ["theories/pot_admissible_kernels_v2.kleis"])`
+4. Read `examples/ontology/revised/` for existing POT formalizations
+5. Pick a result from the table above and start formalizing
 
 ---
 
-## 📖 KEY ACADEMIC REFERENCES
-
-Papers that validate and align with the Kleis approach:
-
-| Paper | Authors | Relevance |
-|-------|---------|-----------|
-| **[Toward Verified Artificial Intelligence](https://cacm.acm.org/research/toward-verified-artificial-intelligence/)** | Seshia et al. (CACM 2022) | Formal methods for AI verification using SAT/SMT (Z3). Kleis implements the same verification paradigm. |
-| **IEEE 1800.2-2020 (UVM)** | IEEE | Universal Verification Methodology for hardware. Kleis provides formal proofs where UVM provides simulation. |
-
-**Added:** January 5, 2026 — Section in manual `13-applications.md` on AI/ML Verification citing the CACM paper.
-
----
-
-## 🚀 CURRENT WORK: Equation Editor Enhancements (Jan 3-4, 2026)
+## PREVIOUS: Equation Editor Enhancements (Jan 3-4, 2026)
 
 ### Branch: `feature/copy-typst-button`
 

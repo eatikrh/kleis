@@ -1,0 +1,8 @@
+import "/Users/eatik_1/git/cee/kleis/theories/pot_flat_rotation_v1.kleis"
+
+structure GalacticTransition {
+    operation core_radius : GreenKernel -> Flow -> ℝ
+    axiom core_positive : ∀(G : GreenKernel, f : Flow). implies(is_admissible(G), core_radius(G, f) > 0)
+    axiom inner_newtonian : ∀(G : GreenKernel, f : Flow, r : ℝ). implies(and(is_admissible(G), and(r > 0, r < core_radius(G, f))), projected_mass(G, f, r) > mass_rate(G, f) * r)
+    axiom outer_flat : ∀(G : GreenKernel, f : Flow, r : ℝ). implies(and(is_admissible(G), r >= core_radius(G, f)), projected_mass(G, f, r) = mass_rate(G, f) * r)
+}

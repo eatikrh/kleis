@@ -1,0 +1,26 @@
+import "/Users/eatik_1/git/cee/kleis/theories/pot_admissible_kernels_v2.kleis"
+
+structure ModalDensity {
+    operation rho : GreenKernel -> Flow -> ℝ -> ℝ
+    axiom density_nonneg : ∀(G : GreenKernel, f : Flow, r : ℝ). implies(is_admissible(G), rho(G, f, r) >= 0)
+    axiom superpose_linear : ∀(G : GreenKernel, f1 f2 : Flow, r : ℝ). implies(is_admissible(G), rho(G, flow_add(f1, f2), r) = rho(G, f1, r) + rho(G, f2, r))
+}
+
+structure ModalPhase {
+    operation coherence : GreenKernel -> ℝ -> ℝ
+    axiom coherence_positive : ∀(G : GreenKernel, r : ℝ). implies(and(is_admissible(G), r > 0), coherence(G, r) > 0)
+    axiom slow_decay : ∀(G : GreenKernel, r1 r2 : ℝ). implies(and(is_admissible(G), and(r1 > 0, r2 >= r1)), coherence(G, r2) * r2 >= coherence(G, r1) * r1)
+}
+
+structure ProjectedPotential {
+    operation projected_mass : GreenKernel -> Flow -> ℝ -> ℝ
+    operation v_squared : GreenKernel -> Flow -> ℝ -> ℝ
+    axiom velocity_from_mass : ∀(G : GreenKernel, f : Flow, r : ℝ). implies(and(is_admissible(G), r > 0), v_squared(G, f, r) * r = projected_mass(G, f, r))
+    axiom projected_mass_nonneg : ∀(G : GreenKernel, f : Flow, r : ℝ). implies(is_admissible(G), projected_mass(G, f, r) >= 0)
+}
+
+structure LinearMassGrowth {
+    operation mass_rate : GreenKernel -> Flow -> ℝ
+    axiom linear_growth : ∀(G : GreenKernel, f : Flow, r : ℝ). implies(and(is_admissible(G), r > 0), projected_mass(G, f, r) = mass_rate(G, f) * r)
+    axiom positive_rate : ∀(G : GreenKernel, f : Flow). implies(is_admissible(G), mass_rate(G, f) > 0)
+}
