@@ -119,6 +119,9 @@ fn test_identity_axiom_simple() {
             VerificationResult::Disabled => {
                 panic!("Axiom verification should be enabled in this test");
             }
+            VerificationResult::InconsistentAxioms => {
+                panic!("Axioms are inconsistent!");
+            }
         }
     }
 
@@ -160,6 +163,9 @@ fn test_commutativity_axiom() {
             VerificationResult::Disabled => {
                 panic!("Feature should be enabled");
             }
+            VerificationResult::InconsistentAxioms => {
+                panic!("Axioms are inconsistent!");
+            }
         }
     }
 }
@@ -191,6 +197,9 @@ fn test_associativity_axiom() {
             }
             VerificationResult::Disabled => {
                 panic!("Feature should be enabled");
+            }
+            VerificationResult::InconsistentAxioms => {
+                panic!("Axioms are inconsistent!");
             }
         }
     }
@@ -270,6 +279,9 @@ fn test_invalid_axiom_detection() {
             VerificationResult::Disabled => {
                 panic!("Feature should be enabled");
             }
+            VerificationResult::InconsistentAxioms => {
+                println!("⚠️ Axioms are inconsistent (acceptable for false axiom test)");
+            }
         }
     }
 }
@@ -339,6 +351,9 @@ fn test_distributivity_axiom() {
             }
             VerificationResult::Disabled => {
                 panic!("Feature should be enabled");
+            }
+            VerificationResult::InconsistentAxioms => {
+                panic!("Axioms are inconsistent!");
             }
         }
     }

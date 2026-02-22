@@ -52,6 +52,10 @@ pub enum VerificationResult {
 
     /// Feature not enabled
     Disabled,
+
+    /// Loaded axioms are mutually inconsistent (unsatisfiable).
+    /// All verification results would be vacuously true — this is a theory bug.
+    InconsistentAxioms,
 }
 
 /// Axiom verifier using Z3 with incremental solving and smart caching
@@ -70,6 +74,14 @@ pub struct AxiomVerifier<'r> {
     #[cfg(feature = "axiom-verification")]
     /// Track which structures' axioms are currently loaded
     loaded_structures: HashSet<String>,
+
+    #[cfg(feature = "axiom-verification")]
+    /// Whether axiom consistency has been checked (avoids redundant checks)
+    consistency_checked: bool,
+
+    #[cfg(feature = "axiom-verification")]
+    /// Result of last consistency check (None = not yet checked)
+    axioms_consistent: Option<bool>,
 
     #[cfg(not(feature = "axiom-verification"))]
     _phantom: std::marker::PhantomData<&'r ()>,
@@ -101,6 +113,8 @@ impl<'r> AxiomVerifier<'r> {
             backend,
             registry,
             loaded_structures: HashSet::new(),
+            consistency_checked: false,
+            axioms_consistent: None,
         })
     }
 
@@ -204,6 +218,34 @@ impl<'r> AxiomVerifier<'r> {
         I: IntoIterator<Item = S>,
         S: AsRef<str>,
     {
+    }
+
+    /// Pre-seed the consistency check result from an external cache.
+    /// This avoids redundant Z3 consistency checks when the evaluator
+    /// already knows the result from a previous verifier instance.
+    #[cfg(feature = "axiom-verification")]
+    pub fn set_consistency_cache(&mut self, cached: Option<bool>) {
+        self.consistency_checked = true;
+        self.axioms_consistent = cached;
+    }
+
+    #[cfg(not(feature = "axiom-verification"))]
+    pub fn set_consistency_cache(&mut self, _cached: Option<bool>) {}
+
+    /// Get the consistency check result (for external caching).
+    /// Returns None if not yet checked, Some(Some(true/false)) if checked.
+    #[cfg(feature = "axiom-verification")]
+    pub fn get_consistency_result(&self) -> Option<Option<bool>> {
+        if self.consistency_checked {
+            Some(self.axioms_consistent)
+        } else {
+            None
+        }
+    }
+
+    #[cfg(not(feature = "axiom-verification"))]
+    pub fn get_consistency_result(&self) -> Option<Option<bool>> {
+        None
     }
 
     /// Analyze expression to find which structures it depends on
@@ -368,10 +410,36 @@ impl<'r> AxiomVerifier<'r> {
         self.load_identity_elements_recursive(&structure.members);
 
         // Phase 2: Get and load axioms (including from nested structures)
+        // Use push/pop so that if axiom loading fails partway through,
+        // the partially-asserted axioms are rolled back. Without this,
+        // a type mismatch in one axiom leaves earlier axioms asserted,
+        // potentially making the solver state UNSAT (inconsistent).
+        //
+        // On success we pop and re-load at the base level. This avoids
+        // accumulating push levels (one per loaded structure), which can
+        // degrade solver performance over many structures.
         println!("   Loading axioms for {}...", structure_name);
-        if let Err(e) = self.load_axioms_recursive(&structure.members) {
-            eprintln!("   ❌ ERROR loading axioms: {}", e);
-            return Err(e);
+        self.backend.push();
+        match self.load_axioms_recursive(&structure.members) {
+            Err(e) => {
+                eprintln!("   ❌ ERROR loading axioms: {}", e);
+                self.backend.pop(1);
+                return Err(e);
+            }
+            Ok(()) => {
+                // Axioms loaded successfully in the trial scope.
+                // Pop the trial scope and re-assert at the base level so we
+                // don't accumulate push levels across many structure loads.
+                self.backend.pop(1);
+                // Re-load is safe: we know it succeeded once, so it won't fail.
+                if let Err(e) = self.load_axioms_recursive(&structure.members) {
+                    eprintln!(
+                        "   ❌ Unexpected error re-loading axioms for {}: {}",
+                        structure_name, e
+                    );
+                    return Err(e);
+                }
+            }
         }
         println!("   ✅ Axioms loaded successfully");
 
@@ -523,6 +591,25 @@ impl<'r> AxiomVerifier<'r> {
                     eprintln!("   ⚠️ Warning: Failed to load {}: {}", structure, e);
                 }
             }
+        }
+
+        // Step 2c: Check axiom consistency (once per verifier lifetime)
+        if !self.consistency_checked {
+            self.consistency_checked = true;
+            match self.backend.check_consistency() {
+                Ok(true) => {
+                    self.axioms_consistent = Some(true);
+                }
+                Ok(false) => {
+                    self.axioms_consistent = Some(false);
+                    return Ok(VerificationResult::InconsistentAxioms);
+                }
+                Err(_e) => {
+                    self.axioms_consistent = None;
+                }
+            }
+        } else if self.axioms_consistent == Some(false) {
+            return Ok(VerificationResult::InconsistentAxioms);
         }
 
         // Step 3: Delegate to backend for verification (uses solver abstraction layer!)
@@ -751,5 +838,599 @@ mod tests {
         let deps = verifier.analyze_dependencies(&expr);
         // Dependencies depend on registry content
         println!("Dependencies for plus operation: {:?}", deps);
+    }
+
+    /// Helper: build a StructureDef with given members
+    #[cfg(feature = "axiom-verification")]
+    fn make_structure(
+        name: &str,
+        members: Vec<crate::kleis_ast::StructureMember>,
+    ) -> crate::kleis_ast::StructureDef {
+        crate::kleis_ast::StructureDef {
+            name: name.to_string(),
+            type_params: vec![],
+            members,
+            extends_clause: None,
+            over_clause: None,
+        }
+    }
+
+    /// Helper: build an axiom StructureMember from an Expression
+    #[cfg(feature = "axiom-verification")]
+    fn make_axiom(name: &str, prop: Expression) -> crate::kleis_ast::StructureMember {
+        crate::kleis_ast::StructureMember::Axiom {
+            name: name.to_string(),
+            proposition: prop,
+        }
+    }
+
+    /// Helper: build an operation StructureMember
+    #[cfg(feature = "axiom-verification")]
+    fn make_operation(
+        name: &str,
+        type_sig: crate::kleis_ast::TypeExpr,
+    ) -> crate::kleis_ast::StructureMember {
+        crate::kleis_ast::StructureMember::Operation {
+            name: name.to_string(),
+            type_signature: type_sig,
+        }
+    }
+
+    /// Test that a successfully loaded structure keeps the solver consistent.
+    /// An existential tautology ∃(x:Int). x = x should be satisfiable.
+    #[cfg(feature = "axiom-verification")]
+    #[test]
+    fn test_successful_structure_load_keeps_consistency() {
+        use crate::ast::Expression;
+        use crate::kleis_ast::TypeExpr;
+
+        let mut registry = StructureRegistry::new();
+
+        // Register a simple structure: operation f : ℤ → ℤ, axiom: ∀x. f(x) >= 0
+        let structure = make_structure(
+            "SimpleStruct",
+            vec![
+                make_operation(
+                    "f",
+                    TypeExpr::Function(
+                        Box::new(TypeExpr::Named("ℤ".to_string())),
+                        Box::new(TypeExpr::Named("ℤ".to_string())),
+                    ),
+                ),
+                make_axiom(
+                    "f_nonneg",
+                    Expression::Quantifier {
+                        quantifier: crate::ast::QuantifierKind::ForAll,
+                        variables: vec![crate::ast::QuantifiedVar {
+                            name: "x".to_string(),
+                            type_annotation: Some("ℤ".to_string()),
+                        }],
+                        body: Box::new(Expression::Operation {
+                            name: "geq".to_string(),
+                            args: vec![
+                                Expression::Operation {
+                                    name: "f".to_string(),
+                                    args: vec![Expression::Object("x".to_string())],
+                                    span: None,
+                                },
+                                Expression::Const("0".to_string()),
+                            ],
+                            span: None,
+                        }),
+                        where_clause: None,
+                    },
+                ),
+            ],
+        );
+        registry.register(structure).unwrap();
+
+        let mut verifier = AxiomVerifier::new(&registry).unwrap();
+        let result = verifier.ensure_structure_loaded("SimpleStruct");
+        assert!(result.is_ok(), "SimpleStruct should load successfully");
+
+        // Existential tautology: ∃(x:ℤ). x = x
+        let tautology = Expression::Quantifier {
+            quantifier: crate::ast::QuantifierKind::Exists,
+            variables: vec![crate::ast::QuantifiedVar {
+                name: "x".to_string(),
+                type_annotation: Some("ℤ".to_string()),
+            }],
+            body: Box::new(Expression::Operation {
+                name: "equals".to_string(),
+                args: vec![
+                    Expression::Object("x".to_string()),
+                    Expression::Object("x".to_string()),
+                ],
+                span: None,
+            }),
+            where_clause: None,
+        };
+        let result = verifier.verify_axiom(&tautology).unwrap();
+        assert!(
+            matches!(
+                result,
+                VerificationResult::Valid | VerificationResult::ValidWithWitness { .. }
+            ),
+            "Existential tautology should hold after successful structure load: got {:?}",
+            result
+        );
+    }
+
+    /// Test that a failed structure load rolls back partial axioms.
+    /// We create a structure where the second axiom will fail (type mismatch).
+    /// After the failure, the solver should remain consistent — an existential
+    /// tautology should still be satisfiable, NOT return UNSAT.
+    #[cfg(feature = "axiom-verification")]
+    #[test]
+    fn test_failed_structure_load_rolls_back() {
+        use crate::ast::Expression;
+
+        let mut registry = StructureRegistry::new();
+
+        // A constraining axiom that narrows the model (1 = 1, always true)
+        let good_axiom = make_axiom(
+            "trivial",
+            Expression::Operation {
+                name: "equals".to_string(),
+                args: vec![
+                    Expression::Const("1".to_string()),
+                    Expression::Const("1".to_string()),
+                ],
+                span: None,
+            },
+        );
+
+        // Two axioms that use the same operation name "clash_op" with
+        // incompatible argument types. The first call declares it as
+        // Int×Int → Int; the second passes a String arg, triggering a
+        // type mismatch error from the Z3 backend.
+        let first_use = make_axiom(
+            "setup_type",
+            Expression::Operation {
+                name: "equals".to_string(),
+                args: vec![
+                    Expression::Operation {
+                        name: "clash_op".to_string(),
+                        args: vec![
+                            Expression::Const("1".to_string()),
+                            Expression::Const("2".to_string()),
+                        ],
+                        span: None,
+                    },
+                    Expression::Const("0".to_string()),
+                ],
+                span: None,
+            },
+        );
+        let conflicting_use = make_axiom(
+            "will_fail",
+            Expression::Operation {
+                name: "equals".to_string(),
+                args: vec![
+                    Expression::Operation {
+                        name: "clash_op".to_string(),
+                        args: vec![
+                            Expression::String("not_an_int".to_string()),
+                            Expression::Const("2".to_string()),
+                        ],
+                        span: None,
+                    },
+                    Expression::Const("0".to_string()),
+                ],
+                span: None,
+            },
+        );
+
+        let structure = make_structure("BadStruct", vec![good_axiom, first_use, conflicting_use]);
+        registry.register(structure).unwrap();
+
+        let mut verifier = AxiomVerifier::new(&registry).unwrap();
+
+        // Loading should fail due to type conflict on "clash_op"
+        let result = verifier.ensure_structure_loaded("BadStruct");
+        assert!(
+            result.is_err(),
+            "BadStruct should fail to load due to type mismatch"
+        );
+
+        // After the failure, the solver should still be consistent.
+        // ∃(x:ℤ). x = x should be satisfiable.
+        let tautology = Expression::Quantifier {
+            quantifier: crate::ast::QuantifierKind::Exists,
+            variables: vec![crate::ast::QuantifiedVar {
+                name: "x".to_string(),
+                type_annotation: Some("ℤ".to_string()),
+            }],
+            body: Box::new(Expression::Operation {
+                name: "equals".to_string(),
+                args: vec![
+                    Expression::Object("x".to_string()),
+                    Expression::Object("x".to_string()),
+                ],
+                span: None,
+            }),
+            where_clause: None,
+        };
+        let result = verifier.verify_axiom(&tautology).unwrap();
+        assert!(
+            matches!(result, VerificationResult::Valid | VerificationResult::ValidWithWitness { .. }),
+            "Existential tautology should hold after failed structure load (rollback must work): got {:?}", result
+        );
+    }
+
+    /// Test that after a failed structure load, other structures can still
+    /// load and verify correctly — the failure doesn't poison the solver.
+    #[cfg(feature = "axiom-verification")]
+    #[test]
+    fn test_failed_load_does_not_poison_subsequent_loads() {
+        use crate::ast::Expression;
+        use crate::kleis_ast::TypeExpr;
+
+        let mut registry = StructureRegistry::new();
+
+        // Bad structure: two axioms using the same op name with conflicting types
+        let first_use = make_axiom(
+            "setup_type",
+            Expression::Operation {
+                name: "equals".to_string(),
+                args: vec![
+                    Expression::Operation {
+                        name: "clash_op2".to_string(),
+                        args: vec![Expression::Const("1".to_string())],
+                        span: None,
+                    },
+                    Expression::Const("0".to_string()),
+                ],
+                span: None,
+            },
+        );
+        let conflicting_use = make_axiom(
+            "will_fail",
+            Expression::Operation {
+                name: "equals".to_string(),
+                args: vec![
+                    Expression::Operation {
+                        name: "clash_op2".to_string(),
+                        args: vec![Expression::String("not_an_int".to_string())],
+                        span: None,
+                    },
+                    Expression::Const("0".to_string()),
+                ],
+                span: None,
+            },
+        );
+        registry
+            .register(make_structure(
+                "BadStruct",
+                vec![first_use, conflicting_use],
+            ))
+            .unwrap();
+
+        // Good structure: operation g : ℤ → ℤ, axiom: g(0) = 42
+        let good_structure = make_structure(
+            "GoodStruct",
+            vec![
+                make_operation(
+                    "g",
+                    TypeExpr::Function(
+                        Box::new(TypeExpr::Named("ℤ".to_string())),
+                        Box::new(TypeExpr::Named("ℤ".to_string())),
+                    ),
+                ),
+                make_axiom(
+                    "g_zero",
+                    Expression::Operation {
+                        name: "equals".to_string(),
+                        args: vec![
+                            Expression::Operation {
+                                name: "g".to_string(),
+                                args: vec![Expression::Const("0".to_string())],
+                                span: None,
+                            },
+                            Expression::Const("42".to_string()),
+                        ],
+                        span: None,
+                    },
+                ),
+            ],
+        );
+        registry.register(good_structure).unwrap();
+
+        let mut verifier = AxiomVerifier::new(&registry).unwrap();
+
+        // Load bad structure — should fail
+        let result = verifier.ensure_structure_loaded("BadStruct");
+        assert!(result.is_err(), "BadStruct should fail to load");
+
+        // Load good structure — should succeed
+        let result = verifier.ensure_structure_loaded("GoodStruct");
+        assert!(
+            result.is_ok(),
+            "GoodStruct should load successfully after BadStruct failure"
+        );
+
+        // Verify that GoodStruct's axiom is usable: g(0) = 42
+        let check = Expression::Operation {
+            name: "equals".to_string(),
+            args: vec![
+                Expression::Operation {
+                    name: "g".to_string(),
+                    args: vec![Expression::Const("0".to_string())],
+                    span: None,
+                },
+                Expression::Const("42".to_string()),
+            ],
+            span: None,
+        };
+        let result = verifier.verify_axiom(&check).unwrap();
+        assert!(
+            matches!(
+                result,
+                VerificationResult::Valid | VerificationResult::ValidWithWitness { .. }
+            ),
+            "g(0) = 42 should be verifiable after BadStruct failure + GoodStruct load: got {:?}",
+            result
+        );
+    }
+
+    /// Helper: build an existential ∃(x:ℤ). body expression.
+    #[cfg(feature = "axiom-verification")]
+    fn exists_int(name: &str, body: Expression) -> Expression {
+        Expression::Quantifier {
+            quantifier: crate::ast::QuantifierKind::Exists,
+            variables: vec![crate::ast::QuantifiedVar {
+                name: name.to_string(),
+                type_annotation: Some("ℤ".to_string()),
+            }],
+            body: Box::new(body),
+            where_clause: None,
+        }
+    }
+
+    /// Helper: build a universal ∀(x:ℤ). body expression.
+    #[cfg(feature = "axiom-verification")]
+    fn forall_int(name: &str, body: Expression) -> Expression {
+        Expression::Quantifier {
+            quantifier: crate::ast::QuantifierKind::ForAll,
+            variables: vec![crate::ast::QuantifiedVar {
+                name: name.to_string(),
+                type_annotation: Some("ℤ".to_string()),
+            }],
+            body: Box::new(body),
+            where_clause: None,
+        }
+    }
+
+    /// Helper: build `a = b` expression.
+    #[cfg(feature = "axiom-verification")]
+    fn eq(a: Expression, b: Expression) -> Expression {
+        Expression::Operation {
+            name: "equals".to_string(),
+            args: vec![a, b],
+            span: None,
+        }
+    }
+
+    /// Verify that a successfully loaded structure's axioms are actually
+    /// usable for proving things — not just that the solver "stays consistent."
+    /// If axioms were silently dropped, the verification would fail.
+    #[cfg(feature = "axiom-verification")]
+    #[test]
+    fn test_loaded_axioms_are_usable_for_verification() {
+        use crate::ast::Expression;
+        use crate::kleis_ast::TypeExpr;
+
+        let mut registry = StructureRegistry::new();
+
+        // Structure: operation h : ℤ → ℤ, axiom: h(0) = 99
+        let structure = make_structure(
+            "UsableStruct",
+            vec![
+                make_operation(
+                    "h",
+                    TypeExpr::Function(
+                        Box::new(TypeExpr::Named("ℤ".to_string())),
+                        Box::new(TypeExpr::Named("ℤ".to_string())),
+                    ),
+                ),
+                make_axiom(
+                    "h_zero",
+                    eq(
+                        Expression::Operation {
+                            name: "h".to_string(),
+                            args: vec![Expression::Const("0".to_string())],
+                            span: None,
+                        },
+                        Expression::Const("99".to_string()),
+                    ),
+                ),
+            ],
+        );
+        registry.register(structure).unwrap();
+
+        let mut verifier = AxiomVerifier::new(&registry).unwrap();
+        verifier.ensure_structure_loaded("UsableStruct").unwrap();
+
+        // h(0) = 99 should be provable (it's an axiom we loaded)
+        let provable = eq(
+            Expression::Operation {
+                name: "h".to_string(),
+                args: vec![Expression::Const("0".to_string())],
+                span: None,
+            },
+            Expression::Const("99".to_string()),
+        );
+        let result = verifier.verify_axiom(&provable).unwrap();
+        assert!(
+            matches!(
+                result,
+                VerificationResult::Valid | VerificationResult::ValidWithWitness { .. }
+            ),
+            "h(0) = 99 should be provable from loaded axioms: got {:?}",
+            result
+        );
+
+        // h(0) = 77 should NOT be provable (contradicts the axiom)
+        let not_provable = eq(
+            Expression::Operation {
+                name: "h".to_string(),
+                args: vec![Expression::Const("0".to_string())],
+                span: None,
+            },
+            Expression::Const("77".to_string()),
+        );
+        let result2 = verifier.verify_axiom(&not_provable).unwrap();
+        assert!(
+            matches!(result2, VerificationResult::Invalid { .. }),
+            "h(0) = 77 should be disprovable (h(0)=99 is asserted): got {:?}",
+            result2
+        );
+    }
+
+    /// Verify that a failed load does NOT leave the solver in an inconsistent
+    /// state due to partially asserted axioms.
+    ///
+    /// Strategy: after a failed load, verify that a trivially true existential
+    /// (∃x. x=x) is still satisfiable. If partial axioms were leaked and
+    /// introduced a contradiction, the solver would be UNSAT and this would
+    /// fail. Also verify that a trivially false universal (∀x. x=0) is
+    /// correctly rejected — if the solver were UNSAT, it would vacuously
+    /// accept this.
+    ///
+    /// We test both the existential and universal sides because they catch
+    /// different failure modes.
+    #[cfg(feature = "axiom-verification")]
+    #[test]
+    fn test_failed_load_does_not_leave_partial_axioms() {
+        use crate::ast::Expression;
+
+        let mut registry = StructureRegistry::new();
+
+        // Structure with a good axiom followed by a type-conflicting axiom.
+        // The good axiom (1=1) gets asserted before the bad one fails.
+        // Without rollback, this partial assertion could corrupt solver state.
+        let good_first = make_axiom(
+            "trivially_true",
+            eq(
+                Expression::Const("1".to_string()),
+                Expression::Const("1".to_string()),
+            ),
+        );
+        let bad_second = make_axiom(
+            "will_fail",
+            eq(
+                Expression::Operation {
+                    name: "clash_op3".to_string(),
+                    args: vec![Expression::Const("1".to_string())],
+                    span: None,
+                },
+                Expression::Operation {
+                    name: "clash_op3".to_string(),
+                    args: vec![Expression::String("oops".to_string())],
+                    span: None,
+                },
+            ),
+        );
+        registry
+            .register(make_structure(
+                "PartialStruct",
+                vec![good_first, bad_second],
+            ))
+            .unwrap();
+
+        let mut verifier = AxiomVerifier::new(&registry).unwrap();
+
+        // Loading should fail
+        let result = verifier.ensure_structure_loaded("PartialStruct");
+        assert!(result.is_err(), "PartialStruct should fail to load");
+
+        // Existential check: ∃(x:ℤ). x = x should be satisfiable.
+        // If partial axioms corrupted the solver (UNSAT), this would fail.
+        let trivial_exists = exists_int(
+            "x",
+            eq(
+                Expression::Object("x".to_string()),
+                Expression::Object("x".to_string()),
+            ),
+        );
+        let result = verifier.verify_axiom(&trivial_exists).unwrap();
+        assert!(
+            matches!(
+                result,
+                VerificationResult::Valid | VerificationResult::ValidWithWitness { .. }
+            ),
+            "∃x. x=x should be satisfiable after failed load (solver must not be UNSAT): got {:?}",
+            result
+        );
+
+        // Universal check: ∀(x:ℤ). x = 0 is obviously false.
+        // If the solver were UNSAT, this would be vacuously "valid."
+        let absurd_forall = forall_int(
+            "x",
+            eq(
+                Expression::Object("x".to_string()),
+                Expression::Const("0".to_string()),
+            ),
+        );
+        let result = verifier.verify_axiom(&absurd_forall).unwrap();
+        assert!(
+            !matches!(result, VerificationResult::Valid | VerificationResult::ValidWithWitness { .. }),
+            "∀x. x=0 should be INVALID after failed load (solver must not be vacuously true): got {:?}", result
+        );
+    }
+
+    /// Verify that an obviously false universal statement is correctly
+    /// rejected (not vacuously true). This catches the UNSAT-solver scenario
+    /// where everything becomes "valid" due to inconsistency.
+    #[cfg(feature = "axiom-verification")]
+    #[test]
+    fn test_false_universal_rejected_after_failed_load() {
+        use crate::ast::Expression;
+
+        let mut registry = StructureRegistry::new();
+
+        // Bad structure that will fail to load
+        let bad = make_axiom(
+            "will_fail",
+            eq(
+                Expression::Operation {
+                    name: "clash_op4".to_string(),
+                    args: vec![Expression::Const("1".to_string())],
+                    span: None,
+                },
+                Expression::Operation {
+                    name: "clash_op4".to_string(),
+                    args: vec![Expression::String("oops".to_string())],
+                    span: None,
+                },
+            ),
+        );
+        registry
+            .register(make_structure("BadStruct2", vec![bad]))
+            .unwrap();
+
+        let mut verifier = AxiomVerifier::new(&registry).unwrap();
+
+        // Attempt to load (will fail)
+        let _ = verifier.ensure_structure_loaded("BadStruct2");
+
+        // ∀(x:ℤ). x = 0 is obviously false — if the solver says it's valid,
+        // the solver state is UNSAT (inconsistent) and everything is vacuously true.
+        let absurd = forall_int(
+            "x",
+            eq(
+                Expression::Object("x".to_string()),
+                Expression::Const("0".to_string()),
+            ),
+        );
+        let result = verifier.verify_axiom(&absurd).unwrap();
+        assert!(
+            !matches!(
+                result,
+                VerificationResult::Valid | VerificationResult::ValidWithWitness { .. }
+            ),
+            "∀x. x=0 should be REJECTED (not vacuously true from an UNSAT solver): got {:?}",
+            result
+        );
     }
 }

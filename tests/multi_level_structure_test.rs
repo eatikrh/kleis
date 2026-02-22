@@ -150,6 +150,9 @@ fn test_ring_distributivity_with_dependencies() {
             Ok(VerificationResult::Disabled) => {
                 panic!("Axiom verification should be enabled");
             }
+            Ok(VerificationResult::InconsistentAxioms) => {
+                panic!("Axioms are inconsistent!");
+            }
             Err(e) => {
                 panic!("Verification error: {}", e);
             }
@@ -230,6 +233,9 @@ fn test_group_inverse_with_monoid_dependencies() {
             Ok(VerificationResult::Disabled) => {
                 panic!("Verification should be enabled");
             }
+            Ok(VerificationResult::InconsistentAxioms) => {
+                panic!("Axioms are inconsistent!");
+            }
             Err(e) => {
                 panic!("Verification error: {}", e);
             }
@@ -297,6 +303,9 @@ fn test_multiple_structure_dependency_chain() {
             Ok(VerificationResult::Disabled) => {
                 panic!("Verification should be enabled");
             }
+            Ok(VerificationResult::InconsistentAxioms) => {
+                panic!("Axioms are inconsistent!");
+            }
             Err(e) => {
                 println!("   ⚠️  Error: {}", e);
                 println!("   This is expected if custom operations aren't fully supported yet");
@@ -359,6 +368,9 @@ fn test_monoid_associativity_basic() {
             }
             Ok(VerificationResult::Disabled) => {
                 panic!("Verification should be enabled");
+            }
+            Ok(VerificationResult::InconsistentAxioms) => {
+                panic!("Axioms are inconsistent!");
             }
             Err(e) => {
                 panic!("Verification error: {}", e);
@@ -444,6 +456,9 @@ fn test_field_multiplicative_inverse_depends_on_ring() {
             }
             Ok(VerificationResult::Disabled) => {
                 panic!("Verification should be enabled");
+            }
+            Ok(VerificationResult::InconsistentAxioms) => {
+                panic!("Axioms are inconsistent!");
             }
             Err(e) => {
                 println!("   ⚠️  Error: {}", e);

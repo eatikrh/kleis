@@ -1,0 +1,21 @@
+import "pot_entanglement_v2.kleis"
+
+example "trivial_existential" {
+    assert(∃(a : DetectorAngle). a = a)
+    out("Trivial existential — system is consistent")
+}
+
+example "two_angles_exist" {
+    assert(∃(a b : DetectorAngle). not(a = b))
+    out("Two distinct angles exist")
+}
+
+example "angle_between_exists" {
+    assert(∃(a b : DetectorAngle). angle_between(a, b) >= 0)
+    out("angle_between is defined and non-negative")
+}
+
+example "angle_positive_exists" {
+    assert(∃(a b : DetectorAngle). angle_between(a, b) > 0)
+    out("Non-zero angle exists")
+}

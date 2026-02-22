@@ -1,0 +1,6 @@
+import "pot_entanglement_v2.kleis"
+
+example "false_universal" {
+    assert(∀(a b : DetectorAngle). a = b)
+    out("ALL angles are equal — this should be FALSE if system is consistent!")
+}

@@ -73,6 +73,8 @@ pub enum AssertResult {
     Disproved { witness: Witness },
     /// Assertion couldn't be evaluated (symbolic)
     Unknown(String),
+    /// Loaded axioms are mutually inconsistent — any assertion would be vacuously true
+    InconsistentAxioms,
 }
 
 /// Represents a user-defined function as a closure
@@ -137,6 +139,11 @@ pub struct Evaluator {
     /// When set, eval() calls hook methods at key points
     /// Uses RefCell for interior mutability (hook needs &mut self)
     debug_hook: RefCell<Option<Box<dyn DebugHook + Send>>>,
+
+    /// Cached axiom consistency result (avoids re-checking per assertion).
+    /// None = not yet checked, Some(true) = consistent, Some(false) = inconsistent.
+    /// "Unknown" from Z3 is stored as None (re-check not attempted — too expensive).
+    axiom_consistency_cache: RefCell<Option<Option<bool>>>,
 }
 
 // =============================================================================
@@ -203,6 +210,7 @@ impl Evaluator {
             implements_blocks: Vec::new(),
             type_aliases: Vec::new(),
             debug_hook: RefCell::new(None),
+            axiom_consistency_cache: RefCell::new(None),
         }
     }
 
@@ -1196,6 +1204,14 @@ impl Evaluator {
                                         0,
                                     );
                                 }
+                                AssertResult::InconsistentAxioms => {
+                                    hook.on_assert_verified(
+                                        condition,
+                                        false,
+                                        "AXIOM INCONSISTENCY: loaded axioms are contradictory",
+                                        0,
+                                    );
+                                }
                             }
                         }
                     }
@@ -1232,6 +1248,23 @@ impl Evaluator {
                                     "Assertion disproved by Z3. Counterexample: {}",
                                     witness
                                 )),
+                                assertions_passed,
+                                assertions_total,
+                            };
+                        }
+                        AssertResult::InconsistentAxioms => {
+                            self.bindings = saved_bindings;
+                            return ExampleResult {
+                                name: example.name.clone(),
+                                passed: false,
+                                error: Some(
+                                    "AXIOM INCONSISTENCY DETECTED: The loaded axioms are \
+                                     mutually unsatisfiable (Z3 proved them contradictory). \
+                                     All assertions would be vacuously true. \
+                                     This is a theory bug — check your axiom definitions \
+                                     for contradictions."
+                                        .to_string(),
+                                ),
                                 assertions_passed,
                                 assertions_total,
                             };
@@ -1375,14 +1408,32 @@ impl Evaluator {
 
     /// Try to verify an assertion using Z3 (for symbolic claims)
     fn verify_with_z3(&self, condition: &Expression) -> Option<AssertResult> {
+        // Fast path: if we already know axioms are inconsistent, skip solver entirely
+        if let Some(Some(false)) = *self.axiom_consistency_cache.borrow() {
+            return Some(AssertResult::InconsistentAxioms);
+        }
+
         let registry = self.build_registry_internal();
 
         match AxiomVerifier::new(&registry) {
             Ok(mut verifier) => {
-                // Load ADT constructors
+                // Pass cached consistency result to avoid redundant checks.
+                // If we already checked and got Sat or Unknown, tell the verifier
+                // to skip the expensive re-check.
+                if let Some(cached) = *self.axiom_consistency_cache.borrow() {
+                    verifier.set_consistency_cache(cached);
+                }
+
                 verifier.load_adt_constructors(self.adt_constructors.iter());
 
-                match verifier.verify_axiom(condition) {
+                let result = verifier.verify_axiom(condition);
+
+                // Capture the verifier's consistency result for future assertions
+                if let Some(consistency) = verifier.get_consistency_result() {
+                    *self.axiom_consistency_cache.borrow_mut() = Some(consistency);
+                }
+
+                match result {
                     Ok(result) => match result {
                         VerificationResult::Valid => Some(AssertResult::Verified { witness: None }),
                         VerificationResult::ValidWithWitness { witness } => {
@@ -1393,13 +1444,17 @@ impl Evaluator {
                         VerificationResult::Invalid { witness } => {
                             Some(AssertResult::Disproved { witness })
                         }
-                        VerificationResult::Unknown => None, // Fall back to simple eval
-                        VerificationResult::Disabled => None, // Feature not enabled
+                        VerificationResult::InconsistentAxioms => {
+                            *self.axiom_consistency_cache.borrow_mut() = Some(Some(false));
+                            Some(AssertResult::InconsistentAxioms)
+                        }
+                        VerificationResult::Unknown => None,
+                        VerificationResult::Disabled => None,
                     },
-                    Err(_) => None, // Verification error, fall back
+                    Err(_) => None,
                 }
             }
-            Err(_) => None, // Couldn't create verifier, fall back
+            Err(_) => None,
         }
     }
 
