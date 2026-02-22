@@ -1164,6 +1164,9 @@ fn verify_expression(input: &str, registry: &StructureRegistry, evaluator: &Eval
                             VerificationResult::Disabled => {
                                 println!("⚠️  Verification disabled");
                             }
+                            VerificationResult::InconsistentAxioms => {
+                                println!("🚨 AXIOM INCONSISTENCY: loaded axioms are contradictory — all assertions would be vacuously true");
+                            }
                         },
                         Err(e) => {
                             println!("❌ Verification error: {}", e);

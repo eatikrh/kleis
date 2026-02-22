@@ -1,0 +1,64 @@
+import "pot_entanglement_v2.kleis"
+
+data MeasBasis = MB(ℤ)
+
+data MeasContext = MC(ℤ)
+
+structure GHZState {
+    operation psi_GHZ : Flow
+
+    operation basis_X : MeasBasis
+    operation basis_Y : MeasBasis
+    axiom bases_distinct : not(basis_X = basis_Y)
+
+    operation ctx_XXX : MeasContext
+    operation ctx_XYY : MeasContext
+    operation ctx_YXY : MeasContext
+    operation ctx_YYX : MeasContext
+
+    operation outcome_A : MeasContext -> ℤ
+    operation outcome_B : MeasContext -> ℤ
+    operation outcome_C : MeasContext -> ℤ
+
+    axiom outcome_A_pm1 : ∀(ctx : MeasContext). outcome_A(ctx) * outcome_A(ctx) = 1
+    axiom outcome_B_pm1 : ∀(ctx : MeasContext). outcome_B(ctx) * outcome_B(ctx) = 1
+    axiom outcome_C_pm1 : ∀(ctx : MeasContext). outcome_C(ctx) * outcome_C(ctx) = 1
+
+    axiom ghz_parity_XXX : outcome_A(ctx_XXX) * outcome_B(ctx_XXX) * outcome_C(ctx_XXX) = 1
+    axiom ghz_parity_XYY : outcome_A(ctx_XYY) * outcome_B(ctx_XYY) * outcome_C(ctx_XYY) = 0 - 1
+    axiom ghz_parity_YXY : outcome_A(ctx_YXY) * outcome_B(ctx_YXY) * outcome_C(ctx_YXY) = 0 - 1
+    axiom ghz_parity_YYX : outcome_A(ctx_YYX) * outcome_B(ctx_YYX) * outcome_C(ctx_YYX) = 0 - 1
+
+    axiom ghz_non_separable : ∀(G : GreenKernel). implies(is_admissible(G), not(is_product_state(psi_GHZ)))
+}
+
+structure GHZNoncontextuality {
+    operation nc_xA : ℤ
+    operation nc_yA : ℤ
+    operation nc_xB : ℤ
+    operation nc_yB : ℤ
+    operation nc_xC : ℤ
+    operation nc_yC : ℤ
+
+    axiom nc_xA_pm1 : nc_xA * nc_xA = 1
+    axiom nc_yA_pm1 : nc_yA * nc_yA = 1
+    axiom nc_xB_pm1 : nc_xB * nc_xB = 1
+    axiom nc_yB_pm1 : nc_yB * nc_yB = 1
+    axiom nc_xC_pm1 : nc_xC * nc_xC = 1
+    axiom nc_yC_pm1 : nc_yC * nc_yC = 1
+
+    axiom context_independence_A_X : outcome_A(ctx_XXX) = nc_xA
+    axiom context_independence_A_X2 : outcome_A(ctx_XYY) = nc_xA
+    axiom context_independence_A_Y : outcome_A(ctx_YXY) = nc_yA
+    axiom context_independence_A_Y2 : outcome_A(ctx_YYX) = nc_yA
+
+    axiom context_independence_B_X : outcome_B(ctx_XXX) = nc_xB
+    axiom context_independence_B_X2 : outcome_B(ctx_YXY) = nc_xB
+    axiom context_independence_B_Y : outcome_B(ctx_XYY) = nc_yB
+    axiom context_independence_B_Y2 : outcome_B(ctx_YYX) = nc_yB
+
+    axiom context_independence_C_X : outcome_C(ctx_XXX) = nc_xC
+    axiom context_independence_C_X2 : outcome_C(ctx_YYX) = nc_xC
+    axiom context_independence_C_Y : outcome_C(ctx_XYY) = nc_yC
+    axiom context_independence_C_Y2 : outcome_C(ctx_YXY) = nc_yC
+}

@@ -535,6 +535,9 @@ fn test_z3_verifies_metric_symmetry_axiom() {
         Ok(kleis::axiom_verifier::VerificationResult::Disabled) => {
             println!("   ⚠️ Axiom verification feature disabled");
         }
+        Ok(kleis::axiom_verifier::VerificationResult::InconsistentAxioms) => {
+            println!("   ⚠️ Axioms are inconsistent");
+        }
         Err(e) => {
             println!("   ❌ Error during verification: {}", e);
         }

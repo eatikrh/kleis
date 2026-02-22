@@ -277,6 +277,18 @@ pub trait SolverBackend {
         axioms: &[Expression],
     ) -> Result<(), String>;
 
+    /// Check if currently loaded axioms are consistent (satisfiable).
+    ///
+    /// Performs a bare `solver.check()` with no additional assertions.
+    /// If the axioms alone are UNSAT, the theory is inconsistent and
+    /// all verification results would be vacuously true.
+    ///
+    /// # Returns
+    /// - `Ok(true)` if axioms are satisfiable (consistent)
+    /// - `Ok(false)` if axioms are unsatisfiable (inconsistent)
+    /// - `Err` if the check itself failed
+    fn check_consistency(&mut self) -> Result<bool, String>;
+
     /// Push a new assertion scope (for incremental solving)
     ///
     /// Creates a checkpoint that can be restored with `pop()`.

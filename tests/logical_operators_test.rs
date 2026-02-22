@@ -192,6 +192,9 @@ fn test_de_morgan_law_verification() {
             Ok(VerificationResult::Disabled) => {
                 panic!("Axiom verification should be enabled");
             }
+            Ok(VerificationResult::InconsistentAxioms) => {
+                panic!("Axioms are inconsistent!");
+            }
             Err(e) => {
                 println!(
                     "⚠️ Verification error: {} (expected - translator doesn't handle Bool yet)",
@@ -249,6 +252,9 @@ fn test_de_morgan_law_and_variant() {
             }
             Ok(VerificationResult::Disabled) => {
                 panic!("Axiom verification should be enabled");
+            }
+            Ok(VerificationResult::InconsistentAxioms) => {
+                panic!("Axioms are inconsistent!");
             }
             Err(e) => {
                 println!(

@@ -1,0 +1,308 @@
+// =============================================================================
+// COSINE UNIQUENESS STRESS TEST
+// =============================================================================
+//
+// Purpose: Test whether axioms (A)-(E) FORCE the singlet correlation
+//   E(a,b) = -cos(θ)
+// without asserting it directly.
+//
+// Method:
+//   - Load all axioms (A)-(E): OnticSymmetry, SymmetrySurvival,
+//     InvariantInnerProducts, SingletInvariance, ModalVisibility
+//   - Load supporting structures: SpinorBasis, RepIrreducibility,
+//     MeasurementProjection, EntangledState
+//   - Define correlation via inner product of projections (correlation_def)
+//   - Define neg_cos boundary values (neg_cos(0) = -1, neg_cos(π) = 1)
+//   - Do NOT assert singlet_correlation
+//
+// Possible outcomes:
+//   PASS on cosine_derivation → Z3 derived cosine from (A)-(E). Revolutionary.
+//   FAIL on cosine_derivation → Z3 cannot derive it. Diagnose why.
+//
+// Either outcome is valuable and must be reported honestly.
+//
+// =============================================================================
+
+import "../../../theories/pot_admissible_kernels_v2.kleis"
+
+// =============================================================================
+// Primitive types (same as pot_entanglement_v2.kleis)
+// =============================================================================
+
+data SpinorField = SF(ℤ)
+data DetectorAngle = DA(ℤ)
+data SU2 = SU2Element(ℤ)
+
+// =============================================================================
+// Spinor algebra
+// =============================================================================
+
+structure SpinorAlgebra {
+    operation spinor_add : SpinorField → SpinorField → SpinorField
+    operation spinor_smul : ℂ → SpinorField → SpinorField
+    element spinor_zero : SpinorField
+
+    axiom spinor_add_comm : ∀(s1 s2 : SpinorField). spinor_add(s1, s2) = spinor_add(s2, s1)
+    axiom spinor_add_id : ∀(s : SpinorField). spinor_add(s, spinor_zero) = s
+}
+
+// =============================================================================
+// Spinor basis (2D, orthonormal)
+// =============================================================================
+
+structure SpinorBasis {
+    element e_up : SpinorField
+    element e_down : SpinorField
+
+    axiom basis_distinct : not(e_up = e_down)
+    axiom basis_nonzero_up : not(e_up = spinor_zero)
+    axiom basis_nonzero_down : not(e_down = spinor_zero)
+
+    axiom basis_spans : ∀(s : SpinorField).
+        ∃(alpha beta : ℂ). s = spinor_add(spinor_smul(alpha, e_up), spinor_smul(beta, e_down))
+
+    axiom basis_orthonormal_uu : spinor_inner(e_up, e_up) = 1
+    axiom basis_orthonormal_dd : spinor_inner(e_down, e_down) = 1
+    axiom basis_orthonormal_ud : spinor_inner(e_up, e_down) = 0
+}
+
+// =============================================================================
+// Rep irreducibility (R is the fundamental 2D representation)
+// =============================================================================
+
+structure RepIrreducibility {
+    axiom R_irreducible : ∀(s : SpinorField).
+        implies(not(s = spinor_zero),
+            ∃(g : SU2). not(∃(c : ℂ). R(g, s) = spinor_smul(c, s)))
+}
+
+// =============================================================================
+// Kernel factorization (ensures is_admissible is non-vacuous)
+// =============================================================================
+
+structure KernelFactorization {
+    operation K_univ : GreenKernel
+    operation K_dyn : GreenKernel
+    operation K_rep : GreenKernel
+
+    axiom univ_admissible : is_admissible(K_univ)
+    axiom dyn_admissible : is_admissible(K_dyn)
+    axiom rep_admissible : is_admissible(K_rep)
+
+    operation unified_kernel : GreenKernel
+    axiom kernel_factorizes : unified_kernel = compose_kernel(K_univ, compose_kernel(K_dyn, K_rep))
+}
+
+// =============================================================================
+// Entangled state and projection
+// =============================================================================
+
+structure EntangledState {
+    operation psi_AB : Flow
+
+    operation project_at : GreenKernel → Flow → DetectorAngle → SpinorField
+
+    // BUG: This axiom makes the theory trivially inconsistent.
+    // flow_add(psi_AB, flow_zero) = psi_AB (by flow_add_id), so
+    // instantiating with psi_A = psi_AB, psi_B = flow_zero gives not(true).
+    axiom non_separable : ∀(psi_A psi_B : Flow, G : GreenKernel, a b : DetectorAngle).
+        implies(is_admissible(G),
+            not(project_at(G, psi_AB, a) = project_at(G, flow_add(psi_A, psi_B), a)
+                and project_at(G, psi_AB, b) = project_at(G, flow_add(psi_A, psi_B), b)))
+
+    axiom single_source : ∀(G : GreenKernel, a b : DetectorAngle).
+        implies(is_admissible(G),
+            equiv(G, psi_AB, psi_AB))
+}
+
+// =============================================================================
+// (A) ONTIC SU(2) SYMMETRY
+// =============================================================================
+
+structure OnticSymmetry {
+    operation U : SU2 → Flow → Flow
+    operation su2_identity : SU2
+    operation su2_compose : SU2 → SU2 → SU2
+
+    axiom group_action : ∀(g h : SU2, ψ : Flow).
+        U(su2_compose(g, h), ψ) = U(g, U(h, ψ))
+
+    axiom identity_action : ∀(ψ : Flow).
+        U(su2_identity, ψ) = ψ
+}
+
+// =============================================================================
+// (B) SYMMETRY SURVIVAL — Projection is an SU(2) intertwiner
+// =============================================================================
+
+structure SymmetrySurvival {
+    operation R : SU2 → SpinorField → SpinorField
+    operation su2_act_on_angle : SU2 → DetectorAngle → DetectorAngle
+
+    axiom angle_action_compose : ∀(g h : SU2, a : DetectorAngle).
+        su2_act_on_angle(su2_compose(g, h), a) = su2_act_on_angle(g, su2_act_on_angle(h, a))
+
+    axiom angle_action_identity : ∀(a : DetectorAngle).
+        su2_act_on_angle(su2_identity, a) = a
+
+    axiom angle_action_isometry : ∀(g : SU2, a b : DetectorAngle).
+        angle_between(su2_act_on_angle(g, a), su2_act_on_angle(g, b)) = angle_between(a, b)
+
+    axiom angle_action_transitive : ∀(a b : DetectorAngle).
+        ∃(g : SU2). su2_act_on_angle(g, a) = b
+
+    axiom intertwiner : ∀(g : SU2, a : DetectorAngle, ψ : Flow, G : GreenKernel).
+        implies(is_admissible(G),
+            project_at(G, U(g, ψ), su2_act_on_angle(g, a)) = R(g, project_at(G, ψ, a)))
+
+    axiom R_group_action : ∀(g h : SU2, s : SpinorField).
+        R(su2_compose(g, h), s) = R(g, R(h, s))
+
+    axiom R_identity : ∀(s : SpinorField).
+        R(su2_identity, s) = s
+}
+
+// =============================================================================
+// (C) INVARIANT INNER PRODUCTS
+// =============================================================================
+
+structure InvariantInnerProducts {
+    operation ontic_inner : Flow → Flow → ℂ
+    operation spinor_inner : SpinorField → SpinorField → ℝ
+
+    axiom ontic_invariant : ∀(g : SU2, ψ φ : Flow).
+        ontic_inner(U(g, ψ), U(g, φ)) = ontic_inner(ψ, φ)
+
+    axiom observable_invariant : ∀(g : SU2, v w : SpinorField).
+        spinor_inner(R(g, v), R(g, w)) = spinor_inner(v, w)
+
+    axiom spinor_inner_symmetric : ∀(v w : SpinorField).
+        spinor_inner(v, w) = spinor_inner(w, v)
+}
+
+// =============================================================================
+// (D) SINGLET INVARIANCE
+// =============================================================================
+
+structure SingletInvariance {
+    operation U_diagonal : SU2 → Flow → Flow
+
+    axiom diagonal_is_simultaneous : ∀(g : SU2).
+        U_diagonal(g, psi_AB) = U(g, psi_AB)
+
+    axiom singlet_invariant : ∀(g : SU2).
+        U_diagonal(g, psi_AB) = psi_AB
+}
+
+// =============================================================================
+// Measurement geometry
+// =============================================================================
+
+structure MeasurementProjection {
+    operation angle_between : DetectorAngle → DetectorAngle → ℝ
+    operation spin_outcome : GreenKernel → Flow → DetectorAngle → ℝ
+
+    axiom angle_symmetric : ∀(a b : DetectorAngle). angle_between(a, b) = angle_between(b, a)
+    axiom angle_self_zero : ∀(a : DetectorAngle). angle_between(a, a) = 0
+
+    axiom angle_nonneg : ∀(a b : DetectorAngle). angle_between(a, b) >= 0
+
+    axiom angle_separates : ∀(a b : DetectorAngle).
+        angle_between(a, b) = 0 ⟹ a = b
+
+    axiom angle_space_nontrivial : ∃(a b : DetectorAngle). angle_between(a, b) > 0
+}
+
+// =============================================================================
+// (E) BORN-TYPE MODAL VISIBILITY
+// =============================================================================
+
+structure ModalVisibility {
+    axiom born_rule : ∀(G : GreenKernel, ψ : Flow, a : DetectorAngle).
+        implies(is_admissible(G),
+            spin_outcome(G, ψ, a) = spinor_inner(project_at(G, ψ, a), project_at(G, ψ, a)))
+
+    axiom inner_normalized : ∀(G : GreenKernel, a : DetectorAngle).
+        implies(is_admissible(G),
+            spinor_inner(project_at(G, psi_AB, a), project_at(G, psi_AB, a)) = 1)
+}
+
+// =============================================================================
+// CORRELATION DEFINITION — WITHOUT singlet_correlation
+// =============================================================================
+//
+// This is the critical difference from pot_entanglement_v2.kleis:
+// we define correlation as spinor_inner of projections, and define neg_cos
+// boundary values, but do NOT assert correlation = neg_cos(angle).
+// Z3 must derive that on its own — if it can.
+
+structure CorrelationDef {
+    operation correlation : GreenKernel → Flow → DetectorAngle → DetectorAngle → ℝ
+    operation neg_cos : ℝ → ℝ
+    element pi_bound : ℝ
+
+    axiom correlation_def : ∀(G : GreenKernel, a b : DetectorAngle).
+        implies(is_admissible(G),
+            correlation(G, psi_AB, a, b) = spinor_inner(project_at(G, psi_AB, a), project_at(G, psi_AB, b)))
+
+    axiom neg_cos_zero : neg_cos(0) = 0 - 1
+    axiom neg_cos_pi : neg_cos(pi_bound) = 1
+}
+
+// =============================================================================
+// TESTS
+// =============================================================================
+
+example "z3_consistency_check" {
+    // Force Z3 verification: if axioms are consistent, x=x is always true.
+    // If this FAILS, something is deeply wrong with the test infrastructure.
+    assert(∀(x : ℤ). x = x)
+}
+
+example "z3_inconsistency_detector" {
+    // If this PASSES, axioms are INCONSISTENT (everything provable from False).
+    // If this FAILS, axioms are consistent.
+    assert(∀(G : GreenKernel). implies(is_admissible(G), 1 = 2))
+}
+
+example "theta_zero_from_axioms" {
+    // correlation_def + inner_normalized → correlation(a,a) = 1.
+    assert(∀(G : GreenKernel, a : DetectorAngle).
+        implies(is_admissible(G),
+            correlation(G, psi_AB, a, a) = 1))
+}
+
+example "theta_zero_vs_cosine" {
+    // neg_cos(0) = -1, but axioms give correlation(a,a) = 1.
+    // SHOULD FAIL: axioms give +1, cosine law requires -1.
+    // If PASSES: axioms are inconsistent (everything provable).
+    assert(∀(G : GreenKernel, a : DetectorAngle).
+        implies(is_admissible(G),
+            correlation(G, psi_AB, a, a) = neg_cos(angle_between(a, a))))
+}
+
+example "cosine_derivation" {
+    // MAIN UNIQUENESS TEST.
+    // PASS → Z3 derived E(a,b) = -cos(θ) from (A)-(E) alone.
+    // FAIL → Z3 cannot derive it from these first-order axioms.
+    assert(∀(G : GreenKernel, a b : DetectorAngle).
+        implies(is_admissible(G),
+            correlation(G, psi_AB, a, b) = neg_cos(angle_between(a, b))))
+}
+
+example "non_separable_bug_detector" {
+    // non_separable says: for ALL psi_A, psi_B, the projections of psi_AB
+    // can't both match projections of flow_add(psi_A, psi_B).
+    // But set psi_A = psi_AB, psi_B = flow_zero:
+    //   flow_add(psi_AB, flow_zero) = psi_AB  (by flow_add_id)
+    //   proj(psi_AB, a) = proj(psi_AB, a)     (trivially true)
+    // So non_separable says not(true) = false under is_admissible.
+    // Combined with is_admissible(K_univ) = true → contradiction.
+    //
+    // This test checks: does is_admissible(G) imply absurdity?
+    // If PASSES: confirms axiom inconsistency.
+    // If FAILS: axioms are consistent (non_separable is not the bug).
+    assert(∀(G : GreenKernel, a : DetectorAngle).
+        implies(is_admissible(G),
+            not(project_at(G, psi_AB, a) = project_at(G, psi_AB, a))))
+}

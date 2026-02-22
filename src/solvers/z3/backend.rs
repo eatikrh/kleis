@@ -1619,9 +1619,15 @@ impl<'r> Z3Backend<'r> {
             }
 
             Expression::Const(s) => {
-                // Try to parse as number
+                // Try to parse as integer first, then as real
                 if let Ok(n) = s.parse::<i64>() {
                     Ok(Int::from_i64(n).into())
+                } else if let Ok(f) = s.parse::<f64>() {
+                    // Convert float to Z3 Real via rational representation
+                    // Use enough precision to represent common constants
+                    let denom: i64 = 1_000_000_000;
+                    let numer = (f * denom as f64).round() as i64;
+                    Ok(Real::from_rational(numer, denom).into())
                 } else {
                     Err(format!("Cannot convert constant to Z3: {}", s))
                 }
@@ -1956,11 +1962,13 @@ impl<'r> Z3Backend<'r> {
                 arithmetic::translate_negate(&args[0])
             }
 
-            "rat_inv" | "inv" | "reciprocal" => {
+            "rat_inv" | "reciprocal" => {
                 if args.len() != 1 {
                     return Err("rat_inv requires 1 argument".to_string());
                 }
                 // Division by 1/x: represented as 1/x in Z3
+                // NOTE: "inv" is NOT matched here — it's the abstract Group inverse
+                // (inv : G → G) and must fall through to uninterpreted function.
                 #[allow(deprecated)]
                 let one = Real::from_real(1, 1);
                 if let Some(r) = args[0].as_real() {
@@ -3633,24 +3641,33 @@ impl<'r> Z3Backend<'r> {
 
                 // CRITICAL: Check for sort mismatches BEFORE calling apply()
                 // Z3's apply() panics on sort mismatch - we want a helpful error instead
+                // Auto-promote Int→Real when the function expects Real (standard numeric coercion)
+                let mut promoted_args: Vec<Dynamic> = args.to_vec();
                 let arity = func_decl.arity();
                 for i in 0..arity {
                     if let Some(expected_sort_kind) = func_decl.domain(i) {
-                        if let Some(arg) = args.get(i) {
+                        if let Some(arg) = promoted_args.get(i) {
                             let actual_sort = arg.get_sort();
                             if expected_sort_kind != actual_sort.kind() {
-                                return Err(format!(
-                                    "Type mismatch in call to '{}': argument {} has type {:?} but expected {:?}.\n\
-                                     Hint: Check if '{}' is declared with the correct signature, or if there are \
-                                     duplicate definitions with different types.",
-                                    name, i + 1, actual_sort, expected_sort_kind, name
-                                ));
+                                if actual_sort.kind() == z3::SortKind::Int
+                                    && expected_sort_kind == z3::SortKind::Real
+                                {
+                                    let real_val = arg.as_int().unwrap().to_real();
+                                    promoted_args[i] = real_val.into();
+                                } else {
+                                    return Err(format!(
+                                        "Type mismatch in call to '{}': argument {} has type {:?} but expected {:?}.\n\
+                                         Hint: Check if '{}' is declared with the correct signature, or if there are \
+                                         duplicate definitions with different types.",
+                                        name, i + 1, actual_sort, expected_sort_kind, name
+                                    ));
+                                }
                             }
                         }
                     }
                 }
 
-                let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
+                let ast_args: Vec<&dyn Ast> = promoted_args.iter().map(|d| d as &dyn Ast).collect();
                 Ok(func_decl.apply(&ast_args))
             }
         }
@@ -3726,7 +3743,7 @@ impl<'r> Z3Backend<'r> {
 
         if !self.declared_ops.contains(name) {
             let domain_strs: Vec<String> = domain.iter().map(|s| format!("{}", s)).collect();
-            println!(
+            eprintln!(
                 "   🔧 Declaring typed function: {} : {} → {}",
                 name,
                 domain_strs.join(" × "),
@@ -4729,6 +4746,51 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         Ok(())
     }
 
+    fn check_consistency(&mut self) -> Result<bool, String> {
+        // Phase 1: Quick check with default timeout (5s)
+        self.solver.push();
+        let bare_result = self.solver.check();
+        self.solver.pop(1);
+
+        match bare_result {
+            SatResult::Sat => return Ok(true),
+            SatResult::Unsat => return Ok(false),
+            SatResult::Unknown => {}
+        }
+
+        // Phase 2: Retry with extended timeout and MBQI enabled.
+        //
+        // Z3's default E-matching is trigger-based and incomplete for
+        // universally quantified axioms. MBQI (Model-Based Quantifier
+        // Instantiation) is a different algorithm that systematically
+        // explores model candidates without needing explicit triggers.
+        // Combined with a longer timeout, this catches inconsistencies
+        // that Phase 1 misses due to assertion-order sensitivity.
+        let mut params = z3::Params::new();
+        params.set_u32("timeout", 15000);
+        params.set_bool("mbqi", true);
+        self.solver.set_params(&params);
+
+        self.solver.push();
+        let extended_result = self.solver.check();
+        self.solver.pop(1);
+
+        // Restore normal solver parameters
+        let mut restore_params = z3::Params::new();
+        restore_params.set_u32("timeout", 5000);
+        restore_params.set_u32("solver2_timeout", 5000);
+        self.solver.set_params(&restore_params);
+
+        match extended_result {
+            SatResult::Sat => Ok(true),
+            SatResult::Unsat => Ok(false),
+            SatResult::Unknown => Err(
+                "Z3 returned Unknown when checking axiom consistency (possible timeout)"
+                    .to_string(),
+            ),
+        }
+    }
+
     fn push(&mut self) {
         self.solver.push();
     }
@@ -4975,13 +5037,303 @@ mod tests {
     }
 
     #[test]
-    fn test_push_pop() {
+    fn test_push_pop_no_panic() {
         let registry = StructureRegistry::new();
         let mut backend = Z3Backend::new(&registry).unwrap();
 
-        // Should not panic
         backend.push();
         backend.pop(1);
+    }
+
+    /// Helper: assert a boolean expression into the solver.
+    fn assert_bool(backend: &mut Z3Backend, expr: &Expression) {
+        backend
+            .assert_expression(expr)
+            .expect("assert_expression failed");
+    }
+
+    /// Helper: build `x = c` where x is a free Int variable and c is a constant.
+    fn eq_const(var: &str, val: &str) -> Expression {
+        Expression::Operation {
+            name: "equals".to_string(),
+            args: vec![
+                Expression::Object(var.to_string()),
+                Expression::Const(val.to_string()),
+            ],
+            span: None,
+        }
+    }
+
+    /// Helper: build an existential `∃(x:ℤ). body`.
+    fn exists_int(var: &str, body: Expression) -> Expression {
+        Expression::Quantifier {
+            quantifier: QuantifierKind::Exists,
+            variables: vec![QuantifiedVar {
+                name: var.to_string(),
+                type_annotation: Some("ℤ".to_string()),
+            }],
+            body: Box::new(body),
+            where_clause: None,
+        }
+    }
+
+    /// Helper: build `a AND b`.
+    fn and_expr(a: Expression, b: Expression) -> Expression {
+        Expression::Operation {
+            name: "and".to_string(),
+            args: vec![a, b],
+            span: None,
+        }
+    }
+
+    /// Helper: returns true if the solver considers the expression valid
+    /// (holds for all models, or satisfiable for existentials).
+    fn is_valid(backend: &mut Z3Backend, expr: &Expression) -> bool {
+        match backend.verify_axiom(expr) {
+            Ok(VerificationResult::Valid) | Ok(VerificationResult::ValidWithWitness { .. }) => true,
+            _ => false,
+        }
+    }
+
+    // ---- Z3 push/pop behavior tests ----
+    // These tests empirically verify push/pop semantics instead of assuming them.
+
+    /// Verify that an assertion made at the base level persists (baseline).
+    #[test]
+    fn test_z3_base_assertion_persists() {
+        let registry = StructureRegistry::new();
+        let mut backend = Z3Backend::new(&registry).unwrap();
+
+        // Assert x = 5 at base level
+        assert_bool(&mut backend, &eq_const("x", "5"));
+
+        // ∃(y:ℤ). x = 5 ∧ y = y  — should be satisfiable because x = 5 is asserted
+        let check = exists_int("y", and_expr(eq_const("x", "5"), eq_const("y", "0")));
+        assert!(
+            is_valid(&mut backend, &check),
+            "Base-level assertion should be visible to verify_axiom"
+        );
+    }
+
+    /// Verify that pop(1) removes assertions made after the matching push().
+    #[test]
+    fn test_z3_pop_removes_assertions_after_push() {
+        let registry = StructureRegistry::new();
+        let mut backend = Z3Backend::new(&registry).unwrap();
+
+        backend.push();
+        // Assert x = 5 inside the pushed scope
+        assert_bool(&mut backend, &eq_const("x", "5"));
+        backend.pop(1);
+
+        // After pop, x = 5 should no longer be asserted.
+        // So ∃(y:ℤ). x = 7 ∧ y = 0 should be satisfiable (x is unconstrained).
+        let check = exists_int("y", and_expr(eq_const("x", "7"), eq_const("y", "0")));
+        assert!(
+            is_valid(&mut backend, &check),
+            "After pop, the assertion x=5 should be gone; x=7 should be satisfiable"
+        );
+    }
+
+    /// Verify that assertions made BEFORE push() survive pop().
+    #[test]
+    fn test_z3_pre_push_assertions_survive_pop() {
+        let registry = StructureRegistry::new();
+        let mut backend = Z3Backend::new(&registry).unwrap();
+
+        // Assert x = 5 at base level
+        assert_bool(&mut backend, &eq_const("x", "5"));
+
+        backend.push();
+        // Assert y = 10 inside pushed scope
+        assert_bool(&mut backend, &eq_const("y", "10"));
+        backend.pop(1);
+
+        // x = 5 should still hold after pop
+        let check = exists_int("z", eq_const("x", "5"));
+        assert!(
+            is_valid(&mut backend, &check),
+            "Assertion before push should survive pop"
+        );
+
+        // y = 10 should NOT hold after pop — y is unconstrained again
+        let check2 = exists_int("z", eq_const("y", "99"));
+        assert!(
+            is_valid(&mut backend, &check2),
+            "Assertion inside push scope should be gone after pop; y=99 should be satisfiable"
+        );
+    }
+
+    /// Verify that push without pop leaves assertions in place.
+    /// This is the pattern used in ensure_structure_loaded on success.
+    #[test]
+    fn test_z3_push_without_pop_keeps_assertions() {
+        let registry = StructureRegistry::new();
+        let mut backend = Z3Backend::new(&registry).unwrap();
+
+        backend.push();
+        assert_bool(&mut backend, &eq_const("x", "42"));
+        // Deliberately do NOT pop — this is the success path
+
+        // x = 42 should still be visible
+        let check = exists_int("y", eq_const("x", "42"));
+        assert!(
+            is_valid(&mut backend, &check),
+            "Assertions after push without pop should remain visible"
+        );
+    }
+
+    /// Verify that a later pop removes only the innermost scope's assertions,
+    /// not the ones from an earlier push that was left open.
+    #[test]
+    fn test_z3_nested_push_pop_scoping() {
+        let registry = StructureRegistry::new();
+        let mut backend = Z3Backend::new(&registry).unwrap();
+
+        // Level 0: assert a = 1
+        assert_bool(&mut backend, &eq_const("a", "1"));
+
+        // Level 1: push + assert b = 2 (left open, simulating successful load)
+        backend.push();
+        assert_bool(&mut backend, &eq_const("b", "2"));
+
+        // Level 2: push + assert c = 3, then pop (simulating failed load rollback)
+        backend.push();
+        assert_bool(&mut backend, &eq_const("c", "3"));
+        backend.pop(1);
+
+        // a = 1 should still hold (base level)
+        let check_a = exists_int("z", eq_const("a", "1"));
+        assert!(
+            is_valid(&mut backend, &check_a),
+            "Base assertion a=1 should survive"
+        );
+
+        // b = 2 should still hold (level 1, not popped)
+        let check_b = exists_int("z", eq_const("b", "2"));
+        assert!(
+            is_valid(&mut backend, &check_b),
+            "Level-1 assertion b=2 should survive (not popped)"
+        );
+
+        // c = 3 should be gone (level 2, popped)
+        let check_c_free = exists_int("z", eq_const("c", "99"));
+        assert!(
+            is_valid(&mut backend, &check_c_free),
+            "Level-2 assertion c=3 should be gone after pop; c=99 should be satisfiable"
+        );
+    }
+
+    /// Verify that a contradictory assertion inside push() makes the solver UNSAT
+    /// within that scope, but after pop() the solver recovers.
+    #[test]
+    fn test_z3_contradiction_inside_push_recovers_after_pop() {
+        let registry = StructureRegistry::new();
+        let mut backend = Z3Backend::new(&registry).unwrap();
+
+        // Assert x = 5 at base level
+        assert_bool(&mut backend, &eq_const("x", "5"));
+
+        backend.push();
+        // Add contradiction: x = 5 AND x = 7 (impossible)
+        assert_bool(&mut backend, &eq_const("x", "7"));
+        // Solver is now UNSAT inside this scope
+        backend.pop(1);
+
+        // After pop, the contradiction is gone. x = 5 should still hold.
+        let check = exists_int("y", eq_const("x", "5"));
+        assert!(
+            is_valid(&mut backend, &check),
+            "After popping a contradictory scope, solver should recover and x=5 should hold"
+        );
+    }
+
+    /// Verify pop(2) removes two levels of assertions at once.
+    #[test]
+    fn test_z3_pop_multiple_levels() {
+        let registry = StructureRegistry::new();
+        let mut backend = Z3Backend::new(&registry).unwrap();
+
+        // Base: a = 1
+        assert_bool(&mut backend, &eq_const("a", "1"));
+
+        // Level 1: b = 2
+        backend.push();
+        assert_bool(&mut backend, &eq_const("b", "2"));
+
+        // Level 2: c = 3
+        backend.push();
+        assert_bool(&mut backend, &eq_const("c", "3"));
+
+        // Pop both levels at once
+        backend.pop(2);
+
+        // a = 1 should survive (base)
+        let check_a = exists_int("z", eq_const("a", "1"));
+        assert!(
+            is_valid(&mut backend, &check_a),
+            "Base assertion a=1 should survive pop(2)"
+        );
+
+        // b and c should both be gone
+        let check_b_free = exists_int("z", eq_const("b", "99"));
+        assert!(
+            is_valid(&mut backend, &check_b_free),
+            "Level-1 assertion b=2 should be gone after pop(2)"
+        );
+
+        let check_c_free = exists_int("z", eq_const("c", "99"));
+        assert!(
+            is_valid(&mut backend, &check_c_free),
+            "Level-2 assertion c=3 should be gone after pop(2)"
+        );
+    }
+
+    /// Verify the exact pattern used in ensure_structure_loaded:
+    ///   push → load succeeds → DON'T pop (assertions persist)
+    ///   push → load fails → pop (assertions rolled back)
+    /// Then check that a subsequent verify_axiom sees the successful load's
+    /// axioms but NOT the failed load's partial axioms.
+    #[test]
+    fn test_z3_ensure_structure_loaded_pattern() {
+        let registry = StructureRegistry::new();
+        let mut backend = Z3Backend::new(&registry).unwrap();
+
+        // Simulate successful load of structure A: a = 100
+        backend.push();
+        assert_bool(&mut backend, &eq_const("a", "100"));
+        // Success: don't pop
+
+        // Simulate failed load of structure B: b = 200 (partial), then error → pop
+        backend.push();
+        assert_bool(&mut backend, &eq_const("b", "200"));
+        backend.pop(1); // Rollback
+
+        // Simulate successful load of structure C: c = 300
+        backend.push();
+        assert_bool(&mut backend, &eq_const("c", "300"));
+        // Success: don't pop
+
+        // a = 100 should hold (successful load A)
+        let check_a = exists_int("z", eq_const("a", "100"));
+        assert!(
+            is_valid(&mut backend, &check_a),
+            "Successful load A's axioms should persist"
+        );
+
+        // c = 300 should hold (successful load C)
+        let check_c = exists_int("z", eq_const("c", "300"));
+        assert!(
+            is_valid(&mut backend, &check_c),
+            "Successful load C's axioms should persist"
+        );
+
+        // b should be unconstrained (failed load B was rolled back)
+        let check_b_free = exists_int("z", eq_const("b", "999"));
+        assert!(
+            is_valid(&mut backend, &check_b_free),
+            "Failed load B's axioms should be rolled back; b=999 should be satisfiable"
+        );
     }
 
     #[test]
@@ -5192,5 +5544,204 @@ mod tests {
 
         let result = backend.simplify(&expr).unwrap();
         assert_eq!(result, Expression::Const("5".to_string()));
+    }
+
+    #[test]
+    fn test_float_literal_translation() {
+        let registry = StructureRegistry::new();
+        let mut backend = Z3Backend::new(&registry).unwrap();
+
+        // Float literal "1.0" should be translated to a Z3 Real
+        let expr = Expression::Const("1.0".to_string());
+        let z3_result = backend.kleis_to_z3(&expr, &HashMap::new());
+        assert!(
+            z3_result.is_ok(),
+            "Float literal 1.0 should translate successfully"
+        );
+
+        let dynamic = z3_result.unwrap();
+        assert!(
+            dynamic.as_real().is_some(),
+            "Float literal 1.0 should produce a Z3 Real sort"
+        );
+    }
+
+    #[test]
+    fn test_float_literal_zero() {
+        let registry = StructureRegistry::new();
+        let mut backend = Z3Backend::new(&registry).unwrap();
+
+        let expr = Expression::Const("0.0".to_string());
+        let z3_result = backend.kleis_to_z3(&expr, &HashMap::new());
+        assert!(
+            z3_result.is_ok(),
+            "Float literal 0.0 should translate successfully"
+        );
+
+        let dynamic = z3_result.unwrap();
+        assert!(
+            dynamic.as_real().is_some(),
+            "Float literal 0.0 should produce a Z3 Real sort"
+        );
+    }
+
+    #[test]
+    fn test_int_to_real_coercion_in_uninterpreted_function() {
+        use crate::kleis_ast::TypeExpr;
+
+        // Register an operation with Real → Real signature to simulate
+        // the real-world case of `neg_cos : ℝ → ℝ` being called as neg_cos(0).
+        let mut registry = StructureRegistry::new();
+        registry.register_toplevel_operation(
+            "test_real_fn".to_string(),
+            TypeExpr::Function(
+                Box::new(TypeExpr::Named("ℝ".to_string())),
+                Box::new(TypeExpr::Named("ℝ".to_string())),
+            ),
+        );
+        let mut backend = Z3Backend::new(&registry).unwrap();
+
+        // Call with an Int literal — the coercion should promote Int → Real
+        let expr_int_arg = Expression::Operation {
+            name: "test_real_fn".to_string(),
+            args: vec![Expression::Const("0".to_string())],
+            span: None,
+        };
+        let result = backend.kleis_to_z3(&expr_int_arg, &HashMap::new());
+        assert!(
+            result.is_ok(),
+            "Int arg should be auto-promoted to Real when function expects Real: {:?}",
+            result.err()
+        );
+    }
+
+    #[test]
+    fn test_type_mismatch_rejected_for_incompatible_sorts() {
+        let registry = StructureRegistry::new();
+        let mut backend = Z3Backend::new(&registry).unwrap();
+
+        // Declare function with Int arg
+        let expr_int = Expression::Operation {
+            name: "test_strict_fn".to_string(),
+            args: vec![Expression::Const("42".to_string())],
+            span: None,
+        };
+        let first = backend.kleis_to_z3(&expr_int, &HashMap::new());
+        assert!(first.is_ok(), "First call with Int arg should succeed");
+
+        // Call with String arg — should fail (String != Int, not auto-promotable)
+        let expr_str = Expression::Operation {
+            name: "test_strict_fn".to_string(),
+            args: vec![Expression::String("hello".to_string())],
+            span: None,
+        };
+        let second = backend.kleis_to_z3(&expr_str, &HashMap::new());
+        assert!(
+            second.is_err(),
+            "String arg where Int expected should produce a type mismatch error"
+        );
+    }
+
+    /// Test that Z3 can detect axiom inconsistency via bare solver.check().
+    ///
+    /// Reproduces the POT non_separable bug: flow_add_id + non_separable
+    /// creates a trivial contradiction. Tests multiple approaches to
+    /// determine which reliably triggers Z3's E-matching.
+    #[test]
+    fn test_consistency_check_detects_quantifier_inconsistency() {
+        let solver = Solver::new();
+
+        let flow_sort = Sort::uninterpreted("Flow".into());
+        let gk_sort = Sort::uninterpreted("GK".into());
+        let da_sort = Sort::uninterpreted("DA".into());
+        let sf_sort = Sort::uninterpreted("SF".into());
+        let bool_sort = Sort::bool();
+
+        let is_admissible = FuncDecl::new("is_admissible", &[&gk_sort], &bool_sort);
+        let flow_add = FuncDecl::new("flow_add", &[&flow_sort, &flow_sort], &flow_sort);
+        let project_at = FuncDecl::new("project_at", &[&gk_sort, &flow_sort, &da_sort], &sf_sort);
+
+        let flow_zero = Dynamic::fresh_const("flow_zero", &flow_sort);
+        let psi_ab = Dynamic::fresh_const("psi_AB", &flow_sort);
+        let k_univ = Dynamic::fresh_const("K_univ", &gk_sort);
+
+        // Axiom 1: ∀(a : Flow). flow_add(a, flow_zero) = a
+        let a_flow = Dynamic::fresh_const("a", &flow_sort);
+        let flow_add_a_zero = flow_add.apply(&[&a_flow, &flow_zero]);
+        let axiom1 = z3::ast::forall_const(&[&a_flow], &[], &a_flow.eq(&flow_add_a_zero));
+        solver.assert(&axiom1);
+
+        // Axiom 2: is_admissible(K_univ)
+        solver.assert(&is_admissible.apply(&[&k_univ]).as_bool().unwrap());
+
+        // Axiom 3: non_separable — the buggy axiom
+        let pa = Dynamic::fresh_const("pA", &flow_sort);
+        let pb = Dynamic::fresh_const("pB", &flow_sort);
+        let g_var = Dynamic::fresh_const("G", &gk_sort);
+        let a_var = Dynamic::fresh_const("a", &da_sort);
+        let b_var = Dynamic::fresh_const("b", &da_sort);
+
+        let g_admissible = is_admissible.apply(&[&g_var]).as_bool().unwrap();
+        let sum = flow_add.apply(&[&pa, &pb]);
+        let proj_psi_a = project_at.apply(&[&g_var, &psi_ab, &a_var]);
+        let proj_sum_a = project_at.apply(&[&g_var, &sum, &a_var]);
+        let proj_psi_b = project_at.apply(&[&g_var, &psi_ab, &b_var]);
+        let proj_sum_b = project_at.apply(&[&g_var, &sum, &b_var]);
+
+        let conj = Bool::and(&[&proj_psi_a.eq(&proj_sum_a), &proj_psi_b.eq(&proj_sum_b)]);
+        let non_sep_body = g_admissible.implies(&conj.not());
+        let axiom3 = z3::ast::forall_const(&[&pa, &pb, &g_var, &a_var, &b_var], &[], &non_sep_body);
+        solver.assert(&axiom3);
+
+        // TEST 1: Bare check()
+        let bare_result = solver.check();
+        eprintln!("TEST 1 - Bare solver.check(): {:?}", bare_result);
+
+        // TEST 2: Seed with ground term flow_add(psi_AB, flow_zero)
+        solver.push();
+        let ground_sum = flow_add.apply(&[&psi_ab, &flow_zero]);
+        solver.assert(&psi_ab.eq(&ground_sum));
+        let seeded_result = solver.check();
+        eprintln!(
+            "TEST 2 - Seeded with flow_add(psi_AB, flow_zero)=psi_AB: {:?}",
+            seeded_result
+        );
+        solver.pop(1);
+
+        // TEST 3: Seed with project_at ground terms too
+        solver.push();
+        let ground_sum3 = flow_add.apply(&[&psi_ab, &flow_zero]);
+        solver.assert(&psi_ab.eq(&ground_sum3));
+        let da_c = Dynamic::fresh_const("da_c", &da_sort);
+        let da_d = Dynamic::fresh_const("da_d", &da_sort);
+        let _p1 = project_at.apply(&[&k_univ, &psi_ab, &da_c]);
+        let _p2 = project_at.apply(&[&k_univ, &ground_sum3, &da_d]);
+        let full_seed_result = solver.check();
+        eprintln!("TEST 3 - Full ground seeding: {:?}", full_seed_result);
+        solver.pop(1);
+
+        // TEST 4: Canary 1≠2
+        solver.push();
+        let one = Int::from_i64(1);
+        let two = Int::from_i64(2);
+        solver.assert(&one.eq(&two).not());
+        let canary_result = solver.check();
+        eprintln!("TEST 4 - Canary (1≠2): {:?}", canary_result);
+        solver.pop(1);
+
+        eprintln!(
+            "\nSummary: bare={:?}, seeded={:?}, full_seed={:?}, canary={:?}",
+            bare_result, seeded_result, full_seed_result, canary_result
+        );
+
+        let any_detected = bare_result == SatResult::Unsat
+            || seeded_result == SatResult::Unsat
+            || full_seed_result == SatResult::Unsat
+            || canary_result == SatResult::Unsat;
+
+        assert!(
+            any_detected,
+            "Z3 should detect the axiom inconsistency via at least one method"
+        );
     }
 }

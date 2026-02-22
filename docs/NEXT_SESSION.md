@@ -1,6 +1,185 @@
 # Next Session Notes
 
-**Last Updated:** February 21, 2026 (session 3)
+**Last Updated:** February 22, 2026 (session 5)
+
+---
+
+## Session 5 (Feb 22, 2026): Axiom Consistency Detection + non_separable Bug Found
+
+### CRITICAL: What You Need to Know
+
+**The entanglement paper (`pot_entanglement_paper.kleis`) does NOT compile.**
+Kleis now detects that its axiom set is **inconsistent** (contradictory).
+All 24 Z3-verified assertions were vacuously true — derived from `False`.
+
+### What Was Accomplished
+
+1. **Axiom Consistency Detection implemented** — Kleis now checks whether loaded axioms are mutually satisfiable before verifying any assertions.
+   - `SolverBackend::check_consistency()` — two-phase approach:
+     - Phase 1: bare `solver.check()` with 5s timeout
+     - Phase 2: MBQI (Model-Based Quantifier Instantiation) with 15s timeout
+   - `AxiomVerifier` runs the check once per lifetime; `Evaluator` caches result across assertions
+   - New variant `VerificationResult::InconsistentAxioms` propagated through evaluator, REPL, MCP, theory engine
+   - Clear error: "AXIOM INCONSISTENCY DETECTED: The loaded axioms are mutually unsatisfiable..."
+
+2. **Root cause identified: `non_separable` axiom in `pot_entanglement_v2.kleis`**
+   - The axiom says: for ALL `psi_A, psi_B`, the entangled state `psi_AB` cannot be decomposed as `flow_add(psi_A, psi_B)`
+   - But `flow_add_id` says: `flow_add(x, flow_zero) = x`
+   - Instantiating with `psi_A = psi_AB, psi_B = flow_zero` gives: `project_at(G, psi_AB, a) ≠ project_at(G, psi_AB, a)` — contradiction
+
+3. **Rust unit test** (`test_consistency_check_detects_quantifier_inconsistency`) reproduces the exact Z3 behavior
+
+4. **Files modified:**
+   - `src/solvers/backend.rs` — added `check_consistency` to `SolverBackend` trait
+   - `src/solvers/z3/backend.rs` — two-phase consistency check implementation + unit test
+   - `src/axiom_verifier.rs` — consistency check integration + cache API
+   - `src/evaluator.rs` — `axiom_consistency_cache` field, cache propagation in `verify_with_z3`
+   - `src/repl.rs` — `InconsistentAxioms` display
+   - `src/mcp/policy.rs`, `src/theory_mcp/engine.rs` — `InconsistentAxioms` handling
+   - `tests/axiom_verification_integration_test.rs`, `tests/z3_tensor_test.rs`, `tests/multi_level_structure_test.rs`, `tests/logical_operators_test.rs` — new match arms
+
+### What Must Happen Next
+
+1. **Fix the `non_separable` axiom** in `theories/pot_entanglement_v2.kleis`
+   - Option A: Remove it entirely — rely on `Separability.entangled_exists` for non-separability
+   - Option B: Refine it to exclude trivial decompositions (e.g., require `psi_A ≠ flow_zero` and `psi_B ≠ flow_zero`)
+   - Either way, `pot_entanglement_paper.kleis` must compile clean afterward
+
+2. **Re-derive the cosine law** — once axioms are consistent, check which claims still hold
+   - The `correlation_def` sign may also need fixing (gives +1 at θ=0, expected -1)
+
+3. **Re-verify ALL entanglement paper assertions** against the corrected axiom set
+
+### Test Results (This Session)
+
+| Test | Result |
+|------|--------|
+| Flat rotation curves paper (`pot_arxiv_paper.kleis`) | 8/8 pass (consistent) |
+| Entanglement paper (`pot_entanglement_paper.kleis`) | 0/24 — **INCONSISTENT** |
+| Cosine uniqueness test (`cosine_uniqueness_test.kleis`) | 0/6 — **INCONSISTENT** |
+| 857 lib unit tests | All pass |
+| 62 integration tests | All pass |
+
+### Lessons Learned
+
+- Z3's E-matching is **order-dependent** for universally quantified axioms. A bare `solver.check()` may return Unknown even for provably inconsistent axioms, depending on assertion order. MBQI is more reliable.
+- **Caching** the consistency result is essential — without it, the 20-second check (5s + 15s) runs per assertion, making consistent files unbearably slow.
+- The `•` (group operation) type mismatch (`Real` vs `Int`) in Group/AbelianGroup is a separate pre-existing issue that should also be addressed.
+
+---
+
+## Session 4 (Feb 22, 2026): GHZ Contextuality Added to Entanglement Paper + Z3 Int→Real Fix
+
+### What Was Accomplished
+
+1. **GHZ contextuality section added to entanglement paper** (`pot_entanglement_paper.kleis`)
+   - New Section 6: "Beyond Bell: The GHZ Contextuality Test"
+   - Three subsections: GHZ state/parities, noncontextual contradiction (Theorem 5), POT contextual consistency (Theorem 6)
+   - Abstract, intro, conclusion, appendix, keywords all updated
+   - GHZ reference (Greenberger, Horne, & Zeilinger 1989) added
+   - Two new Z3 verification examples: `theorem5_ghz_no_go` (UNSAT), `theorem6_pot_ghz_contextual` (SAT)
+   - Paper is now 14 pages covering both 2-particle (Bell) and 3-particle (GHZ)
+
+2. **Refactored GHZ theory file** (`theories/pot_ghz_contextuality_v1.kleis`)
+   - Now imports `pot_entanglement_v1.kleis` instead of duplicating all structures
+
+3. **Fixed Z3 backend Int→Real type promotion** (`src/solvers/z3/backend.rs`)
+   - **`Expression::Const`**: Now parses float literals (`f64`) and converts to Z3 `Real` via rational representation
+   - **Uninterpreted function calls**: Auto-promotes `Int→Real` when function signature expects `Real`
+   - This fixed `theorem1_singlet_correlation` which was failing due to `neg_cos(0)` type mismatch
+   - **Result: 10/10 tests pass** (was 9/10 before)
+   - Remaining `•` warnings are stdlib Group/AbelianGroup Real→Int (reverse direction, correctly not auto-demoted)
+
+### Known Issue: Equation Alignment in ArxivSubsection
+
+**Problem:** Multi-line display equations inside `ArxivSubsection` strings don't align at the `=` sign.
+
+**What was tried (none worked):**
+- Typst `&=` alignment markers with `\\` line breaks in single math block
+- Typst `grid()` with column alignment embedded as raw Typst in the string
+- Typst `mat()` with `delim: #none`
+- Separate `$ ... $` display equations (current approach — readable but unaligned)
+
+**Root cause hypothesis:** The ArxivSubsection template wraps content in a Typst context that may interfere with math alignment. The `&` markers and `\` line breaks in the generated Typst output appear syntactically correct, but alignment doesn't take effect visually. Needs investigation of how `ArxivSubsection` renders its content string — likely `#text(...)` or similar wrapping that prevents math alignment from working across lines.
+
+**Files to investigate:**
+- `stdlib/templates/arxiv_paper.kleis` — how ArxivSubsection renders content
+- `/tmp/align_test4.typ` — standalone Typst test file showing the issue (grid works in standalone but not through template)
+
+**Impact:** Cosmetic only. The equations are correct and readable, just not perfectly column-aligned.
+
+### CRITICAL: Technical Review of Entanglement Paper (Feb 22, 2026)
+
+A rigorous technical review identified the following issues that must be addressed
+before journal submission. These define the research program going forward.
+
+**Issue 1: E10 (cosine law) is axiomatized, not derived (MOST IMPORTANT)**
+
+The paper's language implies `E(a,b) = -cos(θ)` follows from kernel admissibility,
+but E10 is an axiom — it is *imposed* as a structural axiom on the entangled-state
+kernel. The admissible kernel axioms (A1–A4) constrain the class of kernels but do
+not force the specific angular dependence.
+
+*To resolve:* Derive `-cos(θ)` from kernel admissibility + SU(2) representation theory.
+This requires showing that rotational covariance of admissible kernels constrains
+the angular structure, and that the 2-component spinor representation of SO(3) via
+SU(2) pins the kernel to cosine form. Essentially: re-derive Wigner's classification
+inside the projection formalism. **This would be a separate paper.**
+
+*Alternative (honest minimal fix):* Reword the paper to clearly state that E10 is a
+structural axiom encoding the quantum prediction, and that the paper verifies
+*consistency* of this axiom with the rest of the framework — not derivation from
+first principles. Change "follows from" to "is consistent with."
+
+**Issue 2: Non-separability may be QM entanglement in new notation**
+
+POT denies Bell's separability assumption. This is logically valid. But a referee
+will ask: is POT's non-separability mathematically distinguishable from standard QM
+entanglement? If not, POT is a reinterpretation (respectable) not new physics.
+
+*To resolve:* Either (a) show a structural constraint that kernel admissibility
+imposes beyond what standard QM entanglement provides, or (b) acknowledge this
+explicitly and position the paper as a reinterpretation with novel verification
+methodology.
+
+**Issue 3: No-signaling is assumed but not proved**
+
+The paper implicitly assumes marginal independence `P(o_A | a, b) = P(o_A | a)` but
+never proves it within the POT framework. A referee will demand this.
+
+*To resolve:* Add a theorem proving no-signaling from the kernel factorization
+structure. Specifically: show that summing/integrating over B's outcomes with the
+kernel factorization yields a marginal that is independent of b.
+
+**Issue 4: Kernel unification claim is philosophically suggestive but mathematically weak**
+
+The gravity and measurement kernels share linearity (admissibility), but "many
+linear operators exist." Shared linearity is necessary but insufficient for
+unification.
+
+*To resolve:* Prove a non-trivial structural theorem linking elliptic (gravity) and
+spinor (measurement) kernel sectors. For example: show that a single admissibility
+condition constrains BOTH the logarithmic Green's function structure and the SU(2)
+inner-product structure in a way that is not individually obvious.
+
+**Honest classification of the paper (current state):**
+- Technically coherent: YES
+- Mathematically consistent: YES
+- Physically complete: NOT YET
+- Philosophically mature: YES
+- Machine-verification: VERY STRONG (genuinely novel)
+- Classification: **Consistent ontological reinterpretation of QM** (not new physics yet)
+
+**The paper becomes new physics if and only if:**
+1. The cosine law is *derived* (not axiomatized) from kernel structure, OR
+2. POT makes a different prediction from QM somewhere, OR
+3. Kernel unification produces a non-trivial forced theorem linking gravity + measurement
+
+**Priority for next session:**
+1. (Minimal) Reword paper for honesty — E10 is a structural axiom, not a derivation
+2. (Medium) Prove no-signaling theorem within POT framework
+3. (Ambitious) Begin representation-theoretic derivation of cosine law from kernel admissibility + SU(2)
+4. (Ambitious) Strengthen unification argument beyond shared linearity
 
 ---
 
@@ -93,6 +272,109 @@ possible from this side of the projection.
 Both should reference this principle in their "Limitations" sections.
 The rotation curves paper's "What This Paper Does Not Do" should be
 updated to match the entanglement paper's treatment.
+
+### Future Research Directions (from entanglement paper review)
+
+**Reviewed by ChatGPT — refinements captured below.**
+
+1. **Kernel factorization vs AQFT**: POT's K = K_univ · K_dyn · K_rep maps
+   onto Haag-Kastler local algebras, DHR superselection sectors, and the
+   time evolution automorphism. POT may be a "pre-algebraic QFT" — the step
+   before local algebras, explaining where they come from.
+
+   **Refinement (ChatGPT):** The mapping K_univ ↔ A is imprecise because
+   AQFT's core object is the NET O ↦ A(O), not A alone. K_univ is better
+   understood as "a recipe that yields a net after projection."
+
+   **Bridge theorem needed:** From (Hont, Π, K), construct a net O ↦ A(O)
+   and a state ω such that Haag-Kastler axioms hold (at least isotony +
+   locality + some covariance) and correlations match standard QFT.
+
+   **DHR connection:** K_rep looks DHR-ish (superselection sectors), but
+   to earn the parallel we need a POT notion of "localized charge" that
+   survives projection as a sector label.
+
+2. **Projection as C*-algebra state restriction**: If Π is a state restriction
+   ω|_{A(O)}, then GNS gives Hont for free, Tomita-Takesaki gives emergent
+   time, and the split property relates to kernel composition.
+
+   **Refinement (ChatGPT):** "Π is state restriction" should be sharpened to:
+   "Π is a completely positive unital map (quantum channel) from the global
+   algebra to an observable algebra, and restriction to regions O corresponds
+   to composing with the inclusion/projection onto A(O)."
+
+   Reason: "lossy projection" is more naturally a CP map / conditional
+   expectation than mere restriction, unless we already have net structure.
+
+   **Tomita-Takesaki caveat:** Modular time is canonical given (M, ω) but
+   not automatically physical time. Must show that in the POT regime,
+   modular flow corresponds to expected physical dynamics. That's a
+   theorem-shaped goal, not a vibe.
+
+3. **GHZ test (next Z3 verification target)**: The violin string analogy may
+   break for 3-party entanglement (GHZ). GHZ has basis-dependent parity —
+   a single measurement rules out hidden variables deterministically.
+
+   **Concrete approach (ChatGPT):** Don't simulate amplitudes. Encode the
+   four GHZ operator identities as Z3 theorems:
+   ```
+   (X⊗X⊗X)|GHZ⟩ = +|GHZ⟩
+   (X⊗Y⊗Y)|GHZ⟩ = −|GHZ⟩
+   (Y⊗X⊗Y)|GHZ⟩ = −|GHZ⟩
+   (Y⊗Y⊗X)|GHZ⟩ = −|GHZ⟩
+   ```
+   In POT terms: define ψ_ABC as a single non-separable flow, define
+   project_at with basis choice (X or Y), verify the four eigen-relations.
+   If they hold → POT supports GHZ contextuality.
+   If not → pinpoints exactly which axiom is missing (operator algebra
+   structure, composition rules, or how basis enters K_rep).
+
+   This is feasible with the current kleis-theory MCP.
+
+   **Concrete GHZ session plan (from ChatGPT):**
+   File: `theories/pot_ghz_contextuality_v1.kleis` (small, surgical)
+
+   Step A — Show GHZ is UNSAT for pre-assigned outcomes:
+   ```
+   x_A, y_A, x_B, y_B, x_C, y_C ∈ {+1, -1}  (so x² = 1)
+   x_A · x_B · x_C = +1
+   x_A · y_B · y_C = -1
+   y_A · x_B · y_C = -1
+   y_A · y_B · x_C = -1
+   → Multiply all four: (x_A·y_A)²·(x_B·y_B)²·(x_C·y_C)² = +1·(-1)³ = -1
+   → But LHS = +1 (all squares). CONTRADICTION. Z3 confirms UNSAT.
+   ```
+   This proves no noncontextual hidden variable model works for GHZ.
+
+   Step B — Show POT CAN satisfy the constraints (non-pre-assigned):
+   Connect project_at(G, ψ_ABC, basis) to outcome variables.
+   Basis choice (X or Y) parameterizes K_rep.
+   Single ontological mode → constraints satisfied because outcomes
+   are not pre-assigned; they depend on the projection basis.
+
+   Step C — The diagnostic value:
+   If Z3 validates → POT handles 3-party contextuality.
+   If not → pinpoints missing axiom (operator algebra, composition,
+   or basis-dependent K_rep).
+
+   **DONE (this session):** Both Step A and Step B verified by Z3.
+   - Step A: DISPROVED — no ±1 assignment satisfies all four GHZ parities
+   - Step B: VERIFIED — POT's context-dependent outcomes satisfy all four
+   Saved as theories/pot_ghz_contextuality_v1.kleis
+
+   **Precision claim (from ChatGPT review, must include in paper):**
+   "Step B does not 'solve' GHZ; it demonstrates that POT is not a
+   noncontextual hidden-variable theory. GHZ specifically refutes the
+   existence of a single context-independent value assignment for X and Y
+   at each site. POT avoids this by making outcomes functions of the
+   measurement context (projection basis), not pre-assigned values."
+
+   **CP map refinement (from ChatGPT):**
+   POT's projection reads as Heisenberg picture (maps observables/fields
+   forward) while the "lossy state" reading is Schrödinger (maps states).
+   Must pick one explicitly when formalizing. For modular theory
+   (Tomita-Takesaki), need von Neumann algebras + faithful states,
+   which is naturally Heisenberg/algebraic.
 
 ### Entanglement Paper: Formalization Plan (from prior notes)
 

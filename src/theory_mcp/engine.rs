@@ -756,6 +756,16 @@ fn proposition_result(assert_result: &crate::evaluator::AssertResult) -> EvalRes
             witness: None,
             error: Some(format!("Unknown: {}", msg)),
         },
+        AssertResult::InconsistentAxioms => EvalResult {
+            value: None,
+            verified: Some(false),
+            witness: None,
+            error: Some(
+                "AXIOM INCONSISTENCY: loaded axioms are contradictory — \
+                 all assertions would be vacuously true"
+                    .to_string(),
+            ),
+        },
     }
 }
 
