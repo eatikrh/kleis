@@ -1,0 +1,189 @@
+import "../theories/pot_admissible_kernels_v2.kleis"
+
+data SpinorField = SF(ℤ)
+
+data DetectorAngle = DA(ℤ)
+
+structure SpinorAlgebra {
+    operation spinor_add : SpinorField -> SpinorField -> SpinorField
+    operation spinor_smul : ℂ -> SpinorField -> SpinorField
+    element spinor_zero : SpinorField
+    axiom spinor_add_comm : ∀(s1 s2 : SpinorField). spinor_add(s1, s2) = spinor_add(s2, s1)
+    axiom spinor_add_id : ∀(s : SpinorField). spinor_add(s, spinor_zero) = s
+}
+
+structure KernelFactorization {
+    operation K_univ : GreenKernel
+    operation K_dyn : GreenKernel
+    operation K_rep : GreenKernel
+
+    axiom univ_admissible : is_admissible(K_univ)
+    axiom dyn_admissible : is_admissible(K_dyn)
+    axiom rep_admissible : is_admissible(K_rep)
+
+    operation unified_kernel : GreenKernel
+    axiom kernel_factorizes : unified_kernel = compose_kernel(K_univ, compose_kernel(K_dyn, K_rep))
+}
+
+structure EntangledState {
+    operation psi_AB : Flow
+
+    operation project_at : GreenKernel -> Flow -> DetectorAngle -> SpinorField
+
+    axiom non_separable : ∀(psi_A psi_B : Flow, G : GreenKernel, a b : DetectorAngle).
+        implies(is_admissible(G),
+            not(project_at(G, psi_AB, a) = project_at(G, flow_add(psi_A, psi_B), a)
+                and project_at(G, psi_AB, b) = project_at(G, flow_add(psi_A, psi_B), b)))
+
+    axiom single_source : ∀(G : GreenKernel, a b : DetectorAngle).
+        implies(is_admissible(G),
+            equiv(G, psi_AB, psi_AB))
+}
+
+structure Separability {
+    operation is_product_state : Flow -> Bool
+
+    axiom entangled_exists : ∀(G : GreenKernel).
+        implies(is_admissible(G), not(is_product_state(psi_AB)))
+
+    axiom product_states_factor : ∀(G : GreenKernel, psi : Flow, a b : DetectorAngle).
+        implies(and(is_admissible(G), is_product_state(psi)),
+            ∃(psi_A psi_B : Flow).
+                project_at(G, psi, a) = project_at(G, psi_A, a)
+                and project_at(G, psi, b) = project_at(G, psi_B, b))
+}
+
+structure MeasurementProjection {
+    operation angle_between : DetectorAngle -> DetectorAngle -> ℝ
+    operation spinor_inner : SpinorField -> SpinorField -> ℝ
+    operation spin_outcome : GreenKernel -> Flow -> DetectorAngle -> ℝ
+
+    axiom angle_symmetric : ∀(a b : DetectorAngle). angle_between(a, b) = angle_between(b, a)
+
+    axiom angle_self_zero : ∀(a : DetectorAngle). angle_between(a, a) = 0
+
+    axiom outcome_from_projection : ∀(G : GreenKernel, psi : Flow, a : DetectorAngle).
+        implies(is_admissible(G),
+            spin_outcome(G, psi, a) = spinor_inner(project_at(G, psi, a), project_at(G, psi, a)))
+
+    axiom inner_normalized : ∀(G : GreenKernel, a : DetectorAngle).
+        implies(is_admissible(G),
+            spinor_inner(project_at(G, psi_AB, a), project_at(G, psi_AB, a)) = 1)
+}
+
+structure BellCorrelation {
+    operation correlation : GreenKernel -> Flow -> DetectorAngle -> DetectorAngle -> ℝ
+    operation neg_cos : ℝ -> ℝ
+
+    axiom correlation_def : ∀(G : GreenKernel, a b : DetectorAngle).
+        implies(is_admissible(G),
+            correlation(G, psi_AB, a, b) = spinor_inner(project_at(G, psi_AB, a), project_at(G, psi_AB, b)))
+
+    axiom singlet_correlation : ∀(G : GreenKernel, a b : DetectorAngle).
+        implies(is_admissible(G),
+            correlation(G, psi_AB, a, b) = neg_cos(angle_between(a, b)))
+
+    axiom neg_cos_zero : neg_cos(0) = 0 - 1
+
+    axiom neg_cos_pi : neg_cos(pi()) = 1
+}
+
+structure AnticorrelationLemma {
+    axiom same_detector_anticorrelation : ∀(G : GreenKernel, a : DetectorAngle).
+        implies(is_admissible(G),
+            correlation(G, psi_AB, a, a) = neg_cos(0))
+
+    axiom anticorrelation_value : ∀(G : GreenKernel, a : DetectorAngle).
+        implies(is_admissible(G),
+            correlation(G, psi_AB, a, a) = 0 - 1)
+}
+
+structure BellInequality {
+    operation bell_lhs : GreenKernel -> Flow -> DetectorAngle -> DetectorAngle -> DetectorAngle -> ℝ
+    operation bell_rhs : GreenKernel -> Flow -> DetectorAngle -> DetectorAngle -> DetectorAngle -> ℝ
+
+    axiom bell_lhs_def : ∀(G : GreenKernel, psi : Flow, a b c : DetectorAngle).
+        implies(is_admissible(G),
+            bell_lhs(G, psi, a, b, c) = abs(correlation(G, psi, a, b) - correlation(G, psi, a, c)))
+
+    axiom bell_rhs_def : ∀(G : GreenKernel, psi : Flow, a b c : DetectorAngle).
+        implies(is_admissible(G),
+            bell_rhs(G, psi, a, b, c) = 1 + correlation(G, psi, b, c))
+
+    axiom bell_holds_for_product : ∀(G : GreenKernel, psi : Flow, a b c : DetectorAngle).
+        implies(and(is_admissible(G), is_product_state(psi)),
+            bell_lhs(G, psi, a, b, c) <= bell_rhs(G, psi, a, b, c))
+}
+
+structure BellViolation {
+    axiom entangled_violates_bell : ∀(G : GreenKernel).
+        implies(is_admissible(G),
+            ∃(a b c : DetectorAngle).
+                bell_lhs(G, psi_AB, a, b, c) > bell_rhs(G, psi_AB, a, b, c))
+
+    axiom violation_legitimate : ∀(G : GreenKernel).
+        implies(is_admissible(G), not(is_product_state(psi_AB)))
+}
+
+data MeasBasis = MB(ℤ)
+
+data MeasContext = MC(ℤ)
+
+structure GHZState {
+    operation psi_GHZ : Flow
+
+    operation basis_X : MeasBasis
+    operation basis_Y : MeasBasis
+    axiom bases_distinct : not(basis_X = basis_Y)
+
+    operation ctx_XXX : MeasContext
+    operation ctx_XYY : MeasContext
+    operation ctx_YXY : MeasContext
+    operation ctx_YYX : MeasContext
+
+    operation outcome_A : MeasContext -> ℤ
+    operation outcome_B : MeasContext -> ℤ
+    operation outcome_C : MeasContext -> ℤ
+
+    axiom outcome_A_pm1 : ∀(ctx : MeasContext). outcome_A(ctx) * outcome_A(ctx) = 1
+    axiom outcome_B_pm1 : ∀(ctx : MeasContext). outcome_B(ctx) * outcome_B(ctx) = 1
+    axiom outcome_C_pm1 : ∀(ctx : MeasContext). outcome_C(ctx) * outcome_C(ctx) = 1
+
+    axiom ghz_parity_XXX : outcome_A(ctx_XXX) * outcome_B(ctx_XXX) * outcome_C(ctx_XXX) = 1
+    axiom ghz_parity_XYY : outcome_A(ctx_XYY) * outcome_B(ctx_XYY) * outcome_C(ctx_XYY) = 0 - 1
+    axiom ghz_parity_YXY : outcome_A(ctx_YXY) * outcome_B(ctx_YXY) * outcome_C(ctx_YXY) = 0 - 1
+    axiom ghz_parity_YYX : outcome_A(ctx_YYX) * outcome_B(ctx_YYX) * outcome_C(ctx_YYX) = 0 - 1
+
+    axiom ghz_non_separable : ∀(G : GreenKernel). implies(is_admissible(G), not(is_product_state(psi_GHZ)))
+}
+
+structure GHZNoncontextuality {
+    operation nc_xA : ℤ
+    operation nc_yA : ℤ
+    operation nc_xB : ℤ
+    operation nc_yB : ℤ
+    operation nc_xC : ℤ
+    operation nc_yC : ℤ
+
+    axiom nc_xA_pm1 : nc_xA * nc_xA = 1
+    axiom nc_yA_pm1 : nc_yA * nc_yA = 1
+    axiom nc_xB_pm1 : nc_xB * nc_xB = 1
+    axiom nc_yB_pm1 : nc_yB * nc_yB = 1
+    axiom nc_xC_pm1 : nc_xC * nc_xC = 1
+    axiom nc_yC_pm1 : nc_yC * nc_yC = 1
+
+    axiom context_independence_A_X : outcome_A(ctx_XXX) = nc_xA
+    axiom context_independence_A_X2 : outcome_A(ctx_XYY) = nc_xA
+    axiom context_independence_A_Y : outcome_A(ctx_YXY) = nc_yA
+    axiom context_independence_A_Y2 : outcome_A(ctx_YYX) = nc_yA
+
+    axiom context_independence_B_X : outcome_B(ctx_XXX) = nc_xB
+    axiom context_independence_B_X2 : outcome_B(ctx_YXY) = nc_xB
+    axiom context_independence_B_Y : outcome_B(ctx_XYY) = nc_yB
+    axiom context_independence_B_Y2 : outcome_B(ctx_YYX) = nc_yB
+
+    axiom context_independence_C_X : outcome_C(ctx_XXX) = nc_xC
+    axiom context_independence_C_X2 : outcome_C(ctx_YYX) = nc_xC
+    axiom context_independence_C_Y : outcome_C(ctx_XYY) = nc_yC
+    axiom context_independence_C_Y2 : outcome_C(ctx_YXY) = nc_yC
+}

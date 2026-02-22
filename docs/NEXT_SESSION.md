@@ -94,6 +94,109 @@ Both should reference this principle in their "Limitations" sections.
 The rotation curves paper's "What This Paper Does Not Do" should be
 updated to match the entanglement paper's treatment.
 
+### Future Research Directions (from entanglement paper review)
+
+**Reviewed by ChatGPT — refinements captured below.**
+
+1. **Kernel factorization vs AQFT**: POT's K = K_univ · K_dyn · K_rep maps
+   onto Haag-Kastler local algebras, DHR superselection sectors, and the
+   time evolution automorphism. POT may be a "pre-algebraic QFT" — the step
+   before local algebras, explaining where they come from.
+
+   **Refinement (ChatGPT):** The mapping K_univ ↔ A is imprecise because
+   AQFT's core object is the NET O ↦ A(O), not A alone. K_univ is better
+   understood as "a recipe that yields a net after projection."
+
+   **Bridge theorem needed:** From (Hont, Π, K), construct a net O ↦ A(O)
+   and a state ω such that Haag-Kastler axioms hold (at least isotony +
+   locality + some covariance) and correlations match standard QFT.
+
+   **DHR connection:** K_rep looks DHR-ish (superselection sectors), but
+   to earn the parallel we need a POT notion of "localized charge" that
+   survives projection as a sector label.
+
+2. **Projection as C*-algebra state restriction**: If Π is a state restriction
+   ω|_{A(O)}, then GNS gives Hont for free, Tomita-Takesaki gives emergent
+   time, and the split property relates to kernel composition.
+
+   **Refinement (ChatGPT):** "Π is state restriction" should be sharpened to:
+   "Π is a completely positive unital map (quantum channel) from the global
+   algebra to an observable algebra, and restriction to regions O corresponds
+   to composing with the inclusion/projection onto A(O)."
+
+   Reason: "lossy projection" is more naturally a CP map / conditional
+   expectation than mere restriction, unless we already have net structure.
+
+   **Tomita-Takesaki caveat:** Modular time is canonical given (M, ω) but
+   not automatically physical time. Must show that in the POT regime,
+   modular flow corresponds to expected physical dynamics. That's a
+   theorem-shaped goal, not a vibe.
+
+3. **GHZ test (next Z3 verification target)**: The violin string analogy may
+   break for 3-party entanglement (GHZ). GHZ has basis-dependent parity —
+   a single measurement rules out hidden variables deterministically.
+
+   **Concrete approach (ChatGPT):** Don't simulate amplitudes. Encode the
+   four GHZ operator identities as Z3 theorems:
+   ```
+   (X⊗X⊗X)|GHZ⟩ = +|GHZ⟩
+   (X⊗Y⊗Y)|GHZ⟩ = −|GHZ⟩
+   (Y⊗X⊗Y)|GHZ⟩ = −|GHZ⟩
+   (Y⊗Y⊗X)|GHZ⟩ = −|GHZ⟩
+   ```
+   In POT terms: define ψ_ABC as a single non-separable flow, define
+   project_at with basis choice (X or Y), verify the four eigen-relations.
+   If they hold → POT supports GHZ contextuality.
+   If not → pinpoints exactly which axiom is missing (operator algebra
+   structure, composition rules, or how basis enters K_rep).
+
+   This is feasible with the current kleis-theory MCP.
+
+   **Concrete GHZ session plan (from ChatGPT):**
+   File: `theories/pot_ghz_contextuality_v1.kleis` (small, surgical)
+
+   Step A — Show GHZ is UNSAT for pre-assigned outcomes:
+   ```
+   x_A, y_A, x_B, y_B, x_C, y_C ∈ {+1, -1}  (so x² = 1)
+   x_A · x_B · x_C = +1
+   x_A · y_B · y_C = -1
+   y_A · x_B · y_C = -1
+   y_A · y_B · x_C = -1
+   → Multiply all four: (x_A·y_A)²·(x_B·y_B)²·(x_C·y_C)² = +1·(-1)³ = -1
+   → But LHS = +1 (all squares). CONTRADICTION. Z3 confirms UNSAT.
+   ```
+   This proves no noncontextual hidden variable model works for GHZ.
+
+   Step B — Show POT CAN satisfy the constraints (non-pre-assigned):
+   Connect project_at(G, ψ_ABC, basis) to outcome variables.
+   Basis choice (X or Y) parameterizes K_rep.
+   Single ontological mode → constraints satisfied because outcomes
+   are not pre-assigned; they depend on the projection basis.
+
+   Step C — The diagnostic value:
+   If Z3 validates → POT handles 3-party contextuality.
+   If not → pinpoints missing axiom (operator algebra, composition,
+   or basis-dependent K_rep).
+
+   **DONE (this session):** Both Step A and Step B verified by Z3.
+   - Step A: DISPROVED — no ±1 assignment satisfies all four GHZ parities
+   - Step B: VERIFIED — POT's context-dependent outcomes satisfy all four
+   Saved as theories/pot_ghz_contextuality_v1.kleis
+
+   **Precision claim (from ChatGPT review, must include in paper):**
+   "Step B does not 'solve' GHZ; it demonstrates that POT is not a
+   noncontextual hidden-variable theory. GHZ specifically refutes the
+   existence of a single context-independent value assignment for X and Y
+   at each site. POT avoids this by making outcomes functions of the
+   measurement context (projection basis), not pre-assigned values."
+
+   **CP map refinement (from ChatGPT):**
+   POT's projection reads as Heisenberg picture (maps observables/fields
+   forward) while the "lossy state" reading is Schrödinger (maps states).
+   Must pick one explicitly when formalizing. For modular theory
+   (Tomita-Takesaki), need von Neumann algebras + faithful states,
+   which is naturally Heisenberg/algebraic.
+
 ### Entanglement Paper: Formalization Plan (from prior notes)
 
 **Core axioms to formalize in Kleis (ready for kleis-theory MCP):**
