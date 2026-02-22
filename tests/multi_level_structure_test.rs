@@ -33,7 +33,10 @@ fn create_algebra_hierarchy() -> StructureRegistry {
     let mut registry = StructureRegistry::new();
 
     // Parse and register Monoid structure
-    // IMPORTANT: Use operation names that match the axiom text (plus, times, etc.)
+    // IMPORTANT: Use uninterpreted operation names (oplus, otimes, etc.) to avoid
+    // collision with Z3 concrete arithmetic handlers. Names like "plus", "times",
+    // "neg" are intercepted by translate_operation and mapped to Z3 Int::add/mul/neg,
+    // which breaks abstract algebraic reasoning (e.g., no Field over ℤ).
     let monoid_def = r#"
         structure Monoid(M) {
             operation e : M
@@ -53,12 +56,12 @@ fn create_algebra_hierarchy() -> StructureRegistry {
     let group_def = r#"
         structure Group(G) {
             operation zero : G
-            operation plus : G → G → G
-            operation neg : G → G
-            axiom identity: ∀(x : G). equals(plus(x, zero), x)
-            axiom inverse_left: ∀(x : G). equals(plus(neg(x), x), zero)
-            axiom inverse_right: ∀(x : G). equals(plus(x, neg(x)), zero)
-            axiom associativity: ∀(x y z : G). equals(plus(plus(x, y), z), plus(x, plus(y, z)))
+            operation oplus : G → G → G
+            operation negation : G → G
+            axiom identity: ∀(x : G). equals(oplus(x, zero), x)
+            axiom inverse_left: ∀(x : G). equals(oplus(negation(x), x), zero)
+            axiom inverse_right: ∀(x : G). equals(oplus(x, negation(x)), zero)
+            axiom associativity: ∀(x y z : G). equals(oplus(oplus(x, y), z), oplus(x, oplus(y, z)))
         }
     "#;
 
@@ -68,22 +71,21 @@ fn create_algebra_hierarchy() -> StructureRegistry {
     }
 
     // Parse and register Ring structure
-    // Using 'plus' and 'times' so they match the axiom operation names
     let ring_def = r#"
         structure Ring(R) {
             operation zero : R
             operation one : R
-            operation plus : R → R → R
-            operation times : R → R → R
-            operation neg : R → R
-            axiom additive_identity: ∀(x : R). equals(plus(x, zero), x)
-            axiom additive_inverse: ∀(x : R). equals(plus(x, neg(x)), zero)
-            axiom additive_associativity: ∀(x y z : R). equals(plus(plus(x, y), z), plus(x, plus(y, z)))
-            axiom additive_commutativity: ∀(x y : R). equals(plus(x, y), plus(y, x))
-            axiom multiplicative_identity: ∀(x : R). equals(times(x, one), x)
-            axiom multiplicative_associativity: ∀(x y z : R). equals(times(times(x, y), z), times(x, times(y, z)))
-            axiom distributivity_left: ∀(x y z : R). equals(times(x, plus(y, z)), plus(times(x, y), times(x, z)))
-            axiom distributivity_right: ∀(x y z : R). equals(times(plus(x, y), z), plus(times(x, z), times(y, z)))
+            operation oplus : R → R → R
+            operation otimes : R → R → R
+            operation negation : R → R
+            axiom additive_identity: ∀(x : R). equals(oplus(x, zero), x)
+            axiom additive_inverse: ∀(x : R). equals(oplus(x, negation(x)), zero)
+            axiom additive_associativity: ∀(x y z : R). equals(oplus(oplus(x, y), z), oplus(x, oplus(y, z)))
+            axiom additive_commutativity: ∀(x y : R). equals(oplus(x, y), oplus(y, x))
+            axiom multiplicative_identity: ∀(x : R). equals(otimes(x, one), x)
+            axiom multiplicative_associativity: ∀(x y z : R). equals(otimes(otimes(x, y), z), otimes(x, otimes(y, z)))
+            axiom distributivity_left: ∀(x y z : R). equals(otimes(x, oplus(y, z)), oplus(otimes(x, y), otimes(x, z)))
+            axiom distributivity_right: ∀(x y z : R). equals(otimes(oplus(x, y), z), oplus(otimes(x, z), otimes(y, z)))
         }
     "#;
 
@@ -104,7 +106,8 @@ fn test_ring_distributivity_with_dependencies() {
     // - Distributivity laws connecting them
 
     // Parse a Ring distributivity axiom
-    let axiom_text = "∀(x y z : R). equals(times(x, plus(y, z)), plus(times(x, y), times(x, z)))";
+    let axiom_text =
+        "∀(x y z : R). equals(otimes(x, oplus(y, z)), oplus(otimes(x, y), otimes(x, z)))";
     let mut parser = KleisParser::new(axiom_text);
     let result = parser.parse_proposition();
 
@@ -193,7 +196,7 @@ fn test_group_inverse_with_monoid_dependencies() {
     // Group inverse axiom depends on Monoid identity
     // Tests: Can verifier handle axiom that references identity from parent structure?
 
-    let axiom_text = "∀(x : G). equals(plus(x, neg(x)), zero)";
+    let axiom_text = "∀(x : G). equals(oplus(x, negation(x)), zero)";
     let mut parser = KleisParser::new(axiom_text);
     let result = parser.parse_proposition();
 
@@ -262,7 +265,8 @@ fn test_multiple_structure_dependency_chain() {
     // This test verifies an axiom that touches multiple structures:
     // Uses operations from Ring (×, +) and properties from Group (commutativity) and Monoid (identity)
 
-    let axiom_text = "∀(a b c : R). equals(times(plus(a, b), c), plus(times(a, c), times(b, c)))";
+    let axiom_text =
+        "∀(a b c : R). equals(otimes(oplus(a, b), c), oplus(otimes(a, c), otimes(b, c)))";
     let mut parser = KleisParser::new(axiom_text);
     let result = parser.parse_proposition();
 
@@ -332,7 +336,7 @@ fn test_monoid_associativity_basic() {
     // Simplest case: Single structure with one axiom
     // Baseline to compare against multi-level tests
 
-    let axiom_text = "∀(x y z : M). equals(plus(plus(x, y), z), plus(x, plus(y, z)))";
+    let axiom_text = "∀(x y z : M). equals(compose(compose(x, y), z), compose(x, compose(y, z)))";
     let mut parser = KleisParser::new(axiom_text);
     let result = parser.parse_proposition();
 
@@ -397,7 +401,7 @@ fn test_field_multiplicative_inverse_depends_on_ring() {
     // - Multiplicative group structure
     // - Non-zero condition
 
-    let axiom_text = "∀(x : F). implies(not(equals(x, zero)), equals(times(x, inv(x)), one))";
+    let axiom_text = "∀(x : F). implies(not(equals(x, zero)), equals(otimes(x, inv(x)), one))";
     let mut parser = KleisParser::new(axiom_text);
     let result = parser.parse_proposition();
 
@@ -412,16 +416,17 @@ fn test_field_multiplicative_inverse_depends_on_ring() {
     {
         let mut registry = create_algebra_hierarchy();
 
-        // Add Field structure
+        // Add Field structure (uses uninterpreted operation names to avoid
+        // Z3 concrete arithmetic — a Field over ℤ is impossible)
         let field_def = r#"
             structure Field(F) {
                 operation zero : F
                 operation one : F
-                operation plus : F → F → F
-                operation times : F → F → F
-                operation neg : F → F
+                operation oplus : F → F → F
+                operation otimes : F → F → F
+                operation negation : F → F
                 operation inv : F → F
-                axiom multiplicative_inverse: ∀(x : F). implies(logical_not(equals(x, zero)), equals(times(x, inv(x)), one))
+                axiom multiplicative_inverse: ∀(x : F). implies(logical_not(equals(x, zero)), equals(otimes(x, inv(x)), one))
             }
         "#;
 
