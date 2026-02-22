@@ -160,7 +160,7 @@ impl<'r> AxiomVerifier<'r> {
             if let TopLevel::FunctionDef(func_def) = item {
                 self.backend
                     .define_function(&func_def.name, &func_def.params, &func_def.body)?;
-                println!(
+                eprintln!(
                     "   ✅ Top-level function '{}' loaded into Z3",
                     func_def.name
                 );
@@ -169,7 +169,7 @@ impl<'r> AxiomVerifier<'r> {
         }
 
         if count > 0 {
-            println!("   📦 Loaded {} top-level function(s)", count);
+            eprintln!("   📦 Loaded {} top-level function(s)", count);
         }
 
         Ok(())
@@ -386,7 +386,7 @@ impl<'r> AxiomVerifier<'r> {
                 _ => return Err("Invalid extends clause type".to_string()),
             };
 
-            println!("   🔗 Loading parent structure: {}", parent_name);
+            eprintln!("   🔗 Loading parent structure: {}", parent_name);
             self.ensure_structure_loaded(&parent_name)?;
         }
 
@@ -401,7 +401,7 @@ impl<'r> AxiomVerifier<'r> {
                 _ => return Err("Invalid over clause type".to_string()),
             };
 
-            println!("   🔗 Loading over clause: {}", field_name);
+            eprintln!("   🔗 Loading over clause: {}", field_name);
             self.ensure_structure_loaded(&field_name)?;
         }
 
@@ -418,7 +418,7 @@ impl<'r> AxiomVerifier<'r> {
         // On success we pop and re-load at the base level. This avoids
         // accumulating push levels (one per loaded structure), which can
         // degrade solver performance over many structures.
-        println!("   Loading axioms for {}...", structure_name);
+        eprintln!("   Loading axioms for {}...", structure_name);
         self.backend.push();
         match self.load_axioms_recursive(&structure.members) {
             Err(e) => {
@@ -441,11 +441,11 @@ impl<'r> AxiomVerifier<'r> {
                 }
             }
         }
-        println!("   ✅ Axioms loaded successfully");
+        eprintln!("   ✅ Axioms loaded successfully");
 
         // Mark as loaded
         self.loaded_structures.insert(structure_name.to_string());
-        println!("   ✅ Marked {} as loaded", structure_name);
+        eprintln!("   ✅ Marked {} as loaded", structure_name);
 
         Ok(())
     }
@@ -507,7 +507,7 @@ impl<'r> AxiomVerifier<'r> {
                         &func_def.params,
                         &func_def.body,
                     )?;
-                    println!("   ✅ Function {} loaded via backend", func_def.name);
+                    eprintln!("   ✅ Function {} loaded via backend", func_def.name);
                 }
                 StructureMember::NestedStructure { members, .. } => {
                     // Recursively load axioms from nested structure
@@ -837,7 +837,7 @@ mod tests {
         };
         let deps = verifier.analyze_dependencies(&expr);
         // Dependencies depend on registry content
-        println!("Dependencies for plus operation: {:?}", deps);
+        eprintln!("Dependencies for plus operation: {:?}", deps);
     }
 
     /// Helper: build a StructureDef with given members

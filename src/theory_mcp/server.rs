@@ -251,7 +251,15 @@ impl TheoryMcpServer {
         }
 
         if let Some(verified) = result.verified {
-            let (emoji, status) = if verified {
+            let is_inconsistency = result
+                .error
+                .as_ref()
+                .map(|e| e.contains("INCONSISTENCY"))
+                .unwrap_or(false);
+
+            let (emoji, status) = if is_inconsistency {
+                ("🚨", "AXIOM INCONSISTENCY")
+            } else if verified {
                 ("✅", "VERIFIED")
             } else {
                 ("❌", "DISPROVED")
@@ -260,10 +268,20 @@ impl TheoryMcpServer {
 
             self.log(&format!("  → {} {} — {}", emoji, status, value_str));
 
-            let mut text = format!(
-                "{} {}\n\nProposition: {}\nResult: {}",
-                emoji, status, expr_str, value_str
-            );
+            let mut text = if is_inconsistency {
+                format!(
+                    "{} {}\n\nProposition: {}\n\n{}\n\nAll assertions would be vacuously true. Fix the axiom definitions before verifying.",
+                    emoji,
+                    status,
+                    expr_str,
+                    result.error.as_deref().unwrap_or("")
+                )
+            } else {
+                format!(
+                    "{} {}\n\nProposition: {}\nResult: {}",
+                    emoji, status, expr_str, value_str
+                )
+            };
 
             let (witness_str, witness_bindings) = if let Some(ref w) = result.witness {
                 let pp = crate::pretty_print::PrettyPrinter::new();

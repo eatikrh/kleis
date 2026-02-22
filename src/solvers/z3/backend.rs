@@ -1962,11 +1962,13 @@ impl<'r> Z3Backend<'r> {
                 arithmetic::translate_negate(&args[0])
             }
 
-            "rat_inv" | "inv" | "reciprocal" => {
+            "rat_inv" | "reciprocal" => {
                 if args.len() != 1 {
                     return Err("rat_inv requires 1 argument".to_string());
                 }
                 // Division by 1/x: represented as 1/x in Z3
+                // NOTE: "inv" is NOT matched here — it's the abstract Group inverse
+                // (inv : G → G) and must fall through to uninterpreted function.
                 #[allow(deprecated)]
                 let one = Real::from_real(1, 1);
                 if let Some(r) = args[0].as_real() {
@@ -3741,7 +3743,7 @@ impl<'r> Z3Backend<'r> {
 
         if !self.declared_ops.contains(name) {
             let domain_strs: Vec<String> = domain.iter().map(|s| format!("{}", s)).collect();
-            println!(
+            eprintln!(
                 "   🔧 Declaring typed function: {} : {} → {}",
                 name,
                 domain_strs.join(" × "),
