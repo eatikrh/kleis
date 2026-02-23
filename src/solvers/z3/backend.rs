@@ -4824,8 +4824,21 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         // Assert the expression directly (not negated)
         self.solver.assert(&z3_bool);
 
-        // Check satisfiability
-        let result = match self.solver.check() {
+        // Check satisfiability with watchdog to prevent E-matching divergence
+        let z3_debug = std::env::var("KLEIS_Z3_DEBUG").unwrap_or_default() == "1";
+        let timeout_ms: u32 = std::env::var("KLEIS_Z3_TIMEOUT_MS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(5000);
+        let wall_timeout =
+            std::time::Duration::from_millis((timeout_ms as u64).saturating_add(2000));
+        if z3_debug {
+            eprintln!(
+                "   [Z3 DEBUG] check_satisfiability: solver.check() with {}ms watchdog...",
+                wall_timeout.as_millis()
+            );
+        }
+        let result = match solver_check_with_watchdog(&self.solver, wall_timeout) {
             SatResult::Sat => {
                 let witness = if let Some(model) = self.solver.get_model() {
                     super::witness::model_to_witness(
@@ -4910,7 +4923,13 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         if let Some(int_expr) = z3_expr.as_int() {
             self.solver.assert(result_var.eq(&int_expr));
 
-            match self.solver.check() {
+            let eval_timeout_ms: u32 = std::env::var("KLEIS_Z3_TIMEOUT_MS")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(5000);
+            let eval_wall_timeout =
+                std::time::Duration::from_millis((eval_timeout_ms as u64).saturating_add(2000));
+            match solver_check_with_watchdog(&self.solver, eval_wall_timeout) {
                 SatResult::Sat => {
                     if let Some(model) = self.solver.get_model() {
                         if let Some(evaluated) = model.eval(&result_var, true) {

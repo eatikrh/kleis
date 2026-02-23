@@ -50,22 +50,14 @@ echo "   This includes integration tests and vendored Z3 doc tests!"
 echo ""
 
 # Run tests and capture output
-if ! cargo test --all 2>&1 | tee /tmp/kleis_test_output.txt | grep -q "test result: ok"; then
+if ! cargo test --all 2>&1 > /tmp/kleis_test_output.txt; then
     echo ""
     echo "❌ Tests failed!"
     echo "   Some tests did not pass"
+    tail -30 /tmp/kleis_test_output.txt
+    echo ""
     echo "   Run: cargo test"
     echo "   to see failures"
-    echo ""
-    exit 1
-fi
-
-# Check for any FAILED in output
-if grep -q "FAILED" /tmp/kleis_test_output.txt; then
-    echo ""
-    echo "❌ Some tests FAILED!"
-    echo "   Run: cargo test"
-    echo "   to see which tests failed"
     echo ""
     exit 1
 fi
