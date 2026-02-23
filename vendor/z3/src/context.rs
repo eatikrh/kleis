@@ -72,14 +72,14 @@ impl Context {
     ///
     /// # See also:
     /// /// - [`Context::thread_local()`]
-    pub(crate) fn set_thread_local(ctx: &Context) {
+    pub fn set_thread_local(ctx: &Context) {
         DEFAULT_CONTEXT.with(|f| {
             *f.borrow_mut() = ctx.clone();
         });
     }
 
     /// Creates a new Z3 Context using the given configuration.
-    pub(crate) fn new(cfg: &Config) -> Context {
+    pub fn new(cfg: &Config) -> Context {
         Context {
             z3_ctx: unsafe {
                 let p = Z3_mk_context_rc(cfg.z3_cfg).unwrap();

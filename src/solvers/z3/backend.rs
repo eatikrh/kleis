@@ -29,8 +29,43 @@ use crate::solvers::z3::type_mapping::{
 use crate::structure_registry::StructureRegistry;
 use crate::type_inference::Type;
 use std::collections::{HashMap, HashSet};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use z3::ast::{Ast, Bool, Dynamic, Int, Real};
 use z3::{DatatypeAccessor, DatatypeBuilder, DatatypeSort, FuncDecl, SatResult, Solver, Sort};
+
+/// Run `solver.check()` with a hard wall-clock watchdog.
+///
+/// Z3's internal timeout can fail to trigger during complex quantifier
+/// reasoning or simplification. This spawns a scoped watchdog thread that
+/// calls `ContextHandle::interrupt()` after `wall_timeout` elapses,
+/// guaranteeing the call returns (with `SatResult::Unknown`, reason "canceled").
+fn solver_check_with_watchdog(solver: &Solver, wall_timeout: std::time::Duration) -> SatResult {
+    let ctx = z3::Context::thread_local();
+    let handle = ctx.handle(); // ContextHandle is Send + Sync
+    let finished = Arc::new(AtomicBool::new(false));
+    let finished_clone = Arc::clone(&finished);
+
+    std::thread::scope(|s| {
+        s.spawn(move || {
+            let poll_interval = std::time::Duration::from_millis(100);
+            let start = std::time::Instant::now();
+            while start.elapsed() < wall_timeout {
+                if finished_clone.load(Ordering::Relaxed) {
+                    return;
+                }
+                std::thread::sleep(poll_interval);
+            }
+            if !finished_clone.load(Ordering::Relaxed) {
+                handle.interrupt();
+            }
+        });
+
+        let result = solver.check();
+        finished.store(true, Ordering::Relaxed);
+        result
+    })
+}
 
 /// Z3 SMT Solver Backend
 ///
@@ -89,6 +124,11 @@ pub struct Z3Backend<'r> {
     /// Cleared before each `verify_axiom` / `check_satisfiability` call
     /// and populated during the `kleis_to_z3` translation pass.
     quantifier_vars: Vec<(String, Dynamic)>,
+
+    /// Set to true when Z3 reports `memout`. Once set, all subsequent
+    /// verify/check calls return Unknown immediately without calling into Z3,
+    /// preventing panics from null pointer returns on exhausted allocators.
+    memout: bool,
 }
 
 /// Complex number Z3 datatype
@@ -213,17 +253,91 @@ impl<'r> Z3Backend<'r> {
     /// Axioms are loaded from stdlib/*.kleis files via assert_axioms_from_registry().
     /// Call this method after creating the backend to load all axioms before verification.
     pub fn new(registry: &'r StructureRegistry) -> Result<Self, String> {
-        // Set global timeout BEFORE creating solver
-        // This ensures the timeout applies to all Z3 operations
-        z3::set_global_param("timeout", "5000"); // 5 seconds in milliseconds
+        let z3_debug = std::env::var("KLEIS_Z3_DEBUG").unwrap_or_default() == "1";
 
-        // Create solver
+        // Read timeout from env (default 0 = no timeout).
+        // Z3 can crash (internal assertion violation in smt_context.cpp)
+        // when a global timeout fires mid-processing of complex quantifiers.
+        // Only set for debugging divergence; the watchdog is the safe timeout.
+        let timeout_ms: u32 = std::env::var("KLEIS_Z3_TIMEOUT_MS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(0);
+
+        // Read resource limit from env (default 0 = unlimited; set to e.g. 5000000
+        // to cap Z3 work units deterministically when debugging divergence)
+        let rlimit: u32 = std::env::var("KLEIS_Z3_RLIMIT")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(0);
+
+        // Read memory limit from env (in MB; default 0 = unlimited).
+        // Z3 legitimately needs several GB for complex quantifier theories.
+        // Only set this for diagnostics — if Z3 hits the limit it returns
+        // Unknown(memout) instead of crashing, but normal operation needs
+        // the full memory budget.
+        let memory_mb: u32 = std::env::var("KLEIS_Z3_MEMORY_MB")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(0);
+
+        // Only set global Z3 params when explicitly configured.
+        // Z3 can crash internally when a timeout fires mid-processing, so
+        // we rely on the watchdog for wall-clock safety by default.
+        if timeout_ms > 0 {
+            z3::set_global_param("timeout", &timeout_ms.to_string());
+            z3::set_global_param("soft_timeout", &timeout_ms.to_string());
+        }
+        if rlimit > 0 {
+            z3::set_global_param("rlimit", &rlimit.to_string());
+        }
+        if memory_mb > 0 {
+            z3::set_global_param("memory_max_size", &memory_mb.to_string());
+            z3::set_global_param("memory_high_watermark_mb", &memory_mb.to_string());
+        }
+
+        if z3_debug {
+            eprintln!("[Z3 DEBUG] ===== Z3 debug mode enabled =====");
+            eprintln!(
+                "[Z3 DEBUG] timeout={}ms  rlimit={}  memory={}MB  soft_timeout={}ms",
+                timeout_ms, rlimit, memory_mb, timeout_ms
+            );
+
+            z3::set_global_param("smt.qi.profile", "true");
+            z3::set_global_param("smt.qi.profile_freq", "500");
+            z3::set_global_param("trace", "true");
+        }
+
+        // Create a properly configured context and install it as thread-local
+        let mut cfg = z3::Config::new();
+        cfg.set_model_generation(true);
+        if timeout_ms > 0 {
+            cfg.set_param_value("timeout", &timeout_ms.to_string());
+        }
+        if rlimit > 0 {
+            cfg.set_param_value("rlimit", &rlimit.to_string());
+        }
+        if z3_debug {
+            cfg.set_param_value("stats", "true");
+            cfg.set_param_value("trace", "true");
+        }
+        let ctx = z3::Context::new(&cfg);
+        z3::Context::set_thread_local(&ctx);
+
+        if z3_debug {
+            eprintln!(
+                "[Z3 DEBUG] Custom Context installed (model=true, rlimit={}, timeout={})",
+                rlimit, timeout_ms
+            );
+        }
+
+        // Create solver (uses thread-local Context)
         let solver = Solver::new();
 
-        // Also set solver-specific timeouts
+        // Solver-specific params (belt-and-suspenders with context-level settings)
         let mut params = z3::Params::new();
-        params.set_u32("timeout", 5000); // 5 seconds for solver1
-        params.set_u32("solver2_timeout", 5000); // 5 seconds for solver2 (incremental)
+        params.set_u32("timeout", timeout_ms);
+        params.set_u32("solver2_timeout", timeout_ms);
         solver.set_params(&params);
 
         let capabilities = super::load_capabilities()?;
@@ -255,6 +369,7 @@ impl<'r> Z3Backend<'r> {
             warnings: Vec::new(),
             inferred_types: None,
             quantifier_vars: Vec::new(),
+            memout: false,
         };
 
         // Initialize complex number constant 'i' as complex(0, 1)
@@ -690,14 +805,37 @@ impl<'r> Z3Backend<'r> {
     /// backend.initialize_from_registry()?;  // Load everything
     /// ```
     pub fn initialize_from_registry(&mut self) -> Result<(), String> {
+        let z3_debug = std::env::var("KLEIS_Z3_DEBUG").unwrap_or_default() == "1";
+
         // 1. Declare data types first (needed for function sort resolution)
+        if z3_debug {
+            eprintln!("   [Z3 DEBUG] Step 1: Declaring data types...");
+        }
         let _dt_count = self.declare_data_types_from_registry()?;
+        if z3_debug {
+            eprintln!("   [Z3 DEBUG] Step 1 done: {} data types", _dt_count);
+        }
 
         // 2. Load identity elements from structures (needed for axiom translation)
+        if z3_debug {
+            eprintln!("   [Z3 DEBUG] Step 2: Loading identity elements...");
+        }
         let _id_count = self.load_identity_elements_from_registry()?;
+        if z3_debug {
+            eprintln!("   [Z3 DEBUG] Step 2 done: {} identity elements", _id_count);
+        }
 
         // 3. Then load axioms
+        if z3_debug {
+            eprintln!("   [Z3 DEBUG] Step 3: Asserting axioms...");
+        }
         let _axiom_count = self.assert_axioms_from_registry()?;
+        if z3_debug {
+            eprintln!(
+                "   [Z3 DEBUG] Step 3 done: {} axioms asserted",
+                _axiom_count
+            );
+        }
 
         Ok(())
     }
@@ -785,6 +923,9 @@ impl<'r> Z3Backend<'r> {
     /// - Ok(count) - number of axioms successfully loaded
     /// - Err if any axiom fails to translate
     pub fn assert_axioms_from_registry(&mut self) -> Result<usize, String> {
+        if self.memout {
+            return Err("Z3 memory exhausted (memout)".to_string());
+        }
         let mut count = 0;
         let empty_vars: HashMap<String, Dynamic> = HashMap::new();
 
@@ -796,6 +937,8 @@ impl<'r> Z3Backend<'r> {
             .map(|s| (*s).clone())
             .collect();
 
+        let z3_debug = std::env::var("KLEIS_Z3_DEBUG").unwrap_or_default() == "1";
+
         for structure_name in structures_with_axioms {
             // Skip if already loaded
             if self.loaded_structures.contains(&structure_name) {
@@ -803,20 +946,39 @@ impl<'r> Z3Backend<'r> {
             }
 
             let axioms = self.registry.get_axioms(&structure_name);
+            if z3_debug {
+                eprintln!(
+                    "   [Z3 DEBUG] Loading structure '{}' ({} axioms)",
+                    structure_name,
+                    axioms.len()
+                );
+            }
 
             for (axiom_name, axiom_expr) in axioms {
+                if z3_debug {
+                    eprintln!("   [Z3 DEBUG]   asserting '{}'...", axiom_name);
+                }
+                let t = std::time::Instant::now();
                 match self.translate_and_assert_axiom(&axiom_name, axiom_expr, &empty_vars) {
                     Ok(()) => {
                         count += 1;
-                        // Successfully asserted axiom
+                        if z3_debug {
+                            eprintln!(
+                                "   [Z3 DEBUG]   '{}' OK ({}ms)",
+                                axiom_name,
+                                t.elapsed().as_millis()
+                            );
+                        }
                     }
-                    Err(_e) => {
-                        // Continue with other axioms rather than failing entirely
-                        // Axioms may fail if they use unsupported constructs
+                    Err(e) => {
+                        eprintln!("   [Z3 DEBUG]   '{}' FAILED: {}", axiom_name, e);
                     }
                 }
             }
 
+            if z3_debug {
+                eprintln!("   [Z3 DEBUG] ✅ Structure '{}' done", structure_name);
+            }
             self.loaded_structures.insert(structure_name);
         }
 
@@ -1371,6 +1533,8 @@ impl<'r> Z3Backend<'r> {
         expr: &Expression,
         vars: &HashMap<String, Dynamic>,
     ) -> Result<(), String> {
+        let start = std::time::Instant::now();
+
         // Handle quantified axioms (∀ x : T . body)
         if let Expression::Quantifier {
             quantifier,
@@ -1380,22 +1544,46 @@ impl<'r> Z3Backend<'r> {
             ..
         } = expr
         {
-            // Create Z3 forall
+            let t0 = std::time::Instant::now();
             let z3_axiom =
                 self.translate_quantifier_as_forall(quantifier, variables, where_clause, body)?;
+            let translate_ms = t0.elapsed().as_millis();
+
+            let t1 = std::time::Instant::now();
             self.solver.assert(&z3_axiom);
+            let assert_ms = t1.elapsed().as_millis();
+
+            let total_ms = start.elapsed().as_millis();
+            if total_ms > 100 {
+                eprintln!(
+                    "   [Z3 DEBUG] axiom '{}': translate={}ms assert={}ms TOTAL={}ms",
+                    name, translate_ms, assert_ms, total_ms
+                );
+            }
             return Ok(());
         }
 
         // Non-quantified axiom: translate directly
+        let t0 = std::time::Instant::now();
         let z3_expr = self.kleis_to_z3(expr, vars)?;
+        let translate_ms = t0.elapsed().as_millis();
 
         // Must be boolean
         let z3_bool = z3_expr
             .as_bool()
             .ok_or_else(|| format!("Axiom '{}' must be a boolean expression", name))?;
 
+        let t1 = std::time::Instant::now();
         self.solver.assert(&z3_bool);
+        let assert_ms = t1.elapsed().as_millis();
+
+        let total_ms = start.elapsed().as_millis();
+        if total_ms > 100 {
+            eprintln!(
+                "   [Z3 DEBUG] axiom '{}': translate={}ms assert={}ms TOTAL={}ms",
+                name, translate_ms, assert_ms, total_ms
+            );
+        }
         Ok(())
     }
 
@@ -4439,7 +4627,35 @@ impl<'r> Z3Backend<'r> {
         // Assert directly (NOT negated) — we want to find a satisfying assignment
         self.solver.assert(&formula);
 
-        let result = match self.solver.check() {
+        let z3_debug = std::env::var("KLEIS_Z3_DEBUG").unwrap_or_default() == "1";
+        let timeout_ms: u32 = std::env::var("KLEIS_Z3_TIMEOUT_MS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(5000);
+        let wall_timeout =
+            std::time::Duration::from_millis((timeout_ms as u64).saturating_add(2000));
+
+        if z3_debug {
+            eprintln!(
+                "   [Z3 DEBUG] verify_existential: calling solver.check() ({}ms watchdog)...",
+                wall_timeout.as_millis()
+            );
+        }
+        let t0 = std::time::Instant::now();
+        let check_result = solver_check_with_watchdog(&self.solver, wall_timeout);
+        if z3_debug {
+            eprintln!(
+                "   [Z3 DEBUG] verify_existential: solver.check() returned {:?} in {}ms",
+                check_result,
+                t0.elapsed().as_millis()
+            );
+            eprintln!(
+                "   [Z3 DEBUG] existential stats:\n{}",
+                self.solver.get_statistics()
+            );
+        }
+
+        let result = match check_result {
             SatResult::Sat => {
                 // Existential is satisfiable → Valid, with a witness
                 let witness = if let Some(model) = self.solver.get_model() {
@@ -4462,7 +4678,19 @@ impl<'r> Z3Backend<'r> {
                     ),
                 }
             }
-            SatResult::Unknown => VerificationResult::Unknown,
+            SatResult::Unknown => {
+                let reason = self
+                    .solver
+                    .get_reason_unknown()
+                    .unwrap_or_else(|| "no reason".to_string());
+                if z3_debug {
+                    eprintln!(
+                        "   [Z3 DEBUG] verify_existential: Unknown reason: {}",
+                        reason
+                    );
+                }
+                VerificationResult::Unknown
+            }
         };
 
         self.solver.pop(1);
@@ -4480,6 +4708,12 @@ impl<'r> SolverBackend for Z3Backend<'r> {
     }
 
     fn verify_axiom(&mut self, axiom: &Expression) -> Result<VerificationResult, String> {
+        if self.memout {
+            return Ok(VerificationResult::Unknown);
+        }
+
+        let z3_debug = std::env::var("KLEIS_Z3_DEBUG").unwrap_or_default() == "1";
+
         // For existential quantifiers, use direct satisfiability check to extract witnesses.
         // ∃(x,y). P(x,y) — translate body with free variables and check Sat directly.
         // This produces a model with concrete values (the satisfying witness).
@@ -4491,10 +4725,16 @@ impl<'r> SolverBackend for Z3Backend<'r> {
             ..
         } = axiom
         {
+            if z3_debug {
+                eprintln!("   [Z3 DEBUG] verify_axiom: existential path");
+            }
             return self.verify_existential(variables, body, where_clause.as_deref());
         }
 
         // --- Universal / non-quantified: standard negate-and-check ---
+        if z3_debug {
+            eprintln!("   [Z3 DEBUG] verify_axiom: universal/negate-and-check path");
+        }
         self.quantifier_vars.clear();
         self.solver.push();
 
@@ -4507,7 +4747,34 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         // Assert negation: if ¬φ is Unsat, then φ is Valid
         self.solver.assert(z3_bool.not());
 
-        let result = match self.solver.check() {
+        let timeout_ms: u32 = std::env::var("KLEIS_Z3_TIMEOUT_MS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(5000);
+        let wall_timeout =
+            std::time::Duration::from_millis((timeout_ms as u64).saturating_add(2000));
+
+        if z3_debug {
+            eprintln!(
+                "   [Z3 DEBUG] verify_axiom: calling solver.check() ({}ms watchdog)...",
+                wall_timeout.as_millis()
+            );
+        }
+        let t0 = std::time::Instant::now();
+        let check_result = solver_check_with_watchdog(&self.solver, wall_timeout);
+        if z3_debug {
+            eprintln!(
+                "   [Z3 DEBUG] verify_axiom: solver.check() returned {:?} in {}ms",
+                check_result,
+                t0.elapsed().as_millis()
+            );
+            eprintln!(
+                "   [Z3 DEBUG] verify stats:\n{}",
+                self.solver.get_statistics()
+            );
+        }
+
+        let result = match check_result {
             SatResult::Unsat => VerificationResult::Valid,
             SatResult::Sat => {
                 let witness = if let Some(model) = self.solver.get_model() {
@@ -4522,7 +4789,16 @@ impl<'r> SolverBackend for Z3Backend<'r> {
                 };
                 VerificationResult::Invalid { witness }
             }
-            SatResult::Unknown => VerificationResult::Unknown,
+            SatResult::Unknown => {
+                let reason = self
+                    .solver
+                    .get_reason_unknown()
+                    .unwrap_or_else(|| "no reason".to_string());
+                if z3_debug {
+                    eprintln!("   [Z3 DEBUG] verify_axiom: Unknown reason: {}", reason);
+                }
+                VerificationResult::Unknown
+            }
         };
 
         self.solver.pop(1);
@@ -4530,6 +4806,9 @@ impl<'r> SolverBackend for Z3Backend<'r> {
     }
 
     fn check_satisfiability(&mut self, expr: &Expression) -> Result<SatisfiabilityResult, String> {
+        if self.memout {
+            return Ok(SatisfiabilityResult::Unknown);
+        }
         // Clear quantifier variable tracking for this satisfiability pass
         self.quantifier_vars.clear();
 
@@ -4561,7 +4840,19 @@ impl<'r> SolverBackend for Z3Backend<'r> {
                 SatisfiabilityResult::Satisfiable { witness }
             }
             SatResult::Unsat => SatisfiabilityResult::Unsatisfiable,
-            SatResult::Unknown => SatisfiabilityResult::Unknown,
+            SatResult::Unknown => {
+                if std::env::var("KLEIS_Z3_DEBUG").unwrap_or_default() == "1" {
+                    let reason = self
+                        .solver
+                        .get_reason_unknown()
+                        .unwrap_or_else(|| "no reason".to_string());
+                    eprintln!(
+                        "   [Z3 DEBUG] check_satisfiability: Unknown reason: {}",
+                        reason
+                    );
+                }
+                SatisfiabilityResult::Unknown
+            }
         };
 
         // Pop the assertion
@@ -4634,8 +4925,12 @@ impl<'r> SolverBackend for Z3Backend<'r> {
                     return Err("Cannot evaluate expression - unsatisfiable".to_string());
                 }
                 SatResult::Unknown => {
+                    let reason = self
+                        .solver
+                        .get_reason_unknown()
+                        .unwrap_or_else(|| "unknown".to_string());
                     self.solver.pop(1);
-                    return Err("Cannot evaluate expression - unknown".to_string());
+                    return Err(format!("Cannot evaluate expression (reason: {})", reason));
                 }
             }
         }
@@ -4726,6 +5021,9 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         structure_name: &str,
         axioms: &[Expression],
     ) -> Result<(), String> {
+        if self.memout {
+            return Err("Z3 memory exhausted (memout)".to_string());
+        }
         if self.loaded_structures.contains(structure_name) {
             return Ok(()); // Already loaded
         }
@@ -4747,47 +5045,120 @@ impl<'r> SolverBackend for Z3Backend<'r> {
     }
 
     fn check_consistency(&mut self) -> Result<bool, String> {
-        // Phase 1: Quick check with default timeout (5s)
+        if self.memout {
+            return Err("Z3 memory exhausted (memout)".to_string());
+        }
+
+        let z3_debug = std::env::var("KLEIS_Z3_DEBUG").unwrap_or_default() == "1";
+        let timeout_ms: u32 = std::env::var("KLEIS_Z3_TIMEOUT_MS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(5000);
+
+        // Phase 1: Quick check with watchdog
+        let wall_timeout =
+            std::time::Duration::from_millis((timeout_ms as u64).saturating_add(2000));
+        if z3_debug {
+            eprintln!("   [Z3 DEBUG] check_consistency Phase 1: solver.check() with {}ms timeout ({}ms watchdog)...", timeout_ms, wall_timeout.as_millis());
+        }
+        let t0 = std::time::Instant::now();
         self.solver.push();
-        let bare_result = self.solver.check();
+        let bare_result = solver_check_with_watchdog(&self.solver, wall_timeout);
         self.solver.pop(1);
+        if z3_debug {
+            let reason = if matches!(bare_result, SatResult::Unknown) {
+                self.solver.get_reason_unknown().unwrap_or_default()
+            } else {
+                String::new()
+            };
+            eprintln!(
+                "   [Z3 DEBUG] Phase 1 done in {}ms: {:?} {}",
+                t0.elapsed().as_millis(),
+                bare_result,
+                reason
+            );
+            eprintln!(
+                "   [Z3 DEBUG] Phase 1 stats:\n{}",
+                self.solver.get_statistics()
+            );
+        }
 
         match bare_result {
             SatResult::Sat => return Ok(true),
             SatResult::Unsat => return Ok(false),
-            SatResult::Unknown => {}
+            SatResult::Unknown => {
+                let reason = self.solver.get_reason_unknown().unwrap_or_default();
+                if reason.contains("memout") {
+                    self.memout = true;
+                    return Err("Z3 memory exhausted (memout) during consistency check".to_string());
+                }
+            }
         }
 
-        // Phase 2: Retry with extended timeout and MBQI enabled.
+        // Phase 2: Retry with extended timeout (3x) and MBQI enabled.
         //
         // Z3's default E-matching is trigger-based and incomplete for
         // universally quantified axioms. MBQI (Model-Based Quantifier
         // Instantiation) is a different algorithm that systematically
         // explores model candidates without needing explicit triggers.
-        // Combined with a longer timeout, this catches inconsistencies
-        // that Phase 1 misses due to assertion-order sensitivity.
+        let phase2_timeout = timeout_ms.saturating_mul(3);
+        if z3_debug {
+            eprintln!(
+                "   [Z3 DEBUG] check_consistency Phase 2: MBQI with {}ms timeout...",
+                phase2_timeout
+            );
+        }
+        let t1 = std::time::Instant::now();
         let mut params = z3::Params::new();
-        params.set_u32("timeout", 15000);
+        params.set_u32("timeout", phase2_timeout);
         params.set_bool("mbqi", true);
         self.solver.set_params(&params);
 
+        let wall_timeout2 =
+            std::time::Duration::from_millis((phase2_timeout as u64).saturating_add(2000));
         self.solver.push();
-        let extended_result = self.solver.check();
+        let extended_result = solver_check_with_watchdog(&self.solver, wall_timeout2);
         self.solver.pop(1);
+        if z3_debug {
+            let reason = if matches!(extended_result, SatResult::Unknown) {
+                self.solver.get_reason_unknown().unwrap_or_default()
+            } else {
+                String::new()
+            };
+            eprintln!(
+                "   [Z3 DEBUG] Phase 2 done in {}ms: {:?} {}",
+                t1.elapsed().as_millis(),
+                extended_result,
+                reason
+            );
+            eprintln!(
+                "   [Z3 DEBUG] Phase 2 stats:\n{}",
+                self.solver.get_statistics()
+            );
+        }
 
         // Restore normal solver parameters
         let mut restore_params = z3::Params::new();
-        restore_params.set_u32("timeout", 5000);
-        restore_params.set_u32("solver2_timeout", 5000);
+        restore_params.set_u32("timeout", timeout_ms);
+        restore_params.set_u32("solver2_timeout", timeout_ms);
         self.solver.set_params(&restore_params);
 
         match extended_result {
             SatResult::Sat => Ok(true),
             SatResult::Unsat => Ok(false),
-            SatResult::Unknown => Err(
-                "Z3 returned Unknown when checking axiom consistency (possible timeout)"
-                    .to_string(),
-            ),
+            SatResult::Unknown => {
+                let reason = self
+                    .solver
+                    .get_reason_unknown()
+                    .unwrap_or_else(|| "timeout or resource limit".to_string());
+                if reason.contains("memout") {
+                    self.memout = true;
+                }
+                Err(format!(
+                    "Z3 returned Unknown when checking axiom consistency (reason: {})",
+                    reason
+                ))
+            }
         }
     }
 
@@ -4808,6 +5179,9 @@ impl<'r> SolverBackend for Z3Backend<'r> {
     }
 
     fn load_identity_element(&mut self, name: &str, type_expr: &TypeExpr) {
+        if self.memout {
+            return;
+        }
         if !self.identity_elements.contains_key(name) {
             // Create constant with the correct sort based on the type expression
             let sort = self.type_expr_to_sort(type_expr);

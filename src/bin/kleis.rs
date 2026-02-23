@@ -32,6 +32,38 @@ use std::path::{Path, PathBuf};
 #[derive(Parser)]
 #[command(name = "kleis")]
 #[command(author, version, about, long_about = None)]
+#[command(after_long_help = "\
+ENVIRONMENT VARIABLES (Z3 solver):
+  KLEIS_Z3_DEBUG=1          Enable Z3 debug mode: per-axiom timing, quantifier
+                            instantiation profiling, solver statistics after each
+                            check, and get_reason_unknown() diagnostics.
+
+  KLEIS_Z3_TIMEOUT_MS=N     Set Z3 solver timeout in milliseconds (default: 0 = none).
+                            CAUTION: Z3 can crash internally when a global timeout
+                            fires mid-processing. The watchdog is the safe timeout.
+                            Only set for diagnosing specific divergence scenarios.
+
+  KLEIS_Z3_RLIMIT=N         Set Z3 deterministic resource limit in work units
+                            (default: 0 = unlimited). Unlike timeouts, rlimit is
+                            reproducible across runs. Try 5000000 for debugging.
+
+  KLEIS_Z3_MEMORY_MB=N      Set Z3 memory limit in megabytes (default: 0 = unlimited).
+                            Z3 legitimately uses several GB for complex theories.
+                            Only set for diagnostics: Z3 returns Unknown(memout)
+                            gracefully instead of crashing when the limit is hit.
+
+WATCHDOG:
+  Every solver.check() call is protected by a scoped watchdog thread that calls
+  Context::interrupt() if Z3 exceeds the wall-clock limit (timeout + 2 seconds).
+  This prevents hangs from quantifier instantiation loops that ignore Z3's
+  internal timeout. Interrupted checks return Unknown with reason \"canceled\".
+
+EXAMPLES:
+  kleis test file.kleis                         # Normal test run
+  KLEIS_Z3_DEBUG=1 kleis test file.kleis        # With full Z3 diagnostics
+  KLEIS_Z3_TIMEOUT_MS=2000 kleis test file.kleis  # Faster timeout (2s)
+  KLEIS_Z3_RLIMIT=1000000 kleis test file.kleis   # Cap solver work units
+")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,

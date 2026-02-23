@@ -1,6 +1,76 @@
 # Next Session Notes
 
-**Last Updated:** February 22, 2026 (session 5)
+**Last Updated:** February 23, 2026 (session 6)
+
+---
+
+## Session 6 (Feb 23, 2026): Z3 Safety, Trigonometric Axioms, and Epistemic Boundaries
+
+### CRITICAL: What You Need to Know
+
+1. **Z3 global timeout crashes the solver.** Do NOT set `KLEIS_Z3_TIMEOUT_MS` to a nonzero value unless debugging. Z3's internal timeout fires mid-quantifier-processing and causes `ASSERTION VIOLATION` in `smt_context.cpp` (segfault). Default is now 0 (no timeout). The watchdog via `ContextHandle::interrupt()` is the safe wall-clock timeout.
+
+2. **Universal trig axioms cause E-matching divergence.** We tried `stdlib/trigonometry.kleis` with `∀(a b : ℝ). cos(a+b) = cos(a)*cos(b) - sin(a)*sin(b)`. Z3's E-matching explodes: the nonlinear products in the addition formula interact with the Pythagorean identity, creating infinite instantiation chains (observed 13000+ quantifier instances before killing). **Ground instances at specific angles are the correct approach for Z3.**
+
+3. **`neg_cos` replaced with `cos` in the entanglement theory.** `pot_entanglement_v2.kleis` now uses `cos` directly. `spin_half_overlap` reads naturally: `spinor_inner(proj_a, proj_b) = cos(angle_between(a, b))`.
+
+### What Was Accomplished
+
+1. **Z3 timeout default fixed** — `KLEIS_Z3_TIMEOUT_MS` default changed from 5000 to 0. Global Z3 params (timeout, rlimit, memory, soft_timeout) are now only set when explicitly nonzero. This fixed a regression where `pot_arxiv_paper.kleis` was crashing with Z3 ASSERTION VIOLATION at `smt_context.cpp:2485`.
+
+2. **Trigonometric axioms explored** — Created `stdlib/trigonometry.kleis` with full axiomatic cos/sin (Pythagorean, addition formulas, periodicity, bounds). Confirmed all 14 axioms assert in <10ms, but the consistency check diverges. **Deleted the file** — universal nonlinear real arithmetic is beyond Z3's E-matching capability.
+
+3. **Ground cos instances added to entanglement theory:**
+   - `cos(0) = 1`, `cos(pi) = -1` (base values)
+   - `cos(pi/2) = 0`, `cos(pi/4)^2 = 1/2` (CHSH angles)
+   - `BellWitnessAngles` structure with three detector angles at 0, pi/4, pi/2
+
+4. **Bell violation test created** — `examples/ontology/revised/bell_violation_test.kleis` with 9 tests: cos values, correlation at specific angles, Bell LHS/RHS at CHSH witnesses. All 9 pass.
+
+5. **Cosine uniqueness test updated** — `cosine_uniqueness_test.kleis` migrated from `neg_cos` to `cos`. 4/5 pass (1 expected failure = inconsistency detector).
+
+### Files Modified
+- `src/solvers/z3/backend.rs` — timeout default 0, gate global params on nonzero
+- `src/bin/kleis.rs` — updated `--help` for KLEIS_Z3_TIMEOUT_MS (default: 0, caution note)
+- `theories/pot_entanglement_v2.kleis` — replaced neg_cos with cos, added BellWitnessAngles, updated BellCorrelation and AnticorrelationLemma
+- `examples/ontology/revised/cosine_uniqueness_test.kleis` — migrated to cos
+- `examples/ontology/revised/bell_violation_test.kleis` — **NEW**, 9 tests for Bell violation at CHSH angles
+
+### Files Deleted
+- `stdlib/trigonometry.kleis` — universal trig axioms cause E-matching divergence
+
+### Test Results
+- `pot_arxiv_paper.kleis`: 8/8 (regression clean)
+- `bell_violation_test.kleis`: 9/9
+- `cosine_uniqueness_test.kleis`: 4/5 (1 expected failure)
+
+### Key Findings: Epistemic Boundaries in the Entanglement Theory
+
+**The "Unknown" verdicts from Z3 are correct.** They represent the boundary between:
+- **What algebra proves** (linearity, group actions, inner product invariance) — Z3 verifies these
+- **What representation theory / analysis proves** (Schur's lemma, Wigner D-matrices, cosine from character theory) — Z3 returns Unknown
+
+**Tightening `is_admissible` (e.g., constraining H_ont's codomain to C^3) does NOT help** because the Unknown axioms are all about SU(2) acting on SpinorField (C^2), not about the kernel's codomain (FieldR4). The projection `project_at` has already dropped from FieldR4 to SpinorField by the time any Unknown axiom is evaluated.
+
+**The path to closing the gap:**
+- **Short term:** Ground cos instances (done) — Z3 can verify the Bell violation with concrete values
+- **Medium term:** Kleis evaluator as CAS bridge — compute representation theory results, feed to Z3 as ground truths
+- **Long term:** Isabelle/HOL integration as a solver backend for formal proofs of representation theory (Schur's lemma, Wigner D-matrix classification)
+
+The cos/sin addition formulas encode the Lie algebra structure of SU(2). They're not external computational facts — they're the content of the ontological commitment "SU(2) is a symmetry of H_ont." The ground instances carry the same ontological content as the universal axioms; Z3 just can't handle the universal form.
+
+### Lessons Learned
+
+1. **Z3's internal timeout is dangerous.** It fires mid-processing and corrupts Z3's internal state. Always use the `ContextHandle::interrupt()` watchdog instead.
+2. **Universal quantifiers with nonlinear products = E-matching bomb.** `∀(a b : ℝ). f(a+b) = g(a)*g(b) - h(a)*h(b)` is a pattern Z3 cannot handle. Ground instances are the workaround.
+3. **Don't put Z3-hostile axioms in stdlib.** Axioms that cause E-matching divergence should not be in shared libraries. Ground instances belong in the theory files that need them.
+4. **Epistemic honesty > verification completeness.** "Unknown" is a valid answer when the mathematics genuinely requires tools beyond SMT (representation theory, analysis). Don't weaken the theory to get "Verified."
+
+### TODO: NEXT_SESSION.md Cleanup
+- [ ] Mark completed items from sessions 1-5
+- [ ] Move permanent knowledge (Z3 lessons, architecture decisions) to `docs/` subdirectories
+- [ ] Archive sessions older than 2 weeks to `docs/archive/sessions/`
+- [ ] Keep NEXT_SESSION.md focused on active work + last 2-3 sessions
 
 ---
 
