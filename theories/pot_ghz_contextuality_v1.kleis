@@ -29,36 +29,13 @@ structure GHZState {
     axiom ghz_parity_YXY : outcome_A(ctx_YXY) * outcome_B(ctx_YXY) * outcome_C(ctx_YXY) = 0 - 1
     axiom ghz_parity_YYX : outcome_A(ctx_YYX) * outcome_B(ctx_YYX) * outcome_C(ctx_YYX) = 0 - 1
 
-    axiom ghz_non_separable : ∀(G : GreenKernel). implies(is_admissible(G), not(is_product_state(psi_GHZ)))
+    axiom ghz_non_separable : ∀(G : GreenKernel). is_admissible(G) ⟹ not(is_product_state(psi_GHZ))
 }
 
-structure GHZNoncontextuality {
-    operation nc_xA : ℤ
-    operation nc_yA : ℤ
-    operation nc_xB : ℤ
-    operation nc_yB : ℤ
-    operation nc_xC : ℤ
-    operation nc_yC : ℤ
-
-    axiom nc_xA_pm1 : nc_xA * nc_xA = 1
-    axiom nc_yA_pm1 : nc_yA * nc_yA = 1
-    axiom nc_xB_pm1 : nc_xB * nc_xB = 1
-    axiom nc_yB_pm1 : nc_yB * nc_yB = 1
-    axiom nc_xC_pm1 : nc_xC * nc_xC = 1
-    axiom nc_yC_pm1 : nc_yC * nc_yC = 1
-
-    axiom context_independence_A_X : outcome_A(ctx_XXX) = nc_xA
-    axiom context_independence_A_X2 : outcome_A(ctx_XYY) = nc_xA
-    axiom context_independence_A_Y : outcome_A(ctx_YXY) = nc_yA
-    axiom context_independence_A_Y2 : outcome_A(ctx_YYX) = nc_yA
-
-    axiom context_independence_B_X : outcome_B(ctx_XXX) = nc_xB
-    axiom context_independence_B_X2 : outcome_B(ctx_YXY) = nc_xB
-    axiom context_independence_B_Y : outcome_B(ctx_XYY) = nc_yB
-    axiom context_independence_B_Y2 : outcome_B(ctx_YYX) = nc_yB
-
-    axiom context_independence_C_X : outcome_C(ctx_XXX) = nc_xC
-    axiom context_independence_C_X2 : outcome_C(ctx_YYX) = nc_xC
-    axiom context_independence_C_Y : outcome_C(ctx_XYY) = nc_yC
-    axiom context_independence_C_Y2 : outcome_C(ctx_YXY) = nc_yC
-}
+// NOTE: GHZNoncontextuality was removed.
+// The noncontextual hidden-variable assumption is INTENTIONALLY contradictory
+// with the GHZ parity axioms (Mermin's algebraic proof: product of four parity
+// equations under context-independence yields 1 = -1).
+// Theorem 5 in the paper proves this self-containedly using existential
+// variables, without loading a globally-inconsistent structure.
+// Keeping it as a loaded structure would poison the entire solver context.

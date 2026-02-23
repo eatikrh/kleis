@@ -26,12 +26,13 @@
 use crate::ast::Expression;
 use crate::solvers::backend::Witness;
 use crate::structure_registry::StructureRegistry;
-use std::collections::HashSet;
 
 #[cfg(feature = "axiom-verification")]
 use crate::solvers::backend::SolverBackend;
 #[cfg(feature = "axiom-verification")]
 use crate::solvers::z3::Z3Backend;
+#[cfg(feature = "axiom-verification")]
+use std::collections::HashSet;
 
 /// Result of axiom verification
 #[derive(Debug, Clone, PartialEq)]

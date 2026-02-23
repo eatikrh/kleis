@@ -14,6 +14,7 @@ jobs:
   test:
     name: Test
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     strategy:
       matrix:
         os: [macos-latest]  # Ubuntu disabled due to disk space issues with vendored Z3
@@ -67,6 +68,7 @@ jobs:
       
     - name: Run all tests (library + integration)
       run: cargo test --verbose
+      timeout-minutes: 15
       continue-on-error: false  # All tests should pass (unit + integration)
     
     - name: Run integration tests without Z3 (fallback)
