@@ -26,22 +26,50 @@ jobs:
         with:
           mdbook-version: 'latest'
 
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Z3
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libz3-dev
+
+      - name: Set Z3 header path
+        run: echo "Z3_SYS_Z3_HEADER=/usr/include/z3.h" >> $GITHUB_ENV
+
       - name: Build mdBook
         run: |
           cd docs/manual
           mdbook build
 
+      - name: Build rustdoc
+        run: cargo doc --no-deps --document-private-items
+        continue-on-error: true
+
       - name: Assemble site
         run: |
           mkdir -p _site
           cp .nojekyll _site/
+          cp CNAME _site/ 2>/dev/null || true
           cp index.html _site/
           cp sitemap.xml _site/
+          cp robots.txt _site/ 2>/dev/null || true
           cp -r static _site/static
+
+          # Manual
           mkdir -p _site/docs/manual
           cp -r docs/manual/book _site/docs/manual/book
+
+          # Papers (PDFs, .kleis sources)
           mkdir -p _site/docs/papers
           cp -r docs/papers/* _site/docs/papers/
+
+          # Rustdoc API reference
+          mkdir -p _site/api
+          if [ -d "target/doc" ]; then
+            cp -r target/doc/* _site/api/
+            echo '<meta http-equiv="refresh" content="0; url=kleis/index.html">' > _site/api/index.html
+          fi
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
