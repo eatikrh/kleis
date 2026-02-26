@@ -43,7 +43,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-bded12c8.js";
+            window.path_to_searchindex_js = "../searchindex-92d6c9af.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2fee28f3.js"></script>
@@ -333,257 +333,146 @@ inconsistently, and slows down every review.</p>
 <p>Each <code>check_*</code> function in the policy receives source code as a string and
 returns <code>"pass"</code> or <code>"fail: &lt;reason&gt;"</code>. The engine runs all rules against
 the input and returns a per-rule verdict.</p>
-<h3 id="the-standards-file"><a class="header" href="#the-standards-file">The Standards File</a></h3>
-<p>The standards file is a <code>.kleis</code> file where each rule is a <code>define</code> function.
-The current policy includes 36 rules across nine categories:</p>
+<h3 id="three-tiers-of-analysis"><a class="header" href="#three-tiers-of-analysis">Three Tiers of Analysis</a></h3>
+<p>The review engine operates at three distinct levels of sophistication:</p>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Category</th><th>Rules</th><th>Examples</th></tr>
+<tr><th>Tier</th><th>Mechanism</th><th>What it catches</th></tr>
 </thead>
 <tbody>
-<tr><td><strong>Safety</strong></td><td>4</td><td><code>unwrap</code>, <code>unsafe</code>, <code>panic</code>, <code>transmute</code></td></tr>
-<tr><td><strong>Quality</strong></td><td>3</td><td><code>println</code>, <code>todo</code>, <code>dbg</code></td></tr>
-<tr><td><strong>Security</strong></td><td>4</td><td>hardcoded passwords, API keys, secrets, SQL injection</td></tr>
-<tr><td><strong>Style</strong></td><td>6</td><td>wildcard imports, inline <code>use</code>, narrating comments, emoji, separator comments</td></tr>
-<tr><td><strong>Error handling</strong></td><td>2</td><td><code>Result&lt;_, String&gt;</code>, clippy suppressions</td></tr>
-<tr><td><strong>Clippy <code>-D warnings</code></strong></td><td>8</td><td><code>ptr_arg</code>, <code>len_zero</code>, <code>bool_comparison</code>, <code>redundant_clone</code>, <code>single_char_pattern</code>, <code>expect_fun_call</code>, <code>manual_is_ascii</code>, <code>too_many_arguments</code></td></tr>
-<tr><td><strong>Deprecated patterns</strong></td><td>3</td><td><code>try!()</code> macro, <code>extern crate</code>, hardcoded URLs</td></tr>
-<tr><td><strong>Test hygiene</strong></td><td>2</td><td><code>#[ignore]</code> tests, needless <code>.collect()</code></td></tr>
-<tr><td><strong>STRIDE threat model</strong></td><td>4</td><td>TLS bypass, credential logging, unbounded reads, command injection</td></tr>
+<tr><td><strong>1. String checks</strong></td><td><code>check_*</code> with <code>contains</code>/<code>hasPrefix</code></td><td>Clippy patterns, emoji, <code>Result&lt;_, String&gt;</code>, <code>#[allow(unused)]</code></td></tr>
+<tr><td><strong>2. Structural checks</strong></td><td><code>check_*_structural</code> via <code>rust_parser.kleis</code> AST</td><td><code>.unwrap()</code> in production (not test) code, missing docs on pub fns, naming conventions, wildcard imports, function parameter counts</td></tr>
+<tr><td><strong>3. Z3 axioms</strong></td><td><code>structure</code> with <code>axiom</code>, verified by Z3</td><td>Formal properties over all possible inputs (e.g., SafeCode, SqlSafe)</td></tr>
 </tbody>
 </table>
 </div>
-<p>Here is a representative sample:</p>
-<pre><code class="language-kleis">// Safety
-define check_no_unwrap(source) =
-    if contains(source, ".unwrap()") then
-        "fail: contains .unwrap() — use ? or .expect() with a message"
-    else "pass"
-
-// SQL injection detection
-define check_no_sql_injection(source) =
-    if and(contains(source, "format!("), contains(source, "SELECT")) then
-        "fail: SQL query built with format! — use parameterized queries (sqlx::query!)"
-    else if and(contains(source, ".push_str("), contains(source, "WHERE")) then
-        "fail: SQL string built via push_str — use parameterized queries"
-    else "pass"
-
-// Clippy -D warnings patterns
-define check_clippy_len_zero(source) =
+<p>Tier 1 runs simple pattern matching — fast but context-blind.
+Tier 2 parses the source into a <code>Crate</code> AST using a structural parser written
+in Kleis itself (<code>rust_parser.kleis</code>), then queries the AST for functions,
+structs, use declarations, and comments. This enables context-aware analysis:
+<code>.unwrap()</code> in a <code>#[test]</code> function is fine; <code>.unwrap()</code> in production code
+is flagged. Tier 3 uses Z3 to prove properties hold universally.</p>
+<h3 id="the-standards-file"><a class="header" href="#the-standards-file">The Standards File</a></h3>
+<p>The standards file is a <code>.kleis</code> file. It imports the structural parser and
+defines rules at each tier. Here is a representative sample:</p>
+<p><strong>Tier 1 — String checks</strong> for clippy patterns and style:</p>
+<pre><code class="language-kleis">define check_clippy_len_zero(source) =
     if contains(source, ".len() == 0") then
         "fail: clippy::len_zero — use .is_empty() instead"
     else if contains(source, ".len() &gt; 0") then
         "fail: clippy::len_zero — use !.is_empty() instead"
     else "pass"
 
-// Deprecated syntax
-define check_no_deprecated_syntax(source) =
-    if contains(source, "try!(") then
-        "fail: try!() macro is deprecated — use ? operator"
-    else if contains(source, "extern crate ") then
-        "fail: extern crate is unnecessary since Rust 2018 — use 'use' imports"
-    else "pass"
-
-// STRIDE/DoS: unbounded reads
-define check_no_unbounded_read(source) =
-    if contains(source, "read_to_end(") then
-        "fail: STRIDE/DoS — unbounded read_to_end, use take() or read with a size limit"
-    else if contains(source, "read_to_string(") then
-        "fail: STRIDE/DoS — unbounded read_to_string, use take() to limit input size"
+define check_no_result_string(source) =
+    if contains(source, "Result&lt;(), String&gt;") then
+        "fail: Result&lt;(), String&gt; — use thiserror for typed errors"
     else "pass"
 </code></pre>
-<p>Rules are easy to add — the engine discovers all <code>check_*</code> functions
-automatically on startup. No tooling changes needed.</p>
-<h3 id="running-a-review"><a class="header" href="#running-a-review">Running a Review</a></h3>
-<p>The agent calls <code>check_file</code> with a path:</p>
-<pre><code>check_file: { "path": "src/evaluator.rs" }
+<p><strong>Tier 2 — Structural checks</strong> using the Rust parser:</p>
+<pre><code class="language-kleis">import "../meta-programming/rust_parser.kleis"
 
--&gt; Code Review: src/evaluator.rs — 16 passed, 10 failed (out of 26 checks)
-
-   FAIL  check_no_unwrap — contains .unwrap() — use ? or .expect()
-   FAIL  check_no_panic — contains panic!() — return Result instead
-   FAIL  check_no_println — contains println!() — use eprintln! or tracing
-   FAIL  check_no_unsafe — contains unsafe block
-   FAIL  check_no_result_string — Result&lt;_, String&gt; — use thiserror
-   FAIL  check_no_clippy_suppression — fix the lint instead of suppressing
-   FAIL  check_clippy_ptr_arg — use &amp;str instead of &amp;String
-   FAIL  check_no_wildcard_import — wildcard import (::*) — be explicit
-   FAIL  check_no_inline_use — indented use — move imports to top of file
-   FAIL  check_no_narrating_comments — code should speak for itself
-   PASS  (16 other rules)
+define check_safe_structural(source) =
+    let prod = production_code(source) in
+    let c = scan(source) in
+    let fns = crate_functions(c) in
+    let unwrap_fns = non_test_fns_containing(source, fns, ".unwrap()") in
+    let panic_fns  = non_test_fns_containing(source, fns, "panic!(") in
+    let unsafe_hits = if contains(prod, "unsafe {")
+                      then "unsafe block in production code" else "" in
+    let all = append_failure(
+        if eq(unwrap_fns, "") then "" else concat(".unwrap() in production fn: ", unwrap_fns),
+        append_failure(
+            if eq(panic_fns, "") then "" else concat("panic!() in production fn: ", panic_fns),
+            unsafe_hits)) in
+    if eq(all, "") then "pass"
+    else concat("fail: ", all)
 </code></pre>
-<p>Or <code>check_code</code> with a snippet for in-flight review during development:</p>
-<pre><code>check_code: { "source": "fn greet(name: &amp;String) { println!(\"hi\"); }" }
-
--&gt; 2 failures:
-   check_clippy_ptr_arg: use &amp;str instead of &amp;String
-   check_no_println: use eprintln!, log macros, or tracing
+<p>The <code>scan()</code> function parses source code into a <code>Crate</code> AST containing
+<code>Function</code>, <code>UseDeclaration</code>, <code>Comment</code>, and <code>Struct</code> items. The
+<code>production_code()</code> function filters out <code>#[test]</code> functions and
+<code>#[cfg(test)]</code> modules using a single <code>foldLines</code> pass, so patterns are
+only checked against production code.</p>
+<p>Structural verdicts include line numbers for precise reporting:</p>
+<pre><code>fail: .unwrap() in production fn: process_request (line 42), handle_error (line 87)
 </code></pre>
-<h3 id="dogfooding-reviewing-our-own-code"><a class="header" href="#dogfooding-reviewing-our-own-code">Dogfooding: Reviewing Our Own Code</a></h3>
-<p>We ran kleis-review against the Kleis codebase itself — the AI agent
-reviewing code it wrote. Results across 11 core source files:</p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>File</th><th>Pass</th><th>Fail</th><th>Score</th></tr>
-</thead>
-<tbody>
-<tr><td><code>review_mcp/protocol.rs</code></td><td>25</td><td>1</td><td>96%</td></tr>
-<tr><td><code>review_mcp/engine.rs</code></td><td>24</td><td>2</td><td>92%</td></tr>
-<tr><td><code>review_mcp/server.rs</code></td><td>21</td><td>5</td><td>81%</td></tr>
-<tr><td><code>kleis_parser.rs</code></td><td>21</td><td>5</td><td>81%</td></tr>
-<tr><td><code>axiom_verifier.rs</code></td><td>19</td><td>7</td><td>73%</td></tr>
-<tr><td><code>type_checker.rs</code></td><td>19</td><td>7</td><td>73%</td></tr>
-<tr><td><code>bin/kleis.rs</code></td><td>18</td><td>8</td><td>69%</td></tr>
-<tr><td><code>type_inference.rs</code></td><td>17</td><td>9</td><td>65%</td></tr>
-<tr><td><code>render.rs</code></td><td>17</td><td>9</td><td>65%</td></tr>
-<tr><td><code>evaluator.rs</code></td><td>16</td><td>10</td><td>62%</td></tr>
-<tr><td><code>solvers/z3/backend.rs</code></td><td>16</td><td>10</td><td>62%</td></tr>
-</tbody>
-</table>
-</div>
-<p>Most common violations across the codebase:</p>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Violation</th><th>Files Hit</th><th>Severity</th></tr>
-</thead>
-<tbody>
-<tr><td>wildcard imports <code>::*</code></td><td>10/11</td><td>Medium</td></tr>
-<tr><td>narrating comments</td><td>9/11</td><td>Low</td></tr>
-<tr><td><code>.unwrap()</code></td><td>8/11</td><td>Medium</td></tr>
-<tr><td><code>println!()</code></td><td>8/11</td><td>Medium</td></tr>
-<tr><td><code>Result&lt;_, String&gt;</code></td><td>8/11</td><td>Medium</td></tr>
-<tr><td>inline <code>use</code></td><td>7/11</td><td>Low</td></tr>
-<tr><td>color emoji</td><td>5/11</td><td>Low</td></tr>
-<tr><td><code>panic!()</code></td><td>3/11</td><td>High</td></tr>
-</tbody>
-</table>
-</div>
-<p>The cleanest file (<code>protocol.rs</code> at 96%) was the most recently written.
-The oldest, most complex files (<code>evaluator.rs</code>, <code>z3/backend.rs</code> at 62%)
-carry the most debt. The tool measures what discipline cannot sustain
-under pressure — and the quality trend from old to new code is visible.</p>
-<h3 id="adding-new-rules"><a class="header" href="#adding-new-rules">Adding New Rules</a></h3>
-<p>When a pattern bites you in production, add a rule:</p>
-<pre><code class="language-kleis">define check_no_transmute(source) =
-    if contains(source, "transmute(") then
-        "fail: std::mem::transmute — use safe conversions (From/Into, as, bytemuck)"
-    else "pass"
+<p>The master <code>check_structural</code> check parses once and runs multiple sub-rules:</p>
+<pre><code class="language-kleis">define check_structural(source) =
+    let c = scan(source) in
+    let f1 = rule_wildcard_imports(c) in
+    let f2 = rule_narrating_line_comments(c) in
+    let f3 = rule_pub_fn_docs(c) in
+    let f4 = rule_param_count(c) in
+    let f5 = rule_function_count(c) in
+    let f6 = rule_test_presence(c) in
+    let f7 = rule_fn_naming(c) in
+    let f8 = rule_struct_naming(c) in
+    ...
 </code></pre>
-<p>Update the file, restart the MCP, and the new rule is live.</p>
-<h3 id="z3-verification-of-formal-properties"><a class="header" href="#z3-verification-of-formal-properties">Z3 Verification of Formal Properties</a></h3>
-<p>Beyond string-level checks, the review policy defines formal properties
-using Kleis structures with axioms. These properties are verified by Z3 —
-not tested against examples, but proven over all possible inputs.</p>
-<p><strong>Structures define what “safe” or “clean” means formally:</strong></p>
+<p>Sub-rules are named <code>rule_*</code> (not <code>check_*</code>) so the engine does not
+auto-discover them as top-level checks. They are invoked only through
+<code>check_structural</code>.</p>
+<p><strong>Tier 3 — Z3 axioms</strong> for formal verification:</p>
 <pre><code class="language-kleis">structure SafeCode {
     operation is_safe : String -&gt; Bool
 
-    axiom safe_no_unwrap : ∀(s : String).
+    axiom safe_no_unwrap : forall(s : String).
         implies(is_safe(s), not(contains(s, ".unwrap()")))
 
-    axiom safe_no_panic : ∀(s : String).
+    axiom safe_no_panic : forall(s : String).
         implies(is_safe(s), not(contains(s, "panic!(")))
-
-    axiom safe_no_unsafe : ∀(s : String).
-        implies(is_safe(s), not(contains(s, "unsafe {")))
-
-    axiom safe_complete : ∀(s : String).
-        implies(
-            and(not(contains(s, ".unwrap()")),
-                and(not(contains(s, "panic!(")),
-                    not(contains(s, "unsafe {")))),
-            is_safe(s))
 }
 </code></pre>
-<p>Each structure has both <em>necessary conditions</em> (if safe, then no unwrap) and
-a <em>completeness axiom</em> (if no unwrap and no panic and no unsafe, then safe).
-The completeness axiom lets Z3 prove positive properties — that a piece of
-code <em>is</em> safe — not just disprove negative ones.</p>
-<p><strong>The <code>evaluate</code> tool operates at three levels:</strong></p>
-<pre><code>// Level 1: Concrete evaluation
-evaluate: check_no_unwrap("fn f() { x.unwrap() }")
--&gt; fail: contains .unwrap() — use ? or .expect() with a message
-
-// Level 2: Universal proof
-evaluate: ∀(s : String). implies(is_safe(s), not(contains(s, ".unwrap()")))
+<p>The <code>evaluate</code> tool can verify these axioms via Z3:</p>
+<pre><code>evaluate: forall(s : String). implies(is_safe(s), not(contains(s, ".unwrap()")))
 -&gt; VERIFIED
-
-// Level 3: Concrete Z3 verification on actual code
-evaluate: is_safe("fn process(x: Option&lt;i32&gt;) -&gt; Result&lt;i32&gt; { Ok(x?) }")
--&gt; Verified: true
 </code></pre>
-<p>Level 1 is fast string matching. Level 2 proves properties hold over all
-possible inputs — a machine-checked proof, not a test case. Level 3 is
-where the tool becomes a genuine code reviewer: Z3 checks whether a
-<em>specific</em> code snippet satisfies the formal definition of safety.</p>
-<p>Level 3 uses <strong>ground instantiation</strong> — instead of asking Z3 to reason about
-universal quantifiers over the infinite space of strings, the evaluator
-substitutes the concrete code snippet directly into each axiom. This turns
-quantified formulas into quantifier-free assertions that Z3 solves in
-milliseconds.</p>
-<h3 id="sql-injection-analysis-via-z3"><a class="header" href="#sql-injection-analysis-via-z3">SQL Injection Analysis via Z3</a></h3>
-<p>The policy includes a <code>SqlSafe</code> structure that models taint analysis
-axiomatically:</p>
-<pre><code class="language-kleis">structure SqlSafe {
-    operation is_tainted : String -&gt; Bool
-    operation is_sanitized : String -&gt; Bool
-    operation reaches_query : String -&gt; Bool
-
-    axiom no_tainted_query : ∀(s : String).
-        implies(and(is_tainted(s), reaches_query(s)), is_sanitized(s))
-
-    axiom format_select_is_tainted : ∀(s : String).
-        implies(
-            and(contains(s, "format!("), contains(s, "SELECT")),
-            and(is_tainted(s), not(is_sanitized(s))))
-
-    axiom parameterized_is_sanitized : ∀(s : String).
-        implies(contains(s, "sqlx::query!"), is_sanitized(s))
-
-    axiom placeholder_is_sanitized : ∀(s : String).
-        implies(contains(s, "$1"), is_sanitized(s))
-
-    // ... additional axioms for INSERT, UPDATE, DELETE, DROP, TRUNCATE
-}
-</code></pre>
-<p>The axioms encode domain knowledge: <code>format!</code> with SQL keywords is tainted,
-parameterized queries (<code>sqlx::query!</code>, <code>$1</code>, <code>?</code>) are sanitized, and
-destructive operations (<code>DROP</code>, <code>TRUNCATE</code>) are always tainted. Z3 can then
-verify concrete code:</p>
-<pre><code>evaluate: is_tainted("let q = format!(\"SELECT * FROM users WHERE id = {}\", input);")
--&gt; Verified: true
-
-evaluate: is_sanitized("sqlx::query!(\"SELECT * FROM users WHERE id = $1\", id)")
--&gt; Verified: true
-
-evaluate: is_tainted("let q = format!(\"DROP TABLE {}\", name);")
--&gt; Verified: true
-</code></pre>
-<p>This is not string matching — it is logical deduction from axioms. If a code
-snippet contains <code>format!</code> with <code>SELECT</code> but no parameterized placeholder,
-Z3 deduces it is tainted and not sanitized. The axioms compose: new SQL
-patterns can be added without changing the engine.</p>
-<h3 id="three-levels-of-review"><a class="header" href="#three-levels-of-review">Three Levels of Review</a></h3>
+<p>This is not a test case — it is a machine-checked proof over all possible
+inputs.</p>
+<h3 id="the-five-structural-checks"><a class="header" href="#the-five-structural-checks">The Five Structural Checks</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Level</th><th>Mechanism</th><th>Speed</th><th>Example</th></tr>
+<tr><th>Check</th><th>What it detects (in production code only)</th></tr>
 </thead>
 <tbody>
-<tr><td><strong>String checks</strong></td><td><code>check_*</code> functions with <code>contains</code>/<code>hasPrefix</code></td><td>Microseconds</td><td>Fast pattern matching, per-file verdicts</td></tr>
-<tr><td><strong>Universal proofs</strong></td><td>Structures with axioms, verified by Z3</td><td>Milliseconds</td><td>Prove properties hold over all inputs</td></tr>
-<tr><td><strong>Concrete Z3</strong></td><td>Ground instantiation of axioms on real code</td><td>Milliseconds</td><td>Verify <code>is_safe(actual_code)</code> or <code>is_tainted(sql_snippet)</code></td></tr>
+<tr><td><code>check_structural</code></td><td>Wildcard imports, narrating comments, missing pub fn docs, too many params (&gt;5), function/struct naming, function count (&gt;50), missing tests</td></tr>
+<tr><td><code>check_safe_structural</code></td><td><code>.unwrap()</code>, <code>panic!()</code>, <code>unsafe {}</code> — skips test functions</td></tr>
+<tr><td><code>check_clean_structural</code></td><td><code>println!()</code>, <code>todo!()</code>, <code>dbg!()</code> — skips test functions</td></tr>
+<tr><td><code>check_secure_structural</code></td><td>Hardcoded <code>password =</code>, <code>secret =</code>, <code>api_key =</code> — skips test code</td></tr>
+<tr><td><code>check_sql_safe_structural</code></td><td><code>format!</code> with SQL keywords, <code>.push_str</code> with <code>WHERE</code> — skips test code</td></tr>
 </tbody>
 </table>
 </div>
-<p>The string checks catch mechanical issues during development. The universal
-proofs guarantee the standards themselves are consistent. The concrete Z3
-checks apply formal definitions to actual code — the reviewer moves from
-“does this string contain <code>.unwrap()</code>” to “does this code satisfy the formal
-definition of safety.”</p>
+<h3 id="running-a-review"><a class="header" href="#running-a-review">Running a Review</a></h3>
+<p>The agent calls <code>check_file</code> with a path:</p>
+<pre><code>check_file: { "path": "src/server.rs" }
+
+-&gt; Code Review: src/server.rs — 14 passed, 4 failed (out of 18 checks)
+
+   FAIL  check_safe_structural — .unwrap() in production fn: handle_request (line 42)
+   FAIL  check_structural — pub fn missing doc comment: process (line 15), serve (line 80)
+   FAIL  check_no_result_string — Result&lt;(), String&gt; — use thiserror
+   FAIL  check_clippy_ptr_arg — use &amp;str instead of &amp;String
+   PASS  (14 other rules)
+</code></pre>
+<p>Or <code>check_code</code> with a snippet for in-flight review during development:</p>
+<pre><code>check_code: { "source": "fn greet(name: &amp;String) {\n    println!(\"hi\");\n}" }
+
+-&gt; 2 failures:
+   check_clippy_ptr_arg: use &amp;str instead of &amp;String
+   check_clean_structural: println! in production fn: greet (line 1)
+</code></pre>
+<h3 id="adding-new-rules"><a class="header" href="#adding-new-rules">Adding New Rules</a></h3>
+<p>When a pattern bites you in production, add a rule:</p>
+<pre><code class="language-kleis">define check_no_expect_fun_call(source) =
+    if contains(source, ".expect(&amp;format!(") then
+        "fail: clippy::expect_fun_call — use .unwrap_or_else or build msg lazily"
+    else "pass"
+</code></pre>
+<p>No Rust recompilation needed. The engine discovers all <code>check_*</code> functions
+automatically on startup. Update the <code>.kleis</code> file, restart the MCP, and
+the new rule is live.</p>
 <h3 id="starting-the-server-1"><a class="header" href="#starting-the-server-1">Starting the Server</a></h3>
 <pre><code class="language-bash">kleis review-mcp --policy examples/policies/rust_review_policy.kleis --verbose
 </code></pre>
@@ -612,7 +501,7 @@ definition of safety.”</p>
 </thead>
 <tbody>
 <tr><td>kleis-policy</td><td><code>agent_policy.kleis</code></td><td><code>check_*</code> returns “allow”/“deny”</td><td>5</td></tr>
-<tr><td>kleis-review</td><td><code>rust_review_policy.kleis</code></td><td><code>check_*</code> returns “pass”/“fail: reason”</td><td>6</td></tr>
+<tr><td>kleis-review</td><td><code>rust_review_policy.kleis</code></td><td><code>check_*</code> returns “pass”/“fail: reason” (3 tiers: string, structural, Z3)</td><td>6</td></tr>
 <tr><td>kleis-theory</td><td>(none — builds interactively)</td><td><code>submit_*</code>, <code>evaluate</code>, <code>save_theory</code></td><td>9</td></tr>
 </tbody>
 </table>
