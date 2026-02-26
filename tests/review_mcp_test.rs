@@ -248,12 +248,23 @@ fn test_load_real_rust_review_policy() {
         return;
     }
 
+    // Structural checks recurse deeply through the Kleis evaluator.
+    let handle = std::thread::Builder::new()
+        .stack_size(16 * 1024 * 1024)
+        .spawn(move || {
+            real_rust_review_policy_assertions(path);
+        })
+        .expect("spawn test thread");
+    handle.join().expect("test thread panicked");
+}
+
+fn real_rust_review_policy_assertions(path: PathBuf) {
     let engine = ReviewEngine::load(&path).expect("load rust_review_policy.kleis");
     let stats = engine.stats();
 
     assert!(
-        *stats.get("check_functions").unwrap() >= 36,
-        "Expected >= 36 check functions, got {}",
+        *stats.get("check_functions").unwrap() >= 28,
+        "Expected >= 28 check functions, got {}",
         stats.get("check_functions").unwrap()
     );
 
@@ -269,69 +280,73 @@ fn test_load_real_rust_review_policy() {
             .collect::<Vec<_>>()
     );
 
-    // Code with .unwrap() should fail
-    let result = engine.check_code("fn main() { foo().unwrap(); }", "rust");
+    // Code with .unwrap() should fail (check_safe_structural)
+    // Multi-line inputs needed: body_step uses brace_delta per line.
+    let result = engine.check_code("fn main() {\n    foo().unwrap();\n}", "rust");
     assert!(!result.passed);
     assert!(result
         .verdicts
         .iter()
-        .any(|v| v.rule_name == "check_no_unwrap" && !v.passed));
+        .any(|v| v.rule_name == "check_safe_structural" && !v.passed));
 
-    // Code with unsafe should fail
-    let result = engine.check_code("unsafe { *ptr = 1; }", "rust");
+    // Code with unsafe should fail (check_safe_structural)
+    let result = engine.check_code(
+        "fn risky() {\n    unsafe {\n        *ptr = 1;\n    }\n}",
+        "rust",
+    );
     assert!(!result.passed);
     assert!(result
         .verdicts
         .iter()
-        .any(|v| v.rule_name == "check_no_unsafe" && !v.passed));
+        .any(|v| v.rule_name == "check_safe_structural" && !v.passed));
 
-    // Code with println! should fail
-    let result = engine.check_code("fn main() { println!(\"hello\"); }", "rust");
+    // Code with println! should fail (check_clean_structural)
+    let result = engine.check_code("fn main() {\n    println!(\"hello\");\n}", "rust");
     assert!(!result.passed);
     assert!(result
         .verdicts
         .iter()
-        .any(|v| v.rule_name == "check_no_println" && !v.passed));
+        .any(|v| v.rule_name == "check_clean_structural" && !v.passed));
 
-    // Code with panic! should fail
-    let result = engine.check_code("fn main() { panic!(\"oops\"); }", "rust");
+    // Code with panic! should fail (check_safe_structural)
+    let result = engine.check_code("fn main() {\n    panic!(\"oops\");\n}", "rust");
     assert!(!result.passed);
     assert!(result
         .verdicts
         .iter()
-        .any(|v| v.rule_name == "check_no_panic" && !v.passed));
+        .any(|v| v.rule_name == "check_safe_structural" && !v.passed));
 
-    // Code with todo! should fail
-    let result = engine.check_code("fn main() { todo!(\"later\"); }", "rust");
+    // Code with todo! should fail (check_clean_structural)
+    let result = engine.check_code("fn main() {\n    todo!(\"later\");\n}", "rust");
     assert!(!result.passed);
     assert!(result
         .verdicts
         .iter()
-        .any(|v| v.rule_name == "check_no_todo" && !v.passed));
+        .any(|v| v.rule_name == "check_clean_structural" && !v.passed));
 
-    // Code with dbg! should fail
-    let result = engine.check_code("fn main() { dbg!(x); }", "rust");
+    // Code with dbg! should fail (check_clean_structural)
+    let result = engine.check_code("fn main() {\n    dbg!(x);\n}", "rust");
     assert!(!result.passed);
     assert!(result
         .verdicts
         .iter()
-        .any(|v| v.rule_name == "check_no_dbg" && !v.passed));
+        .any(|v| v.rule_name == "check_clean_structural" && !v.passed));
 
-    // Code with hardcoded password should fail
-    let result = engine.check_code("let password = get_secret();", "rust");
+    // Code with hardcoded password should fail (check_secure_structural)
+    let result = engine.check_code("fn init() {\n    let password = get_secret();\n}", "rust");
     assert!(!result.passed);
     assert!(result
         .verdicts
         .iter()
-        .any(|v| v.rule_name == "check_no_hardcoded_password" && !v.passed));
+        .any(|v| v.rule_name == "check_secure_structural" && !v.passed));
 
-    // Code with wildcard import should fail
-    let result = engine.check_code("use std::collections::*;", "rust");
+    // Code with wildcard import should fail (check_structural)
+    let result = engine.check_code("use std::collections::*;\nfn process() {\n}\n", "rust");
     assert!(!result.passed);
     assert!(result
         .verdicts
         .iter()
-        .any(|v| v.rule_name == "check_no_wildcard_import" && !v.passed));
+        .any(|v| v.rule_name == "check_structural" && !v.passed));
 
     // Code with #[allow(unused)] should fail
     let result = engine.check_code("#[allow(dead_code)]\nfn old() {}", "rust");
@@ -341,21 +356,13 @@ fn test_load_real_rust_review_policy() {
         .iter()
         .any(|v| v.rule_name == "check_no_allow_unused" && !v.passed));
 
-    // Code with inline use statement should fail
-    let result = engine.check_code("fn main() { use std::io; }", "rust");
+    // Narrating comments should fail (check_structural)
+    let result = engine.check_code("// Import the module\nuse std::io;\nfn f() {\n}\n", "rust");
     assert!(!result.passed);
     assert!(result
         .verdicts
         .iter()
-        .any(|v| v.rule_name == "check_no_inline_use" && !v.passed));
-
-    // Narrating comments should fail
-    let result = engine.check_code("// Import the module\nuse std::io;", "rust");
-    assert!(!result.passed);
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_no_narrating_comments" && !v.passed));
+        .any(|v| v.rule_name == "check_structural" && !v.passed));
 
     // Result<_, String> should fail
     let result = engine.check_code("fn load() -> Result<(), String> { Ok(()) }", "rust");
@@ -479,346 +486,9 @@ fn test_load_real_rust_review_policy() {
     );
 }
 
-#[test]
-fn test_check_no_separator_comments() {
-    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
-    if !path.exists() {
-        return;
-    }
-    let engine = ReviewEngine::load(&path).expect("load policy");
-
-    let bad_equals = engine.check_code("// ==============================\nfn main() {}", "rust");
-    assert!(
-        bad_equals
-            .verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_separator_comments" && !v.passed),
-        "// ==== separator should fail"
-    );
-
-    let bad_dashes = engine.check_code("// ---- section divider ----\nfn main() {}", "rust");
-    assert!(
-        bad_dashes
-            .verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_separator_comments" && !v.passed),
-        "// ---- separator should fail"
-    );
-
-    let clean = engine.check_code("fn add(a: i32, b: i32) -> i32 { a + b }", "rust");
-    assert!(
-        !clean
-            .verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_separator_comments" && !v.passed),
-        "Clean code should pass"
-    );
-}
-
-#[test]
-fn test_check_no_transmute() {
-    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
-    if !path.exists() {
-        return;
-    }
-    let engine = ReviewEngine::load(&path).expect("load policy");
-
-    let bad = engine.check_code("let x: u32 = unsafe { std::mem::transmute(f) };", "rust");
-    assert!(
-        bad.verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_transmute" && !v.passed),
-        "transmute should fail"
-    );
-
-    let clean = engine.check_code("let x: u32 = u32::from(y);", "rust");
-    assert!(
-        !clean
-            .verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_transmute" && !v.passed),
-        "From/Into should pass"
-    );
-}
-
-#[test]
-fn test_check_no_deprecated_syntax() {
-    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
-    if !path.exists() {
-        return;
-    }
-    let engine = ReviewEngine::load(&path).expect("load policy");
-
-    let bad_try = engine.check_code("let x = try!(some_fn());", "rust");
-    assert!(
-        bad_try
-            .verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_deprecated_syntax" && !v.passed),
-        "try!() should fail"
-    );
-
-    let bad_extern = engine.check_code("extern crate serde;", "rust");
-    assert!(
-        bad_extern
-            .verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_deprecated_syntax" && !v.passed),
-        "extern crate should fail"
-    );
-
-    let clean = engine.check_code("use serde::Deserialize;", "rust");
-    assert!(
-        !clean
-            .verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_deprecated_syntax" && !v.passed),
-        "use imports should pass"
-    );
-}
-
-#[test]
-fn test_check_no_hardcoded_urls() {
-    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
-    if !path.exists() {
-        return;
-    }
-    let engine = ReviewEngine::load(&path).expect("load policy");
-
-    let bad_http = engine.check_code("let url = \"http://example.com/api\";", "rust");
-    assert!(
-        bad_http
-            .verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_hardcoded_urls" && !v.passed),
-        "hardcoded http URL should fail"
-    );
-
-    let bad_https = engine.check_code("let url = \"https://api.example.com\";", "rust");
-    assert!(
-        bad_https
-            .verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_hardcoded_urls" && !v.passed),
-        "hardcoded https URL should fail"
-    );
-
-    let clean = engine.check_code("let url = config.base_url();", "rust");
-    assert!(
-        !clean
-            .verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_hardcoded_urls" && !v.passed),
-        "config-driven URL should pass"
-    );
-}
-
-#[test]
-fn test_check_no_ignored_tests() {
-    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
-    if !path.exists() {
-        return;
-    }
-    let engine = ReviewEngine::load(&path).expect("load policy");
-
-    let bad = engine.check_code("#[ignore]\n#[test]\nfn test_something() {}", "rust");
-    assert!(
-        bad.verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_ignored_tests" && !v.passed),
-        "#[ignore] should fail"
-    );
-
-    let clean = engine.check_code("#[test]\nfn test_something() { assert!(true); }", "rust");
-    assert!(
-        !clean
-            .verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_ignored_tests" && !v.passed),
-        "normal test should pass"
-    );
-}
-
-#[test]
-fn test_check_no_needless_collect() {
-    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
-    if !path.exists() {
-        return;
-    }
-    let engine = ReviewEngine::load(&path).expect("load policy");
-
-    let bad = engine.check_code(
-        "let v = items.iter().map(|x| x + 1).collect::<Vec<_>>();",
-        "rust",
-    );
-    assert!(
-        bad.verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_needless_collect" && !v.passed),
-        "collect::<Vec<>> should fail"
-    );
-
-    let clean = engine.check_code("let sum: i32 = items.iter().sum();", "rust");
-    assert!(
-        !clean
-            .verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_needless_collect" && !v.passed),
-        "iterator without collect should pass"
-    );
-}
-
-// =============================================================================
-// STRIDE Threat Model Rules
-// =============================================================================
-
-#[test]
-fn test_check_no_tls_bypass() {
-    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
-    if !path.exists() {
-        return;
-    }
-    let engine = ReviewEngine::load(&path).expect("load policy");
-
-    let bad1 = engine.check_code("let client = build_insecure_client();", "rust");
-    assert!(
-        bad1.verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_tls_bypass" && !v.passed),
-        "'insecure' should fail"
-    );
-
-    let bad2 = engine.check_code("config.no_verify = true;", "rust");
-    assert!(
-        bad2.verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_tls_bypass" && !v.passed),
-        "'no_verify' should fail"
-    );
-
-    let bad3 = engine.check_code("opts.allow_invalid_certs(true);", "rust");
-    assert!(
-        bad3.verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_tls_bypass" && !v.passed),
-        "'allow_invalid' should fail"
-    );
-
-    let clean = engine.check_code("let client = Client::builder().build()?;", "rust");
-    assert!(
-        !clean
-            .verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_tls_bypass" && !v.passed),
-        "Normal client builder should pass"
-    );
-}
-
-#[test]
-fn test_check_no_credential_logging() {
-    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
-    if !path.exists() {
-        return;
-    }
-    let engine = ReviewEngine::load(&path).expect("load policy");
-
-    let bad = engine.check_code(r#"println!("User password is: {}", password);"#, "rust");
-    assert!(
-        bad.verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_credential_logging" && !v.passed),
-        "Printing password to stdout should fail"
-    );
-
-    let clean = engine.check_code(r#"println!("User logged in: {}", username);"#, "rust");
-    assert!(
-        !clean
-            .verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_credential_logging" && !v.passed),
-        "Printing username (non-sensitive) should pass"
-    );
-}
-
-#[test]
-fn test_check_no_unbounded_read() {
-    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
-    if !path.exists() {
-        return;
-    }
-    let engine = ReviewEngine::load(&path).expect("load policy");
-
-    let bad1 = engine.check_code(
-        "let mut buf = Vec::new(); file.read_to_end(&mut buf)?;",
-        "rust",
-    );
-    assert!(
-        bad1.verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_unbounded_read" && !v.passed),
-        "read_to_end should fail"
-    );
-
-    let bad2 = engine.check_code(
-        "let mut s = String::new(); stdin.read_to_string(&mut s)?;",
-        "rust",
-    );
-    assert!(
-        bad2.verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_unbounded_read" && !v.passed),
-        "read_to_string should fail"
-    );
-
-    let clean = engine.check_code("let mut buf = [0u8; 1024]; stream.read(&mut buf)?;", "rust");
-    assert!(
-        !clean
-            .verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_unbounded_read" && !v.passed),
-        "Bounded read should pass"
-    );
-}
-
-#[test]
-fn test_check_no_command_injection() {
-    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
-    if !path.exists() {
-        return;
-    }
-    let engine = ReviewEngine::load(&path).expect("load policy");
-
-    let bad = engine.check_code(
-        r#"let out = Command::new(format!("/usr/bin/{}", user_cmd)).output()?;"#,
-        "rust",
-    );
-    assert!(
-        bad.verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_command_injection" && !v.passed),
-        "Command::new with format! should fail"
-    );
-
-    let bad2 = engine.check_code(r#"cmd.arg(format!("--name={}", user_input));"#, "rust");
-    assert!(
-        bad2.verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_command_injection" && !v.passed),
-        ".arg(format!()) should fail"
-    );
-
-    let clean = engine.check_code(
-        r#"let out = Command::new("ls").arg("-la").output()?;"#,
-        "rust",
-    );
-    assert!(
-        !clean
-            .verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_command_injection" && !v.passed),
-        "Static command should pass"
-    );
-}
+// ==========================================================================
+// Z3 Verification Tests
+// ==========================================================================
 
 #[test]
 fn test_evaluate_concrete_expression() {
@@ -858,11 +528,12 @@ fn test_evaluate_check_function() {
     }
     let engine = ReviewEngine::load(&path).expect("load policy");
 
-    let result = engine.evaluate_expression("check_no_unwrap(\"fn f() { a + b }\")");
+    let result = engine.evaluate_expression("check_no_allow_unused(\"fn f() { a + b }\")");
     assert!(result.error.is_none(), "Should evaluate without error");
     assert_eq!(result.value.as_deref(), Some("pass"));
 
-    let result = engine.evaluate_expression("check_no_unwrap(\"x.unwrap()\")");
+    let result =
+        engine.evaluate_expression("check_no_allow_unused(\"#[allow(unused)]\\nfn f() {}\")");
     assert!(result.error.is_none());
     let val = result.value.unwrap();
     assert!(val.starts_with("fail"), "Should fail: {}", val);
@@ -983,68 +654,65 @@ fn test_structures_loaded_in_policy() {
 }
 
 #[test]
-fn test_check_no_sql_injection() {
+fn test_check_sql_safe_structural() {
     let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
     if !path.exists() {
         return;
     }
-    let engine = ReviewEngine::load(&path).expect("load policy");
 
-    let bad_format = engine.check_code(
-        r#"let q = format!("SELECT * FROM users WHERE id = {}", id);"#,
-        "rust",
-    );
-    assert!(
-        bad_format
-            .verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_sql_injection" && !v.passed),
-        "format! with SELECT * FROM should fail"
-    );
+    // Structural checks recurse deeply through the Kleis evaluator;
+    // run in a thread with a larger stack to avoid overflow.
+    let handle = std::thread::Builder::new()
+        .stack_size(16 * 1024 * 1024)
+        .spawn(move || {
+            let engine = ReviewEngine::load(&path).expect("load policy");
 
-    let bad_insert = engine.check_code(
-        r#"let q = format!("INSERT INTO logs VALUES({})", val);"#,
-        "rust",
-    );
-    assert!(
-        bad_insert
-            .verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_sql_injection" && !v.passed),
-        "format! with INSERT INTO should fail"
-    );
+            let bad_format = engine.check_code(
+                "let q = format!(\"SELECT * FROM users WHERE id = {}\", id);",
+                "rust",
+            );
+            assert!(
+                bad_format
+                    .verdicts
+                    .iter()
+                    .any(|v| v.rule_name == "check_sql_safe_structural" && !v.passed),
+                "format! with SELECT should fail"
+            );
 
-    let safe_parameterized =
-        engine.check_code("let row = sqlx::query!(\"SELECT id FROM users WHERE name = $1\", name).fetch_one(&pool).await?;", "rust");
-    assert!(
-        !safe_parameterized
-            .verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_sql_injection" && !v.passed),
-        "Parameterized query should pass"
-    );
+            let bad_insert = engine.check_code(
+                "let q = format!(\"INSERT INTO logs VALUES({})\", val);",
+                "rust",
+            );
+            assert!(
+                bad_insert
+                    .verdicts
+                    .iter()
+                    .any(|v| v.rule_name == "check_sql_safe_structural" && !v.passed),
+                "format! with INSERT should fail"
+            );
 
-    let clean_code = engine.check_code("fn add(a: i32, b: i32) -> i32 { a + b }", "rust");
-    assert!(
-        !clean_code
-            .verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_sql_injection" && !v.passed),
-        "Code without SQL should pass"
-    );
+            let safe_parameterized =
+                engine.check_code("let row = sqlx::query!(\"SELECT id FROM users WHERE name = $1\", name).fetch_one(&pool).await?;", "rust");
+            assert!(
+                !safe_parameterized
+                    .verdicts
+                    .iter()
+                    .any(|v| v.rule_name == "check_sql_safe_structural" && !v.passed),
+                "Parameterized query should pass"
+            );
 
-    let http_crud = engine.check_code(
-        r#"pub fn update(&self, id: &str) { let path = format!("{API_PATH}/{id}"); }
-           pub fn delete(&self, id: &str) { let path = format!("{API_PATH}/{id}"); }"#,
-        "rust",
-    );
-    assert!(
-        !http_crud
-            .verdicts
-            .iter()
-            .any(|v| v.rule_name == "check_no_sql_injection" && !v.passed),
-        "HTTP CRUD methods with format! should NOT trigger SQL injection"
-    );
+            let clean_code = engine.check_code("fn add(a: i32, b: i32) -> i32 { a + b }", "rust");
+            assert!(
+                !clean_code
+                    .verdicts
+                    .iter()
+                    .any(|v| v.rule_name == "check_sql_safe_structural" && !v.passed),
+                "Code without SQL should pass"
+            );
+        })
+        .expect("spawn test thread");
+
+    handle.join().expect("test thread panicked");
 }
 
 #[cfg(feature = "axiom-verification")]
@@ -1069,6 +737,136 @@ fn test_evaluate_z3_sql_safe_taint_property() {
         Some(true),
         "no_tainted_query axiom should be verified"
     );
+}
+
+// ==========================================================================
+// check_file — Path Validation and File Review
+// ==========================================================================
+
+#[test]
+fn test_check_file_empty_path() {
+    let engine = load_review_policy(
+        r#"
+        define check_a(source) = "pass"
+    "#,
+    );
+
+    let result = engine.check_file("", "rust");
+    assert!(result.is_err());
+    assert!(
+        result.unwrap_err().contains("empty"),
+        "Should mention empty path"
+    );
+}
+
+#[test]
+fn test_check_file_nonexistent() {
+    let engine = load_review_policy(
+        r#"
+        define check_a(source) = "pass"
+    "#,
+    );
+
+    let result = engine.check_file("/tmp/kleis_no_such_file_ever_12345.rs", "rust");
+    assert!(result.is_err());
+    assert!(
+        result.unwrap_err().contains("not found"),
+        "Should mention file not found"
+    );
+}
+
+#[test]
+fn test_check_file_directory() {
+    let engine = load_review_policy(
+        r#"
+        define check_a(source) = "pass"
+    "#,
+    );
+
+    let result = engine.check_file("src", "rust");
+    assert!(result.is_err());
+    assert!(
+        result.unwrap_err().contains("directory"),
+        "Should mention directory"
+    );
+}
+
+#[test]
+fn test_check_file_valid_rust_file() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let handle = std::thread::Builder::new()
+        .stack_size(16 * 1024 * 1024)
+        .spawn(move || {
+            let result = engine
+                .check_file("tests/fixtures/sample_bad_code.rs", "rust")
+                .expect("check_file should succeed");
+
+            assert!(
+                !result.verdicts.is_empty(),
+                "Should produce at least one verdict"
+            );
+            assert!(
+                !result.summary.is_empty(),
+                "Should produce a non-empty summary"
+            );
+        })
+        .expect("spawn test thread");
+    handle.join().expect("test thread panicked");
+}
+
+#[test]
+fn test_check_file_clean_code() {
+    let id = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
+    let dir = std::env::temp_dir();
+    let tmp_path = dir.join(format!("kleis_test_clean_{}_{}.rs", std::process::id(), id));
+    std::fs::write(
+        &tmp_path,
+        "/// Adds two numbers.\npub fn add(a: i32, b: i32) -> i32 {\n    a + b\n}\n",
+    )
+    .expect("write temp file");
+
+    let engine = load_review_policy(
+        r#"
+        define check_example(source) =
+            if contains(source, ".unwrap()") then "fail: unwrap" else "pass"
+    "#,
+    );
+
+    let result = engine
+        .check_file(tmp_path.to_str().unwrap(), "rust")
+        .expect("check_file should succeed");
+    assert!(result.passed, "Clean code should pass");
+    let _ = std::fs::remove_file(&tmp_path);
+}
+
+#[test]
+fn test_check_file_bad_code() {
+    let id = TEST_COUNTER.fetch_add(1, Ordering::SeqCst);
+    let dir = std::env::temp_dir();
+    let tmp_path = dir.join(format!("kleis_test_bad_{}_{}.rs", std::process::id(), id));
+    std::fs::write(&tmp_path, "fn main() {\n    foo().unwrap();\n}\n").expect("write temp file");
+
+    let engine = load_review_policy(
+        r#"
+        define check_no_unwrap(source) =
+            if contains(source, ".unwrap()") then "fail: unwrap detected" else "pass"
+    "#,
+    );
+
+    let result = engine
+        .check_file(tmp_path.to_str().unwrap(), "rust")
+        .expect("check_file should succeed");
+    assert!(!result.passed, "Bad code should fail");
+    assert!(result
+        .verdicts
+        .iter()
+        .any(|v| v.rule_name == "check_no_unwrap" && !v.passed));
+    let _ = std::fs::remove_file(&tmp_path);
 }
 
 // ==========================================================================

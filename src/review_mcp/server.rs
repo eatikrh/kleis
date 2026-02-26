@@ -275,6 +275,17 @@ impl ReviewMcpServer {
         })
     }
 
+    fn check_file_error(&self, message: &str) -> Value {
+        let content = McpToolContent {
+            content_type: "text".to_string(),
+            text: message.to_string(),
+        };
+        serde_json::json!({
+            "content": [content],
+            "isError": true,
+        })
+    }
+
     fn handle_check_file(&self, arguments: &Value) -> Value {
         let path = arguments.get("path").and_then(|p| p.as_str()).unwrap_or("");
         let language = arguments
@@ -284,21 +295,10 @@ impl ReviewMcpServer {
 
         self.log(&format!("check_file: {}, language={}", path, language));
 
-        let source = match std::fs::read_to_string(path) {
-            Ok(s) => s,
-            Err(e) => {
-                let content = McpToolContent {
-                    content_type: "text".to_string(),
-                    text: format!("Cannot read file '{}': {}", path, e),
-                };
-                return serde_json::json!({
-                    "content": [content],
-                    "isError": true,
-                });
-            }
+        let result = match self.engine.check_file(path, language) {
+            Ok(r) => r,
+            Err(e) => return self.check_file_error(&e),
         };
-
-        let result = self.engine.check_code(&source, language);
 
         let emoji = if result.passed { "✅" } else { "❌" };
 

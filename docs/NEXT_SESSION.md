@@ -72,6 +72,16 @@ The cos/sin addition formulas encode the Lie algebra structure of SU(2). They're
 - [ ] Archive sessions older than 2 weeks to `docs/archive/sessions/`
 - [ ] Keep NEXT_SESSION.md focused on active work + last 2-3 sessions
 
+### Future: kleis-review — Context-Aware Parsing for Reduced False Positives
+
+The current `kleis-review` MCP uses string matching (`contains`, `hasPrefix`, `hasSuffix`) for code review rules. This works well for most patterns but produces false positives in cases where syntactic context matters:
+
+- **`check_no_wildcard_import`** flags `use super::*;` in test modules (idiomatic Rust).
+- **`check_no_narrating_comments`** flags doc comments (`/// Create a new attribute`) that legitimately start with a verb.
+- **`check_no_inline_use`** flags `use` inside function bodies, which is valid Rust (e.g., inside tests or to limit import scope).
+
+Fixing these requires parsing structure, not just string matching. A future version of the review engine should support AST-aware or at least scope-aware checks — for example, suppressing certain rules inside `#[cfg(test)]` modules or distinguishing `///` doc comments from `//` line comments.
+
 ---
 
 ## Session 5 (Feb 22, 2026): Axiom Consistency Detection + non_separable Bug Found

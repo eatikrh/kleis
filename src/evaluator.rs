@@ -1124,10 +1124,14 @@ impl Evaluator {
                     value,
                     location: _,
                 } => {
-                    // Evaluate the value and bind it
+                    // Evaluate the value: first via eval (fires debug hooks for
+                    // cross-file stepping), then eval_concrete to fully reduce.
+                    // eval_internal returns substituted-but-unevaluated bodies for
+                    // user-defined functions; without the second step, let bindings
+                    // would hold intermediate expressions that break pattern matching.
                     match self.eval(value) {
-                        Ok(evaluated) => {
-                            // Notify debug hook about the binding
+                        Ok(partial) => {
+                            let evaluated = self.eval_concrete(&partial).unwrap_or(partial);
                             {
                                 let mut hook_ref = self.debug_hook.borrow_mut();
                                 if let Some(ref mut hook) = *hook_ref {
@@ -3082,6 +3086,174 @@ impl Evaluator {
                         Ok(n) => Ok(Some(Expression::Const(format!("{}", n)))),
                         Err(_) => Ok(Some(Expression::Const("-1".to_string()))),
                     }
+                } else {
+                    Ok(None)
+                }
+            }
+
+            // === High-performance string operations ===
+            // These are Rust-native implementations that replace recursive Kleis
+            // functions to avoid O(n^2) string copying and stack overflow on large
+            // inputs (e.g., parsing a 10K-line Rust file).
+            "splitLines" => {
+                // splitLines("line1\nline2\nline3") → Cons("line1", Cons("line2", Cons("line3", Nil)))
+                // Auto-detects newline format: real \n (0x0A) or escaped two-char \n
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some(s) = self.as_string(&args[0]) {
+                    let lines: Vec<&str> = if s.contains('\n') {
+                        s.split('\n').collect()
+                    } else if s.contains("\\n") {
+                        s.split("\\n").collect()
+                    } else {
+                        vec![&s]
+                    };
+                    let mut result = Expression::Object("Nil".to_string());
+                    for line in lines.into_iter().rev() {
+                        result = Expression::Operation {
+                            name: "Cons".to_string(),
+                            args: vec![Expression::String(line.to_string()), result],
+                            span: None,
+                        };
+                    }
+                    Ok(Some(result))
+                } else {
+                    Ok(None)
+                }
+            }
+            "countLines" => {
+                // countLines("a\nb\nc") → 3
+                // O(n) scan, no allocation
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some(s) = self.as_string(&args[0]) {
+                    if s.is_empty() {
+                        return Ok(Some(Expression::Const("0".to_string())));
+                    }
+                    let count = if s.contains('\n') {
+                        s.split('\n').count()
+                    } else if s.contains("\\n") {
+                        s.split("\\n").count()
+                    } else {
+                        1
+                    };
+                    Ok(Some(Expression::Const(format!("{}", count))))
+                } else {
+                    Ok(None)
+                }
+            }
+            "nthLine" => {
+                // nthLine("a\nb\nc", 1) → "b" (0-indexed)
+                if args.len() != 2 {
+                    return Ok(None);
+                }
+                if let (Some(s), Some(n)) = (self.as_string(&args[0]), self.as_integer(&args[1])) {
+                    let lines: Vec<&str> = if s.contains('\n') {
+                        s.split('\n').collect()
+                    } else if s.contains("\\n") {
+                        s.split("\\n").collect()
+                    } else {
+                        vec![&s]
+                    };
+                    let idx = n as usize;
+                    if idx < lines.len() {
+                        Ok(Some(Expression::String(lines[idx].to_string())))
+                    } else {
+                        Ok(Some(Expression::String(String::new())))
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+            "readFile" => {
+                // readFile("path/to/file.rs") → file contents as string
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some(path) = self.as_string(&args[0]) {
+                    match std::fs::read_to_string(&path) {
+                        Ok(contents) => Ok(Some(Expression::String(contents))),
+                        Err(e) => Err(format!("readFile: {}: {}", path, e)),
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+            "trimRight" => {
+                // trimRight("hello  ") → "hello"
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some(s) = self.as_string(&args[0]) {
+                    Ok(Some(Expression::String(s.trim_end().to_string())))
+                } else {
+                    Ok(None)
+                }
+            }
+            "trimLeft" => {
+                // trimLeft("  hello") → "hello"
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some(s) = self.as_string(&args[0]) {
+                    Ok(Some(Expression::String(s.trim_start().to_string())))
+                } else {
+                    Ok(None)
+                }
+            }
+            "trim" => {
+                // trim("  hello  ") → "hello"
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some(s) = self.as_string(&args[0]) {
+                    Ok(Some(Expression::String(s.trim().to_string())))
+                } else {
+                    Ok(None)
+                }
+            }
+            "foldLines" => {
+                // foldLines(f, init, source) → iteratively apply f(acc, line) over lines
+                // Replaces recursive scan_lines: no stack overflow, no Cons list.
+                // f can be a lambda or a named 2-arg function.
+                if args.len() != 3 {
+                    return Ok(None);
+                }
+                let func = &args[0];
+                let init = &args[1];
+                if let Some(source) = self.as_string(&args[2]) {
+                    let lines: Vec<&str> = if source.contains('\n') {
+                        source.split('\n').collect()
+                    } else if source.contains("\\n") {
+                        source.split("\\n").collect()
+                    } else {
+                        vec![&*source]
+                    };
+                    let mut acc = init.clone();
+                    for line in &lines {
+                        let line_expr = Expression::String(line.to_string());
+                        // Try applying as lambda via beta reduction
+                        match func {
+                            Expression::Object(fname) => {
+                                // Named function: call fname(acc, line)
+                                let call = Expression::Operation {
+                                    name: fname.clone(),
+                                    args: vec![line_expr, acc.clone()],
+                                    span: None,
+                                };
+                                acc = self.eval_concrete(&call)?;
+                            }
+                            _ => {
+                                // Lambda or other expression: beta reduce
+                                let reduced =
+                                    self.beta_reduce_multi(func, &[line_expr, acc.clone()])?;
+                                acc = self.eval_concrete(&reduced)?;
+                            }
+                        }
+                    }
+                    Ok(Some(acc))
                 } else {
                     Ok(None)
                 }

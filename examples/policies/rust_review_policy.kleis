@@ -1,85 +1,22 @@
 // Rust Code Review Policy — Formal Coding Standards
 //
+// String-based checks: pattern matching for clippy, style, and error handling.
+// Structural checks: AST-based analysis via rust_parser.kleis for context-aware
+//   safety, cleanliness, security, SQL injection, naming, docs, and more.
+// Z3 structures: formal axioms (SafeCode, CleanCode, SecureCode, SqlSafe).
+//
 // Each check_* function receives source code as a string and returns
 // "pass" or "fail: <reason>".
 //
 // Usage: kleis review-mcp --policy examples/policies/rust_review_policy.kleis
 
-// --- Safety ---
-
-define check_no_unwrap(source) =
-    if contains(source, ".unwrap()") then "fail: contains .unwrap() — use ? or .expect() with a message"
-    else "pass"
-
-define check_no_unsafe(source) =
-    if contains(source, "unsafe {") then "fail: contains unsafe block"
-    else if contains(source, "unsafe{") then "fail: contains unsafe block"
-    else "pass"
-
-define check_no_panic(source) =
-    if contains(source, "panic!(") then "fail: contains panic!() — return Result instead"
-    else "pass"
-
-// --- Quality ---
-
-define check_no_println(source) =
-    if contains(source, "println!(") then "fail: contains println!() — use eprintln!, log macros, or tracing"
-    else "pass"
-
-define check_no_todo(source) =
-    if contains(source, "todo!(") then "fail: contains todo!() — complete the implementation"
-    else "pass"
-
-define check_no_dbg(source) =
-    if contains(source, "dbg!(") then "fail: contains dbg!() — remove debug macros"
-    else "pass"
-
-// --- Security ---
-
-define check_no_hardcoded_password(source) =
-    if contains(source, "password =") then "fail: possible hardcoded password detected"
-    else if contains(source, "password:") then "fail: possible hardcoded password detected"
-    else "pass"
-
-define check_no_hardcoded_api_key(source) =
-    if contains(source, "api_key =") then "fail: possible hardcoded API key detected"
-    else if contains(source, "api_key:") then "fail: possible hardcoded API key detected"
-    else if contains(source, "API_KEY =") then "fail: possible hardcoded API key constant detected"
-    else "pass"
-
-define check_no_hardcoded_secret(source) =
-    if contains(source, "secret =") then "fail: possible hardcoded secret detected"
-    else if contains(source, "secret:") then "fail: possible hardcoded secret detected"
-    else if contains(source, "SECRET =") then "fail: possible hardcoded secret constant detected"
-    else "pass"
+import "../meta-programming/rust_parser.kleis"
 
 // --- Style ---
-
-define check_no_wildcard_import(source) =
-    if contains(source, "use *;") then "fail: wildcard import detected — be explicit"
-    else if contains(source, "::*;") then "fail: wildcard import (::*) detected — be explicit"
-    else "pass"
 
 define check_no_allow_unused(source) =
     if contains(source, "#[allow(unused)]") then "fail: #[allow(unused)] — remove dead code instead"
     else if contains(source, "#[allow(dead_code)]") then "fail: #[allow(dead_code)] — remove dead code instead"
-    else "pass"
-
-define check_no_inline_use(source) =
-    if contains(source, "{ use ") then "fail: inline use statement inside block — move imports to top of file"
-    else if contains(source, "{use ") then "fail: inline use statement inside block — move imports to top of file"
-    else if contains(source, "    use ") then "fail: indented use statement — move imports to top of file"
-    else "pass"
-
-define check_no_narrating_comments(source) =
-    if contains(source, "// Import") then "fail: narrating comment — move to README.md, code should speak for itself"
-    else if contains(source, "// Define") then "fail: narrating comment — move to README.md, code should speak for itself"
-    else if contains(source, "// Return the") then "fail: narrating comment — move to README.md, code should speak for itself"
-    else if contains(source, "// Increment") then "fail: narrating comment — move to README.md, code should speak for itself"
-    else if contains(source, "// Set the") then "fail: narrating comment — move to README.md, code should speak for itself"
-    else if contains(source, "// Create a new") then "fail: narrating comment — move to README.md, code should speak for itself"
-    else if contains(source, "// Initialize") then "fail: narrating comment — move to README.md, code should speak for itself"
-    else if contains(source, "// Handle the error") then "fail: narrating comment — move to README.md, code should speak for itself"
     else "pass"
 
 // --- Error handling ---
@@ -148,22 +85,6 @@ define check_clippy_expect_fun_call(source) =
     if contains(source, ".expect(&format!(") then "fail: clippy::expect_fun_call — use .unwrap_or_else or build msg lazily"
     else "pass"
 
-// --- SQL injection patterns ---
-
-define check_no_sql_injection(source) =
-    if and(contains(source, "format!("), contains(source, "SELECT * FROM")) then "fail: SQL query built with format! — use parameterized queries (sqlx::query!)"
-    else if and(contains(source, "format!("), contains(source, "select * from")) then "fail: SQL query built with format! — use parameterized queries (sqlx::query!)"
-    else if and(contains(source, "format!("), contains(source, "INSERT INTO")) then "fail: SQL query built with format! — use parameterized queries"
-    else if and(contains(source, "format!("), contains(source, "insert into")) then "fail: SQL query built with format! — use parameterized queries"
-    else if and(contains(source, "format!("), contains(source, "UPDATE SET")) then "fail: SQL query built with format! — use parameterized queries"
-    else if and(contains(source, "format!("), contains(source, "DELETE FROM")) then "fail: SQL query built with format! — use parameterized queries"
-    else if and(contains(source, "format!("), contains(source, "delete from")) then "fail: SQL query built with format! — use parameterized queries"
-    else if and(contains(source, "format!("), contains(source, "DROP TABLE")) then "fail: SQL query built with format! — use parameterized queries"
-    else if and(contains(source, "format!("), contains(source, "drop table")) then "fail: SQL query built with format! — use parameterized queries"
-    else if and(contains(source, ".push_str("), contains(source, "WHERE ")) then "fail: SQL string built via push_str — use parameterized queries"
-    else if and(contains(source, ".push_str("), contains(source, "where ")) then "fail: SQL string built via push_str — use parameterized queries"
-    else "pass"
-
 // --- No color emoji or decorative icons in Rust source ---
 // Unicode strings are fine; decorative emoji are not.
 
@@ -225,12 +146,7 @@ define check_no_needless_collect(source) =
     else "pass"
 
 // --- STRIDE threat model coverage ---
-// Spoofing, Tampering, Repudiation, Information disclosure, Denial of service,
-// Elevation of privilege.
 
-// Spoofing: TLS/certificate verification bypass
-// Developers who disable verification use recognizable naming patterns
-// regardless of which TLS library they use.
 define check_no_tls_bypass(source) =
     if contains(source, "insecure") then "fail: STRIDE/Spoofing — 'insecure' in code, review TLS/auth configuration"
     else if contains(source, "no_verify") then "fail: STRIDE/Spoofing — 'no_verify' pattern, TLS verification may be disabled"
@@ -239,8 +155,6 @@ define check_no_tls_bypass(source) =
     else if contains(source, "disable_tls") then "fail: STRIDE/Spoofing — TLS explicitly disabled"
     else "pass"
 
-// Information disclosure: credential logging
-// If source contains both a print/log call and a sensitive word, flag it.
 define check_no_credential_logging(source) =
     if and(contains(source, "password"), contains(source, "println!(")) then "fail: STRIDE/Disclosure — printing password to stdout"
     else if and(contains(source, "secret"), contains(source, "println!(")) then "fail: STRIDE/Disclosure — printing secret to stdout"
@@ -248,18 +162,148 @@ define check_no_credential_logging(source) =
     else if and(contains(source, "password"), contains(source, "tracing::")) then "fail: STRIDE/Disclosure — logging password via tracing"
     else "pass"
 
-// Denial of service: unbounded reads
 define check_no_unbounded_read(source) =
     if contains(source, "read_to_end(") then "fail: STRIDE/DoS — unbounded read_to_end, use take() or read with a size limit"
     else if contains(source, "read_to_string(") then "fail: STRIDE/DoS — unbounded read_to_string, use take() to limit input size"
     else "pass"
 
-// Elevation of privilege: shell/command injection
 define check_no_command_injection(source) =
     if and(contains(source, "Command::new("), contains(source, "format!(")) then "fail: STRIDE/EoP — Command::new with format!, possible shell injection"
     else if contains(source, ".arg(format!(") then "fail: STRIDE/EoP — command arg built with format!, validate and sanitize input"
     else "pass"
 
+// =============================================================================
+// Context-Aware Structural Checks (AST-based)
+// =============================================================================
+
+// --- Sub-checks: named rule_* so the engine doesn't auto-discover them ---
+
+define rule_wildcard_imports(c: Crate) : String =
+    let bad = non_test_wildcard_uses(c) in
+    let names = wildcard_use_names(bad) in
+    if eq(names, "") then ""
+    else concat("wildcard import outside test module: ", names)
+
+define rule_narrating_line_comments(c: Crate) : String =
+    let bad = has_narrating_line_comment(crate_comments(c)) in
+    if eq(bad, "") then ""
+    else concat("narrating comment on ", bad)
+
+define rule_pub_fn_docs(c: Crate) : String =
+    let fns = filter_non_test_fns(crate_functions(c)) in
+    let missing = pub_fns_missing_docs(fns, crate_comments(c)) in
+    if eq(missing, "") then ""
+    else concat("pub fn missing doc comment: ", missing)
+
+define rule_param_count(c: Crate) : String =
+    let fns = filter_non_test_fns(crate_functions(c)) in
+    let bad = fns_with_too_many_params(fns, 5) in
+    if eq(bad, "") then ""
+    else concat("too many parameters (>5): ", bad)
+
+define rule_function_count(c: Crate) : String =
+    if gt(count_functions(c), 50)
+    then concat("file has ", concat(intToStr(count_functions(c)), " functions (>50) — consider splitting"))
+    else ""
+
+define rule_test_presence(c: Crate) : String =
+    let fns = crate_functions(c) in
+    let non_test = filter_non_test_fns(fns) in
+    let test_count = count_test_fns(fns) in
+    let fn_count = count_fn_list(non_test) in
+    if and(gt(fn_count, 3), eq(test_count, 0))
+    then concat(intToStr(fn_count), " functions but no tests — consider adding test coverage")
+    else ""
+
+define rule_fn_naming(c: Crate) : String =
+    let fns = crate_functions(c) in
+    let bad = fns_with_bad_names(fns) in
+    if eq(bad, "") then ""
+    else concat("function names should be snake_case: ", bad)
+
+define rule_struct_naming(c: Crate) : String =
+    let structs = crate_structs(c) in
+    let bad = structs_with_bad_names(structs) in
+    if eq(bad, "") then ""
+    else concat("struct names should be PascalCase: ", bad)
+
+define check_structural(source) =
+    let c = scan(source) in
+    let f1 = rule_wildcard_imports(c) in
+    let f2 = rule_narrating_line_comments(c) in
+    let f3 = rule_pub_fn_docs(c) in
+    let f4 = rule_param_count(c) in
+    let f5 = rule_function_count(c) in
+    let f6 = rule_test_presence(c) in
+    let f7 = rule_fn_naming(c) in
+    let f8 = rule_struct_naming(c) in
+    let all = append_failure(f1,
+              append_failure(f2,
+              append_failure(f3,
+              append_failure(f4,
+              append_failure(f5,
+              append_failure(f6,
+              append_failure(f7, f8))))))) in
+    if eq(all, "") then "pass"
+    else concat("fail: ", all)
+
+// =============================================================================
+// Context-Aware Safety & Cleanliness Checks (skip test code)
+// =============================================================================
+
+define check_safe_structural(source) =
+    let prod = production_code(source) in
+    let c = scan(source) in
+    let fns = crate_functions(c) in
+    let unwrap_fns  = non_test_fns_containing(source, fns, ".unwrap()") in
+    let panic_fns   = non_test_fns_containing(source, fns, "panic!(") in
+    let unsafe_hits = if contains(prod, "unsafe {") then "unsafe block in production code" else "" in
+    let f1 = if eq(unwrap_fns, "") then "" else concat(".unwrap() in production fn: ", unwrap_fns) in
+    let f2 = if eq(panic_fns, "") then "" else concat("panic!() in production fn: ", panic_fns) in
+    let all = append_failure(f1, append_failure(f2, unsafe_hits)) in
+    if eq(all, "") then "pass"
+    else concat("fail: ", all)
+
+define check_clean_structural(source) =
+    let prod = production_code(source) in
+    let c = scan(source) in
+    let fns = crate_functions(c) in
+    let println_fns = non_test_fns_containing(source, fns, "println!(") in
+    let todo_fns    = non_test_fns_containing(source, fns, "todo!(") in
+    let dbg_fns     = non_test_fns_containing(source, fns, "dbg!(") in
+    let f1 = if eq(println_fns, "") then "" else concat("println! in production fn: ", println_fns) in
+    let f2 = if eq(todo_fns, "") then "" else concat("todo! in production fn: ", todo_fns) in
+    let f3 = if eq(dbg_fns, "") then "" else concat("dbg! in production fn: ", dbg_fns) in
+    let all = append_failure(f1, append_failure(f2, f3)) in
+    if eq(all, "") then "pass"
+    else concat("fail: ", all)
+
+define check_secure_structural(source) =
+    let prod = production_code(source) in
+    let f1 = if contains(prod, "password =") then "hardcoded password in production code" else "" in
+    let f2 = if contains(prod, "secret =") then "hardcoded secret in production code" else "" in
+    let f3 = if contains(prod, "api_key =") then "hardcoded api_key in production code" else "" in
+    let all = append_failure(f1, append_failure(f2, f3)) in
+    if eq(all, "") then "pass"
+    else concat("fail: ", all)
+
+define check_sql_safe_structural(source) =
+    let prod = production_code(source) in
+    let f1 = if and(contains(prod, "format!("), contains(prod, "SELECT"))
+             then "format! with SELECT in production code — use parameterized queries" else "" in
+    let f2 = if and(contains(prod, "format!("), contains(prod, "INSERT"))
+             then "format! with INSERT in production code — use parameterized queries" else "" in
+    let f3 = if and(contains(prod, ".push_str("), contains(prod, "WHERE"))
+             then ".push_str with WHERE in production code — use parameterized queries" else "" in
+    let f4 = if contains(prod, "sqlx::query!")
+             then "" else "" in
+    let all = append_failure(f1, append_failure(f2, f3)) in
+    if eq(all, "") then "pass"
+    else concat("fail: ", all)
+
+// =============================================================================
+// Formal Properties (Z3-verified)
+// =============================================================================
 //
 // These structures define formal properties of the coding standards.
 // The agent can verify them via the `evaluate` tool, which routes
@@ -437,4 +481,70 @@ structure SqlSafe {
 
     axiom truncate_lower_is_tainted : ∀(s : String).
         implies(contains(s, "truncate"), and(is_tainted(s), not(is_sanitized(s))))
+}
+
+// =============================================================================
+// Tests for check_structural
+// =============================================================================
+
+example "structural_clean_code" {
+    let source = "/// Add two numbers\npub fn add(a: i32, b: i32) -> i32 {\n    a + b\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_add() {\n        assert_eq!(add(1, 2), 3);\n    }\n}" in
+    out(check_structural(source))
+}
+
+example "structural_wildcard_import" {
+    let source = "use std::io::*;\npub fn process() {}" in
+    out(check_structural(source))
+}
+
+example "structural_missing_pub_docs" {
+    let source = "pub fn undocumented_public() {}\npub fn also_no_docs() {}" in
+    out(check_structural(source))
+}
+
+example "structural_too_many_params" {
+    let source = "fn too_many(a: i32, b: i32, c: i32, d: i32, e: i32, f: i32) {}" in
+    out(check_structural(source))
+}
+
+example "structural_bad_naming" {
+    let source = "fn badCamelCase() {}\nstruct lowercase {}" in
+    out(check_structural(source))
+}
+
+example "structural_narrating_comment" {
+    let source = "// Import the module\nfn helper() {}" in
+    out(check_structural(source))
+}
+
+// --- Context-aware safety/cleanliness tests ---
+
+example "safe_unwrap_in_test_is_ok" {
+    let source = "fn production() {\n    let x = compute();\n}\n\n#[test]\nfn test_it() {\n    production().unwrap();\n}" in
+    out(check_safe_structural(source))
+}
+
+example "safe_unwrap_in_production_flagged" {
+    let source = "fn production() {\n    let x = get_value().unwrap();\n}" in
+    out(check_safe_structural(source))
+}
+
+example "clean_println_in_test_is_ok" {
+    let source = "fn real_fn() {\n    compute();\n}\n\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn test_it() {\n        println!(\"debug\");\n    }\n}" in
+    out(check_clean_structural(source))
+}
+
+example "clean_println_in_production_flagged" {
+    let source = "fn real_fn() {\n    println!(\"oops\");\n}" in
+    out(check_clean_structural(source))
+}
+
+example "secure_password_in_test_ok" {
+    let source = "fn login() {\n    auth();\n}\n\n#[test]\nfn test_login() {\n    let password = \"test123\";\n}" in
+    out(check_secure_structural(source))
+}
+
+example "sql_safe_format_in_test_ok" {
+    let source = "fn query_db() {\n    sqlx::query!(\"SELECT id FROM users WHERE id = ?\");\n}\n\n#[test]\nfn test_query() {\n    let q = format!(\"SELECT * FROM test\");\n}" in
+    out(check_sql_safe_structural(source))
 }
