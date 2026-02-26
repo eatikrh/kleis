@@ -366,12 +366,32 @@ impl ReviewEngine {
         }
 
         match self.evaluator.eval_concrete(&expr) {
-            Ok(result) => EvalResult {
-                value: Some(Self::expression_to_string(&result)),
-                verified: None,
-                witness: None,
-                error: None,
-            },
+            Ok(result) => {
+                if let Expression::Operation { ref name, .. } = result {
+                    if let Some(structure_name) = self.find_owner_structure(name) {
+                        if let Some(z3_result) = self
+                            .evaluator
+                            .verify_structure_operation(&expr, &structure_name)
+                        {
+                            return Self::proposition_result(&z3_result);
+                        }
+                        return EvalResult {
+                            value: None,
+                            verified: None,
+                            witness: None,
+                            error: Some(
+                                "Z3 unavailable for structure operation verification".to_string(),
+                            ),
+                        };
+                    }
+                }
+                EvalResult {
+                    value: Some(Self::expression_to_string(&result)),
+                    verified: None,
+                    witness: None,
+                    error: None,
+                }
+            }
             Err(e) => EvalResult {
                 value: None,
                 verified: None,
@@ -379,6 +399,19 @@ impl ReviewEngine {
                 error: Some(format!("Evaluation error: {}", e)),
             },
         }
+    }
+
+    fn find_owner_structure(&self, name: &str) -> Option<String> {
+        for structure in self.evaluator.get_structures() {
+            for member in &structure.members {
+                if let crate::kleis_ast::StructureMember::Operation { name: op_name, .. } = member {
+                    if op_name == name {
+                        return Some(structure.name.clone());
+                    }
+                }
+            }
+        }
+        None
     }
 
     fn is_proposition(expr: &Expression) -> bool {

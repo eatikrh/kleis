@@ -252,8 +252,8 @@ fn test_load_real_rust_review_policy() {
     let stats = engine.stats();
 
     assert!(
-        *stats.get("check_functions").unwrap() >= 23,
-        "Expected >= 23 check functions, got {}",
+        *stats.get("check_functions").unwrap() >= 36,
+        "Expected >= 36 check functions, got {}",
         stats.get("check_functions").unwrap()
     );
 
@@ -479,9 +479,346 @@ fn test_load_real_rust_review_policy() {
     );
 }
 
-// ==========================================================================
-// Z3 Verification Tests
-// ==========================================================================
+#[test]
+fn test_check_no_separator_comments() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let bad_equals = engine.check_code("// ==============================\nfn main() {}", "rust");
+    assert!(
+        bad_equals
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_separator_comments" && !v.passed),
+        "// ==== separator should fail"
+    );
+
+    let bad_dashes = engine.check_code("// ---- section divider ----\nfn main() {}", "rust");
+    assert!(
+        bad_dashes
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_separator_comments" && !v.passed),
+        "// ---- separator should fail"
+    );
+
+    let clean = engine.check_code("fn add(a: i32, b: i32) -> i32 { a + b }", "rust");
+    assert!(
+        !clean
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_separator_comments" && !v.passed),
+        "Clean code should pass"
+    );
+}
+
+#[test]
+fn test_check_no_transmute() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let bad = engine.check_code("let x: u32 = unsafe { std::mem::transmute(f) };", "rust");
+    assert!(
+        bad.verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_transmute" && !v.passed),
+        "transmute should fail"
+    );
+
+    let clean = engine.check_code("let x: u32 = u32::from(y);", "rust");
+    assert!(
+        !clean
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_transmute" && !v.passed),
+        "From/Into should pass"
+    );
+}
+
+#[test]
+fn test_check_no_deprecated_syntax() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let bad_try = engine.check_code("let x = try!(some_fn());", "rust");
+    assert!(
+        bad_try
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_deprecated_syntax" && !v.passed),
+        "try!() should fail"
+    );
+
+    let bad_extern = engine.check_code("extern crate serde;", "rust");
+    assert!(
+        bad_extern
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_deprecated_syntax" && !v.passed),
+        "extern crate should fail"
+    );
+
+    let clean = engine.check_code("use serde::Deserialize;", "rust");
+    assert!(
+        !clean
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_deprecated_syntax" && !v.passed),
+        "use imports should pass"
+    );
+}
+
+#[test]
+fn test_check_no_hardcoded_urls() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let bad_http = engine.check_code("let url = \"http://example.com/api\";", "rust");
+    assert!(
+        bad_http
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_hardcoded_urls" && !v.passed),
+        "hardcoded http URL should fail"
+    );
+
+    let bad_https = engine.check_code("let url = \"https://api.example.com\";", "rust");
+    assert!(
+        bad_https
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_hardcoded_urls" && !v.passed),
+        "hardcoded https URL should fail"
+    );
+
+    let clean = engine.check_code("let url = config.base_url();", "rust");
+    assert!(
+        !clean
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_hardcoded_urls" && !v.passed),
+        "config-driven URL should pass"
+    );
+}
+
+#[test]
+fn test_check_no_ignored_tests() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let bad = engine.check_code("#[ignore]\n#[test]\nfn test_something() {}", "rust");
+    assert!(
+        bad.verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_ignored_tests" && !v.passed),
+        "#[ignore] should fail"
+    );
+
+    let clean = engine.check_code("#[test]\nfn test_something() { assert!(true); }", "rust");
+    assert!(
+        !clean
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_ignored_tests" && !v.passed),
+        "normal test should pass"
+    );
+}
+
+#[test]
+fn test_check_no_needless_collect() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let bad = engine.check_code(
+        "let v = items.iter().map(|x| x + 1).collect::<Vec<_>>();",
+        "rust",
+    );
+    assert!(
+        bad.verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_needless_collect" && !v.passed),
+        "collect::<Vec<>> should fail"
+    );
+
+    let clean = engine.check_code("let sum: i32 = items.iter().sum();", "rust");
+    assert!(
+        !clean
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_needless_collect" && !v.passed),
+        "iterator without collect should pass"
+    );
+}
+
+// =============================================================================
+// STRIDE Threat Model Rules
+// =============================================================================
+
+#[test]
+fn test_check_no_tls_bypass() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let bad1 = engine.check_code("let client = build_insecure_client();", "rust");
+    assert!(
+        bad1.verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_tls_bypass" && !v.passed),
+        "'insecure' should fail"
+    );
+
+    let bad2 = engine.check_code("config.no_verify = true;", "rust");
+    assert!(
+        bad2.verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_tls_bypass" && !v.passed),
+        "'no_verify' should fail"
+    );
+
+    let bad3 = engine.check_code("opts.allow_invalid_certs(true);", "rust");
+    assert!(
+        bad3.verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_tls_bypass" && !v.passed),
+        "'allow_invalid' should fail"
+    );
+
+    let clean = engine.check_code("let client = Client::builder().build()?;", "rust");
+    assert!(
+        !clean
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_tls_bypass" && !v.passed),
+        "Normal client builder should pass"
+    );
+}
+
+#[test]
+fn test_check_no_credential_logging() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let bad = engine.check_code(r#"println!("User password is: {}", password);"#, "rust");
+    assert!(
+        bad.verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_credential_logging" && !v.passed),
+        "Printing password to stdout should fail"
+    );
+
+    let clean = engine.check_code(r#"println!("User logged in: {}", username);"#, "rust");
+    assert!(
+        !clean
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_credential_logging" && !v.passed),
+        "Printing username (non-sensitive) should pass"
+    );
+}
+
+#[test]
+fn test_check_no_unbounded_read() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let bad1 = engine.check_code(
+        "let mut buf = Vec::new(); file.read_to_end(&mut buf)?;",
+        "rust",
+    );
+    assert!(
+        bad1.verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_unbounded_read" && !v.passed),
+        "read_to_end should fail"
+    );
+
+    let bad2 = engine.check_code(
+        "let mut s = String::new(); stdin.read_to_string(&mut s)?;",
+        "rust",
+    );
+    assert!(
+        bad2.verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_unbounded_read" && !v.passed),
+        "read_to_string should fail"
+    );
+
+    let clean = engine.check_code("let mut buf = [0u8; 1024]; stream.read(&mut buf)?;", "rust");
+    assert!(
+        !clean
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_unbounded_read" && !v.passed),
+        "Bounded read should pass"
+    );
+}
+
+#[test]
+fn test_check_no_command_injection() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let bad = engine.check_code(
+        r#"let out = Command::new(format!("/usr/bin/{}", user_cmd)).output()?;"#,
+        "rust",
+    );
+    assert!(
+        bad.verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_command_injection" && !v.passed),
+        "Command::new with format! should fail"
+    );
+
+    let bad2 = engine.check_code(r#"cmd.arg(format!("--name={}", user_input));"#, "rust");
+    assert!(
+        bad2.verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_command_injection" && !v.passed),
+        ".arg(format!()) should fail"
+    );
+
+    let clean = engine.check_code(
+        r#"let out = Command::new("ls").arg("-la").output()?;"#,
+        "rust",
+    );
+    assert!(
+        !clean
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_command_injection" && !v.passed),
+        "Static command should pass"
+    );
+}
 
 #[test]
 fn test_evaluate_concrete_expression() {
@@ -654,7 +991,7 @@ fn test_check_no_sql_injection() {
     let engine = ReviewEngine::load(&path).expect("load policy");
 
     let bad_format = engine.check_code(
-        "let q = format!(\"SELECT * FROM users WHERE id = {}\", id);",
+        r#"let q = format!("SELECT * FROM users WHERE id = {}", id);"#,
         "rust",
     );
     assert!(
@@ -662,11 +999,11 @@ fn test_check_no_sql_injection() {
             .verdicts
             .iter()
             .any(|v| v.rule_name == "check_no_sql_injection" && !v.passed),
-        "format! with SELECT should fail"
+        "format! with SELECT * FROM should fail"
     );
 
     let bad_insert = engine.check_code(
-        "let q = format!(\"INSERT INTO logs VALUES({})\", val);",
+        r#"let q = format!("INSERT INTO logs VALUES({})", val);"#,
         "rust",
     );
     assert!(
@@ -674,7 +1011,7 @@ fn test_check_no_sql_injection() {
             .verdicts
             .iter()
             .any(|v| v.rule_name == "check_no_sql_injection" && !v.passed),
-        "format! with INSERT should fail"
+        "format! with INSERT INTO should fail"
     );
 
     let safe_parameterized =
@@ -694,6 +1031,19 @@ fn test_check_no_sql_injection() {
             .iter()
             .any(|v| v.rule_name == "check_no_sql_injection" && !v.passed),
         "Code without SQL should pass"
+    );
+
+    let http_crud = engine.check_code(
+        r#"pub fn update(&self, id: &str) { let path = format!("{API_PATH}/{id}"); }
+           pub fn delete(&self, id: &str) { let path = format!("{API_PATH}/{id}"); }"#,
+        "rust",
+    );
+    assert!(
+        !http_crud
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_sql_injection" && !v.passed),
+        "HTTP CRUD methods with format! should NOT trigger SQL injection"
     );
 }
 
@@ -718,5 +1068,172 @@ fn test_evaluate_z3_sql_safe_taint_property() {
         result.verified,
         Some(true),
         "no_tainted_query axiom should be verified"
+    );
+}
+
+// ==========================================================================
+// Z3 Concrete String Routing Tests
+// ==========================================================================
+
+#[cfg(feature = "axiom-verification")]
+#[test]
+fn test_z3_concrete_unsafe_sql_not_sanitized() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let result =
+        engine.evaluate_expression("is_sanitized(\"DELETE FROM my_table WHERE id = user_input\")");
+    assert!(
+        result.verified.is_some(),
+        "Z3 should return a verdict, got: value={:?} error={:?}",
+        result.value,
+        result.error
+    );
+    assert_eq!(
+        result.verified,
+        Some(false),
+        "Unparameterized DELETE should NOT be sanitized"
+    );
+}
+
+#[cfg(feature = "axiom-verification")]
+#[test]
+fn test_z3_concrete_parameterized_sql_is_sanitized() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let result = engine.evaluate_expression("is_sanitized(\"SELECT * FROM users WHERE id = $1\")");
+    assert!(
+        result.verified.is_some(),
+        "Z3 should return a verdict, got: value={:?} error={:?}",
+        result.value,
+        result.error
+    );
+    assert_eq!(
+        result.verified,
+        Some(true),
+        "Parameterized SELECT ($1) should be sanitized"
+    );
+}
+
+#[cfg(feature = "axiom-verification")]
+#[test]
+fn test_z3_concrete_drop_is_tainted() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let result = engine.evaluate_expression("is_tainted(\"DROP TABLE users\")");
+    assert!(
+        result.verified.is_some(),
+        "Z3 should return a verdict, got: value={:?} error={:?}",
+        result.value,
+        result.error
+    );
+    assert_eq!(
+        result.verified,
+        Some(true),
+        "DROP TABLE should always be tainted"
+    );
+}
+
+#[cfg(feature = "axiom-verification")]
+#[test]
+fn test_z3_concrete_safe_code_with_unwrap() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let result = engine.evaluate_expression("is_safe(\"let x = val.unwrap();\")");
+    assert!(
+        result.verified.is_some(),
+        "Z3 should return a verdict, got: value={:?} error={:?}",
+        result.value,
+        result.error
+    );
+    assert_eq!(
+        result.verified,
+        Some(false),
+        "Code with .unwrap() should NOT be safe"
+    );
+}
+
+#[cfg(feature = "axiom-verification")]
+#[test]
+fn test_z3_concrete_whole_file_content() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    let fixture_path = PathBuf::from("tests/fixtures/sample_bad_code.rs");
+    if !path.exists() || !fixture_path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+    let content = std::fs::read_to_string(&fixture_path).expect("read fixture");
+
+    let expr = format!(
+        "is_safe(\"{}\")",
+        content.replace('\\', "\\\\").replace('"', "\\\"")
+    );
+    let result = engine.evaluate_expression(&expr);
+    assert!(
+        result.verified.is_some(),
+        "Z3 should return a verdict for whole file, got: value={:?} error={:?}",
+        result.value,
+        result.error
+    );
+    assert_eq!(
+        result.verified,
+        Some(false),
+        "Sample bad code with unwrap/panic should NOT be safe"
+    );
+
+    let tainted_expr = format!(
+        "is_tainted(\"{}\")",
+        content.replace('\\', "\\\\").replace('"', "\\\"")
+    );
+    let tainted_result = engine.evaluate_expression(&tainted_expr);
+    assert!(
+        tainted_result.verified.is_some(),
+        "Z3 should return a verdict for taint check, got: value={:?} error={:?}",
+        tainted_result.value,
+        tainted_result.error
+    );
+    assert_eq!(
+        tainted_result.verified,
+        Some(true),
+        "File with format!(SELECT ...) should be tainted"
+    );
+}
+
+#[cfg(feature = "axiom-verification")]
+#[test]
+fn test_z3_concrete_clean_code() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let result =
+        engine.evaluate_expression("is_clean(\"fn add(a: i32, b: i32) -> i32 { a + b }\")");
+    assert!(
+        result.verified.is_some(),
+        "Z3 should return a verdict, got: value={:?} error={:?}",
+        result.value,
+        result.error
+    );
+    assert_eq!(
+        result.verified,
+        Some(true),
+        "Clean code (no println/todo/dbg) should be clean"
     );
 }

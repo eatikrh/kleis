@@ -151,12 +151,17 @@ define check_clippy_expect_fun_call(source) =
 // --- SQL injection patterns ---
 
 define check_no_sql_injection(source) =
-    if and(contains(source, "format!("), contains(source, "SELECT")) then "fail: SQL query built with format! — use parameterized queries (sqlx::query!)"
-    else if and(contains(source, "format!("), contains(source, "INSERT")) then "fail: SQL query built with format! — use parameterized queries"
-    else if and(contains(source, "format!("), contains(source, "UPDATE")) then "fail: SQL query built with format! — use parameterized queries"
+    if and(contains(source, "format!("), contains(source, "SELECT * FROM")) then "fail: SQL query built with format! — use parameterized queries (sqlx::query!)"
+    else if and(contains(source, "format!("), contains(source, "select * from")) then "fail: SQL query built with format! — use parameterized queries (sqlx::query!)"
+    else if and(contains(source, "format!("), contains(source, "INSERT INTO")) then "fail: SQL query built with format! — use parameterized queries"
+    else if and(contains(source, "format!("), contains(source, "insert into")) then "fail: SQL query built with format! — use parameterized queries"
+    else if and(contains(source, "format!("), contains(source, "UPDATE SET")) then "fail: SQL query built with format! — use parameterized queries"
     else if and(contains(source, "format!("), contains(source, "DELETE FROM")) then "fail: SQL query built with format! — use parameterized queries"
-    else if and(contains(source, "format!("), contains(source, "DROP")) then "fail: SQL query built with format! — use parameterized queries"
-    else if and(contains(source, ".push_str("), contains(source, "WHERE")) then "fail: SQL string built via push_str — use parameterized queries"
+    else if and(contains(source, "format!("), contains(source, "delete from")) then "fail: SQL query built with format! — use parameterized queries"
+    else if and(contains(source, "format!("), contains(source, "DROP TABLE")) then "fail: SQL query built with format! — use parameterized queries"
+    else if and(contains(source, "format!("), contains(source, "drop table")) then "fail: SQL query built with format! — use parameterized queries"
+    else if and(contains(source, ".push_str("), contains(source, "WHERE ")) then "fail: SQL string built via push_str — use parameterized queries"
+    else if and(contains(source, ".push_str("), contains(source, "where ")) then "fail: SQL string built via push_str — use parameterized queries"
     else "pass"
 
 // --- No color emoji or decorative icons in Rust source ---
@@ -188,9 +193,73 @@ define check_no_emoji(source) =
     else if contains(source, "➡️") then "fail: color emoji in source — use plain text"
     else "pass"
 
-// =============================================================================
-// Formal Properties (Z3-verified)
-// =============================================================================
+define check_no_separator_comments(source) =
+    if contains(source, "// ====") then "fail: decorative separator comment — use blank lines instead"
+    else if contains(source, "// ----") then "fail: decorative separator comment — use blank lines instead"
+    else if contains(source, "// ****") then "fail: decorative separator comment — use blank lines instead"
+    else if contains(source, "// ####") then "fail: decorative separator comment — use blank lines instead"
+    else if contains(source, "// ~~~~") then "fail: decorative separator comment — use blank lines instead"
+    else "pass"
+
+define check_no_transmute(source) =
+    if contains(source, "transmute(") then "fail: std::mem::transmute — use safe conversions (From/Into, as, bytemuck)"
+    else if contains(source, "transmute_copy(") then "fail: std::mem::transmute_copy — use safe conversions"
+    else "pass"
+
+define check_no_deprecated_syntax(source) =
+    if contains(source, "try!(") then "fail: try!() macro is deprecated — use ? operator"
+    else if contains(source, "extern crate ") then "fail: extern crate is unnecessary since Rust 2018 — use 'use' imports"
+    else "pass"
+
+define check_no_hardcoded_urls(source) =
+    if contains(source, "http://") then "fail: hardcoded HTTP URL — use configuration or constants"
+    else if contains(source, "https://") then "fail: hardcoded HTTPS URL — use configuration or constants"
+    else "pass"
+
+define check_no_ignored_tests(source) =
+    if contains(source, "#[ignore]") then "fail: #[ignore] test — provide a reason or remove the test"
+    else "pass"
+
+define check_no_needless_collect(source) =
+    if contains(source, ".collect::<Vec<") then "fail: possible needless .collect() — consider using iterator directly"
+    else "pass"
+
+// --- STRIDE threat model coverage ---
+// Spoofing, Tampering, Repudiation, Information disclosure, Denial of service,
+// Elevation of privilege.
+
+// Spoofing: TLS/certificate verification bypass
+// Developers who disable verification use recognizable naming patterns
+// regardless of which TLS library they use.
+define check_no_tls_bypass(source) =
+    if contains(source, "insecure") then "fail: STRIDE/Spoofing — 'insecure' in code, review TLS/auth configuration"
+    else if contains(source, "no_verify") then "fail: STRIDE/Spoofing — 'no_verify' pattern, TLS verification may be disabled"
+    else if contains(source, "skip_verify") then "fail: STRIDE/Spoofing — 'skip_verify' pattern, TLS verification may be disabled"
+    else if contains(source, "allow_invalid") then "fail: STRIDE/Spoofing — 'allow_invalid' pattern, invalid certs/hostnames may be accepted"
+    else if contains(source, "disable_tls") then "fail: STRIDE/Spoofing — TLS explicitly disabled"
+    else "pass"
+
+// Information disclosure: credential logging
+// If source contains both a print/log call and a sensitive word, flag it.
+define check_no_credential_logging(source) =
+    if and(contains(source, "password"), contains(source, "println!(")) then "fail: STRIDE/Disclosure — printing password to stdout"
+    else if and(contains(source, "secret"), contains(source, "println!(")) then "fail: STRIDE/Disclosure — printing secret to stdout"
+    else if and(contains(source, "password"), contains(source, "log::")) then "fail: STRIDE/Disclosure — logging password"
+    else if and(contains(source, "password"), contains(source, "tracing::")) then "fail: STRIDE/Disclosure — logging password via tracing"
+    else "pass"
+
+// Denial of service: unbounded reads
+define check_no_unbounded_read(source) =
+    if contains(source, "read_to_end(") then "fail: STRIDE/DoS — unbounded read_to_end, use take() or read with a size limit"
+    else if contains(source, "read_to_string(") then "fail: STRIDE/DoS — unbounded read_to_string, use take() to limit input size"
+    else "pass"
+
+// Elevation of privilege: shell/command injection
+define check_no_command_injection(source) =
+    if and(contains(source, "Command::new("), contains(source, "format!(")) then "fail: STRIDE/EoP — Command::new with format!, possible shell injection"
+    else if contains(source, ".arg(format!(") then "fail: STRIDE/EoP — command arg built with format!, validate and sanitize input"
+    else "pass"
+
 //
 // These structures define formal properties of the coding standards.
 // The agent can verify them via the `evaluate` tool, which routes
@@ -207,6 +276,13 @@ structure SafeCode {
 
     axiom safe_no_unsafe : ∀(s : String).
         implies(is_safe(s), not(contains(s, "unsafe {")))
+
+    axiom safe_complete : ∀(s : String).
+        implies(
+            and(not(contains(s, ".unwrap()")),
+                and(not(contains(s, "panic!(")),
+                    not(contains(s, "unsafe {")))),
+            is_safe(s))
 }
 
 structure CleanCode {
@@ -220,6 +296,13 @@ structure CleanCode {
 
     axiom clean_no_dbg : ∀(s : String).
         implies(is_clean(s), not(contains(s, "dbg!(")))
+
+    axiom clean_complete : ∀(s : String).
+        implies(
+            and(not(contains(s, "println!(")),
+                and(not(contains(s, "todo!(")),
+                    not(contains(s, "dbg!(")))),
+            is_clean(s))
 }
 
 structure SecureCode {
@@ -233,6 +316,13 @@ structure SecureCode {
 
     axiom secure_no_hardcoded_api_key : ∀(s : String).
         implies(is_secure(s), not(contains(s, "api_key =")))
+
+    axiom secure_complete : ∀(s : String).
+        implies(
+            and(not(contains(s, "password =")),
+                and(not(contains(s, "secret =")),
+                    not(contains(s, "api_key =")))),
+            is_secure(s))
 }
 
 structure SqlSafe {
@@ -252,9 +342,21 @@ structure SqlSafe {
             and(is_tainted(s), not(is_sanitized(s)))
         )
 
+    axiom format_select_lower_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, "format!("), contains(s, "select")),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
     axiom format_insert_is_tainted : ∀(s : String).
         implies(
             and(contains(s, "format!("), contains(s, "INSERT")),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom format_insert_lower_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, "format!("), contains(s, "insert into")),
             and(is_tainted(s), not(is_sanitized(s)))
         )
 
@@ -263,4 +365,76 @@ structure SqlSafe {
             and(contains(s, ".push_str("), contains(s, "WHERE")),
             and(is_tainted(s), not(is_sanitized(s)))
         )
+
+    axiom concat_where_lower_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, ".push_str("), contains(s, "where")),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom placeholder_is_sanitized : ∀(s : String).
+        implies(contains(s, "$1"), is_sanitized(s))
+
+    axiom question_mark_is_sanitized : ∀(s : String).
+        implies(contains(s, "?"), is_sanitized(s))
+
+    axiom select_without_placeholder_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, "SELECT"), and(not(contains(s, "$")), not(contains(s, "?")))),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom select_lower_without_placeholder_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, "select"), and(not(contains(s, "$")), not(contains(s, "?")))),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom insert_without_placeholder_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, "INSERT"), and(not(contains(s, "$")), not(contains(s, "?")))),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom insert_lower_without_placeholder_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, "insert into"), and(not(contains(s, "$")), not(contains(s, "?")))),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom update_without_placeholder_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, "UPDATE"), and(not(contains(s, "$")), not(contains(s, "?")))),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom update_lower_without_placeholder_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, "update"), and(not(contains(s, "$")), not(contains(s, "?")))),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom delete_without_placeholder_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, "DELETE"), and(not(contains(s, "$")), not(contains(s, "?")))),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom delete_lower_without_placeholder_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, "delete from"), and(not(contains(s, "$")), not(contains(s, "?")))),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom drop_is_tainted : ∀(s : String).
+        implies(contains(s, "DROP"), and(is_tainted(s), not(is_sanitized(s))))
+
+    axiom drop_lower_is_tainted : ∀(s : String).
+        implies(contains(s, "drop table"), and(is_tainted(s), not(is_sanitized(s))))
+
+    axiom truncate_is_tainted : ∀(s : String).
+        implies(contains(s, "TRUNCATE"), and(is_tainted(s), not(is_sanitized(s))))
+
+    axiom truncate_lower_is_tainted : ∀(s : String).
+        implies(contains(s, "truncate"), and(is_tainted(s), not(is_sanitized(s))))
 }
