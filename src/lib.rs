@@ -29,6 +29,7 @@ pub mod provenance; // Track which file each definition came from
 pub mod render;
 pub mod render_editor; // EditorNode-only renderer (no Expression conversion)
 pub mod repl; // REPL implementation
+pub mod review_mcp; // Review MCP for code review via formal standards
 pub mod signature_interpreter;
 pub mod solvers; // Pluggable solver backends (Z3, CVC5, etc.)
 pub mod structure_registry;

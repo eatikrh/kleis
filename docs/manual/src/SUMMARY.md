@@ -53,6 +53,10 @@
 
 - [Interactive Theory Building](./chapters/27-theory-building.md)
 
+# Agent MCP Servers
+
+- [Agent MCP Servers](./chapters/28-agent-mcps.md)
+
 # Appendices
 
 - [Grammar Reference](./appendix/grammar.md)

@@ -44,10 +44,10 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-3af4630c.js";
+            window.path_to_searchindex_js = "searchindex-8ecbb850.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-89399ff3.js"></script>
+        <script src="toc-2fee28f3.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -8693,7 +8693,309 @@ scripts/theory.sh status  # Check
 <li><strong>Compute</strong> with numerical methods (LAPACK, ODE solver) on concrete instances</li>
 </ul>
 <p>The substrate is ready. Build on it.</p>
-<p>→ <a href="#control-systems">Previous: Control Systems</a></p>
+<p>-&gt; <a href="#control-systems">Previous: Control Systems</a> | <a href="#agent-mcp-servers">Next: Agent MCP Servers</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="agent-mcp-servers"><a class="header" href="#agent-mcp-servers">Agent MCP Servers</a></h1>
+<p>Kleis ships three Model Context Protocol (MCP) servers that turn Kleis policies
+and structures into live tools for AI agents. The previous chapter covered
+<strong>kleis-theory</strong> — the interactive theory-building server. This chapter covers
+the other two: <strong>kleis-policy</strong> for agent action gating, and <strong>kleis-review</strong>
+for code review against formal coding standards.</p>
+<p>All three share the same architecture: a Kleis <code>.kleis</code> file defines the rules,
+the Kleis evaluator loads them into memory, and the MCP server exposes them as
+JSON-RPC tools over stdio. The rules are declarative, version-controlled, and
+readable by both humans and machines.</p>
+<h2 id="kleis-policy-agent-action-gating"><a class="header" href="#kleis-policy-agent-action-gating">kleis-policy: Agent Action Gating</a></h2>
+<h3 id="the-problem"><a class="header" href="#the-problem">The Problem</a></h3>
+<p>An AI agent in an IDE can run shell commands, edit files, commit code, and push
+to remote repositories. Without guardrails, a single hallucinated command —
+<code>rm -rf /</code>, <code>git push --force main</code>, <code>chmod 777</code> — can cause real damage.</p>
+<p>Static tool-call filters are too coarse. “Never allow shell commands” is
+impractical. “Allow shell commands but deny dangerous patterns” requires
+nuance that belongs in a policy, not hardcoded in the agent runtime.</p>
+<h3 id="the-solution"><a class="header" href="#the-solution">The Solution</a></h3>
+<p>The kleis-policy MCP loads a policy file and exposes five tools:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tool</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>check_action</code></td><td>Check whether an action is allowed, get preconditions</td></tr>
+<tr><td><code>list_rules</code></td><td>Show all loaded policy rules</td></tr>
+<tr><td><code>explain_rule</code></td><td>Explain a specific rule in detail</td></tr>
+<tr><td><code>describe_schema</code></td><td>Show the full policy vocabulary</td></tr>
+<tr><td><code>evaluate</code></td><td>Evaluate any Kleis expression or verify a proposition via Z3</td></tr>
+</tbody>
+</table>
+</div>
+<p>The agent calls <code>check_action</code> before performing file edits, deletions,
+commands, git operations, and commits. The policy returns “allow” or “deny”
+plus any preconditions that must be satisfied first.</p>
+<h3 id="the-policy-file"><a class="header" href="#the-policy-file">The Policy File</a></h3>
+<p>The policy is a standard <code>.kleis</code> file using <code>define</code>, <code>if/then/else</code>,
+and built-in string functions (<code>contains</code>, <code>hasPrefix</code>, <code>hasSuffix</code>, <code>isAscii</code>):</p>
+<pre><code class="language-kleis">define check_file_delete(path) =
+    if hasPrefix(path, "src/") then "deny"
+    else if hasPrefix(path, "tests/") then "deny"
+    else if path = "Cargo.toml" then "deny"
+    else "allow"
+
+define check_run_command(cmd) =
+    if contains(cmd, "rm -rf") then "deny"
+    else if contains(cmd, "chmod 777") then "deny"
+    else if contains(cmd, "pkill") then "deny"
+    else "allow"
+
+define check_git_push(branch, force) =
+    if force = 1 then "deny"
+    else if branch = "production" then "deny"
+    else "allow"
+
+define check_git_commit(description) =
+    if isAscii(description) then "allow"
+    else "deny"
+</code></pre>
+<p>These rules are not aspirational documentation — they are enforced at runtime.
+When the agent calls <code>check_action("run_command", "rm -rf ./build")</code>, the
+server evaluates <code>check_run_command("rm -rf ./build")</code> and returns <code>"deny"</code>.</p>
+<h3 id="preconditions"><a class="header" href="#preconditions">Preconditions</a></h3>
+<p>Beyond allow/deny, the policy defines preconditions — commands or checks
+that must run before an action is permitted:</p>
+<pre><code class="language-kleis">define before_git_push(branch, force) =
+    "cargo fmt --all &amp;&amp; cargo clippy --all-targets --all-features &amp;&amp; cargo test"
+
+define before_file_edit(path) =
+    if hasPrefix(path, "src/kleis_parser") then
+        "cargo test parser &amp;&amp; cat docs/grammar/kleis_grammar_v99.ebnf"
+    else if hasPrefix(path, "src/evaluator") then "cargo test evaluator"
+    else "none"
+</code></pre>
+<p>When the agent asks to edit <code>src/kleis_parser.rs</code>, the MCP responds: “allowed,
+but first run parser tests and read the grammar.” The agent executes the
+preconditions, then proceeds with the edit.</p>
+<h3 id="z3-verification-of-the-policy-itself"><a class="header" href="#z3-verification-of-the-policy-itself">Z3 Verification of the Policy Itself</a></h3>
+<p>Because the policy is a Kleis program, its properties can be verified via Z3.
+The <code>evaluate</code> tool accepts universal quantifiers:</p>
+<pre><code>evaluate: check_git_commit("fix: resolve parsing bug")
+-&gt; "allow"
+
+evaluate: check_git_commit("initial commit")
+-&gt; "deny"
+
+evaluate: forall(d : String). implies(check_git_commit(d) = "allow", isAscii(d))
+-&gt; VERIFIED
+</code></pre>
+<p>The third query proves that <strong>every</strong> commit message the policy allows is
+ASCII. This is not a test case — it is a machine-checked proof over all
+possible inputs. If someone modifies the policy in a way that breaks this
+property, Z3 will catch it.</p>
+<h3 id="starting-the-server"><a class="header" href="#starting-the-server">Starting the Server</a></h3>
+<pre><code class="language-bash">kleis mcp --policy examples/policies/agent_policy.kleis --verbose
+</code></pre>
+<p>In Cursor, add to <code>.cursor/mcp.json</code>:</p>
+<pre><code class="language-json">"kleis-policy": {
+    "command": "/Users/you/bin/kleis",
+    "args": ["mcp", "--verbose", "--policy",
+             "/path/to/examples/policies/agent_policy.kleis"]
+}
+</code></pre>
+<hr>
+<h2 id="kleis-review-code-review-via-formal-standards"><a class="header" href="#kleis-review-code-review-via-formal-standards">kleis-review: Code Review via Formal Standards</a></h2>
+<h3 id="the-problem-1"><a class="header" href="#the-problem-1">The Problem</a></h3>
+<p>Code reviews catch two categories of issues:</p>
+<ol>
+<li>
+<p><strong>Mechanical</strong> — <code>.unwrap()</code> in production code, wildcard imports, emoji
+in source files, <code>Result&lt;_, String&gt;</code> instead of typed errors. These are
+team conventions that reviewers enforce inconsistently depending on who
+reviews the MR and how tired they are.</p>
+</li>
+<li>
+<p><strong>Architectural</strong> — “should this be a middleware or a per-handler check?”
+These require understanding and judgment.</p>
+</li>
+</ol>
+<p>Linters handle syntax. AI agents handle architecture. But the mechanical
+layer — team conventions, hard-won lessons, project-specific standards —
+falls through the cracks. It lives in people’s heads, gets enforced
+inconsistently, and slows down every review.</p>
+<h3 id="the-solution-1"><a class="header" href="#the-solution-1">The Solution</a></h3>
+<p>The kleis-review MCP loads a coding standards file and exposes five tools:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tool</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>check_code</code></td><td>Check a source code snippet against all standards</td></tr>
+<tr><td><code>check_file</code></td><td>Check a file on disk against all standards</td></tr>
+<tr><td><code>list_rules</code></td><td>List all loaded coding standard rules</td></tr>
+<tr><td><code>explain_rule</code></td><td>Explain a specific rule in detail</td></tr>
+<tr><td><code>describe_standards</code></td><td>Show the full schema of loaded standards</td></tr>
+</tbody>
+</table>
+</div>
+<p>Each <code>check_*</code> function in the policy receives source code as a string and
+returns <code>"pass"</code> or <code>"fail: &lt;reason&gt;"</code>. The engine runs all rules against
+the input and returns a per-rule verdict.</p>
+<h3 id="the-standards-file"><a class="header" href="#the-standards-file">The Standards File</a></h3>
+<p>The standards file is a <code>.kleis</code> file where each rule is a <code>define</code> function.
+Here is a representative sample:</p>
+<pre><code class="language-kleis">// Safety
+define check_no_unwrap(source) =
+    if contains(source, ".unwrap()") then
+        "fail: contains .unwrap() — use ? or .expect() with a message"
+    else "pass"
+
+// Error handling
+define check_no_result_string(source) =
+    if contains(source, "Result&lt;(), String&gt;") then
+        "fail: Result&lt;(), String&gt; — use thiserror for typed errors"
+    else "pass"
+
+// Clippy patterns
+define check_clippy_len_zero(source) =
+    if contains(source, ".len() == 0") then
+        "fail: clippy::len_zero — use .is_empty() instead"
+    else if contains(source, ".len() &gt; 0") then
+        "fail: clippy::len_zero — use !.is_empty() instead"
+    else "pass"
+
+// Style
+define check_no_emoji(source) =
+    if contains(source, "rocket_emoji") then
+        "fail: color emoji in source — use plain text"
+    else "pass"
+</code></pre>
+<p>A full policy covers safety (unwrap, unsafe, panic), quality (println, todo,
+dbg), security (hardcoded passwords, API keys, secrets), style (wildcard
+imports, narrating comments, inline use statements), error handling
+(Result&lt;_, String&gt;, clippy suppressions), and clippy <code>-D warnings</code> patterns
+(ptr_arg, len_zero, bool_comparison, redundant_clone).</p>
+<h3 id="running-a-review"><a class="header" href="#running-a-review">Running a Review</a></h3>
+<p>The agent calls <code>check_file</code> with a path:</p>
+<pre><code>check_file: { "path": "src/evaluator.rs" }
+
+-&gt; Code Review: src/evaluator.rs — 15 passed, 10 failed (out of 25 checks)
+
+   FAIL  check_no_unwrap — contains .unwrap() — use ? or .expect()
+   FAIL  check_no_panic — contains panic!() — return Result instead
+   FAIL  check_no_println — contains println!() — use eprintln! or tracing
+   FAIL  check_no_unsafe — contains unsafe block
+   FAIL  check_no_result_string — Result&lt;(), String&gt; — use thiserror
+   FAIL  check_no_clippy_suppression — fix the lint instead of suppressing
+   FAIL  check_clippy_ptr_arg — use &amp;str instead of &amp;String
+   FAIL  check_no_wildcard_import — wildcard import (::*) — be explicit
+   FAIL  check_no_inline_use — indented use — move imports to top of file
+   FAIL  check_no_narrating_comments — code should speak for itself
+   PASS  (15 other rules)
+</code></pre>
+<p>Or <code>check_code</code> with a snippet for in-flight review during development:</p>
+<pre><code>check_code: { "source": "fn greet(name: &amp;String) { println!(\"hi\"); }" }
+
+-&gt; 2 failures:
+   check_clippy_ptr_arg: use &amp;str instead of &amp;String
+   check_no_println: use eprintln!, log macros, or tracing
+</code></pre>
+<h3 id="real-results"><a class="header" href="#real-results">Real Results</a></h3>
+<p>We ran the policy against two Rust codebases:</p>
+<p><strong>Kleis</strong> (12 core source files):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Metric</th><th>Value</th></tr>
+</thead>
+<tbody>
+<tr><td>Files checked</td><td>12</td></tr>
+<tr><td>Passed clean</td><td>1</td></tr>
+<tr><td>Total violations</td><td>71</td></tr>
+<tr><td>Top violations</td><td><code>.unwrap()</code> (8 files), <code>println!</code> (9 files), wildcard imports (9 files)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>A sample codebase</strong> (37 source files):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Metric</th><th>Value</th></tr>
+</thead>
+<tbody>
+<tr><td>Files checked</td><td>37</td></tr>
+<tr><td>Passed clean</td><td>12</td></tr>
+<tr><td>Total violations</td><td>70</td></tr>
+<tr><td>Top violations</td><td><code>.unwrap()</code> (17 files), inline use (15 files)</td></tr>
+<tr><td>Emoji violations</td><td>0</td></tr>
+<tr><td>Clippy suppressions</td><td>0</td></tr>
+</tbody>
+</table>
+</div>
+<p>The tool immediately distinguished the two codebases by maturity. The sample
+codebase had zero emoji and zero clippy suppressions — exactly the discipline
+expected from a production CLI tool. Its main debt was <code>.unwrap()</code> calls,
+which is common in CLI applications where panicking on bad input is acceptable.</p>
+<h3 id="adding-new-rules"><a class="header" href="#adding-new-rules">Adding New Rules</a></h3>
+<p>When a pattern bites you in production, add a rule:</p>
+<pre><code class="language-kleis">define check_no_expect_fun_call(source) =
+    if contains(source, ".expect(&amp;format!(") then
+        "fail: clippy::expect_fun_call — use .unwrap_or_else or build msg lazily"
+    else "pass"
+</code></pre>
+<p>No tooling changes needed. The engine discovers all <code>check_*</code> functions
+automatically on startup. Update the file, restart the MCP, and the new rule
+is live.</p>
+<h3 id="starting-the-server-1"><a class="header" href="#starting-the-server-1">Starting the Server</a></h3>
+<pre><code class="language-bash">kleis review-mcp --policy examples/policies/rust_review_policy.kleis --verbose
+</code></pre>
+<p>In Cursor, add to <code>.cursor/mcp.json</code>:</p>
+<pre><code class="language-json">"kleis-review": {
+    "command": "/Users/you/bin/kleis",
+    "args": ["review-mcp", "--verbose", "--policy",
+             "/path/to/examples/policies/rust_review_policy.kleis"]
+}
+</code></pre>
+<hr>
+<h2 id="the-three-mcps-together"><a class="header" href="#the-three-mcps-together">The Three MCPs Together</a></h2>
+<p>The three servers cover different stages of the development workflow:</p>
+<pre><code>kleis-policy          kleis-review          kleis-theory
+     |                     |                     |
+     v                     v                     v
+"Can I do this?"    "Is this code good?"   "Is this math correct?"
+     |                     |                     |
+  Action gating       Code standards       Theory building
+  before editing       during editing       during research
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Server</th><th>Policy file</th><th>Convention</th><th>Tools</th></tr>
+</thead>
+<tbody>
+<tr><td>kleis-policy</td><td><code>agent_policy.kleis</code></td><td><code>check_*</code> returns “allow”/“deny”</td><td>5</td></tr>
+<tr><td>kleis-review</td><td><code>rust_review_policy.kleis</code></td><td><code>check_*</code> returns “pass”/“fail: reason”</td><td>5</td></tr>
+<tr><td>kleis-theory</td><td>(none — builds interactively)</td><td><code>submit_*</code>, <code>evaluate</code>, <code>save_theory</code></td><td>9</td></tr>
+</tbody>
+</table>
+</div>
+<p>All three are subcommands of the same <code>kleis</code> binary. One build, one install,
+three servers:</p>
+<pre><code class="language-bash">./scripts/build-kleis.sh
+# Installs to ~/bin/kleis and ~/.cargo/bin/kleis
+# All three MCPs are ready
+</code></pre>
+<h3 id="shared-architecture"><a class="header" href="#shared-architecture">Shared Architecture</a></h3>
+<p>Each MCP server follows the same pattern:</p>
+<ol>
+<li><strong>Load</strong> — Parse the <code>.kleis</code> file, build an evaluator with all definitions</li>
+<li><strong>Serve</strong> — Listen on stdin for JSON-RPC 2.0 messages</li>
+<li><strong>Evaluate</strong> — For each tool call, evaluate the corresponding Kleis function</li>
+<li><strong>Respond</strong> — Return structured JSON results to the agent</li>
+</ol>
+<p>The evaluator is built once at startup. Each tool call is a function evaluation
+against the loaded definitions. No compilation, no network calls, no disk I/O
+per check. This is why reviews of large files complete in milliseconds.</p>
+<hr>
+<p>-&gt; <a href="#interactive-theory-building">Previous: Interactive Theory Building</a></p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="appendix-a-grammar-reference"><a class="header" href="#appendix-a-grammar-reference">Appendix A: Grammar Reference</a></h1>
 <p>This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.97).</p>
