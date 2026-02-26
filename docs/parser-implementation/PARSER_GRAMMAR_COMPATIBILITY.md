@@ -1,7 +1,7 @@
 # Kleis Parser vs Formal Grammar Compatibility
 
-**Date:** January 1, 2026  
-**Formal Grammar:** Kleis v0.96 (Named Arguments for Plotting)  
+**Date:** January 1, 2026 (updated Feb 26, 2026)  
+**Formal Grammar:** Kleis v0.99 (mature)  
 **Parser Implementation:** `src/kleis_parser.rs`  
 **Branch:** `main`
 
@@ -9,12 +9,11 @@
 
 ## TL;DR
 
-✅ **Parser implements ~80% of formal grammar v0.96, with complete algebraic type system including calculus operators and named arguments for plotting**
+✅ **The Kleis grammar is mature at v0.99. The parser implements the full grammar.**
 
-**Coverage:** ~80% of formal grammar (prefix operators more complete than previously documented)  
-**Purpose:** Complete algebraic type system with theorem proving, calculus, generic constraints, inheritance, and compositional structures  
-**Status:** Phase 1, 2, 3, 4 COMPLETE! Grammar v0.7 with type aliases, parenthesized types, calculus operators, functions in structures, where clauses, nested structures, extends, and Z3 integration all working  
-**Tests:** 521+ passing unit tests + 17 round-trip tests - ALL RIGOROUS ✅
+**Coverage:** Grammar is mature — all major features implemented  
+**Status:** Quantifiers, pattern matching, let bindings, lambdas, data types, example blocks, imports, and/or/not, big operators (Σ/Π/∫/lim), named arguments, parametric types in quantifiers — all working  
+**Tests:** 850+ passing tests
 
 ---
 
@@ -1109,7 +1108,7 @@ This is **sufficient for:**
 
 - **[Kleis Grammar v0.96](../grammar/kleis_grammar_v096.md)** - Complete formal specification (CURRENT)
 - **[Kleis Grammar v0.6](../grammar/archive/kleis_grammar_v06.md)** - Historical specification
-- **[Parser Status](KLEIS_PARSER_STATUS.md)** - Implementation details
+- **[Parser Status](../archive/parser-implementation-KLEIS_PARSER_STATUS.md)** - Implementation details (archived, historical)
 - **[ADR-007](../adr/adr-007-bootstrap-grammar.md)** - Bootstrap strategy (~30% → gradual expansion)
 - **[ADR-015](../adr/adr-015-text-as-source-of-truth.md)** - Why we need Kleis text parser
 

@@ -491,7 +491,7 @@ This is why text representation matters for document collaboration.
 ## References
 
 ### Design Documents
-- [content-editing-paradigm.md](../notation/content-editing-paradigm.md) - Design discussion
+- [content-editing-paradigm.md](../archive/notation/content-editing-paradigm.md) - Design discussion (archived)
 - [notation-mapping-tests.md](../notation/notation-mapping-tests.md) - Test cases
 - [notation-poc-tests.md](../notation/notation-poc-tests.md) - Validation tests
 

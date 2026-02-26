@@ -232,7 +232,7 @@ struct IncrementalChecker {
 | Occurs check | ✅ | ✅ | ✅ Complete |
 | Constraint solving | ✅ | ✅ | ✅ Complete |
 | Generalization | ✅ | ⚠️ Partial | ⚠️ Type::ForAll exists but not used |
-| Let-polymorphism | ✅ | ❌ No let yet | ⚠️ Need let in grammar first |
+| Let-polymorphism | ✅ | ✅ `let` in grammar (v0.99) | ⚠️ Full generalization still partial |
 | Type classes | ✅ | 🔄 Building (ADR-016) | 🔄 In progress |
 | Incremental | IDE only | ❌ No | ⚠️ Future work |
 
@@ -283,7 +283,7 @@ fn infer_operation(&mut self, name: &str, args: &[Expression]) {
 - Occurs check ✅
 - Constraint solving ✅
 
-**Only missing:** Full generalization (∀) - but that's for let-polymorphism which we haven't added to grammar yet.
+**Only missing:** Full generalization (∀) — `let` is now in the grammar (v0.99), so this is an inference engine task, not a grammar gap.
 
 ### Are we doing Incremental Checking like Haskell?
 
@@ -366,7 +366,7 @@ The core algorithm is correct. What we're adding (ADR-016) is:
 
 1. ✅ **COMPLETE (Dec 9):** Extend with structures (ADR-016) - StructureRegistry implemented!
 2. ✅ **COMPLETE (Dec 9):** Connect structure registry to HM inference - Fully integrated!
-3. ⬜ **Next:** Add let-polymorphism (needs `let` keyword in grammar)
+3. ⬜ **Next:** Add let-polymorphism (`let` is in grammar v0.99; inference engine needs generalization)
 4. ⬜ **Later:** Add incremental checking (IDE feature)
 
 **Dec 9 Update:** Items 1 & 2 completed with:
@@ -400,7 +400,7 @@ The core algorithm is correct. What we're adding (ADR-016) is:
 - ✅ True user extensibility (custom structures work without code changes)
 
 **What's still missing:**
-- Generalization (∀) - needs let-polymorphism in grammar
+- Generalization (∀) — `let` is in grammar; inference engine needs full generalization support
 - Incremental checking - IDE feature for later
 
 **Status:** ✅ **Proper Hindley-Milner implementation with full extensibility!**  

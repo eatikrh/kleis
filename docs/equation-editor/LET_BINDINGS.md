@@ -261,7 +261,7 @@ Kleis follows the **ML/Haskell tradition** of pure, expression-based let binding
 
 ## Grammar (EBNF)
 
-From `docs/grammar/kleis_grammar_v08.ebnf`:
+From `docs/grammar/kleis_grammar_v08.ebnf` (historical; current grammar is v0.99):
 
 ```ebnf
 // v0.8: Let binding supports full patterns

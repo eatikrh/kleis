@@ -2,10 +2,10 @@
 
 **Date:** December 6, 2025  
 **Status:** Design Discussion (led to ADR-015)  
-**Formal Decision:** [ADR-015: Text as Source of Truth](../adr/adr-015-text-as-source-of-truth.md)  
-**Related:** Grammar v0.3, Equation Editor, Notebook System
+**Formal Decision:** [ADR-015: Text as Source of Truth](../../adr/adr-015-text-as-source-of-truth.md)  
+**Related:** Grammar v0.3 (historical; grammar is now v0.99), Equation Editor, Notebook System
 
-> **Note:** This document captures the design discussion. For the formal decisions, see [ADR-015](../adr/adr-015-text-as-source-of-truth.md).
+> **Note:** This document captures the design discussion. For the formal decisions, see [ADR-015](../../adr/adr-015-text-as-source-of-truth.md).
 
 ---
 
@@ -196,7 +196,7 @@ The visual editor becomes a **type annotation tool**:
 
 ## Design Decisions → See ADR-015
 
-**The formal decisions are documented in [ADR-015: Text as Source of Truth](../adr/adr-015-text-as-source-of-truth.md).**
+**The formal decisions are documented in [ADR-015: Text as Source of Truth](../../adr/adr-015-text-as-source-of-truth.md).**
 
 This section captures the design discussion that led to those decisions.
 
@@ -270,5 +270,5 @@ Require explicit forms in text. Visual display can use traditional notation.
 
 ## Test Cases
 
-See [notation-mapping-tests.md](notation-mapping-tests.md) for specific test cases validating the one-to-one mapping hypothesis.
+See [notation-mapping-tests.md](../../notation/notation-mapping-tests.md) for specific test cases validating the one-to-one mapping hypothesis.
 
