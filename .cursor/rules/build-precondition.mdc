@@ -1,0 +1,11 @@
+---
+globs: 
+alwaysApply: true
+---
+# Build precondition
+
+Always build Kleis using `./scripts/build-kleis.sh`, never with raw `cargo build`.
+
+The build script handles Z3 header detection, artifact cleanup, and installs
+the binary to `~/bin/kleis` and `~/.cargo/bin/kleis` so the LSP extension and
+MCP servers pick up the latest version.

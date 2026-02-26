@@ -7,12 +7,12 @@
 use crate::ast::Expression;
 use crate::evaluator::{AssertResult, Evaluator};
 use crate::kleis_ast::{Program, StructureMember, TopLevel};
-use crate::kleis_parser::{parse_kleis_program, KleisParser};
+use crate::kleis_parser::{parse_kleis_program_with_file, KleisParser};
 use crate::pretty_print::PrettyPrinter;
 use crate::solvers::backend::Witness;
 use serde_json::Value;
-use std::collections::HashMap;
-use std::path::PathBuf;
+use std::collections::{HashMap, HashSet};
+use std::path::{Path, PathBuf};
 
 /// Result of checking code against a single rule
 #[derive(Debug, Clone)]
@@ -76,11 +76,23 @@ impl ReviewEngine {
             )
         })?;
 
-        let program = parse_kleis_program(&source)
+        let canonical = policy_path.canonicalize().map_err(|e| {
+            format!(
+                "Cannot resolve policy path '{}': {}",
+                policy_path.display(),
+                e
+            )
+        })?;
+        let file_path_str = canonical.to_string_lossy().to_string();
+
+        let program = parse_kleis_program_with_file(&source, &file_path_str)
             .map_err(|e| format!("Review policy parse error: {}", e.message))?;
 
         let mut evaluator = Evaluator::new();
-        evaluator.load_program(&program)?;
+        let mut loaded_files = HashSet::new();
+        loaded_files.insert(canonical.clone());
+        load_imports_recursive(&program, &canonical, &mut evaluator, &mut loaded_files)?;
+        evaluator.load_program_with_file(&program, Some(canonical))?;
 
         let rules = Self::extract_rules(&program);
 
@@ -209,6 +221,31 @@ impl ReviewEngine {
             verdicts,
             summary,
         }
+    }
+
+    /// Check a file on disk against all `check_*` rules.
+    ///
+    /// Validates the path (non-empty, exists, is a file, is readable text)
+    /// before delegating to `check_code`.
+    pub fn check_file(&self, path: &str, language: &str) -> Result<ReviewResult, String> {
+        if path.is_empty() {
+            return Err("'path' argument is required but was empty".to_string());
+        }
+
+        let file_path = Path::new(path);
+
+        if !file_path.exists() {
+            return Err(format!("File not found: {}", path));
+        }
+
+        if file_path.is_dir() {
+            return Err(format!("'{}' is a directory, not a file", path));
+        }
+
+        let source = std::fs::read_to_string(file_path)
+            .map_err(|e| format!("Cannot read file '{}': {}", path, e))?;
+
+        Ok(self.check_code(&source, language))
     }
 
     fn is_pass(result: &Expression) -> bool {
@@ -492,4 +529,47 @@ impl ReviewEngine {
             other => format!("{:?}", other),
         }
     }
+}
+
+/// Recursively load imports for a program.
+fn load_imports_recursive(
+    program: &Program,
+    file_path: &Path,
+    evaluator: &mut Evaluator,
+    loaded_files: &mut HashSet<PathBuf>,
+) -> Result<(), String> {
+    let base_dir = file_path.parent().unwrap_or(Path::new("."));
+
+    for item in &program.items {
+        if let TopLevel::Import(import_path_str) = item {
+            let import_path = Path::new(import_path_str);
+            let resolved = if import_path.is_absolute() {
+                import_path.to_path_buf()
+            } else if import_path_str.starts_with("stdlib/") {
+                PathBuf::from(import_path_str)
+            } else {
+                base_dir.join(import_path)
+            };
+
+            let canonical = resolved
+                .canonicalize()
+                .map_err(|e| format!("Cannot resolve import '{}': {}", import_path_str, e))?;
+
+            if loaded_files.contains(&canonical) {
+                continue;
+            }
+            loaded_files.insert(canonical.clone());
+
+            let source = std::fs::read_to_string(&canonical)
+                .map_err(|e| format!("Cannot read import '{}': {}", import_path_str, e))?;
+            let fp = canonical.to_string_lossy().to_string();
+            let import_program = parse_kleis_program_with_file(&source, &fp)
+                .map_err(|e| format!("Parse error in '{}': {}", import_path_str, e))?;
+
+            load_imports_recursive(&import_program, &canonical, evaluator, loaded_files)?;
+            evaluator.load_program_with_file(&import_program, Some(canonical))?;
+        }
+    }
+
+    Ok(())
 }

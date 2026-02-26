@@ -1,0 +1,1728 @@
+// ============================================================================
+// RUST STRUCTURAL PARSER IN KLEIS
+// ============================================================================
+//
+// A structural scanner for Rust source code, written in pure Kleis.
+// Extracts items, comments, attributes, and structural metrics needed
+// by the kleis-review code review engine.
+//
+// Grammar reference: https://doc.rust-lang.org/reference/grammar.html
+// Data type names follow the official Rust grammar productions.
+//
+// Usage:
+//   :load examples/meta-programming/rust_parser.kleis
+//   :eval scan("fn main() { println!(\"hello\"); }")
+//
+// ============================================================================
+
+import "stdlib/prelude.kleis"
+
+// ============================================================================
+// PART 1: Data Types — Following Official Rust Grammar
+// ============================================================================
+
+// Visibility → pub | pub(crate) | pub(self) | pub(super) | pub(in SimplePath)
+// Reference: https://doc.rust-lang.org/reference/visibility-and-privacy.html
+data Visibility =
+    Private
+  | Pub
+  | PubCrate
+  | PubSuper
+  | PubSelf
+  | PubIn(path: String)
+
+// Comment tokens from the Rust lexer grammar:
+//   LINE_COMMENT     → // (~[/ !] | //) ~LF*
+//   OUTER_LINE_DOC   → /// (~/ ~LF*)?
+//   INNER_LINE_DOC   → //! ~LF*
+//   BLOCK_COMMENT    → /* ... */
+//   OUTER_BLOCK_DOC  → /** ... */
+//   INNER_BLOCK_DOC  → /*! ... */
+data Comment =
+    LineComment(text: String, line: ℤ)
+  | OuterLineDoc(text: String, line: ℤ)
+  | InnerLineDoc(text: String, line: ℤ)
+  | BlockComment(text: String, line: ℤ)
+  | OuterBlockDoc(text: String, line: ℤ)
+  | InnerBlockDoc(text: String, line: ℤ)
+
+// Attribute grammar:
+//   OuterAttribute → # [ Attr ]
+//   InnerAttribute → # ! [ Attr ]
+data Attribute =
+    OuterAttr(content: String, line: ℤ)
+  | InnerAttr(content: String, line: ℤ)
+
+// UseDeclaration → use UseTree ;
+// UseTree → (SimplePath? ::)? *
+//         | (SimplePath? ::)? { (UseTree (, UseTree)* ,?)? }
+//         | SimplePath (as (IDENTIFIER | _))?
+data UseTree =
+    UsePath(path: String)
+  | UseWildcard(path: String)
+  | UseGroup(prefix: String, items: List(String))
+  | UseAlias(path: String, alias: String)
+
+data UseDeclaration =
+    UseDecl(vis: Visibility, tree: UseTree, line: ℤ)
+
+// Function → FunctionQualifiers fn IDENTIFIER GenericParams? ...
+// FunctionQualifiers → const? async? ItemSafety? (extern Abi?)?
+data Function =
+    FnDecl(
+        vis: Visibility,
+        is_async: Bool,
+        is_const: Bool,
+        is_unsafe: Bool,
+        name: String,
+        params_text: String,
+        return_type: String,
+        body_line_count: ℤ,
+        max_nesting: ℤ,
+        attrs: List(Attribute),
+        line: ℤ
+    )
+
+// Module → unsafe? mod IDENTIFIER ; | unsafe? mod IDENTIFIER { ... }
+data Module =
+    ModDecl(
+        vis: Visibility,
+        is_unsafe: Bool,
+        name: String,
+        is_inline: Bool,
+        attrs: List(Attribute),
+        line: ℤ
+    )
+
+// Struct → struct IDENTIFIER ...
+data StructDecl =
+    Struct(vis: Visibility, name: String, line: ℤ)
+
+// Enumeration → enum IDENTIFIER ...
+data EnumDecl =
+    Enum(vis: Visibility, name: String, line: ℤ)
+
+// Trait → unsafe? trait IDENTIFIER ...
+data TraitDecl =
+    Trait(vis: Visibility, name: String, is_unsafe: Bool, line: ℤ)
+
+// Implementation → InherentImpl | TraitImpl
+data ImplBlock =
+    InherentImpl(target: String, line: ℤ)
+  | TraitImpl(trait_name: String, target: String, line: ℤ)
+
+// Item → OuterAttribute* (VisItem | MacroItem)
+// VisItem → Visibility? (Module | ExternCrate | UseDeclaration | Function | ...)
+data Item =
+    ItemUse(decl: UseDeclaration)
+  | ItemFn(decl: Function)
+  | ItemMod(decl: Module)
+  | ItemStruct(decl: StructDecl)
+  | ItemEnum(decl: EnumDecl)
+  | ItemTrait(decl: TraitDecl)
+  | ItemImpl(decl: ImplBlock)
+  | ItemConst(name: String, vis: Visibility, line: ℤ)
+  | ItemStatic(name: String, vis: Visibility, line: ℤ)
+  | ItemType(name: String, vis: Visibility, line: ℤ)
+  | ItemMacroCall(name: String, line: ℤ)
+
+// Crate → InnerAttribute* Item*
+data Crate =
+    Crate(
+        items: List(Item),
+        comments: List(Comment),
+        line_count: ℤ
+    )
+
+// ============================================================================
+// PART 2: String Helpers
+// ============================================================================
+
+// splitLines, countLines, readFile, nthLine, trim, trimLeft, trimRight are
+// Rust-native built-ins for O(n) performance on large files.
+// They auto-detect newline format (real \n vs escaped two-char \n).
+
+// Kept for backward compatibility — thin wrappers around built-ins
+define split_lines(s: String) : List(String) = splitLines(s)
+define count_lines(s: String) : ℤ = countLines(s)
+
+// Skip leading whitespace — uses built-in trimLeft for O(n) performance
+define trim_left(s: String) : String = trimLeft(s)
+
+// Count leading whitespace characters
+define indent_depth(s: String) : ℤ =
+    strlen(s) - strlen(trimLeft(s))
+
+// Extract word starting at position (up to space, paren, brace, angle bracket, or end)
+define read_word(s: String) : String =
+    read_word_acc(s, "")
+
+define read_word_acc(s: String, acc: String) : String =
+    if le(strlen(s), 0) then acc
+    else let c = charAt(s, 0) in
+        if or(eq(c, " "), or(eq(c, "\t"), or(eq(c, "("), or(eq(c, ")"),
+           or(eq(c, "{"), or(eq(c, "}"), or(eq(c, "<"), or(eq(c, ">"),
+           or(eq(c, ";"), or(eq(c, ","), eq(c, ":")))))))))))
+        then acc
+        else read_word_acc(substr(s, 1, strlen(s) - 1), concat(acc, c))
+
+// Skip past a word and any following whitespace
+define skip_word(s: String) : String =
+    let w = read_word(s) in
+    trim_left(substr(s, strlen(w), strlen(s) - strlen(w)))
+
+// ============================================================================
+// PART 3: Comment Classifier
+// ============================================================================
+//
+// From Rust grammar:
+//   INNER_LINE_DOC  → //! ~[LF CR]*
+//   OUTER_LINE_DOC  → /// (~/ ~[LF CR]*)?
+//   LINE_COMMENT    → // (~[/ ! LF] | //) ~LF* | //
+//
+// Precedence: //! > /// > //
+
+define classify_comment(line: String, line_num: ℤ) : Comment =
+    let trimmed = trim_left(line) in
+    if hasPrefix(trimmed, "//!")
+    then InnerLineDoc(substr(trimmed, 3, strlen(trimmed) - 3), line_num)
+    else if hasPrefix(trimmed, "///")
+    then
+        // "////" is a LINE_COMMENT per grammar, not OUTER_LINE_DOC
+        if and(gt(strlen(trimmed), 3), eq(charAt(trimmed, 3), "/"))
+        then LineComment(substr(trimmed, 2, strlen(trimmed) - 2), line_num)
+        else OuterLineDoc(substr(trimmed, 3, strlen(trimmed) - 3), line_num)
+    else if hasPrefix(trimmed, "//")
+    then LineComment(substr(trimmed, 2, strlen(trimmed) - 2), line_num)
+    else LineComment(line, line_num)
+
+// Check if a trimmed line starts a line comment
+define is_comment_line(trimmed: String) : Bool =
+    hasPrefix(trimmed, "//")
+
+// Check if a trimmed line starts a block comment
+define is_block_comment_start(trimmed: String) : Bool =
+    hasPrefix(trimmed, "/*")
+
+// Classify block comment opener
+//   INNER_BLOCK_DOC → /*! ... */
+//   OUTER_BLOCK_DOC → /** ... */ (but /***/ is BLOCK_COMMENT)
+//   BLOCK_COMMENT   → /* ... */
+define classify_block_comment_start(trimmed: String, line_num: ℤ) : Comment =
+    if hasPrefix(trimmed, "/*!")
+    then InnerBlockDoc(trimmed, line_num)
+    else if hasPrefix(trimmed, "/**")
+    then
+        // /***/ is a regular BLOCK_COMMENT per grammar
+        if eq(trimmed, "/***/")
+        then BlockComment(trimmed, line_num)
+        else OuterBlockDoc(trimmed, line_num)
+    else BlockComment(trimmed, line_num)
+
+// ============================================================================
+// PART 4: Visibility Parser
+// ============================================================================
+//
+// Visibility → pub | pub(crate) | pub(self) | pub(super) | pub(in SimplePath)
+
+define parse_visibility(s: String) : Visibility =
+    let trimmed = trim_left(s) in
+    if hasPrefix(trimmed, "pub(crate)") then PubCrate
+    else if hasPrefix(trimmed, "pub(super)") then PubSuper
+    else if hasPrefix(trimmed, "pub(self)") then PubSelf
+    else if hasPrefix(trimmed, "pub(in ") then
+        let after = substr(trimmed, 7, strlen(trimmed) - 7) in
+        let path = read_word(after) in
+        PubIn(path)
+    else if hasPrefix(trimmed, "pub") then Pub
+    else Private
+
+// Skip past the visibility prefix, returning the rest
+define skip_visibility(s: String) : String =
+    let trimmed = trim_left(s) in
+    if hasPrefix(trimmed, "pub(crate)") then trim_left(substr(trimmed, 10, strlen(trimmed) - 10))
+    else if hasPrefix(trimmed, "pub(super)") then trim_left(substr(trimmed, 10, strlen(trimmed) - 10))
+    else if hasPrefix(trimmed, "pub(self)") then trim_left(substr(trimmed, 9, strlen(trimmed) - 9))
+    else if hasPrefix(trimmed, "pub(in ") then
+        let rest = substr(trimmed, 7, strlen(trimmed) - 7) in
+        let path = read_word(rest) in
+        // skip "pub(in path)"
+        let after_path = substr(rest, strlen(path), strlen(rest) - strlen(path)) in
+        let after_close = trim_left(after_path) in
+        if hasPrefix(after_close, ")") then trim_left(substr(after_close, 1, strlen(after_close) - 1))
+        else after_close
+    else if hasPrefix(trimmed, "pub ") then trim_left(substr(trimmed, 4, strlen(trimmed) - 4))
+    else if hasPrefix(trimmed, "pub\t") then trim_left(substr(trimmed, 4, strlen(trimmed) - 4))
+    else trimmed
+
+// ============================================================================
+// PART 5: Attribute Parser
+// ============================================================================
+//
+// OuterAttribute → # [ Attr ]
+// InnerAttribute → # ! [ Attr ]
+
+define is_outer_attribute(trimmed: String) : Bool =
+    and(hasPrefix(trimmed, "#["), not(hasPrefix(trimmed, "#![")))
+
+define is_inner_attribute(trimmed: String) : Bool =
+    hasPrefix(trimmed, "#![")
+
+define parse_attribute(trimmed: String, line_num: ℤ) : Attribute =
+    if hasPrefix(trimmed, "#![")
+    then
+        // Extract content between #![ and ]
+        let inner = substr(trimmed, 3, strlen(trimmed) - 3) in
+        let content = if hasSuffix(inner, "]")
+                      then substr(inner, 0, strlen(inner) - 1)
+                      else inner in
+        InnerAttr(content, line_num)
+    else if hasPrefix(trimmed, "#[")
+    then
+        let inner = substr(trimmed, 2, strlen(trimmed) - 2) in
+        let content = if hasSuffix(inner, "]")
+                      then substr(inner, 0, strlen(inner) - 1)
+                      else inner in
+        OuterAttr(content, line_num)
+    else OuterAttr(trimmed, line_num)
+
+// Check if an attribute indicates a test context
+define is_test_attr(attr: Attribute) : Bool =
+    match attr {
+        OuterAttr(content, ln) => eq(content, "test")
+      | InnerAttr(content, ln) => false
+    }
+
+define is_ignore_attr(attr: Attribute) : Bool =
+    match attr {
+        OuterAttr(content, ln) => eq(content, "ignore")
+      | InnerAttr(content, ln) => false
+    }
+
+define is_cfg_test_attr(attr: Attribute) : Bool =
+    match attr {
+        OuterAttr(content, ln) => eq(content, "cfg(test)")
+      | InnerAttr(content, ln) => false
+    }
+
+define is_allow_attr(attr: Attribute) : Bool =
+    match attr {
+        OuterAttr(content, ln) => hasPrefix(content, "allow(")
+      | InnerAttr(content, ln) => hasPrefix(content, "allow(")
+    }
+
+// ============================================================================
+// PART 6: UseDeclaration Parser
+// ============================================================================
+//
+// UseDeclaration → use UseTree ;
+// UseTree → (SimplePath? ::)? *
+//         | (SimplePath? ::)? { ... }
+//         | SimplePath (as (IDENTIFIER | _))?
+
+define is_use_line(after_vis: String) : Bool =
+    hasPrefix(after_vis, "use ")
+
+define parse_use_tree(use_text: String) : UseTree =
+    // use_text is everything after "use " up to ";"
+    let path = if hasSuffix(use_text, ";")
+               then substr(use_text, 0, strlen(use_text) - 1)
+               else use_text in
+    let trimmed = trim_left(path) in
+    if hasSuffix(trimmed, "::*")
+    then UseWildcard(substr(trimmed, 0, strlen(trimmed) - 3))
+    else if contains(trimmed, "::{")
+    then
+        let brace_idx = indexOf(trimmed, "::{") in
+        let prefix = substr(trimmed, 0, brace_idx) in
+        UseGroup(prefix, Nil)
+    else if contains(trimmed, " as ")
+    then
+        let as_idx = indexOf(trimmed, " as ") in
+        let original = substr(trimmed, 0, as_idx) in
+        let alias = substr(trimmed, as_idx + 4, strlen(trimmed) - as_idx - 4) in
+        UseAlias(original, trim_left(alias))
+    else UsePath(trimmed)
+
+define parse_use_declaration(line: String, vis: Visibility, line_num: ℤ) : UseDeclaration =
+    let after_vis = skip_visibility(line) in
+    // Skip "use "
+    let use_text = substr(after_vis, 4, strlen(after_vis) - 4) in
+    UseDecl(vis, parse_use_tree(use_text), line_num)
+
+// ============================================================================
+// PART 7: Function Signature Parser
+// ============================================================================
+//
+// Function → FunctionQualifiers fn IDENTIFIER GenericParams? ( ... ) ReturnType? ...
+// FunctionQualifiers → const? async? ItemSafety? (extern Abi?)?
+
+data FnQualifiers =
+    FnQual(is_const: Bool, is_async: Bool, is_unsafe: Bool, is_extern: Bool)
+
+define parse_fn_qualifiers(s: String) : FnQualifiers =
+    parse_fn_qual_acc(s, FnQual(false, false, false, false))
+
+define parse_fn_qual_acc(s: String, acc: FnQualifiers) : FnQualifiers =
+    let trimmed = trim_left(s) in
+    let word = read_word(trimmed) in
+    match acc {
+        FnQual(c, a, u, e) =>
+            if eq(word, "const") then parse_fn_qual_acc(skip_word(trimmed), FnQual(true, a, u, e))
+            else if eq(word, "async") then parse_fn_qual_acc(skip_word(trimmed), FnQual(c, true, u, e))
+            else if eq(word, "unsafe") then parse_fn_qual_acc(skip_word(trimmed), FnQual(c, a, true, e))
+            else if eq(word, "extern") then FnQual(c, a, u, true)
+            else acc
+    }
+
+// Skip past qualifiers to find "fn"
+define skip_to_fn(s: String) : String =
+    let trimmed = trim_left(s) in
+    let word = read_word(trimmed) in
+    if eq(word, "fn") then trimmed
+    else if or(eq(word, "const"), or(eq(word, "async"), or(eq(word, "unsafe"), eq(word, "extern"))))
+    then skip_to_fn(skip_word(trimmed))
+    else if hasPrefix(trimmed, "\"") then
+        // extern "C" — skip the ABI string and continue
+        let after_quote = substr(trimmed, 1, strlen(trimmed) - 1) in
+        let close_idx = indexOf(after_quote, "\"") in
+        if ge(close_idx, 0)
+        then skip_to_fn(trim_left(substr(after_quote, close_idx + 1, strlen(after_quote) - close_idx - 1)))
+        else trimmed
+    else trimmed
+
+define is_fn_line(after_vis: String) : Bool =
+    let at_fn = skip_to_fn(after_vis) in
+    hasPrefix(at_fn, "fn ")
+
+// Extract function name: the IDENTIFIER after "fn"
+define extract_fn_name(after_vis: String) : String =
+    let at_fn = skip_to_fn(after_vis) in
+    // Skip "fn "
+    let after_fn = trim_left(substr(at_fn, 2, strlen(at_fn) - 2)) in
+    read_word(after_fn)
+
+// Extract parameter text between outermost parens
+define extract_params(line: String) : String =
+    let paren_idx = indexOf(line, "(") in
+    if lt(paren_idx, 0) then ""
+    else
+        let after_open = substr(line, paren_idx + 1, strlen(line) - paren_idx - 1) in
+        extract_until_close_paren(after_open, 1, "")
+
+define extract_until_close_paren(s: String, depth: ℤ, acc: String) : String =
+    if le(strlen(s), 0) then acc
+    else let c = charAt(s, 0) in
+        let rest = substr(s, 1, strlen(s) - 1) in
+        if and(eq(c, ")"), eq(depth, 1)) then acc
+        else if eq(c, "(") then extract_until_close_paren(rest, depth + 1, concat(acc, c))
+        else if eq(c, ")") then extract_until_close_paren(rest, depth - 1, concat(acc, c))
+        else extract_until_close_paren(rest, depth, concat(acc, c))
+
+// Extract return type: text after ") ->" up to "{" or "where" or ";"
+define extract_return_type(line: String) : String =
+    let arrow_idx = indexOf(line, "->") in
+    if lt(arrow_idx, 0) then ""
+    else
+        let after_arrow = trim_left(substr(line, arrow_idx + 2, strlen(line) - arrow_idx - 2)) in
+        read_until_body_start(after_arrow, "")
+
+define read_until_body_start(s: String, acc: String) : String =
+    if le(strlen(s), 0) then trim_right_acc(acc, "")
+    else let c = charAt(s, 0) in
+        if or(eq(c, "{"), eq(c, ";"))
+        then trim_right_acc(acc, "")
+        else if and(eq(c, "w"), hasPrefix(s, "where"))
+        then trim_right_acc(acc, "")
+        else read_until_body_start(substr(s, 1, strlen(s) - 1), concat(acc, c))
+
+// Trim trailing whitespace (simple version)
+define trim_right_acc(s: String, result: String) : String =
+    if le(strlen(s), 0) then result
+    else let c = charAt(s, strlen(s) - 1) in
+        if or(eq(c, " "), eq(c, "\t"))
+        then trim_right_acc(substr(s, 0, strlen(s) - 1), result)
+        else s
+
+// ============================================================================
+// PART 8: Module Parser
+// ============================================================================
+//
+// Module → unsafe? mod IDENTIFIER ; | unsafe? mod IDENTIFIER { ... }
+
+define is_mod_line(after_vis: String) : Bool =
+    or(hasPrefix(after_vis, "mod "),
+       and(hasPrefix(after_vis, "unsafe"), hasPrefix(trim_left(skip_word(after_vis)), "mod ")))
+
+define extract_mod_name(after_vis: String) : String =
+    let s = if hasPrefix(after_vis, "unsafe")
+            then trim_left(skip_word(after_vis))
+            else after_vis in
+    // Skip "mod "
+    let after_mod = trim_left(substr(s, 3, strlen(s) - 3)) in
+    read_word(after_mod)
+
+define is_mod_inline(line: String) : Bool =
+    contains(line, "{")
+
+// ============================================================================
+// PART 9: Other Item Detectors
+// ============================================================================
+
+// Struct → struct IDENTIFIER ...
+define is_struct_line(after_vis: String) : Bool =
+    hasPrefix(after_vis, "struct ")
+
+define extract_struct_name(after_vis: String) : String =
+    let after_kw = trim_left(substr(after_vis, 6, strlen(after_vis) - 6)) in
+    read_word(after_kw)
+
+// Enumeration → enum IDENTIFIER ...
+define is_enum_line(after_vis: String) : Bool =
+    hasPrefix(after_vis, "enum ")
+
+define extract_enum_name(after_vis: String) : String =
+    let after_kw = trim_left(substr(after_vis, 4, strlen(after_vis) - 4)) in
+    read_word(after_kw)
+
+// Trait → unsafe? trait IDENTIFIER ...
+define is_trait_line(after_vis: String) : Bool =
+    or(hasPrefix(after_vis, "trait "),
+       and(hasPrefix(after_vis, "unsafe"), hasPrefix(trim_left(skip_word(after_vis)), "trait ")))
+
+define extract_trait_name(after_vis: String) : String =
+    let s = if hasPrefix(after_vis, "unsafe")
+            then trim_left(skip_word(after_vis))
+            else after_vis in
+    let after_kw = trim_left(substr(s, 5, strlen(s) - 5)) in
+    read_word(after_kw)
+
+// Implementation → impl GenericParams? Type ...
+// TraitImpl → unsafe? impl GenericParams? !? TypePath for Type ...
+define is_impl_line(after_vis: String) : Bool =
+    or(hasPrefix(after_vis, "impl "),
+       hasPrefix(after_vis, "impl<"))
+
+define extract_impl_info(after_vis: String) : ImplBlock =
+    // Skip "impl" and optional generics
+    let after_impl = trim_left(substr(after_vis, 4, strlen(after_vis) - 4)) in
+    let skipped = if eq(charAt(after_impl, 0), "<")
+                  then skip_angle_brackets(after_impl)
+                  else after_impl in
+    let trimmed = trim_left(skipped) in
+    if contains(trimmed, " for ")
+    then
+        let for_idx = indexOf(trimmed, " for ") in
+        let trait_name = substr(trimmed, 0, for_idx) in
+        let after_for = trim_left(substr(trimmed, for_idx + 5, strlen(trimmed) - for_idx - 5)) in
+        let target = read_word(after_for) in
+        TraitImpl(trait_name, target, 0)
+    else
+        let target = read_word(trimmed) in
+        InherentImpl(target, 0)
+
+// Skip past matching angle brackets (for generics)
+define skip_angle_brackets(s: String) : String =
+    if not(eq(charAt(s, 0), "<")) then s
+    else skip_angles_acc(substr(s, 1, strlen(s) - 1), 1)
+
+define skip_angles_acc(s: String, depth: ℤ) : String =
+    if le(strlen(s), 0) then ""
+    else if le(depth, 0) then s
+    else let c = charAt(s, 0) in
+        let rest = substr(s, 1, strlen(s) - 1) in
+        if eq(c, "<") then skip_angles_acc(rest, depth + 1)
+        else if eq(c, ">") then skip_angles_acc(rest, depth - 1)
+        else skip_angles_acc(rest, depth)
+
+// ConstantItem → const (IDENTIFIER | _) : Type ...
+define is_const_line(after_vis: String) : Bool =
+    and(hasPrefix(after_vis, "const "), not(hasPrefix(after_vis, "const fn")))
+
+define extract_const_name(after_vis: String) : String =
+    let after_kw = trim_left(substr(after_vis, 5, strlen(after_vis) - 5)) in
+    read_word(after_kw)
+
+// StaticItem → ItemSafety? static mut? IDENTIFIER ...
+define is_static_line(after_vis: String) : Bool =
+    hasPrefix(after_vis, "static ")
+
+define extract_static_name(after_vis: String) : String =
+    let after_kw = trim_left(substr(after_vis, 6, strlen(after_vis) - 6)) in
+    let s = if hasPrefix(after_kw, "mut ")
+            then trim_left(substr(after_kw, 3, strlen(after_kw) - 3))
+            else after_kw in
+    read_word(s)
+
+// TypeAlias → type IDENTIFIER ...
+define is_type_line(after_vis: String) : Bool =
+    hasPrefix(after_vis, "type ")
+
+define extract_type_name(after_vis: String) : String =
+    let after_kw = trim_left(substr(after_vis, 4, strlen(after_vis) - 4)) in
+    read_word(after_kw)
+
+// Macro invocation: name! or name!(
+define is_macro_line(after_vis: String) : Bool =
+    let word = read_word(after_vis) in
+    let rest = trim_left(substr(after_vis, strlen(word), strlen(after_vis) - strlen(word))) in
+    hasPrefix(rest, "!")
+
+// ============================================================================
+// PART 10: Brace Depth Counter
+// ============================================================================
+//
+// Count net brace changes in a line (for tracking scope depth).
+// Ignores braces inside string literals and comments.
+
+define count_open_braces(s: String) : ℤ =
+    count_char(s, "{", 0)
+
+define count_close_braces(s: String) : ℤ =
+    count_char(s, "}", 0)
+
+define count_char(s: String, target: String, acc: ℤ) : ℤ =
+    if le(strlen(s), 0) then acc
+    else if eq(charAt(s, 0), target) then count_char(substr(s, 1, strlen(s) - 1), target, acc + 1)
+    else count_char(substr(s, 1, strlen(s) - 1), target, acc)
+
+define brace_delta(line: String) : ℤ =
+    count_open_braces(line) - count_close_braces(line)
+
+// Maximum nesting depth within a block of source lines
+define max_nesting_in(lines: List(String), current: ℤ, max_so_far: ℤ) : ℤ =
+    match lines {
+        Nil => max_so_far
+      | Cons(line, rest) =>
+            let delta = brace_delta(line) in
+            let new_depth = current + delta in
+            let new_max = if gt(new_depth, max_so_far) then new_depth else max_so_far in
+            max_nesting_in(rest, new_depth, new_max)
+    }
+
+// ============================================================================
+// PART 11: Structural Scanner
+// ============================================================================
+//
+// Scans source line by line, producing a Crate with all items and comments.
+
+data ScanState =
+    State(
+        items: List(Item),
+        comments: List(Comment),
+        pending_attrs: List(Attribute),
+        brace_depth: ℤ,
+        in_block_comment: Bool,
+        current_line: ℤ
+    )
+
+define initial_state : ScanState =
+    State(Nil, Nil, Nil, 0, false, 1)
+
+// Main entry point: scan a Rust source string into a Crate
+// Uses the built-in foldLines for O(n) iterative processing — no recursion,
+// no stack overflow, handles 10K+ line files.
+define scan(source: String) : Crate =
+    let final_state = foldLines(scan_one_line, initial_state, source) in
+    match final_state {
+        State(items, comments, _, _, _, line_num) =>
+            Crate(rev_items(items), rev_comments(comments), line_num - 1)
+    }
+
+// Convenience: scan a file from disk
+define scan_file(path: String) : Crate =
+    scan(readFile(path))
+
+// Process each line in sequence
+define scan_lines(lines: List(String), state: ScanState) : ScanState =
+    match lines {
+        Nil => state
+      | Cons(line, rest) => scan_lines(rest, scan_one_line(line, state))
+    }
+
+// Process a single line
+define scan_one_line(line: String, state: ScanState) : ScanState =
+    match state {
+        State(items, comments, attrs, depth, in_block, line_num) =>
+            // Handle block comment continuation
+            if in_block then
+                if contains(line, "*/")
+                then State(items, comments, attrs, depth, false, line_num + 1)
+                else State(items, comments, attrs, depth, true, line_num + 1)
+            else
+                let trimmed = trim_left(line) in
+                // Empty line
+                if le(strlen(trimmed), 0)
+                then State(items, comments, attrs, depth, false, line_num + 1)
+                // Line comment
+                else if is_comment_line(trimmed)
+                then
+                    let comment = classify_comment(line, line_num) in
+                    State(items, Cons(comment, comments), attrs, depth, false, line_num + 1)
+                // Block comment start
+                else if is_block_comment_start(trimmed)
+                then
+                    let comment = classify_block_comment_start(trimmed, line_num) in
+                    let still_open = not(and(contains(trimmed, "*/"), not(eq(trimmed, "/*")))) in
+                    State(items, Cons(comment, comments), attrs, depth, still_open, line_num + 1)
+                // Inner attribute
+                else if is_inner_attribute(trimmed)
+                then
+                    let attr = parse_attribute(trimmed, line_num) in
+                    State(items, comments, Cons(attr, attrs), depth, false, line_num + 1)
+                // Outer attribute
+                else if is_outer_attribute(trimmed)
+                then
+                    let attr = parse_attribute(trimmed, line_num) in
+                    State(items, comments, Cons(attr, attrs), depth, false, line_num + 1)
+                // Item line — parse visibility then dispatch
+                else
+                    let vis = parse_visibility(trimmed) in
+                    let after_vis = skip_visibility(trimmed) in
+                    let new_depth = depth + brace_delta(line) in
+                    // Use declaration
+                    if is_use_line(after_vis)
+                    then
+                        let decl = parse_use_declaration(line, vis, line_num) in
+                        let item = ItemUse(decl) in
+                        State(Cons(item, items), comments, Nil, new_depth, false, line_num + 1)
+                    // Function
+                    else if is_fn_line(after_vis)
+                    then
+                        let quals = parse_fn_qualifiers(after_vis) in
+                        let name = extract_fn_name(after_vis) in
+                        let params = extract_params(line) in
+                        let ret = extract_return_type(line) in
+                        match quals {
+                            FnQual(c, a, u, e) =>
+                                let decl = FnDecl(vis, a, c, u, name, params, ret, 0, 0, rev_attrs(attrs), line_num) in
+                                State(Cons(ItemFn(decl), items), comments, Nil, new_depth, false, line_num + 1)
+                        }
+                    // Module
+                    else if is_mod_line(after_vis)
+                    then
+                        let name = extract_mod_name(after_vis) in
+                        let is_unsafe = hasPrefix(after_vis, "unsafe") in
+                        let inline = is_mod_inline(line) in
+                        let decl = ModDecl(vis, is_unsafe, name, inline, rev_attrs(attrs), line_num) in
+                        State(Cons(ItemMod(decl), items), comments, Nil, new_depth, false, line_num + 1)
+                    // Struct
+                    else if is_struct_line(after_vis)
+                    then
+                        let name = extract_struct_name(after_vis) in
+                        let decl = Struct(vis, name, line_num) in
+                        State(Cons(ItemStruct(decl), items), comments, Nil, new_depth, false, line_num + 1)
+                    // Enum
+                    else if is_enum_line(after_vis)
+                    then
+                        let name = extract_enum_name(after_vis) in
+                        let decl = Enum(vis, name, line_num) in
+                        State(Cons(ItemEnum(decl), items), comments, Nil, new_depth, false, line_num + 1)
+                    // Trait
+                    else if is_trait_line(after_vis)
+                    then
+                        let name = extract_trait_name(after_vis) in
+                        let is_unsafe = hasPrefix(after_vis, "unsafe") in
+                        let decl = Trait(vis, name, is_unsafe, line_num) in
+                        State(Cons(ItemTrait(decl), items), comments, Nil, new_depth, false, line_num + 1)
+                    // Impl
+                    else if is_impl_line(after_vis)
+                    then
+                        let info = extract_impl_info(after_vis) in
+                        let decl = match info {
+                            InherentImpl(t, dummy_ln) => InherentImpl(t, line_num)
+                          | TraitImpl(tr, t, dummy_ln) => TraitImpl(tr, t, line_num)
+                        } in
+                        State(Cons(ItemImpl(decl), items), comments, Nil, new_depth, false, line_num + 1)
+                    // Const
+                    else if is_const_line(after_vis)
+                    then
+                        let name = extract_const_name(after_vis) in
+                        State(Cons(ItemConst(name, vis, line_num), items), comments, Nil, new_depth, false, line_num + 1)
+                    // Static
+                    else if is_static_line(after_vis)
+                    then
+                        let name = extract_static_name(after_vis) in
+                        State(Cons(ItemStatic(name, vis, line_num), items), comments, Nil, new_depth, false, line_num + 1)
+                    // Type alias
+                    else if is_type_line(after_vis)
+                    then
+                        let name = extract_type_name(after_vis) in
+                        State(Cons(ItemType(name, vis, line_num), items), comments, Nil, new_depth, false, line_num + 1)
+                    // Macro invocation
+                    else if is_macro_line(after_vis)
+                    then
+                        let name = read_word(after_vis) in
+                        State(Cons(ItemMacroCall(name, line_num), items), comments, Nil, new_depth, false, line_num + 1)
+                    // Unrecognized line — just track brace depth
+                    else State(items, comments, attrs, new_depth, false, line_num + 1)
+    }
+
+// ============================================================================
+// PART 12: List Reversal Helpers
+// ============================================================================
+
+define rev_items(xs: List(Item)) : List(Item) =
+    rev_items_acc(xs, Nil)
+
+define rev_items_acc(xs: List(Item), acc: List(Item)) : List(Item) =
+    match xs {
+        Nil => acc
+      | Cons(h, t) => rev_items_acc(t, Cons(h, acc))
+    }
+
+define rev_comments(xs: List(Comment)) : List(Comment) =
+    rev_comments_acc(xs, Nil)
+
+define rev_comments_acc(xs: List(Comment), acc: List(Comment)) : List(Comment) =
+    match xs {
+        Nil => acc
+      | Cons(h, t) => rev_comments_acc(t, Cons(h, acc))
+    }
+
+define rev_attrs(xs: List(Attribute)) : List(Attribute) =
+    rev_attrs_acc(xs, Nil)
+
+define rev_attrs_acc(xs: List(Attribute), acc: List(Attribute)) : List(Attribute) =
+    match xs {
+        Nil => acc
+      | Cons(h, t) => rev_attrs_acc(t, Cons(h, acc))
+    }
+
+// ============================================================================
+// PART 13: Review-Oriented Query Functions
+// ============================================================================
+//
+// These operate on the parsed Crate and provide the context-aware checks
+// that string matching cannot.
+
+// --- Comment Queries ---
+
+define is_doc_comment(c: Comment) : Bool =
+    match c {
+        OuterLineDoc(text, ln) => true
+      | InnerLineDoc(text, ln) => true
+      | OuterBlockDoc(text, ln) => true
+      | InnerBlockDoc(text, ln) => true
+      | LineComment(text, ln) => false
+      | BlockComment(text, ln) => false
+    }
+
+define is_line_comment(c: Comment) : Bool =
+    match c {
+        LineComment(text, ln) => true
+      | OuterLineDoc(text, ln) => false
+      | InnerLineDoc(text, ln) => false
+      | OuterBlockDoc(text, ln) => false
+      | InnerBlockDoc(text, ln) => false
+      | BlockComment(text, ln) => false
+    }
+
+// --- Use Declaration Queries ---
+
+define is_wildcard_use(decl: UseDeclaration) : Bool =
+    match decl {
+        UseDecl(vis, tree, ln) =>
+            match tree {
+                UseWildcard(p) => true
+              | UsePath(p) => false
+              | UseGroup(p, items) => false
+              | UseAlias(p, alias) => false
+            }
+    }
+
+define use_line(decl: UseDeclaration) : ℤ =
+    match decl {
+        UseDecl(vis, tree, ln) => ln
+    }
+
+define use_path(decl: UseDeclaration) : String =
+    match decl {
+        UseDecl(vis, tree, ln) =>
+            match tree {
+                UsePath(p) => p
+              | UseWildcard(p) => p
+              | UseGroup(p, items) => p
+              | UseAlias(p, alias) => p
+            }
+    }
+
+// Check if a use is "use super::*;" (idiomatic in test modules)
+define is_super_wildcard(decl: UseDeclaration) : Bool =
+    match decl {
+        UseDecl(vis, tree, ln) =>
+            match tree {
+                UseWildcard(path) => eq(path, "super")
+              | UsePath(p) => false
+              | UseGroup(p, items) => false
+              | UseAlias(p, alias) => false
+            }
+    }
+
+// --- Function Queries ---
+
+define fn_name(f: Function) : String =
+    match f {
+        FnDecl(vis, ia, ic, iu, name, params, ret, blc, mn, attrs, ln) => name
+    }
+
+define fn_is_test(f: Function) : Bool =
+    match f {
+        FnDecl(vis, ia, ic, iu, name, params, ret, blc, mn, attrs, ln) =>
+            any_test_attr(attrs)
+    }
+
+define any_test_attr(attrs: List(Attribute)) : Bool =
+    match attrs {
+        Nil => false
+      | Cons(a, rest) => if is_test_attr(a) then true else any_test_attr(rest)
+    }
+
+define fn_is_ignored(f: Function) : Bool =
+    match f {
+        FnDecl(vis, ia, ic, iu, name, params, ret, blc, mn, attrs, ln) =>
+            any_ignore_attr(attrs)
+    }
+
+define any_ignore_attr(attrs: List(Attribute)) : Bool =
+    match attrs {
+        Nil => false
+      | Cons(a, rest) => if is_ignore_attr(a) then true else any_ignore_attr(rest)
+    }
+
+// --- Module Queries ---
+
+define mod_name(m: Module) : String =
+    match m {
+        ModDecl(vis, iu, name, il, attrs, ln) => name
+    }
+
+define mod_is_test(m: Module) : Bool =
+    match m {
+        ModDecl(vis, iu, name, il, attrs, ln) =>
+            or(eq(name, "tests"), any_cfg_test_attr(attrs))
+    }
+
+define any_cfg_test_attr(attrs: List(Attribute)) : Bool =
+    match attrs {
+        Nil => false
+      | Cons(a, rest) => if is_cfg_test_attr(a) then true else any_cfg_test_attr(rest)
+    }
+
+// --- Crate-Level Queries ---
+
+// Get all functions from the crate
+define crate_functions(c: Crate) : List(Function) =
+    match c {
+        Crate(items, comments, lc) => extract_functions(items)
+    }
+
+define extract_functions(items: List(Item)) : List(Function) =
+    match items {
+        Nil => Nil
+      | Cons(item, rest) =>
+            match item {
+                ItemFn(f) => Cons(f, extract_functions(rest))
+              | ItemUse(u) => extract_functions(rest)
+              | ItemMod(m) => extract_functions(rest)
+              | ItemStruct(s) => extract_functions(rest)
+              | ItemEnum(e) => extract_functions(rest)
+              | ItemTrait(t) => extract_functions(rest)
+              | ItemImpl(i) => extract_functions(rest)
+              | ItemConst(n, v, l) => extract_functions(rest)
+              | ItemStatic(n, v, l) => extract_functions(rest)
+              | ItemType(n, v, l) => extract_functions(rest)
+              | ItemMacroCall(n, l) => extract_functions(rest)
+            }
+    }
+
+// Get all use declarations from the crate
+define crate_uses(c: Crate) : List(UseDeclaration) =
+    match c {
+        Crate(items, comments, lc) => extract_uses(items)
+    }
+
+define extract_uses(items: List(Item)) : List(UseDeclaration) =
+    match items {
+        Nil => Nil
+      | Cons(item, rest) =>
+            match item {
+                ItemUse(u) => Cons(u, extract_uses(rest))
+              | ItemFn(f) => extract_uses(rest)
+              | ItemMod(m) => extract_uses(rest)
+              | ItemStruct(s) => extract_uses(rest)
+              | ItemEnum(e) => extract_uses(rest)
+              | ItemTrait(t) => extract_uses(rest)
+              | ItemImpl(i) => extract_uses(rest)
+              | ItemConst(n, v, l) => extract_uses(rest)
+              | ItemStatic(n, v, l) => extract_uses(rest)
+              | ItemType(n, v, l) => extract_uses(rest)
+              | ItemMacroCall(n, l) => extract_uses(rest)
+            }
+    }
+
+// Get all modules from the crate
+define crate_modules(c: Crate) : List(Module) =
+    match c {
+        Crate(items, comments, lc) => extract_modules(items)
+    }
+
+define extract_modules(items: List(Item)) : List(Module) =
+    match items {
+        Nil => Nil
+      | Cons(item, rest) =>
+            match item {
+                ItemMod(m) => Cons(m, extract_modules(rest))
+              | ItemFn(f) => extract_modules(rest)
+              | ItemUse(u) => extract_modules(rest)
+              | ItemStruct(s) => extract_modules(rest)
+              | ItemEnum(e) => extract_modules(rest)
+              | ItemTrait(t) => extract_modules(rest)
+              | ItemImpl(i) => extract_modules(rest)
+              | ItemConst(n, v, l) => extract_modules(rest)
+              | ItemStatic(n, v, l) => extract_modules(rest)
+              | ItemType(n, v, l) => extract_modules(rest)
+              | ItemMacroCall(n, l) => extract_modules(rest)
+            }
+    }
+
+// Get all comments from the crate
+define crate_comments(c: Crate) : List(Comment) =
+    match c {
+        Crate(items, comments, lc) => comments
+    }
+
+// Count items by kind
+define count_functions(c: Crate) : ℤ =
+    length_fn(crate_functions(c))
+
+define length_fn(xs: List(Function)) : ℤ =
+    match xs {
+        Nil => 0
+      | Cons(_, rest) => 1 + length_fn(rest)
+    }
+
+define count_uses(c: Crate) : ℤ =
+    length_use(crate_uses(c))
+
+define length_use(xs: List(UseDeclaration)) : ℤ =
+    match xs {
+        Nil => 0
+      | Cons(_, rest) => 1 + length_use(rest)
+    }
+
+// Find wildcard imports NOT in test modules
+define non_test_wildcard_uses(c: Crate) : List(UseDeclaration) =
+    let uses = crate_uses(c) in
+    let test_mods = crate_modules(c) in
+    let has_test_mod = any_test_module(test_mods) in
+    filter_wildcard_uses(uses)
+
+define any_test_module(mods: List(Module)) : Bool =
+    match mods {
+        Nil => false
+      | Cons(m, rest) => if mod_is_test(m) then true else any_test_module(rest)
+    }
+
+define filter_wildcard_uses(uses: List(UseDeclaration)) : List(UseDeclaration) =
+    match uses {
+        Nil => Nil
+      | Cons(u, rest) =>
+            if and(is_wildcard_use(u), not(is_super_wildcard(u)))
+            then Cons(u, filter_wildcard_uses(rest))
+            else filter_wildcard_uses(rest)
+    }
+
+// ============================================================================
+// PART 14: Review-Oriented Query Helpers
+// ============================================================================
+// These functions support context-aware code review rules.
+
+// --- Function accessors ---
+
+define fn_is_pub(f: Function) : Bool =
+    match f {
+        FnDecl(Pub, ia, ic, iu, name, params, ret, blc, mn, attrs, ln) => true
+      | FnDecl(vis, ia, ic, iu, name, params, ret, blc, mn, attrs, ln) => false
+    }
+
+define fn_params_text(f: Function) : String =
+    match f {
+        FnDecl(vis, ia, ic, iu, name, params, ret, blc, mn, attrs, ln) => params
+    }
+
+define fn_return_type(f: Function) : String =
+    match f {
+        FnDecl(vis, ia, ic, iu, name, params, ret, blc, mn, attrs, ln) => ret
+    }
+
+define fn_line(f: Function) : ℤ =
+    match f {
+        FnDecl(vis, ia, ic, iu, name, params, ret, blc, mn, attrs, ln) => ln
+    }
+
+define fn_attrs(f: Function) : List(Attribute) =
+    match f {
+        FnDecl(vis, ia, ic, iu, name, params, ret, blc, mn, attrs, ln) => attrs
+    }
+
+// Count parameters: count commas in params_text + 1, but 0 for empty or self-only
+define count_params(f: Function) : ℤ =
+    let p = fn_params_text(f) in
+    if eq(p, "") then 0
+    else if eq(p, "&self") then 0
+    else if eq(p, "&mut self") then 0
+    else if eq(p, "self") then 0
+    else count_commas(p) + 1
+
+define count_commas(s: String) : ℤ =
+    let idx = indexOf(s, ",") in
+    if lt(idx, 0) then 0
+    else 1 + count_commas(substr(s, idx + 1, strlen(s) - idx - 1))
+
+// --- Struct accessors ---
+
+define struct_name(s: StructDecl) : String =
+    match s {
+        Struct(vis, name, ln) => name
+    }
+
+define struct_is_pub(s: StructDecl) : Bool =
+    match s {
+        Struct(Pub, name, ln) => true
+      | Struct(vis, name, ln) => false
+    }
+
+define struct_line(s: StructDecl) : ℤ =
+    match s {
+        Struct(vis, name, ln) => ln
+    }
+
+// --- Extract structs from crate ---
+
+define crate_structs(c: Crate) : List(StructDecl) =
+    match c {
+        Crate(items, comments, lc) => extract_structs(items)
+    }
+
+define extract_structs(items: List(Item)) : List(StructDecl) =
+    match items {
+        Nil => Nil
+      | Cons(item, rest) =>
+            match item {
+                ItemStruct(s) => Cons(s, extract_structs(rest))
+              | ItemFn(f) => extract_structs(rest)
+              | ItemUse(u) => extract_structs(rest)
+              | ItemMod(m) => extract_structs(rest)
+              | ItemEnum(e) => extract_structs(rest)
+              | ItemTrait(t) => extract_structs(rest)
+              | ItemImpl(i) => extract_structs(rest)
+              | ItemConst(n, v, l) => extract_structs(rest)
+              | ItemStatic(n, v, l) => extract_structs(rest)
+              | ItemType(n, v, l) => extract_structs(rest)
+              | ItemMacroCall(n, l) => extract_structs(rest)
+            }
+    }
+
+// --- Doc comment proximity check ---
+// A pub item on line N is documented if an OuterLineDoc exists on line N-1
+// (or N-2 for items preceded by attributes)
+
+define has_doc_before(line_num: ℤ, comments: List(Comment)) : Bool =
+    any_doc_near(line_num, comments)
+
+define any_doc_near(line_num: ℤ, comments: List(Comment)) : Bool =
+    match comments {
+        Nil => false
+      | Cons(c, rest) =>
+            if is_doc_near_line(c, line_num) then true
+            else any_doc_near(line_num, rest)
+    }
+
+define is_doc_near_line(c: Comment, target: ℤ) : Bool =
+    match c {
+        OuterLineDoc(text, ln) => eq(ln, target - 1)
+      | OuterBlockDoc(text, ln) => eq(ln, target - 1)
+      | LineComment(text, ln) => false
+      | InnerLineDoc(text, ln) => false
+      | BlockComment(text, ln) => false
+      | InnerBlockDoc(text, ln) => false
+    }
+
+// --- Filtering helpers ---
+
+define filter_pub_fns(fns: List(Function)) : List(Function) =
+    match fns {
+        Nil => Nil
+      | Cons(f, rest) =>
+            if fn_is_pub(f) then Cons(f, filter_pub_fns(rest))
+            else filter_pub_fns(rest)
+    }
+
+define filter_non_test_fns(fns: List(Function)) : List(Function) =
+    match fns {
+        Nil => Nil
+      | Cons(f, rest) =>
+            if fn_is_test(f) then filter_non_test_fns(rest)
+            else Cons(f, filter_non_test_fns(rest))
+    }
+
+define count_test_fns(fns: List(Function)) : ℤ =
+    match fns {
+        Nil => 0
+      | Cons(f, rest) =>
+            if fn_is_test(f) then 1 + count_test_fns(rest)
+            else count_test_fns(rest)
+    }
+
+define count_fn_list(fns: List(Function)) : ℤ =
+    match fns {
+        Nil => 0
+      | Cons(f, rest) => 1 + count_fn_list(rest)
+    }
+
+define head_fn(fns: List(Function)) : Function =
+    match fns {
+        Cons(f, rest) => f
+    }
+
+define head_struct(structs: List(StructDecl)) : StructDecl =
+    match structs {
+        Cons(s, rest) => s
+    }
+
+// --- Naming convention checks ---
+
+define has_uppercase(s: String) : Bool =
+    has_uppercase_acc(s, 0)
+
+define has_uppercase_acc(s: String, i: ℤ) : Bool =
+    if ge(i, strlen(s)) then false
+    else let c = charAt(s, i) in
+        if or(or(or(or(or(contains("ABCDEFGHIJKLM", c), contains("NOPQRSTUVWXYZ", c)), false), false), false), false)
+        then true
+        else has_uppercase_acc(s, i + 1)
+
+define starts_with_uppercase(s: String) : Bool =
+    if le(strlen(s), 0) then false
+    else let c = charAt(s, 0) in
+        contains("ABCDEFGHIJKLMNOPQRSTUVWXYZ", c)
+
+// --- Collecting names for error messages ---
+
+define pub_fns_missing_docs(fns: List(Function), comments: List(Comment)) : String =
+    pub_fns_missing_docs_acc(fns, comments, "")
+
+define pub_fns_missing_docs_acc(fns: List(Function), comments: List(Comment), acc: String) : String =
+    match fns {
+        Nil => acc
+      | Cons(f, rest) =>
+            if and(fn_is_pub(f), not(has_doc_before(fn_line(f), comments)))
+            then let new_acc = append_name(acc, name_at(fn_name(f), fn_line(f))) in
+                pub_fns_missing_docs_acc(rest, comments, new_acc)
+            else pub_fns_missing_docs_acc(rest, comments, acc)
+    }
+
+define fns_with_too_many_params(fns: List(Function), limit: ℤ) : String =
+    fns_too_many_params_acc(fns, limit, "")
+
+define fns_too_many_params_acc(fns: List(Function), limit: ℤ, acc: String) : String =
+    match fns {
+        Nil => acc
+      | Cons(f, rest) =>
+            if gt(count_params(f), limit)
+            then let new_acc = append_name(acc, name_at(fn_name(f), fn_line(f))) in
+                fns_too_many_params_acc(rest, limit, new_acc)
+            else fns_too_many_params_acc(rest, limit, acc)
+    }
+
+define fns_with_bad_names(fns: List(Function)) : String =
+    fns_bad_names_acc(fns, "")
+
+define fns_bad_names_acc(fns: List(Function), acc: String) : String =
+    match fns {
+        Nil => acc
+      | Cons(f, rest) =>
+            if has_uppercase(fn_name(f))
+            then let new_acc = append_name(acc, name_at(fn_name(f), fn_line(f))) in
+                fns_bad_names_acc(rest, new_acc)
+            else fns_bad_names_acc(rest, acc)
+    }
+
+define structs_with_bad_names(structs: List(StructDecl)) : String =
+    structs_bad_names_acc(structs, "")
+
+define structs_bad_names_acc(structs: List(StructDecl), acc: String) : String =
+    match structs {
+        Nil => acc
+      | Cons(s, rest) =>
+            if not(starts_with_uppercase(struct_name(s)))
+            then let new_acc = append_name(acc, name_at(struct_name(s), struct_line(s))) in
+                structs_bad_names_acc(rest, new_acc)
+            else structs_bad_names_acc(rest, acc)
+    }
+
+// --- Narrating comment filter (line comments only, not doc comments) ---
+
+define has_narrating_line_comment(comments: List(Comment)) : String =
+    narrating_comment_acc(comments, "")
+
+define narrating_comment_acc(comments: List(Comment), acc: String) : String =
+    match comments {
+        Nil => acc
+      | Cons(c, rest) =>
+            if is_line_comment(c)
+            then let text = comment_text(c) in
+                if is_narrating_text(text)
+                then let new_acc = append_name(acc, concat("line ", intToStr(comment_line(c)))) in
+                    narrating_comment_acc(rest, new_acc)
+                else narrating_comment_acc(rest, acc)
+            else narrating_comment_acc(rest, acc)
+    }
+
+define comment_text(c: Comment) : String =
+    match c {
+        LineComment(t, ln) => t
+      | OuterLineDoc(t, ln) => t
+      | InnerLineDoc(t, ln) => t
+      | BlockComment(t, ln) => t
+      | OuterBlockDoc(t, ln) => t
+      | InnerBlockDoc(t, ln) => t
+    }
+
+define comment_line(c: Comment) : ℤ =
+    match c {
+        LineComment(t, ln) => ln
+      | OuterLineDoc(t, ln) => ln
+      | InnerLineDoc(t, ln) => ln
+      | BlockComment(t, ln) => ln
+      | OuterBlockDoc(t, ln) => ln
+      | InnerBlockDoc(t, ln) => ln
+    }
+
+define is_narrating_text(text: String) : Bool =
+    let t = trimLeft(text) in
+    or(hasPrefix(t, "Import"),
+    or(hasPrefix(t, "Define"),
+    or(hasPrefix(t, "Return the"),
+    or(hasPrefix(t, "Increment"),
+    or(hasPrefix(t, "Set the"),
+    or(hasPrefix(t, "Create a new"),
+    or(hasPrefix(t, "Initialize"),
+    or(hasPrefix(t, "Handle the error"),
+    false))))))))
+
+// --- Wildcard import names for error messages ---
+
+define wildcard_use_names(uses: List(UseDeclaration)) : String =
+    wildcard_use_names_acc(uses, "")
+
+define wildcard_use_names_acc(uses: List(UseDeclaration), acc: String) : String =
+    match uses {
+        Nil => acc
+      | Cons(u, rest) =>
+            let new_acc = append_name(acc, name_at(use_path(u), use_line(u))) in
+            wildcard_use_names_acc(rest, new_acc)
+    }
+
+// --- String accumulation helper ---
+
+define name_at(name: String, ln: ℤ) : String =
+    concat(name, concat(" (line ", concat(intToStr(ln), ")")))
+
+define append_name(acc: String, name: String) : String =
+    if eq(acc, "") then name
+    else concat(acc, concat(", ", name))
+
+define append_failure(acc: String, msg: String) : String =
+    if eq(msg, "") then acc
+    else if eq(acc, "") then msg
+    else concat(acc, concat("; ", msg))
+
+// ============================================================================
+// PART 14b: Function Body Extraction & Production Code Filtering
+// ============================================================================
+//
+// These use foldLines (Rust-native built-in) for O(N) single-pass processing.
+// They enable context-aware axiom checks that skip test code.
+
+// --- Per-function body extraction ---
+// Extracts the body text of a single function given its start line.
+
+data BodyState =
+    BS(
+        target: ℤ,
+        cur: ℤ,
+        depth: ℤ,
+        started: Bool,
+        done: Bool,
+        result: String
+    )
+
+define body_step(line: String, state: BodyState) : BodyState =
+    match state {
+        BS(target, cur, depth, started, done, result) =>
+            if done then BS(target, cur + 1, depth, started, true, result)
+            else if lt(cur, target) then BS(target, cur + 1, depth, false, false, result)
+            else
+                let delta = brace_delta(line) in
+                let new_depth = depth + delta in
+                if and(not(started), gt(new_depth, 0)) then
+                    BS(target, cur + 1, new_depth, true, false, result)
+                else if and(started, le(new_depth, 0)) then
+                    BS(target, cur + 1, new_depth, true, true, result)
+                else if started then
+                    let new_result = if eq(result, "") then line
+                                    else concat(result, concat("\n", line)) in
+                    BS(target, cur + 1, new_depth, true, false, new_result)
+                else
+                    BS(target, cur + 1, new_depth, false, false, result)
+    }
+
+define fn_body_text(source: String, f: Function) : String =
+    let start = fn_line(f) in
+    let init = BS(start, 1, 0, false, false, "") in
+    let final_state = foldLines(body_step, init, source) in
+    match final_state { BS(t, c, d, s, dn, result) => result }
+
+// --- Production code filtering ---
+// Extracts all source lines that are NOT inside test contexts (#[test]
+// functions or #[cfg(test)] modules). Uses a single foldLines pass.
+
+data ProdState =
+    PS(
+        depth: ℤ,
+        skip_depth: ℤ,
+        in_test: Bool,
+        saw_test_attr: Bool,
+        result: String
+    )
+
+define prod_step(line: String, state: ProdState) : ProdState =
+    match state {
+        PS(depth, skip_depth, in_test, saw_attr, result) =>
+            let trimmed = trimLeft(line) in
+            let delta = brace_delta(line) in
+            let new_depth = depth + delta in
+            if and(in_test, le(new_depth, skip_depth))
+            then PS(new_depth, 0, false, false, result)
+            else if in_test
+            then PS(new_depth, skip_depth, true, false, result)
+            else if and(saw_attr, gt(new_depth, depth))
+            then PS(new_depth, depth, true, false, result)
+            else if saw_attr
+            then PS(new_depth, skip_depth, false, true, result)
+            else if or(hasPrefix(trimmed, "#[test]"), hasPrefix(trimmed, "#[cfg(test)]"))
+            then
+                if gt(new_depth, depth)
+                then PS(new_depth, depth, true, false, result)
+                else PS(new_depth, depth, false, true, result)
+            else
+                let new_result = if eq(result, "") then line
+                                 else concat(result, concat("\n", line)) in
+                PS(new_depth, 0, false, false, new_result)
+    }
+
+define production_code(source: String) : String =
+    let init = PS(0, 0, false, false, "") in
+    let final_state = foldLines(prod_step, init, source) in
+    match final_state { PS(d, sd, it, sa, result) => result }
+
+// --- Check a pattern against only non-test function bodies ---
+
+define any_non_test_fn_contains(source: String, fns: List(Function), pattern: String) : Bool =
+    match fns {
+        Nil => false
+      | Cons(f, rest) =>
+            if fn_is_test(f) then any_non_test_fn_contains(source, rest, pattern)
+            else
+                let body = fn_body_text(source, f) in
+                if contains(body, pattern) then true
+                else any_non_test_fn_contains(source, rest, pattern)
+    }
+
+// --- Collect names of non-test functions whose body contains a pattern ---
+
+define non_test_fns_containing(source: String, fns: List(Function), pattern: String) : String =
+    ntfc_acc(source, fns, pattern, "")
+
+define ntfc_acc(source: String, fns: List(Function), pattern: String, acc: String) : String =
+    match fns {
+        Nil => acc
+      | Cons(f, rest) =>
+            if fn_is_test(f) then ntfc_acc(source, rest, pattern, acc)
+            else
+                let body = fn_body_text(source, f) in
+                if contains(body, pattern)
+                then ntfc_acc(source, rest, pattern, append_name(acc, name_at(fn_name(f), fn_line(f))))
+                else ntfc_acc(source, rest, pattern, acc)
+    }
+
+// ============================================================================
+// PART 15: Verified Properties
+// ============================================================================
+
+structure RustParserProperties {
+    // Comment classification follows grammar precedence
+    axiom inner_doc_priority :
+        match classify_comment("  //! crate docs", 1) {
+            InnerLineDoc(t, l) => true
+          | OuterLineDoc(t, l) => false
+          | LineComment(t, l) => false
+          | BlockComment(t, l) => false
+          | OuterBlockDoc(t, l) => false
+          | InnerBlockDoc(t, l) => false }
+
+    axiom outer_doc_priority :
+        match classify_comment("  /// function docs", 1) {
+            OuterLineDoc(t, l) => true
+          | InnerLineDoc(t, l) => false
+          | LineComment(t, l) => false
+          | BlockComment(t, l) => false
+          | OuterBlockDoc(t, l) => false
+          | InnerBlockDoc(t, l) => false }
+
+    axiom quad_slash_is_line_comment :
+        match classify_comment("  //// not a doc comment", 1) {
+            LineComment(t, l) => true
+          | OuterLineDoc(t, l) => false
+          | InnerLineDoc(t, l) => false
+          | BlockComment(t, l) => false
+          | OuterBlockDoc(t, l) => false
+          | InnerBlockDoc(t, l) => false }
+
+    axiom regular_comment :
+        match classify_comment("  // just a comment", 1) {
+            LineComment(t, l) => true
+          | OuterLineDoc(t, l) => false
+          | InnerLineDoc(t, l) => false
+          | BlockComment(t, l) => false
+          | OuterBlockDoc(t, l) => false
+          | InnerBlockDoc(t, l) => false }
+
+    // Visibility parsing follows grammar
+    axiom private_default : parse_visibility("fn foo()") = Private
+    axiom pub_simple : parse_visibility("pub fn foo()") = Pub
+    axiom pub_crate : parse_visibility("pub(crate) fn foo()") = PubCrate
+    axiom pub_super : parse_visibility("pub(super) fn foo()") = PubSuper
+
+    // Use tree classification follows grammar
+    axiom wildcard_detected :
+        match parse_use_tree("std::collections::*;") {
+            UseWildcard(p) => true
+          | UsePath(p) => false
+          | UseGroup(p, items) => false
+          | UseAlias(p, alias) => false }
+
+    axiom path_detected :
+        match parse_use_tree("std::collections::HashMap;") {
+            UsePath(p) => true
+          | UseWildcard(p) => false
+          | UseGroup(p, items) => false
+          | UseAlias(p, alias) => false }
+
+    axiom alias_detected :
+        match parse_use_tree("std::io::Result as IoResult;") {
+            UseAlias(p, alias) => true
+          | UsePath(p) => false
+          | UseWildcard(p) => false
+          | UseGroup(p, items) => false }
+
+    // super::* is identified as idiomatic test import
+    axiom super_wildcard_idiomatic :
+        is_super_wildcard(UseDecl(Private, UseWildcard("super"), 1))
+}
+
+// ============================================================================
+// PART 15: Examples
+// ============================================================================
+
+example "scan_simple_function" {
+    let source = "pub fn add(a: i32, b: i32) -> i32 {\n    a + b\n}" in
+    let result = scan(source) in
+    out(result)
+    out(count_functions(result))
+}
+
+example "scan_use_declarations" {
+    let source = "use std::collections::HashMap;\nuse std::io::*;\nuse super::*;" in
+    let result = scan(source) in
+    out(result)
+    out(count_uses(result))
+}
+
+example "scan_comments" {
+    let source = "/// Doc comment\n//! Inner doc\n// Regular comment\n//// Quad slash" in
+    let result = scan(source) in
+    out(crate_comments(result))
+}
+
+example "scan_test_module" {
+    let source = "#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_add() {\n        assert_eq!(add(1, 2), 3);\n    }\n}" in
+    let result = scan(source) in
+    out(result)
+}
+
+example "scan_just_use" {
+    let source = "use std::collections::HashMap;" in
+    let result = scan(source) in
+    out(result)
+}
+
+example "scan_two_uses" {
+    let source = "use std::collections::HashMap;\nuse std::io::*;" in
+    let result = scan(source) in
+    out(result)
+}
+
+example "scan_comment_then_use" {
+    let source = "// a comment\nuse std::io::*;" in
+    let result = scan(source) in
+    out(result)
+}
+
+example "scan_full_file" {
+    let source = "//! Crate documentation\n\nuse std::collections::HashMap;\nuse std::io::Result;\n\n/// A simple adder\npub fn add(a: i32, b: i32) -> i32 {\n    a + b\n}\n\nstruct Config {\n    name: String,\n}\n\nimpl Config {\n    pub fn new() -> Self {\n        Config { name: String::new() }\n    }\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_add() {\n        assert_eq!(add(1, 2), 3);\n    }\n}" in
+    let result = scan(source) in
+    out(result)
+    out(count_functions(result))
+    out(count_uses(result))
+    out(non_test_wildcard_uses(result))
+}
+
+// --- Tests for new query helpers ---
+
+example "test_fn_is_pub" {
+    let source = "pub fn add(a: i32, b: i32) -> i32 {\n    a + b\n}\nfn private_helper() {}" in
+    let c = scan(source) in
+    let pub_count = count_fn_list(filter_pub_fns(crate_functions(c))) in
+    out(pub_count)
+}
+
+example "test_fn_params_and_return" {
+    let source = "pub fn add(a: i32, b: i32) -> i32 {\n    a + b\n}" in
+    let c = scan(source) in
+    let fns = crate_functions(c) in
+    let f = head_fn(fns) in
+    out(fn_params_text(f))
+    out(fn_return_type(f))
+    out(fn_line(f))
+    out(count_params(f))
+}
+
+example "test_struct_accessors" {
+    let source = "pub struct Config {\n    name: String,\n}\nstruct internal {\n    val: i32,\n}" in
+    let c = scan(source) in
+    let structs = crate_structs(c) in
+    let s1 = head_struct(structs) in
+    out(struct_name(s1))
+    out(struct_is_pub(s1))
+    out(starts_with_uppercase(struct_name(s1)))
+}
+
+example "test_has_doc_before" {
+    let source = "/// Documented\npub fn add() {}\npub fn undoc() {}" in
+    let c = scan(source) in
+    let fns = crate_functions(c) in
+    let comments = crate_comments(c) in
+    let f1 = head_fn(fns) in
+    out(has_doc_before(fn_line(f1), comments))
+}
+
+example "test_filter_pub_fns" {
+    let source = "pub fn public_one() {}\nfn private_one() {}\npub fn public_two() {}" in
+    let c = scan(source) in
+    let pub_fns = filter_pub_fns(crate_functions(c)) in
+    out(count_fn_list(pub_fns))
+}
+
+example "test_filter_non_test_fns" {
+    let source = "pub fn real_fn() {}\n#[test]\nfn test_something() {}\nfn helper() {}" in
+    let c = scan(source) in
+    let all = crate_functions(c) in
+    let non_test = filter_non_test_fns(all) in
+    let test_count = count_test_fns(all) in
+    out(count_fn_list(non_test))
+    out(test_count)
+}
+
+example "test_count_params_zero" {
+    let source = "fn zero() {}" in
+    let c = scan(source) in
+    let f = head_fn(crate_functions(c)) in
+    out(count_params(f))
+}
+
+example "test_count_params_two" {
+    let source = "fn two(x: i32, y: i32) {}" in
+    let c = scan(source) in
+    let f = head_fn(crate_functions(c)) in
+    out(count_params(f))
+}
+
+example "test_count_params_self" {
+    let source = "fn self_only(&self) {}" in
+    let c = scan(source) in
+    let f = head_fn(crate_functions(c)) in
+    out(count_params(f))
+}
+
+example "test_naming_conventions" {
+    let source = "fn snake_case() {}\nfn badCamelCase() {}\npub struct GoodName {}\nstruct badname {}" in
+    let c = scan(source) in
+    let bad_fns = fns_with_bad_names(crate_functions(c)) in
+    let bad_structs = structs_with_bad_names(crate_structs(c)) in
+    out(bad_fns)
+    out(bad_structs)
+}
+
+example "test_pub_fns_missing_docs" {
+    let source = "/// Documented function\npub fn documented() {}\npub fn undocumented() {}\nfn private_no_docs() {}" in
+    let c = scan(source) in
+    let fns = filter_non_test_fns(crate_functions(c)) in
+    let missing = pub_fns_missing_docs(fns, crate_comments(c)) in
+    out(missing)
+}
+
+example "test_narrating_comments_only_line" {
+    let source = "/// Define the helper function\n// Define the helper function\npub fn helper() {}" in
+    let c = scan(source) in
+    let narrating = has_narrating_line_comment(crate_comments(c)) in
+    out(narrating)
+}
+
+example "test_append_failure" {
+    out(append_failure("", ""))
+    out(append_failure("", "first problem"))
+    out(append_failure("first problem", ""))
+    out(append_failure("first problem", "second problem"))
+}
+
+example "test_fn_body_text" {
+    let source = "pub fn add(a: i32, b: i32) -> i32 {\n    a + b\n}\nfn other() {\n    let x = 1;\n    x\n}" in
+    let c = scan(source) in
+    let f = head_fn(crate_functions(c)) in
+    out(fn_body_text(source, f))
+}
+
+example "test_production_code_filters_test_mod" {
+    let source = "fn real() {\n    do_work();\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n    #[test]\n    fn test_real() {\n        real().unwrap();\n    }\n}" in
+    let prod = production_code(source) in
+    out(contains(prod, "do_work"))
+    out(contains(prod, "unwrap"))
+}
+
+example "test_production_code_filters_test_fn" {
+    let source = "fn production() {\n    compute();\n}\n\n#[test]\nfn test_it() {\n    production().unwrap();\n}" in
+    let prod = production_code(source) in
+    out(contains(prod, "compute"))
+    out(contains(prod, "unwrap"))
+}
+
+example "test_non_test_fns_containing" {
+    let source = "fn real() {\n    x.unwrap();\n}\n\n#[test]\nfn test_it() {\n    y.unwrap();\n}" in
+    let c = scan(source) in
+    let fns = crate_functions(c) in
+    let hits = non_test_fns_containing(source, fns, ".unwrap()") in
+    out(hits)
+}
