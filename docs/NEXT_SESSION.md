@@ -1,6 +1,27 @@
 # Next Session Notes
 
-**Last Updated:** February 23, 2026 (session 6)
+**Last Updated:** February 26, 2026 (session 7)
+
+---
+
+## Session 7 (Feb 26, 2026): Rebase, Conflict Resolution, and Merged PRs
+
+### Merged PRs
+- **#135** — STRIDE threat model rules, concrete Z3 verification, expanded review coverage
+- **#136** — Structural Rust parsing, superseded string checks removed, docs updated, check_file tests
+
+### Current State
+- **28 active check_* functions**: 23 string-based + 5 structural (AST-based with line-number reporting)
+- **6 Z3 concrete tests** + **6 check_file tests** + original tests = 34 total review MCP tests
+- **Rust structural parser** (`rust_parser.kleis`) operational: `scan()`, `production_code()`, `fn_body_text()`, `non_test_fns_containing()`
+- **Three-tier review model** documented in `28-agent-mcps.md`: string checks / structural checks / Z3 axioms
+
+### Open Items
+1. **No timeouts** — `eval_concrete` and Z3 can block indefinitely. STILL OPEN.
+2. **`evaluator.rs` is 10,887 lines** — too large for the structural parser to review. Needs splitting into modules (`eval_core`, `eval_builtins`, `eval_z3`, `eval_types`, `eval_io`).
+3. **`check_no_hardcoded_urls` false positive** — flags documentation URLs in comments. Needs structural version that skips comments.
+4. **Z3 axioms not wired into automatic review** — `SafeCode`, `SqlSafe` etc. require explicit `evaluate_expression` calls. Future: parser extracts code fragments, feeds to Z3.
+5. **NEXT_SESSION.md is 147K chars** — needs cleanup per session archival rules.
 
 ---
 
