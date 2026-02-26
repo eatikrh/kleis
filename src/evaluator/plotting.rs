@@ -3,14 +3,11 @@ use crate::ast::Expression;
 use super::Evaluator;
 
 impl Evaluator {
-    // === Plotting helpers ===
-
-    // =========================================================================
-    // COMPOSITIONAL PLOTTING API (matches Lilaq 1:1)
-    // =========================================================================
-
     /// diagram(options, element1, element2, ...) - Compose plot elements and render to SVG
-    pub(crate) fn builtin_diagram(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+    pub(crate) fn builtin_diagram(
+        &self,
+        args: &[Expression],
+    ) -> Result<Option<Expression>, String> {
         use crate::plotting::{compile_diagram, DiagramOptions, PlotElement};
 
         if args.is_empty() {
@@ -118,7 +115,10 @@ impl Evaluator {
     ///
     /// Usage: export_typst(plot(...), bar(...), title = "My Plot")
     /// Returns: String containing complete Typst code
-    pub(crate) fn builtin_export_typst(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+    pub(crate) fn builtin_export_typst(
+        &self,
+        args: &[Expression],
+    ) -> Result<Option<Expression>, String> {
         use crate::plotting::{export_diagram_typst, DiagramOptions, PlotElement};
 
         if args.is_empty() {
@@ -282,7 +282,10 @@ impl Evaluator {
     /// - rows: List of rows, each row is a list [[a, b, c], [d, e, f]]
     ///
     /// Returns: String containing Typst table code
-    pub(crate) fn builtin_table_typst(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+    pub(crate) fn builtin_table_typst(
+        &self,
+        args: &[Expression],
+    ) -> Result<Option<Expression>, String> {
         if args.len() < 2 {
             return Err(
                 "table_typst() requires 2 arguments: headers (list), rows (list of lists)"
@@ -365,7 +368,10 @@ impl Evaluator {
     /// - rows: List of rows, each row is a list [[a, b, c], [d, e, f]]
     ///
     /// Returns: Object containing Typst table code (no string quotes, no #)
-    pub(crate) fn builtin_table_typst_raw(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+    pub(crate) fn builtin_table_typst_raw(
+        &self,
+        args: &[Expression],
+    ) -> Result<Option<Expression>, String> {
         if args.len() < 2 {
             return Err(
                 "table_typst_raw() requires 2 arguments: headers (list), rows (list of lists)"
@@ -441,7 +447,10 @@ impl Evaluator {
     ///
     /// Usage: typst_raw(text_string)
     /// Returns: Object containing the text verbatim
-    pub(crate) fn builtin_typst_raw(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+    pub(crate) fn builtin_typst_raw(
+        &self,
+        args: &[Expression],
+    ) -> Result<Option<Expression>, String> {
         if args.len() != 1 {
             return Ok(None);
         }
@@ -465,7 +474,10 @@ impl Evaluator {
     ///
     /// The ast should be a Kleis EditorNode expression, e.g.:
     ///   binop("equals", sym("E"), binop("times", sym("m"), sup(sym("c"), num("2"))))
-    pub(crate) fn builtin_render_to_typst(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+    pub(crate) fn builtin_render_to_typst(
+        &self,
+        args: &[Expression],
+    ) -> Result<Option<Expression>, String> {
         use crate::render::RenderTarget;
         use crate::render_editor::render_editor_node;
 
@@ -846,7 +858,10 @@ impl Evaluator {
     }
 
     /// quiver(xs, ys, directions) - Create vector field PlotElement
-    pub(crate) fn builtin_quiver_element(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+    pub(crate) fn builtin_quiver_element(
+        &self,
+        args: &[Expression],
+    ) -> Result<Option<Expression>, String> {
         if args.len() < 3 {
             return Err("quiver() requires: x_coords, y_coords, directions".to_string());
         }
@@ -881,7 +896,10 @@ impl Evaluator {
     }
 
     /// place(x, y, text, align = "top") - Text annotation at coordinates
-    pub(crate) fn builtin_place_element(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+    pub(crate) fn builtin_place_element(
+        &self,
+        args: &[Expression],
+    ) -> Result<Option<Expression>, String> {
         if args.len() < 3 {
             return Err("place() requires: x, y, text".to_string());
         }
@@ -906,7 +924,10 @@ impl Evaluator {
     }
 
     /// yaxis(position = "right", label = "...", child_elements...) - Secondary y-axis
-    pub(crate) fn builtin_yaxis_element(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+    pub(crate) fn builtin_yaxis_element(
+        &self,
+        args: &[Expression],
+    ) -> Result<Option<Expression>, String> {
         // yaxis can contain child plot elements and options
         // yaxis(bar(...), plot(...), position = "right", label = "...")
 
@@ -949,7 +970,10 @@ impl Evaluator {
     }
 
     /// xaxis(position = "top", label = "...", functions = ("x => k/x", "x => k/x")) - Secondary x-axis
-    pub(crate) fn builtin_xaxis_element(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+    pub(crate) fn builtin_xaxis_element(
+        &self,
+        args: &[Expression],
+    ) -> Result<Option<Expression>, String> {
         // xaxis can contain child plot elements and options
         // xaxis(plot(...), position = "top", label = "Energy (eV)", functions = ...)
 
@@ -992,7 +1016,10 @@ impl Evaluator {
     }
 
     /// path(points, fill = "blue", closed = true) - Arbitrary path for polygons/fractals
-    pub(crate) fn builtin_path_element(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+    pub(crate) fn builtin_path_element(
+        &self,
+        args: &[Expression],
+    ) -> Result<Option<Expression>, String> {
         // path can take:
         // - A list of (x, y) pairs: path([(0,0), (1,1), (2,0)])
         // - Separate x and y lists: path(xs, ys)
@@ -1139,7 +1166,10 @@ impl Evaluator {
     }
 
     /// stacked_area(xs, ys1, ys2, ys3, ...) - Create stacked area chart
-    pub(crate) fn builtin_stacked_area(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
+    pub(crate) fn builtin_stacked_area(
+        &self,
+        args: &[Expression],
+    ) -> Result<Option<Expression>, String> {
         if args.len() < 2 {
             return Err("stacked_area() requires x data and at least one y series".to_string());
         }
@@ -1171,7 +1201,7 @@ impl Evaluator {
         // Compute cumulative sums (stacked values)
         let mut stacked: Vec<Vec<f64>> = vec![vec![0.0; n]]; // Start with zeros
         for ys in &y_series {
-            let prev = stacked.last().unwrap();
+            let prev = stacked.last().expect("stacked initialized non-empty");
             let new_stack: Vec<f64> = prev.iter().zip(ys.iter()).map(|(a, b)| a + b).collect();
             stacked.push(new_stack);
         }

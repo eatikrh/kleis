@@ -425,8 +425,6 @@ impl Evaluator {
         }
     }
 
-    // === Matrix helper methods ===
-
     pub(crate) fn extract_matrix(
         &self,
         expr: &Expression,
@@ -486,12 +484,7 @@ impl Evaluator {
         }
     }
 
-    pub(crate) fn make_matrix(
-        &self,
-        m: usize,
-        n: usize,
-        elements: Vec<Expression>,
-    ) -> Expression {
+    pub(crate) fn make_matrix(&self, m: usize, n: usize, elements: Vec<Expression>) -> Expression {
         Expression::Operation {
             name: "Matrix".to_string(),
             args: vec![
@@ -502,8 +495,6 @@ impl Evaluator {
             span: None,
         }
     }
-
-    // === Symbolic arithmetic helpers ===
 
     pub(crate) fn add_expressions(&self, a: &Expression, b: &Expression) -> Expression {
         match (self.as_number(a), self.as_number(b)) {
@@ -586,8 +577,6 @@ impl Evaluator {
             },
         }
     }
-
-    // === Complex number helpers ===
 
     pub(crate) fn extract_complex(&self, expr: &Expression) -> Option<(Expression, Expression)> {
         match expr {

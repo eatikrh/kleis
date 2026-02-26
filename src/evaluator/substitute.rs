@@ -10,7 +10,11 @@ impl Evaluator {
     /// Recursively traverses the expression tree and replaces Object(name)
     /// with the bound value from the substitution map.
     #[allow(clippy::only_used_in_recursion)]
-    pub(crate) fn substitute(&self, expr: &Expression, subst: &HashMap<String, Expression>) -> Expression {
+    pub(crate) fn substitute(
+        &self,
+        expr: &Expression,
+        subst: &HashMap<String, Expression>,
+    ) -> Expression {
         match expr {
             Expression::Object(name) => {
                 // Replace with bound value if exists, otherwise keep as-is
@@ -190,11 +194,6 @@ impl Evaluator {
             }
         }
     }
-
-
-    // =========================================================================
-    // Beta Reduction for Lambda Expressions
-    // =========================================================================
 
     /// Default fuel limit for reduction (prevents infinite loops)
     pub(crate) const DEFAULT_REDUCTION_FUEL: usize = 1000;
@@ -448,10 +447,6 @@ impl Evaluator {
         }
     }
 
-    // =========================================================================
-    // Alpha Conversion (Variable Capture Avoidance)
-    // =========================================================================
-
     /// Check if substitution would cause variable capture and alpha-convert if needed
     ///
     /// Variable capture occurs when a free variable in the argument would become
@@ -606,7 +601,11 @@ impl Evaluator {
     }
 
     /// Collect pattern variables into a HashSet (alias for collect_pattern_vars_from_pattern)
-    pub(crate) fn collect_pattern_vars(&self, pattern: &crate::ast::Pattern, vars: &mut HashSet<String>) {
+    pub(crate) fn collect_pattern_vars(
+        &self,
+        pattern: &crate::ast::Pattern,
+        vars: &mut HashSet<String>,
+    ) {
         self.collect_pattern_vars_from_pattern(pattern, vars);
     }
 
@@ -819,7 +818,12 @@ impl Evaluator {
     }
 
     /// Generate a fresh variable name that doesn't conflict
-    pub(crate) fn fresh_variable(&self, base: &str, expr1: &Expression, expr2: &Expression) -> String {
+    pub(crate) fn fresh_variable(
+        &self,
+        base: &str,
+        expr1: &Expression,
+        expr2: &Expression,
+    ) -> String {
         let mut all_vars = self.free_variables(expr1);
         all_vars.extend(self.free_variables(expr2));
         all_vars.extend(self.bound_variables(expr1));
@@ -836,7 +840,12 @@ impl Evaluator {
 
     /// Alpha-convert: rename all occurrences of a bound variable
     #[allow(clippy::only_used_in_recursion)]
-    pub(crate) fn alpha_convert(&self, expr: &Expression, old_name: &str, new_name: &str) -> Expression {
+    pub(crate) fn alpha_convert(
+        &self,
+        expr: &Expression,
+        old_name: &str,
+        new_name: &str,
+    ) -> Expression {
         match expr {
             Expression::Lambda { params, body, .. } => {
                 // Check if this lambda binds the old name
@@ -929,5 +938,4 @@ impl Evaluator {
             _ => expr.clone(),
         }
     }
-
 }

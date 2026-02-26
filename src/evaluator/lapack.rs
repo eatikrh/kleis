@@ -52,10 +52,7 @@ impl Evaluator {
         Ok(Some(Expression::List(result)))
     }
 
-    pub(crate) fn lapack_eig(
-        &self,
-        args: &[Expression],
-    ) -> Result<Option<Expression>, String> {
+    pub(crate) fn lapack_eig(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
         if args.len() != 1 {
             return Ok(None);
         }
@@ -120,10 +117,7 @@ impl Evaluator {
         ])))
     }
 
-    pub(crate) fn lapack_svd(
-        &self,
-        args: &[Expression],
-    ) -> Result<Option<Expression>, String> {
+    pub(crate) fn lapack_svd(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
         if args.len() != 1 {
             return Ok(None);
         }
@@ -180,10 +174,7 @@ impl Evaluator {
         )))
     }
 
-    pub(crate) fn lapack_solve(
-        &self,
-        args: &[Expression],
-    ) -> Result<Option<Expression>, String> {
+    pub(crate) fn lapack_solve(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
         if args.len() != 2 {
             return Ok(None);
         }
@@ -266,10 +257,7 @@ impl Evaluator {
         )))
     }
 
-    pub(crate) fn lapack_inv(
-        &self,
-        args: &[Expression],
-    ) -> Result<Option<Expression>, String> {
+    pub(crate) fn lapack_inv(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
         if args.len() != 1 {
             return Ok(None);
         }
@@ -301,10 +289,7 @@ impl Evaluator {
         )))
     }
 
-    pub(crate) fn lapack_qr(
-        &self,
-        args: &[Expression],
-    ) -> Result<Option<Expression>, String> {
+    pub(crate) fn lapack_qr(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
         if args.len() != 1 {
             return Ok(None);
         }
@@ -370,10 +355,7 @@ impl Evaluator {
         )))
     }
 
-    pub(crate) fn lapack_rank(
-        &self,
-        args: &[Expression],
-    ) -> Result<Option<Expression>, String> {
+    pub(crate) fn lapack_rank(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
         if args.len() != 1 {
             return Ok(None);
         }
@@ -397,10 +379,7 @@ impl Evaluator {
         Ok(Some(Expression::Const(format!("{}", r))))
     }
 
-    pub(crate) fn lapack_cond(
-        &self,
-        args: &[Expression],
-    ) -> Result<Option<Expression>, String> {
+    pub(crate) fn lapack_cond(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
         if args.len() != 1 {
             return Ok(None);
         }
@@ -428,10 +407,7 @@ impl Evaluator {
         }
     }
 
-    pub(crate) fn lapack_norm(
-        &self,
-        args: &[Expression],
-    ) -> Result<Option<Expression>, String> {
+    pub(crate) fn lapack_norm(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
         if args.is_empty() || args.len() > 2 {
             return Ok(None);
         }
@@ -465,10 +441,7 @@ impl Evaluator {
         Ok(Some(Expression::Const(format!("{}", nval))))
     }
 
-    pub(crate) fn lapack_det(
-        &self,
-        args: &[Expression],
-    ) -> Result<Option<Expression>, String> {
+    pub(crate) fn lapack_det(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
         if args.len() != 1 {
             return Ok(None);
         }
@@ -496,10 +469,7 @@ impl Evaluator {
         Ok(Some(Expression::Const(format!("{}", d))))
     }
 
-    pub(crate) fn lapack_schur(
-        &self,
-        args: &[Expression],
-    ) -> Result<Option<Expression>, String> {
+    pub(crate) fn lapack_schur(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
         if args.len() != 1 {
             return Ok(None);
         }
@@ -569,10 +539,7 @@ impl Evaluator {
 
     /// Solve the Continuous Algebraic Riccati Equation (CARE):
     ///   A'P + PA - PBR^-1 B'P + Q = 0
-    pub(crate) fn lapack_care(
-        &self,
-        args: &[Expression],
-    ) -> Result<Option<Expression>, String> {
+    pub(crate) fn lapack_care(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
         if args.len() != 4 {
             return Err("care(A, B, Q, R) requires 4 matrix arguments".to_string());
         }
@@ -632,10 +599,7 @@ impl Evaluator {
     }
 
     /// LQR controller design: K = R^-1 B'P where P solves CARE
-    pub(crate) fn lapack_lqr(
-        &self,
-        args: &[Expression],
-    ) -> Result<Option<Expression>, String> {
+    pub(crate) fn lapack_lqr(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
         if args.len() != 4 {
             return Err("lqr(A, B, Q, R) requires 4 matrix arguments".to_string());
         }
@@ -711,10 +675,7 @@ impl Evaluator {
     }
 
     /// Solve the Discrete-time Algebraic Riccati Equation (DARE)
-    pub(crate) fn lapack_dare(
-        &self,
-        args: &[Expression],
-    ) -> Result<Option<Expression>, String> {
+    pub(crate) fn lapack_dare(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
         if args.len() != 4 {
             return Err("dare(A, B, Q, R) requires 4 matrix arguments".to_string());
         }
@@ -778,10 +739,7 @@ impl Evaluator {
     }
 
     /// Discrete-time LQR: K = (B'PB + R)^-1 B'PA where P solves DARE
-    pub(crate) fn lapack_dlqr(
-        &self,
-        args: &[Expression],
-    ) -> Result<Option<Expression>, String> {
+    pub(crate) fn lapack_dlqr(&self, args: &[Expression]) -> Result<Option<Expression>, String> {
         if args.len() != 4 {
             return Err("dlqr(A, B, Q, R) requires 4 matrix arguments".to_string());
         }
