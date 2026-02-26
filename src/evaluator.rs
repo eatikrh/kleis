@@ -1407,7 +1407,7 @@ impl Evaluator {
     }
 
     /// Try to verify an assertion using Z3 (for symbolic claims)
-    fn verify_with_z3(&self, condition: &Expression) -> Option<AssertResult> {
+    pub fn verify_with_z3(&self, condition: &Expression) -> Option<AssertResult> {
         // Fast path: if we already know axioms are inconsistent, skip solver entirely
         if let Some(Some(false)) = *self.axiom_consistency_cache.borrow() {
             return Some(AssertResult::InconsistentAxioms);
@@ -1446,6 +1446,106 @@ impl Evaluator {
                         }
                         VerificationResult::InconsistentAxioms => {
                             *self.axiom_consistency_cache.borrow_mut() = Some(Some(false));
+                            Some(AssertResult::InconsistentAxioms)
+                        }
+                        VerificationResult::Unknown => None,
+                        VerificationResult::Disabled => None,
+                    },
+                    Err(_) => None,
+                }
+            }
+            Err(_) => None,
+        }
+    }
+
+    /// Targeted Z3 verification for a structure operation with concrete arguments.
+    ///
+    /// Instead of loading quantified axioms (which cause timeouts with Z3's
+    /// string theory), this method instantiates axioms with the concrete
+    /// argument, producing ground (quantifier-free) assertions that Z3 can
+    /// solve instantly.
+    pub fn verify_structure_operation(
+        &self,
+        condition: &Expression,
+        structure_name: &str,
+    ) -> Option<AssertResult> {
+        let concrete_arg = match condition {
+            Expression::Operation { args, .. } if args.len() == 1 => &args[0],
+            _ => return self.verify_with_z3(condition),
+        };
+
+        const LARGE_STRING_THRESHOLD: usize = 1_000_000;
+        if let Expression::String(s) = concrete_arg {
+            if s.len() > LARGE_STRING_THRESHOLD {
+                eprintln!(
+                    "[kleis-review] Warning: large string ({} bytes) passed to Z3 — \
+                     temporary memory usage may be high",
+                    s.len()
+                );
+            }
+        }
+
+        let structure = self.structures.iter().find(|s| s.name == structure_name)?;
+
+        let mut ground_axioms = Vec::new();
+        for member in &structure.members {
+            if let crate::kleis_ast::StructureMember::Axiom {
+                proposition:
+                    Expression::Quantifier {
+                        variables, body, ..
+                    },
+                ..
+            } = member
+            {
+                if variables.len() == 1 {
+                    let mut subst = HashMap::new();
+                    subst.insert(variables[0].name.clone(), concrete_arg.clone());
+                    ground_axioms.push(self.substitute(body, &subst));
+                }
+            }
+        }
+
+        if ground_axioms.is_empty() {
+            return self.verify_with_z3(condition);
+        }
+
+        let mut ground_structure = structure.clone();
+        ground_structure.members = ground_structure
+            .members
+            .iter()
+            .filter(|m| !matches!(m, crate::kleis_ast::StructureMember::Axiom { .. }))
+            .cloned()
+            .collect();
+        for (i, axiom) in ground_axioms.iter().enumerate() {
+            ground_structure
+                .members
+                .push(crate::kleis_ast::StructureMember::Axiom {
+                    name: format!("ground_{}", i),
+                    proposition: axiom.clone(),
+                });
+        }
+
+        let mut registry = StructureRegistry::new();
+        let _ = registry.register(ground_structure);
+
+        match AxiomVerifier::new(&registry) {
+            Ok(mut verifier) => {
+                verifier.set_consistency_cache(Some(true));
+                verifier.load_adt_constructors(self.adt_constructors.iter());
+
+                let result = verifier.verify_axiom(condition);
+                match result {
+                    Ok(result) => match result {
+                        VerificationResult::Valid => Some(AssertResult::Verified { witness: None }),
+                        VerificationResult::ValidWithWitness { witness } => {
+                            Some(AssertResult::Verified {
+                                witness: Some(witness),
+                            })
+                        }
+                        VerificationResult::Invalid { witness } => {
+                            Some(AssertResult::Disproved { witness })
+                        }
+                        VerificationResult::InconsistentAxioms => {
                             Some(AssertResult::InconsistentAxioms)
                         }
                         VerificationResult::Unknown => None,
