@@ -991,7 +991,7 @@ fn test_check_no_sql_injection() {
     let engine = ReviewEngine::load(&path).expect("load policy");
 
     let bad_format = engine.check_code(
-        "let q = format!(\"SELECT * FROM users WHERE id = {}\", id);",
+        r#"let q = format!("SELECT * FROM users WHERE id = {}", id);"#,
         "rust",
     );
     assert!(
@@ -999,11 +999,11 @@ fn test_check_no_sql_injection() {
             .verdicts
             .iter()
             .any(|v| v.rule_name == "check_no_sql_injection" && !v.passed),
-        "format! with SELECT should fail"
+        "format! with SELECT * FROM should fail"
     );
 
     let bad_insert = engine.check_code(
-        "let q = format!(\"INSERT INTO logs VALUES({})\", val);",
+        r#"let q = format!("INSERT INTO logs VALUES({})", val);"#,
         "rust",
     );
     assert!(
@@ -1011,7 +1011,7 @@ fn test_check_no_sql_injection() {
             .verdicts
             .iter()
             .any(|v| v.rule_name == "check_no_sql_injection" && !v.passed),
-        "format! with INSERT should fail"
+        "format! with INSERT INTO should fail"
     );
 
     let safe_parameterized =
@@ -1031,6 +1031,19 @@ fn test_check_no_sql_injection() {
             .iter()
             .any(|v| v.rule_name == "check_no_sql_injection" && !v.passed),
         "Code without SQL should pass"
+    );
+
+    let http_crud = engine.check_code(
+        r#"pub fn update(&self, id: &str) { let path = format!("{API_PATH}/{id}"); }
+           pub fn delete(&self, id: &str) { let path = format!("{API_PATH}/{id}"); }"#,
+        "rust",
+    );
+    assert!(
+        !http_crud
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_sql_injection" && !v.passed),
+        "HTTP CRUD methods with format! should NOT trigger SQL injection"
     );
 }
 

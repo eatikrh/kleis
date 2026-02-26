@@ -151,18 +151,17 @@ define check_clippy_expect_fun_call(source) =
 // --- SQL injection patterns ---
 
 define check_no_sql_injection(source) =
-    if and(contains(source, "format!("), contains(source, "SELECT")) then "fail: SQL query built with format! — use parameterized queries (sqlx::query!)"
-    else if and(contains(source, "format!("), contains(source, "select")) then "fail: SQL query built with format! — use parameterized queries (sqlx::query!)"
-    else if and(contains(source, "format!("), contains(source, "INSERT")) then "fail: SQL query built with format! — use parameterized queries"
-    else if and(contains(source, "format!("), contains(source, "insert")) then "fail: SQL query built with format! — use parameterized queries"
-    else if and(contains(source, "format!("), contains(source, "UPDATE")) then "fail: SQL query built with format! — use parameterized queries"
-    else if and(contains(source, "format!("), contains(source, "update")) then "fail: SQL query built with format! — use parameterized queries"
-    else if and(contains(source, "format!("), contains(source, "DELETE")) then "fail: SQL query built with format! — use parameterized queries"
-    else if and(contains(source, "format!("), contains(source, "delete")) then "fail: SQL query built with format! — use parameterized queries"
-    else if and(contains(source, "format!("), contains(source, "DROP")) then "fail: SQL query built with format! — use parameterized queries"
+    if and(contains(source, "format!("), contains(source, "SELECT * FROM")) then "fail: SQL query built with format! — use parameterized queries (sqlx::query!)"
+    else if and(contains(source, "format!("), contains(source, "select * from")) then "fail: SQL query built with format! — use parameterized queries (sqlx::query!)"
+    else if and(contains(source, "format!("), contains(source, "INSERT INTO")) then "fail: SQL query built with format! — use parameterized queries"
+    else if and(contains(source, "format!("), contains(source, "insert into")) then "fail: SQL query built with format! — use parameterized queries"
+    else if and(contains(source, "format!("), contains(source, "UPDATE SET")) then "fail: SQL query built with format! — use parameterized queries"
+    else if and(contains(source, "format!("), contains(source, "DELETE FROM")) then "fail: SQL query built with format! — use parameterized queries"
+    else if and(contains(source, "format!("), contains(source, "delete from")) then "fail: SQL query built with format! — use parameterized queries"
+    else if and(contains(source, "format!("), contains(source, "DROP TABLE")) then "fail: SQL query built with format! — use parameterized queries"
     else if and(contains(source, "format!("), contains(source, "drop table")) then "fail: SQL query built with format! — use parameterized queries"
-    else if and(contains(source, ".push_str("), contains(source, "WHERE")) then "fail: SQL string built via push_str — use parameterized queries"
-    else if and(contains(source, ".push_str("), contains(source, "where")) then "fail: SQL string built via push_str — use parameterized queries"
+    else if and(contains(source, ".push_str("), contains(source, "WHERE ")) then "fail: SQL string built via push_str — use parameterized queries"
+    else if and(contains(source, ".push_str("), contains(source, "where ")) then "fail: SQL string built via push_str — use parameterized queries"
     else "pass"
 
 // --- No color emoji or decorative icons in Rust source ---
