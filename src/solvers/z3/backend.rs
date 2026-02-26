@@ -4033,6 +4033,8 @@ impl<'r> Z3Backend<'r> {
             "ℤ" | "Int" | "Integer" | "ℕ" | "Nat" | "Natural" => Sort::int(),
             // Boolean → Bool sort
             "Bool" | "Boolean" => Sort::bool(),
+            // String → String sort (Z3 Seq)
+            "String" | "Str" => Sort::string(),
 
             // Bitvector types - common widths
             "BitVec8" | "Byte" | "U8" | "I8" => Sort::bitvector(8),

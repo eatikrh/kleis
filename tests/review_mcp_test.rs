@@ -252,8 +252,8 @@ fn test_load_real_rust_review_policy() {
     let stats = engine.stats();
 
     assert!(
-        *stats.get("check_functions").unwrap() >= 22,
-        "Expected >= 22 check functions, got {}",
+        *stats.get("check_functions").unwrap() >= 23,
+        "Expected >= 23 check functions, got {}",
         stats.get("check_functions").unwrap()
     );
 
@@ -476,5 +476,247 @@ fn test_load_real_rust_review_policy() {
             .iter()
             .any(|v| v.rule_name == "check_no_emoji" && !v.passed),
         "Plain text should pass check_no_emoji"
+    );
+}
+
+// ==========================================================================
+// Z3 Verification Tests
+// ==========================================================================
+
+#[test]
+fn test_evaluate_concrete_expression() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let result = engine.evaluate_expression("1 + 2");
+    assert!(result.error.is_none(), "Should evaluate without error");
+    assert!(result.value.is_some(), "Should produce a value");
+    assert_eq!(result.value.as_deref(), Some("3"));
+}
+
+#[test]
+fn test_evaluate_string_function() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let result = engine.evaluate_expression("contains(\"hello world\", \"world\")");
+    assert!(result.error.is_none(), "Should evaluate without error");
+    assert!(
+        result.value.is_some(),
+        "Should return a value for contains()"
+    );
+}
+
+#[test]
+fn test_evaluate_check_function() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let result = engine.evaluate_expression("check_no_unwrap(\"fn f() { a + b }\")");
+    assert!(result.error.is_none(), "Should evaluate without error");
+    assert_eq!(result.value.as_deref(), Some("pass"));
+
+    let result = engine.evaluate_expression("check_no_unwrap(\"x.unwrap()\")");
+    assert!(result.error.is_none());
+    let val = result.value.unwrap();
+    assert!(val.starts_with("fail"), "Should fail: {}", val);
+}
+
+#[cfg(feature = "axiom-verification")]
+#[test]
+fn test_evaluate_z3_proposition() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let result = engine
+        .evaluate_expression("∀(s : String). implies(is_safe(s), not(contains(s, \".unwrap()\")))");
+    assert!(
+        result.error.is_none(),
+        "Z3 proposition should not error: {:?}",
+        result.error
+    );
+    assert_eq!(
+        result.verified,
+        Some(true),
+        "safe_no_unwrap axiom should be verified by Z3"
+    );
+}
+
+#[cfg(feature = "axiom-verification")]
+#[test]
+fn test_evaluate_z3_safe_no_panic() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let result = engine
+        .evaluate_expression("∀(s : String). implies(is_safe(s), not(contains(s, \"panic!(\")))");
+    assert!(
+        result.error.is_none(),
+        "Z3 should not error: {:?}",
+        result.error
+    );
+    assert_eq!(
+        result.verified,
+        Some(true),
+        "safe_no_panic axiom should be verified"
+    );
+}
+
+#[cfg(feature = "axiom-verification")]
+#[test]
+fn test_evaluate_z3_clean_no_println() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let result = engine.evaluate_expression(
+        "∀(s : String). implies(is_clean(s), not(contains(s, \"println!(\" )))",
+    );
+    assert!(
+        result.error.is_none(),
+        "Z3 should not error: {:?}",
+        result.error
+    );
+    assert_eq!(
+        result.verified,
+        Some(true),
+        "clean_no_println axiom should be verified"
+    );
+}
+
+#[test]
+fn test_existing_check_code_still_works() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let result = engine.check_code("fn add(a: i32, b: i32) -> i32 { a + b }", "rust");
+    assert!(
+        result.passed,
+        "Clean code should still pass all checks after adding structures"
+    );
+}
+
+#[test]
+fn test_structures_loaded_in_policy() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+    let schema = engine.describe_schema();
+
+    let structures = schema["structures"].as_array().expect("structures array");
+    assert!(
+        structures.len() >= 4,
+        "Should have at least 4 structures (SafeCode, CleanCode, SecureCode, SqlSafe), got {}",
+        structures.len()
+    );
+
+    let names: Vec<&str> = structures
+        .iter()
+        .filter_map(|s| s["name"].as_str())
+        .collect();
+    assert!(names.contains(&"SafeCode"), "Missing SafeCode structure");
+    assert!(names.contains(&"CleanCode"), "Missing CleanCode structure");
+    assert!(
+        names.contains(&"SecureCode"),
+        "Missing SecureCode structure"
+    );
+    assert!(names.contains(&"SqlSafe"), "Missing SqlSafe structure");
+}
+
+#[test]
+fn test_check_no_sql_injection() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let bad_format = engine.check_code(
+        "let q = format!(\"SELECT * FROM users WHERE id = {}\", id);",
+        "rust",
+    );
+    assert!(
+        bad_format
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_sql_injection" && !v.passed),
+        "format! with SELECT should fail"
+    );
+
+    let bad_insert = engine.check_code(
+        "let q = format!(\"INSERT INTO logs VALUES({})\", val);",
+        "rust",
+    );
+    assert!(
+        bad_insert
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_sql_injection" && !v.passed),
+        "format! with INSERT should fail"
+    );
+
+    let safe_parameterized =
+        engine.check_code("let row = sqlx::query!(\"SELECT id FROM users WHERE name = $1\", name).fetch_one(&pool).await?;", "rust");
+    assert!(
+        !safe_parameterized
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_sql_injection" && !v.passed),
+        "Parameterized query should pass"
+    );
+
+    let clean_code = engine.check_code("fn add(a: i32, b: i32) -> i32 { a + b }", "rust");
+    assert!(
+        !clean_code
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_sql_injection" && !v.passed),
+        "Code without SQL should pass"
+    );
+}
+
+#[cfg(feature = "axiom-verification")]
+#[test]
+fn test_evaluate_z3_sql_safe_taint_property() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+
+    let result = engine.evaluate_expression(
+        "∀(s : String). implies(and(is_tainted(s), reaches_query(s)), is_sanitized(s))",
+    );
+    assert!(
+        result.error.is_none(),
+        "Z3 should not error: {:?}",
+        result.error
+    );
+    assert_eq!(
+        result.verified,
+        Some(true),
+        "no_tainted_query axiom should be verified"
     );
 }

@@ -151,7 +151,7 @@ inconsistently, and slows down every review.
 
 ### The Solution
 
-The kleis-review MCP loads a coding standards file and exposes five tools:
+The kleis-review MCP loads a coding standards file and exposes six tools:
 
 | Tool | Purpose |
 |------|---------|
@@ -160,6 +160,7 @@ The kleis-review MCP loads a coding standards file and exposes five tools:
 | `list_rules` | List all loaded coding standard rules |
 | `explain_rule` | Explain a specific rule in detail |
 | `describe_standards` | Show the full schema of loaded standards |
+| `evaluate` | Evaluate a Kleis expression or verify a proposition via Z3 |
 
 Each `check_*` function in the policy receives source code as a string and
 returns `"pass"` or `"fail: <reason>"`. The engine runs all rules against
@@ -279,6 +280,60 @@ define check_no_expect_fun_call(source) =
 No tooling changes needed. The engine discovers all `check_*` functions
 automatically on startup. Update the file, restart the MCP, and the new rule
 is live.
+
+### Z3 Verification of Formal Properties
+
+Beyond string-level checks, the review policy can define formal properties
+using Kleis structures with axioms. These properties are verified by Z3 —
+not tested against examples, but proven over all possible inputs.
+
+The standards file can include structures like:
+
+```kleis
+structure SafeCode {
+    operation is_safe : String -> Bool
+
+    axiom safe_no_unwrap : forall(s : String).
+        implies(is_safe(s), not(contains(s, ".unwrap()")))
+
+    axiom safe_no_panic : forall(s : String).
+        implies(is_safe(s), not(contains(s, "panic!(")))
+
+    axiom safe_no_unsafe : forall(s : String).
+        implies(is_safe(s), not(contains(s, "unsafe {")))
+}
+```
+
+The `evaluate` tool accepts any Kleis expression, including universal
+quantifiers that Z3 can verify:
+
+```
+evaluate: contains("hello world", "world")
+-> true
+
+evaluate: check_no_unwrap("fn f() { x.unwrap() }")
+-> fail: contains .unwrap() — use ? or .expect() with a message
+
+evaluate: forall(s : String). implies(is_safe(s), not(contains(s, ".unwrap()")))
+-> VERIFIED
+```
+
+The first two calls are concrete evaluation — the Kleis evaluator computes
+the result directly. The third is a Z3 proposition: it proves that for
+**every** string `s`, if `is_safe(s)` holds, then `s` does not contain
+`.unwrap()`. This is not a test case — it is a machine-checked proof.
+
+This gives the review MCP two levels of capability:
+
+| Level | Mechanism | Example |
+|-------|-----------|---------|
+| **String checks** | `check_*` functions with `contains`/`hasPrefix` | Fast pattern matching, per-file verdicts |
+| **Formal properties** | Structures with axioms, verified by Z3 | Prove properties hold over all inputs |
+
+The string checks run in microseconds and catch mechanical issues during
+development. The formal properties provide guarantees about the standards
+themselves — for example, proving that the safety definition is internally
+consistent, or that two properties cannot conflict.
 
 ### Starting the Server
 

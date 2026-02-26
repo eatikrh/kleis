@@ -86,5 +86,24 @@ pub fn review_tool_definitions() -> Vec<McpTool> {
                 "required": []
             }),
         },
+        McpTool {
+            name: "evaluate".to_string(),
+            description: "Evaluate a Kleis expression or verify a proposition via Z3 \
+                         in the context of the loaded review policy. Propositions \
+                         (quantifiers, logical connectives) are verified by Z3; \
+                         other expressions are evaluated concretely. Use this to \
+                         verify formal properties of the coding standards."
+                .to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "expression": {
+                        "type": "string",
+                        "description": "A Kleis expression to evaluate or a proposition to verify"
+                    }
+                },
+                "required": ["expression"]
+            }),
+        },
     ]
 }

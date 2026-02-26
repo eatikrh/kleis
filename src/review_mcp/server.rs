@@ -192,6 +192,7 @@ impl ReviewMcpServer {
                     "list_rules" => self.handle_list_rules(),
                     "explain_rule" => self.handle_explain_rule(&arguments),
                     "describe_standards" => self.handle_describe_standards(),
+                    "evaluate" => self.handle_evaluate(&arguments),
                     _ => {
                         let content = McpToolContent {
                             content_type: "text".to_string(),
@@ -469,6 +470,94 @@ impl ReviewMcpServer {
         serde_json::json!({
             "content": [content],
             "schema": schema,
+        })
+    }
+
+    fn handle_evaluate(&self, arguments: &Value) -> Value {
+        let expr_str = arguments
+            .get("expression")
+            .and_then(|e| e.as_str())
+            .unwrap_or("");
+
+        self.log(&format!("evaluate: {}", expr_str));
+
+        if expr_str.is_empty() {
+            let content = McpToolContent {
+                content_type: "text".to_string(),
+                text: "Error: 'expression' parameter is required".to_string(),
+            };
+            return serde_json::json!({
+                "content": [content],
+                "isError": true
+            });
+        }
+
+        let result = self.engine.evaluate_expression(expr_str);
+
+        let mut text = String::new();
+        if let Some(ref value) = result.value {
+            text.push_str(value);
+        }
+        if let Some(verified) = result.verified {
+            if verified {
+                text = format!("VERIFIED: {}", text);
+            } else {
+                text = format!("DISPROVED: {}", text);
+            }
+        }
+        if let Some(ref error) = result.error {
+            text = format!("Error: {}", error);
+        }
+
+        let (witness_str, witness_bindings) = if let Some(ref w) = result.witness {
+            let pp = crate::pretty_print::PrettyPrinter::new();
+            let binding_strs: Vec<String> = w
+                .bindings
+                .iter()
+                .map(|b| format!("{} = {}", b.name, pp.format_expression(&b.value)))
+                .collect();
+            let binding_json: Vec<serde_json::Value> = w
+                .bindings
+                .iter()
+                .map(|b| {
+                    serde_json::json!({
+                        "variable": b.name,
+                        "value": pp.format_expression(&b.value),
+                    })
+                })
+                .collect();
+
+            let label = if result.verified == Some(true) {
+                "Witness"
+            } else {
+                "Counterexample"
+            };
+            if binding_strs.is_empty() {
+                text.push_str(&format!("\n\n{} (raw):\n{}", label, w.raw));
+                (Some(w.raw.clone()), binding_json)
+            } else {
+                text.push_str(&format!("\n\n{} (Kleis):", label));
+                for s in &binding_strs {
+                    text.push_str(&format!("\n  {}", s));
+                }
+                (Some(binding_strs.join(", ")), binding_json)
+            }
+        } else {
+            (None, Vec::new())
+        };
+
+        let content = McpToolContent {
+            content_type: "text".to_string(),
+            text,
+        };
+
+        serde_json::json!({
+            "content": [content],
+            "value": result.value,
+            "verified": result.verified,
+            "witness": witness_str,
+            "witness_bindings": witness_bindings,
+            "error": result.error,
         })
     }
 
