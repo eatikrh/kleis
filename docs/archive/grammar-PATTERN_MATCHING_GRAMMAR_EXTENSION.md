@@ -1,7 +1,11 @@
 # Pattern Matching Grammar Extension for Kleis v0.5
 
+> **HISTORICAL DOCUMENT (December 2025).** Pattern matching was fully implemented
+> and is part of the mature grammar (now v0.99). All items marked "TODO" or
+> "Planned" below are **done**. This document is preserved as a design record.
+
 **Date:** December 8, 2025  
-**Status:** 📋 PROPOSED (Implementation in progress)  
+**Status:** ✅ IMPLEMENTED (grammar v0.99)  
 **Base:** Kleis Grammar v0.4 (with algebraic data types)
 
 ---

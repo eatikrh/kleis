@@ -1,10 +1,10 @@
 # Appendix A: Grammar Reference
 
-This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.97).
+This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.99).
 
-> **Complete Grammar:** See `vscode-kleis/docs/grammar/kleis_grammar_v097.md` for the full specification.
+> **Complete Grammar:** See `docs/grammar/kleis_grammar_v099.md` for the full specification.
 >
-> **v0.97 (Jan 2026):** Added `and`, `or`, `not` as ASCII equivalents for `∧`, `∨`, `¬`.
+> **v0.99 (Feb 2026):** The grammar is mature. Recent additions include parametric types in quantifiers (v0.98) and `and`/`or`/`not` as ASCII equivalents for `∧`/`∨`/`¬` (v0.97).
 
 ## Program Structure
 

@@ -10,7 +10,7 @@ Comprehensive documentation for the Kleis symbolic language and computational fr
 |----------|-------------|
 | [NEXT_SESSION.md](NEXT_SESSION.md) | **Start here** - Current priorities and context |
 | [adr/README.md](adr/README.md) | Architecture Decision Records (22 ADRs) |
-| [grammar/kleis_grammar_v098.md](grammar/kleis_grammar_v098.md) | Current grammar specification (v0.98) |
+| [grammar/kleis_grammar_v099.md](grammar/kleis_grammar_v099.md) | Current grammar specification (v0.99 — mature) |
 | [../README.md](../README.md) | Project overview |
 
 ---
@@ -80,11 +80,10 @@ docs/
 
 ## 📖 Key References
 
-### Grammar (Current: v0.98)
-- [`grammar/kleis_grammar_v098.md`](grammar/kleis_grammar_v098.md) - Human-readable spec (v0.98 - parametric types in quantifiers)
-- [`grammar/kleis_grammar_v098.ebnf`](grammar/kleis_grammar_v098.ebnf) - Machine-readable EBNF
+### Grammar (Current: v0.99 — mature)
+- [`grammar/kleis_grammar_v099.md`](grammar/kleis_grammar_v099.md) - Current specification (v0.99)
+- [`grammar/kleis_grammar_v098.md`](grammar/kleis_grammar_v098.md) - v0.98 (parametric types in quantifiers)
 - [`grammar/kleis_grammar_v097.md`](grammar/kleis_grammar_v097.md) - v0.97 (ASCII logical operators)
-- [`grammar/kleis_grammar_v096.md`](grammar/kleis_grammar_v096.md) - v0.96 (named arguments)
 - `grammar/archive/` - Historical grammar versions (v03-v08)
 
 ### Type System

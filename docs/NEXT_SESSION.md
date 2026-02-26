@@ -23,6 +23,24 @@
 4. **Z3 axioms not wired into automatic review** — `SafeCode`, `SqlSafe` etc. require explicit `evaluate_expression` calls. Future: parser extracts code fragments, feeds to Z3.
 5. ~~**NEXT_SESSION.md is 147K chars**~~ — **DONE**. Cleaned up: archives created, trimmed to ~106 lines.
 
+### Known Limitations: `rust_parser.kleis` Structural Scanner
+
+The Kleis-based Rust structural parser (`rust_parser.kleis`) is intentionally **not** a compiler-grade parser. It's a lightweight scanner for review tooling. Rule authors should be aware of these sharp edges:
+
+1. **Brace depth is lexical, not semantic.** `brace_delta(line)` counts `{`/`}` even inside string literals, raw strings, and comments. This can skew nesting depth and any body-size metrics. Fix: a lightweight string/comment-aware brace counter (still not a full tokenizer).
+
+2. **Block comments are not nest-aware.** Continuation detection uses `contains("*/")`, but Rust block comments can nest (`/* /* */ */`). Robust "ignore content in comments" needs a nesting counter rather than a boolean `in_block`.
+
+3. **Multi-line item headers may be incomplete.** Function signatures, `where` clauses, and attributes can span lines. The scanner works line-by-line, so some item facts may be partial unless a "header accumulation" mode is added.
+
+4. **Macros can masquerade as items.** `macro_rules!`, attribute macros, and DSL-like macros can confuse `is_*_line` heuristics. This is acceptable for review tooling but should be documented so users don't assume compiler-grade accuracy.
+
+### Known Limitations: `kleis_review_policy.kleis` Checks
+
+5. **Security checks are intentionally blunt.** Checks like `contains(prod, "password =")` and `format!(..SELECT..)` work as guardrails but will produce false positives in test fixtures, docs, and examples. Future: an allowlist mechanism or context-aware suppression.
+
+6. **`production_code(source)` split is a correctness bottleneck.** The test-vs-production partition drives many checks. If it's too naive (e.g., misclassifying test helpers or integration tests), it either misses real problems or creates noise. Worth monitoring as the codebase evolves.
+
 ---
 
 ## Session 6 (Feb 23, 2026): Z3 Safety, Trigonometric Axioms, and Epistemic Boundaries

@@ -1,8 +1,13 @@
 # Kleis v0.5 Capabilities - What Can It Do Now?
 
+> **HISTORICAL DOCUMENT (December 2025).** This captured capabilities at grammar
+> v0.5. The grammar is now **v0.99** with many additional features (example blocks,
+> imports, big operators, named arguments, and/or/not, parametric quantifiers, etc.).
+> Items listed as "future" or "not implemented" may now be available.
+
 **Date:** December 8, 2025  
-**Grammar Version:** v0.5 (with pattern matching)  
-**Status:** Analyzing new capabilities enabled by recent features
+**Grammar Version:** v0.5 (historical; current grammar is v0.99)  
+**Status:** Historical capability analysis
 
 ---
 

@@ -1,9 +1,16 @@
 # Kleis Language Parser - Current Status
 
+> **HISTORICAL DOCUMENT (December 2025).** This document described the parser at
+> grammar v0.3 (~30% coverage). The grammar is now **v0.99** and the parser is
+> **mature** — all features listed as "Phase 2" or "Not Yet Supported" below have
+> been implemented. See `docs/grammar/kleis_grammar_v099.md` for the current spec
+> and `docs/parser-implementation/PARSER_GRAMMAR_COMPATIBILITY.md` for current
+> coverage details.
+
 **Parser:** `src/kleis_parser.rs`  
-**Last Updated:** December 8, 2025  
-**Grammar Version:** v0.3 (POC - ~30% coverage)  
-**Status:** Working for Phase 1, ready for Phase 2 extension
+**Last Updated:** December 8, 2025 (document is historical; parser has evolved significantly)  
+**Grammar Version:** v0.99 (mature — quantifiers, pattern matching, let bindings, lambdas, data types, example blocks, imports, and/or/not, big operators, named arguments all implemented)  
+**Status:** Mature
 
 ---
 
