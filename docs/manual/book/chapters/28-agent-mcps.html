@@ -43,7 +43,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-8ecbb850.js";
+            window.path_to_searchindex_js = "../searchindex-13c773b2.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-2fee28f3.js"></script>
@@ -314,7 +314,7 @@ layer — team conventions, hard-won lessons, project-specific standards —
 falls through the cracks. It lives in people’s heads, gets enforced
 inconsistently, and slows down every review.</p>
 <h3 id="the-solution-1"><a class="header" href="#the-solution-1">The Solution</a></h3>
-<p>The kleis-review MCP loads a coding standards file and exposes five tools:</p>
+<p>The kleis-review MCP loads a coding standards file and exposes six tools:</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -326,6 +326,7 @@ inconsistently, and slows down every review.</p>
 <tr><td><code>list_rules</code></td><td>List all loaded coding standard rules</td></tr>
 <tr><td><code>explain_rule</code></td><td>Explain a specific rule in detail</td></tr>
 <tr><td><code>describe_standards</code></td><td>Show the full schema of loaded standards</td></tr>
+<tr><td><code>evaluate</code></td><td>Evaluate a Kleis expression or verify a proposition via Z3</td></tr>
 </tbody>
 </table>
 </div>
@@ -437,6 +438,55 @@ which is common in CLI applications where panicking on bad input is acceptable.<
 <p>No tooling changes needed. The engine discovers all <code>check_*</code> functions
 automatically on startup. Update the file, restart the MCP, and the new rule
 is live.</p>
+<h3 id="z3-verification-of-formal-properties"><a class="header" href="#z3-verification-of-formal-properties">Z3 Verification of Formal Properties</a></h3>
+<p>Beyond string-level checks, the review policy can define formal properties
+using Kleis structures with axioms. These properties are verified by Z3 —
+not tested against examples, but proven over all possible inputs.</p>
+<p>The standards file can include structures like:</p>
+<pre><code class="language-kleis">structure SafeCode {
+    operation is_safe : String -&gt; Bool
+
+    axiom safe_no_unwrap : forall(s : String).
+        implies(is_safe(s), not(contains(s, ".unwrap()")))
+
+    axiom safe_no_panic : forall(s : String).
+        implies(is_safe(s), not(contains(s, "panic!(")))
+
+    axiom safe_no_unsafe : forall(s : String).
+        implies(is_safe(s), not(contains(s, "unsafe {")))
+}
+</code></pre>
+<p>The <code>evaluate</code> tool accepts any Kleis expression, including universal
+quantifiers that Z3 can verify:</p>
+<pre><code>evaluate: contains("hello world", "world")
+-&gt; true
+
+evaluate: check_no_unwrap("fn f() { x.unwrap() }")
+-&gt; fail: contains .unwrap() — use ? or .expect() with a message
+
+evaluate: forall(s : String). implies(is_safe(s), not(contains(s, ".unwrap()")))
+-&gt; VERIFIED
+</code></pre>
+<p>The first two calls are concrete evaluation — the Kleis evaluator computes
+the result directly. The third is a Z3 proposition: it proves that for
+<strong>every</strong> string <code>s</code>, if <code>is_safe(s)</code> holds, then <code>s</code> does not contain
+<code>.unwrap()</code>. This is not a test case — it is a machine-checked proof.</p>
+<p>This gives the review MCP two levels of capability:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Level</th><th>Mechanism</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>String checks</strong></td><td><code>check_*</code> functions with <code>contains</code>/<code>hasPrefix</code></td><td>Fast pattern matching, per-file verdicts</td></tr>
+<tr><td><strong>Formal properties</strong></td><td>Structures with axioms, verified by Z3</td><td>Prove properties hold over all inputs</td></tr>
+</tbody>
+</table>
+</div>
+<p>The string checks run in microseconds and catch mechanical issues during
+development. The formal properties provide guarantees about the standards
+themselves — for example, proving that the safety definition is internally
+consistent, or that two properties cannot conflict.</p>
 <h3 id="starting-the-server-1"><a class="header" href="#starting-the-server-1">Starting the Server</a></h3>
 <pre><code class="language-bash">kleis review-mcp --policy examples/policies/rust_review_policy.kleis --verbose
 </code></pre>
