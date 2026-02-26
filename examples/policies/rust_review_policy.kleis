@@ -1,0 +1,178 @@
+// Rust Code Review Policy — Formal Coding Standards
+//
+// Each check_* function receives source code as a string and returns
+// "pass" or "fail: <reason>".
+//
+// Usage: kleis review-mcp --policy examples/policies/rust_review_policy.kleis
+
+// --- Safety ---
+
+define check_no_unwrap(source) =
+    if contains(source, ".unwrap()") then "fail: contains .unwrap() — use ? or .expect() with a message"
+    else "pass"
+
+define check_no_unsafe(source) =
+    if contains(source, "unsafe {") then "fail: contains unsafe block"
+    else if contains(source, "unsafe{") then "fail: contains unsafe block"
+    else "pass"
+
+define check_no_panic(source) =
+    if contains(source, "panic!(") then "fail: contains panic!() — return Result instead"
+    else "pass"
+
+// --- Quality ---
+
+define check_no_println(source) =
+    if contains(source, "println!(") then "fail: contains println!() — use eprintln!, log macros, or tracing"
+    else "pass"
+
+define check_no_todo(source) =
+    if contains(source, "todo!(") then "fail: contains todo!() — complete the implementation"
+    else "pass"
+
+define check_no_dbg(source) =
+    if contains(source, "dbg!(") then "fail: contains dbg!() — remove debug macros"
+    else "pass"
+
+// --- Security ---
+
+define check_no_hardcoded_password(source) =
+    if contains(source, "password =") then "fail: possible hardcoded password detected"
+    else if contains(source, "password:") then "fail: possible hardcoded password detected"
+    else "pass"
+
+define check_no_hardcoded_api_key(source) =
+    if contains(source, "api_key =") then "fail: possible hardcoded API key detected"
+    else if contains(source, "api_key:") then "fail: possible hardcoded API key detected"
+    else if contains(source, "API_KEY =") then "fail: possible hardcoded API key constant detected"
+    else "pass"
+
+define check_no_hardcoded_secret(source) =
+    if contains(source, "secret =") then "fail: possible hardcoded secret detected"
+    else if contains(source, "secret:") then "fail: possible hardcoded secret detected"
+    else if contains(source, "SECRET =") then "fail: possible hardcoded secret constant detected"
+    else "pass"
+
+// --- Style ---
+
+define check_no_wildcard_import(source) =
+    if contains(source, "use *;") then "fail: wildcard import detected — be explicit"
+    else if contains(source, "::*;") then "fail: wildcard import (::*) detected — be explicit"
+    else "pass"
+
+define check_no_allow_unused(source) =
+    if contains(source, "#[allow(unused)]") then "fail: #[allow(unused)] — remove dead code instead"
+    else if contains(source, "#[allow(dead_code)]") then "fail: #[allow(dead_code)] — remove dead code instead"
+    else "pass"
+
+define check_no_inline_use(source) =
+    if contains(source, "{ use ") then "fail: inline use statement inside block — move imports to top of file"
+    else if contains(source, "{use ") then "fail: inline use statement inside block — move imports to top of file"
+    else if contains(source, "    use ") then "fail: indented use statement — move imports to top of file"
+    else "pass"
+
+define check_no_narrating_comments(source) =
+    if contains(source, "// Import") then "fail: narrating comment — move to README.md, code should speak for itself"
+    else if contains(source, "// Define") then "fail: narrating comment — move to README.md, code should speak for itself"
+    else if contains(source, "// Return the") then "fail: narrating comment — move to README.md, code should speak for itself"
+    else if contains(source, "// Increment") then "fail: narrating comment — move to README.md, code should speak for itself"
+    else if contains(source, "// Set the") then "fail: narrating comment — move to README.md, code should speak for itself"
+    else if contains(source, "// Create a new") then "fail: narrating comment — move to README.md, code should speak for itself"
+    else if contains(source, "// Initialize") then "fail: narrating comment — move to README.md, code should speak for itself"
+    else if contains(source, "// Handle the error") then "fail: narrating comment — move to README.md, code should speak for itself"
+    else "pass"
+
+// --- Error handling ---
+
+define check_no_result_string(source) =
+    if contains(source, "Result<Self, String>") then "fail: Result<_, String> — use thiserror for typed errors"
+    else if contains(source, "Result<(), String>") then "fail: Result<(), String> — use thiserror for typed errors"
+    else if contains(source, ", String>") then "fail: possible Result<_, String> — prefer thiserror or anyhow"
+    else "pass"
+
+// --- Clippy discipline ---
+
+define check_no_clippy_suppression(source) =
+    if contains(source, "#[allow(clippy::") then "fail: clippy suppression — fix the lint instead of suppressing it"
+    else if contains(source, "#![allow(clippy::") then "fail: module-wide clippy suppression — fix the lints"
+    else "pass"
+
+define check_no_too_many_arguments(source) =
+    if contains(source, "too_many_arguments") then "fail: too many function arguments — refactor into a config struct"
+    else "pass"
+
+define check_no_type_complexity(source) =
+    if contains(source, "type_complexity") then "fail: type complexity suppressed — introduce a type alias"
+    else "pass"
+
+// --- Clippy -D warnings patterns ---
+// These catch code that `cargo clippy -- -D warnings` would reject.
+
+define check_clippy_ptr_arg(source) =
+    if contains(source, "&String") then "fail: clippy::ptr_arg — use &str instead of &String"
+    else if contains(source, "&Vec<") then "fail: clippy::ptr_arg — use &[T] instead of &Vec<T>"
+    else "pass"
+
+define check_clippy_len_zero(source) =
+    if contains(source, ".len() == 0") then "fail: clippy::len_zero — use .is_empty() instead"
+    else if contains(source, ".len() > 0") then "fail: clippy::len_zero — use !.is_empty() instead"
+    else if contains(source, ".len() != 0") then "fail: clippy::len_zero — use !.is_empty() instead"
+    else "pass"
+
+define check_clippy_bool_comparison(source) =
+    if contains(source, "== true") then "fail: clippy::bool_comparison — remove == true, use value directly"
+    else if contains(source, "== false") then "fail: clippy::bool_comparison — use !value instead of == false"
+    else if contains(source, "!= true") then "fail: clippy::bool_comparison — use !value instead"
+    else "pass"
+
+define check_clippy_redundant_clone(source) =
+    if contains(source, ".to_string().as_str()") then "fail: clippy — needless .to_string().as_str(), use &str directly"
+    else if contains(source, ".to_owned().as_str()") then "fail: clippy — needless .to_owned().as_str()"
+    else if contains(source, ".clone().as_ref()") then "fail: clippy — needless .clone().as_ref()"
+    else "pass"
+
+define check_clippy_manual_is_ascii(source) =
+    if contains(source, ">= 'a' && ") then "fail: clippy::manual_is_ascii_check — use .is_ascii_lowercase()"
+    else if contains(source, ">= 'A' && ") then "fail: clippy::manual_is_ascii_check — use .is_ascii_uppercase()"
+    else if contains(source, ">= '0' && ") then "fail: clippy::manual_is_ascii_check — use .is_ascii_digit()"
+    else "pass"
+
+define check_clippy_single_char_pattern(source) =
+    if contains(source, ".split(\"\n\")") then "fail: clippy::single_char_pattern — use .split('\\n') with a char"
+    else if contains(source, ".contains(\"\n\")") then "fail: clippy::single_char_pattern — use .contains('\\n') with a char"
+    else if contains(source, ".starts_with(\"/\")") then "fail: clippy::single_char_pattern — use .starts_with('/') with a char"
+    else if contains(source, ".ends_with(\"/\")") then "fail: clippy::single_char_pattern — use .ends_with('/') with a char"
+    else "pass"
+
+define check_clippy_expect_fun_call(source) =
+    if contains(source, ".expect(&format!(") then "fail: clippy::expect_fun_call — use .unwrap_or_else or build msg lazily"
+    else "pass"
+
+// --- No color emoji or decorative icons in Rust source ---
+// Unicode strings are fine; decorative emoji are not.
+
+define check_no_emoji(source) =
+    if contains(source, "✅") then "fail: color emoji in source — use plain text"
+    else if contains(source, "❌") then "fail: color emoji in source — use plain text"
+    else if contains(source, "🔥") then "fail: color emoji in source — use plain text"
+    else if contains(source, "🚀") then "fail: color emoji in source — use plain text"
+    else if contains(source, "🎉") then "fail: color emoji in source — use plain text"
+    else if contains(source, "🐛") then "fail: color emoji in source — use plain text"
+    else if contains(source, "💡") then "fail: color emoji in source — use plain text"
+    else if contains(source, "✨") then "fail: color emoji in source — use plain text"
+    else if contains(source, "👍") then "fail: color emoji in source — use plain text"
+    else if contains(source, "📝") then "fail: color emoji in source — use plain text"
+    else if contains(source, "🔧") then "fail: color emoji in source — use plain text"
+    else if contains(source, "📦") then "fail: color emoji in source — use plain text"
+    else if contains(source, "🔒") then "fail: color emoji in source — use plain text"
+    else if contains(source, "🔑") then "fail: color emoji in source — use plain text"
+    else if contains(source, "💥") then "fail: color emoji in source — use plain text"
+    else if contains(source, "🤖") then "fail: color emoji in source — use plain text"
+    else if contains(source, "🔴") then "fail: color emoji in source — use plain text"
+    else if contains(source, "🟢") then "fail: color emoji in source — use plain text"
+    else if contains(source, "🟡") then "fail: color emoji in source — use plain text"
+    else if contains(source, "⚠️") then "fail: color emoji in source — use plain text"
+    else if contains(source, "⬆️") then "fail: color emoji in source — use plain text"
+    else if contains(source, "⬇️") then "fail: color emoji in source — use plain text"
+    else if contains(source, "➡️") then "fail: color emoji in source — use plain text"
+    else "pass"

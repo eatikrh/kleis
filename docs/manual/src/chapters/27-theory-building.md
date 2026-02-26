@@ -356,4 +356,4 @@ The theory file is the beginning, not the end. Future sessions can:
 
 The substrate is ready. Build on it.
 
-→ [Previous: Control Systems](./26-control-systems.md)
+-> [Previous: Control Systems](./26-control-systems.md) | [Next: Agent MCP Servers](./28-agent-mcps.md)

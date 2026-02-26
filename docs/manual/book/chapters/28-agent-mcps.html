@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>VS Code Debugging - The Kleis Manual</title>
+        <title>Agent MCP Servers - The Kleis Manual</title>
 
 
         <!-- Custom HTML head -->
@@ -154,7 +154,7 @@
                         <a href="https://github.com/eatikrh/kleis" title="Git repository" aria-label="Git repository">
                             <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
                         </a>
-                        <a href="https://github.com/eatikrh/kleis/edit/main/docs/manual/src/appendix/vscode-debugging.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                        <a href="https://github.com/eatikrh/kleis/edit/main/docs/manual/src/chapters/28-agent-mcps.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
                             <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
                         </a>
 
@@ -188,420 +188,317 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="vs-code-debugging"><a class="header" href="#vs-code-debugging">VS Code Debugging</a></h1>
-<p>This appendix explains how to set up and use the VS Code debugger with Kleis.</p>
-<p><img src="../images/vscode-debugger.png" alt="VS Code Debugger with Kleis"></p>
-<p><em>VS Code debugging a Kleis file: breakpoint on line 69, Variables panel showing expression AST, Call Stack showing evaluation context, and Debug Console with status messages.</em></p>
-<h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
-<ol>
-<li><strong>VS Code</strong> installed</li>
-<li><strong>Kleis extension</strong> installed (provides syntax highlighting + debugging)</li>
-<li><strong>Kleis binaries</strong> built:
-<pre><code class="language-bash">cargo build --release --bin kleis --bin kleis-lsp
+                        <h1 id="agent-mcp-servers"><a class="header" href="#agent-mcp-servers">Agent MCP Servers</a></h1>
+<p>Kleis ships three Model Context Protocol (MCP) servers that turn Kleis policies
+and structures into live tools for AI agents. The previous chapter covered
+<strong>kleis-theory</strong> — the interactive theory-building server. This chapter covers
+the other two: <strong>kleis-policy</strong> for agent action gating, and <strong>kleis-review</strong>
+for code review against formal coding standards.</p>
+<p>All three share the same architecture: a Kleis <code>.kleis</code> file defines the rules,
+the Kleis evaluator loads them into memory, and the MCP server exposes them as
+JSON-RPC tools over stdio. The rules are declarative, version-controlled, and
+readable by both humans and machines.</p>
+<h2 id="kleis-policy-agent-action-gating"><a class="header" href="#kleis-policy-agent-action-gating">kleis-policy: Agent Action Gating</a></h2>
+<h3 id="the-problem"><a class="header" href="#the-problem">The Problem</a></h3>
+<p>An AI agent in an IDE can run shell commands, edit files, commit code, and push
+to remote repositories. Without guardrails, a single hallucinated command —
+<code>rm -rf /</code>, <code>git push --force main</code>, <code>chmod 777</code> — can cause real damage.</p>
+<p>Static tool-call filters are too coarse. “Never allow shell commands” is
+impractical. “Allow shell commands but deny dangerous patterns” requires
+nuance that belongs in a policy, not hardcoded in the agent runtime.</p>
+<h3 id="the-solution"><a class="header" href="#the-solution">The Solution</a></h3>
+<p>The kleis-policy MCP loads a policy file and exposes five tools:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tool</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>check_action</code></td><td>Check whether an action is allowed, get preconditions</td></tr>
+<tr><td><code>list_rules</code></td><td>Show all loaded policy rules</td></tr>
+<tr><td><code>explain_rule</code></td><td>Explain a specific rule in detail</td></tr>
+<tr><td><code>describe_schema</code></td><td>Show the full policy vocabulary</td></tr>
+<tr><td><code>evaluate</code></td><td>Evaluate any Kleis expression or verify a proposition via Z3</td></tr>
+</tbody>
+</table>
+</div>
+<p>The agent calls <code>check_action</code> before performing file edits, deletions,
+commands, git operations, and commits. The policy returns “allow” or “deny”
+plus any preconditions that must be satisfied first.</p>
+<h3 id="the-policy-file"><a class="header" href="#the-policy-file">The Policy File</a></h3>
+<p>The policy is a standard <code>.kleis</code> file using <code>define</code>, <code>if/then/else</code>,
+and built-in string functions (<code>contains</code>, <code>hasPrefix</code>, <code>hasSuffix</code>, <code>isAscii</code>):</p>
+<pre><code class="language-kleis">define check_file_delete(path) =
+    if hasPrefix(path, "src/") then "deny"
+    else if hasPrefix(path, "tests/") then "deny"
+    else if path = "Cargo.toml" then "deny"
+    else "allow"
+
+define check_run_command(cmd) =
+    if contains(cmd, "rm -rf") then "deny"
+    else if contains(cmd, "chmod 777") then "deny"
+    else if contains(cmd, "pkill") then "deny"
+    else "allow"
+
+define check_git_push(branch, force) =
+    if force = 1 then "deny"
+    else if branch = "production" then "deny"
+    else "allow"
+
+define check_git_commit(description) =
+    if isAscii(description) then "allow"
+    else "deny"
 </code></pre>
+<p>These rules are not aspirational documentation — they are enforced at runtime.
+When the agent calls <code>check_action("run_command", "rm -rf ./build")</code>, the
+server evaluates <code>check_run_command("rm -rf ./build")</code> and returns <code>"deny"</code>.</p>
+<h3 id="preconditions"><a class="header" href="#preconditions">Preconditions</a></h3>
+<p>Beyond allow/deny, the policy defines preconditions — commands or checks
+that must run before an action is permitted:</p>
+<pre><code class="language-kleis">define before_git_push(branch, force) =
+    "cargo fmt --all &amp;&amp; cargo clippy --all-targets --all-features &amp;&amp; cargo test"
+
+define before_file_edit(path) =
+    if hasPrefix(path, "src/kleis_parser") then
+        "cargo test parser &amp;&amp; cat docs/grammar/kleis_grammar_v99.ebnf"
+    else if hasPrefix(path, "src/evaluator") then "cargo test evaluator"
+    else "none"
+</code></pre>
+<p>When the agent asks to edit <code>src/kleis_parser.rs</code>, the MCP responds: “allowed,
+but first run parser tests and read the grammar.” The agent executes the
+preconditions, then proceeds with the edit.</p>
+<h3 id="z3-verification-of-the-policy-itself"><a class="header" href="#z3-verification-of-the-policy-itself">Z3 Verification of the Policy Itself</a></h3>
+<p>Because the policy is a Kleis program, its properties can be verified via Z3.
+The <code>evaluate</code> tool accepts universal quantifiers:</p>
+<pre><code>evaluate: check_git_commit("fix: resolve parsing bug")
+-&gt; "allow"
+
+evaluate: check_git_commit("initial commit")
+-&gt; "deny"
+
+evaluate: forall(d : String). implies(check_git_commit(d) = "allow", isAscii(d))
+-&gt; VERIFIED
+</code></pre>
+<p>The third query proves that <strong>every</strong> commit message the policy allows is
+ASCII. This is not a test case — it is a machine-checked proof over all
+possible inputs. If someone modifies the policy in a way that breaks this
+property, Z3 will catch it.</p>
+<h3 id="starting-the-server"><a class="header" href="#starting-the-server">Starting the Server</a></h3>
+<pre><code class="language-bash">kleis mcp --policy examples/policies/agent_policy.kleis --verbose
+</code></pre>
+<p>In Cursor, add to <code>.cursor/mcp.json</code>:</p>
+<pre><code class="language-json">"kleis-policy": {
+    "command": "/Users/you/bin/kleis",
+    "args": ["mcp", "--verbose", "--policy",
+             "/path/to/examples/policies/agent_policy.kleis"]
+}
+</code></pre>
+<hr>
+<h2 id="kleis-review-code-review-via-formal-standards"><a class="header" href="#kleis-review-code-review-via-formal-standards">kleis-review: Code Review via Formal Standards</a></h2>
+<h3 id="the-problem-1"><a class="header" href="#the-problem-1">The Problem</a></h3>
+<p>Code reviews catch two categories of issues:</p>
+<ol>
+<li>
+<p><strong>Mechanical</strong> — <code>.unwrap()</code> in production code, wildcard imports, emoji
+in source files, <code>Result&lt;_, String&gt;</code> instead of typed errors. These are
+team conventions that reviewers enforce inconsistently depending on who
+reviews the MR and how tired they are.</p>
+</li>
+<li>
+<p><strong>Architectural</strong> — “should this be a middleware or a per-handler check?”
+These require understanding and judgment.</p>
 </li>
 </ol>
-<h2 id="extension-setup"><a class="header" href="#extension-setup">Extension Setup</a></h2>
-<p>The Kleis VS Code extension is located in <code>vscode-kleis/</code>. Install it:</p>
-<pre><code class="language-bash">cd vscode-kleis
-npm install
-npm run compile
-code --install-extension kleis-*.vsix
-</code></pre>
-<p>Or for development, open the extension folder in VS Code and press F5 to launch an Extension Development Host.</p>
-<h2 id="workspace-settings"><a class="header" href="#workspace-settings">Workspace Settings</a></h2>
-<p>Create <code>.vscode/settings.json</code> in your project to configure the extension:</p>
-<pre><code class="language-json">{
-  "kleis.serverPath": "${workspaceFolder}/target/release/kleis",
-  "kleis.replPath": "${workspaceFolder}/target/release/repl",
-  "kleis.trace.server": "off"
-}
-</code></pre>
-<h3 id="settings-reference"><a class="header" href="#settings-reference">Settings Reference</a></h3>
+<p>Linters handle syntax. AI agents handle architecture. But the mechanical
+layer — team conventions, hard-won lessons, project-specific standards —
+falls through the cracks. It lives in people’s heads, gets enforced
+inconsistently, and slows down every review.</p>
+<h3 id="the-solution-1"><a class="header" href="#the-solution-1">The Solution</a></h3>
+<p>The kleis-review MCP loads a coding standards file and exposes five tools:</p>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Setting</th><th>Description</th></tr>
+<tr><th>Tool</th><th>Purpose</th></tr>
 </thead>
 <tbody>
-<tr><td><code>kleis.serverPath</code></td><td>Path to the <code>kleis</code> binary (used for LSP and DAP)</td></tr>
-<tr><td><code>kleis.replPath</code></td><td>Path to the <code>repl</code> binary (used for REPL panel)</td></tr>
-<tr><td><code>kleis.trace.server</code></td><td>Logging level: <code>"off"</code>, <code>"messages"</code>, or <code>"verbose"</code></td></tr>
+<tr><td><code>check_code</code></td><td>Check a source code snippet against all standards</td></tr>
+<tr><td><code>check_file</code></td><td>Check a file on disk against all standards</td></tr>
+<tr><td><code>list_rules</code></td><td>List all loaded coding standard rules</td></tr>
+<tr><td><code>explain_rule</code></td><td>Explain a specific rule in detail</td></tr>
+<tr><td><code>describe_standards</code></td><td>Show the full schema of loaded standards</td></tr>
 </tbody>
 </table>
 </div>
-<p><strong>Note:</strong> Use absolute paths for reliability. Example for a typical setup:</p>
-<pre><code class="language-json">{
-  "kleis.serverPath": "/Users/yourname/git/kleis/target/release/kleis",
-  "kleis.replPath": "/Users/yourname/git/kleis/target/release/repl",
-  "kleis.trace.server": "off"
-}
-</code></pre>
-<p>Set <code>"kleis.trace.server": "verbose"</code> when debugging extension issues.</p>
-<h2 id="launch-configuration"><a class="header" href="#launch-configuration">Launch Configuration</a></h2>
-<p>Create <code>.vscode/launch.json</code> in your project:</p>
-<pre><code class="language-json">{
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "type": "kleis",
-            "request": "launch",
-            "name": "Debug Kleis File",
-            "program": "${file}",
-            "stopOnEntry": false
-        }
-    ]
-}
-</code></pre>
-<h3 id="configuration-options"><a class="header" href="#configuration-options">Configuration Options</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Option</th><th>Type</th><th>Description</th></tr>
-</thead>
-<tbody>
-<tr><td><code>program</code></td><td>string</td><td>Path to .kleis file to debug</td></tr>
-<tr><td><code>stopOnEntry</code></td><td>boolean</td><td>Stop at first line (default: false)</td></tr>
-</tbody>
-</table>
-</div>
-<h2 id="setting-breakpoints"><a class="header" href="#setting-breakpoints">Setting Breakpoints</a></h2>
-<p>Click in the gutter (left margin) next to any line in an example block:</p>
-<pre><code class="language-kleis">example "my test" {
-    let x = 5          // ← Click here to set breakpoint
-    let y = double(x)  // ← Or here
-    assert(y = 10)
-}
-</code></pre>
-<h3 id="where-breakpoints-work"><a class="header" href="#where-breakpoints-work">Where Breakpoints Work</a></h3>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Location</th><th>Works?</th><th>Notes</th></tr>
-</thead>
-<tbody>
-<tr><td>Inside example blocks</td><td>✅ Yes</td><td><code>let</code>, <code>assert</code>, expressions</td></tr>
-<tr><td>Function body lines</td><td>✅ Yes</td><td>Stops when function is called</td></tr>
-<tr><td>Top-level definitions</td><td>❌ No</td><td>Declarations, not executable</td></tr>
-<tr><td>Imported files</td><td>✅ Yes</td><td>Set breakpoints in helper files</td></tr>
-</tbody>
-</table>
-</div>
-<h3 id="breakpoints-in-imported-files"><a class="header" href="#breakpoints-in-imported-files">Breakpoints in Imported Files</a></h3>
-<p>You can set breakpoints in imported files:</p>
-<pre><code class="language-kleis">// helpers.kleis
-define double(n) =
-    n + n    // ← Breakpoint here catches all calls to double()
+<p>Each <code>check_*</code> function in the policy receives source code as a string and
+returns <code>"pass"</code> or <code>"fail: &lt;reason&gt;"</code>. The engine runs all rules against
+the input and returns a per-rule verdict.</p>
+<h3 id="the-standards-file"><a class="header" href="#the-standards-file">The Standards File</a></h3>
+<p>The standards file is a <code>.kleis</code> file where each rule is a <code>define</code> function.
+Here is a representative sample:</p>
+<pre><code class="language-kleis">// Safety
+define check_no_unwrap(source) =
+    if contains(source, ".unwrap()") then
+        "fail: contains .unwrap() — use ? or .expect() with a message"
+    else "pass"
 
-// main.kleis
-import "helpers.kleis"
+// Error handling
+define check_no_result_string(source) =
+    if contains(source, "Result&lt;(), String&gt;") then
+        "fail: Result&lt;(), String&gt; — use thiserror for typed errors"
+    else "pass"
 
-example "cross-file breakpoint" {
-    let x = double(5)  // Stops at the breakpoint in helpers.kleis
-}
-</code></pre>
-<p><strong>Tip:</strong> Open the imported file and set breakpoints before starting the debug session.</p>
-<h2 id="starting-a-debug-session"><a class="header" href="#starting-a-debug-session">Starting a Debug Session</a></h2>
-<ol>
-<li>Open a <code>.kleis</code> file with example blocks</li>
-<li>Set breakpoints on lines you want to inspect</li>
-<li>Press <strong>F5</strong> or click <strong>Run → Start Debugging</strong></li>
-<li>Select “Debug Kleis File” configuration</li>
-</ol>
-<h2 id="debug-controls"><a class="header" href="#debug-controls">Debug Controls</a></h2>
-<div class="table-wrapper">
-<table>
-<thead>
-<tr><th>Key</th><th>Action</th><th>Description</th></tr>
-</thead>
-<tbody>
-<tr><td>F5</td><td>Continue</td><td>Run until next breakpoint</td></tr>
-<tr><td>F10</td><td>Step Over</td><td>Execute current line, don’t enter functions</td></tr>
-<tr><td>F11</td><td>Step Into</td><td>Enter function calls</td></tr>
-<tr><td>Shift+F11</td><td>Step Out</td><td>Finish current function, return to caller</td></tr>
-<tr><td>Shift+F5</td><td>Stop</td><td>End debug session</td></tr>
-</tbody>
-</table>
-</div>
-<h2 id="inspecting-variables"><a class="header" href="#inspecting-variables">Inspecting Variables</a></h2>
-<p>The <strong>Variables</strong> panel (left sidebar) shows:</p>
-<ul>
-<li><strong>Local variables</strong> — Let bindings in current scope</li>
-<li><strong>Function parameters</strong> — Arguments passed to current function</li>
-<li><strong>Inferred types</strong> — When available, types are displayed</li>
-</ul>
-<p><strong>Important:</strong> Variables are displayed as <strong>AST expressions</strong>, not just values:</p>
-<pre><code class="language-kleis">example "inspection demo" {
-    let x = 5
-    let y = x + 1
-    // Variables panel shows:
-    //   x = Const("5")
-    //   y = Operation { name: "plus", args: [Const("5"), Const("1")] }
-}
-</code></pre>
-<h3 id="type-aware-variable-display"><a class="header" href="#type-aware-variable-display">Type-Aware Variable Display</a></h3>
-<p>When type information is available, variables show their inferred types:</p>
-<pre><code class="language-kleis">example "typed variables" {
-    let M = matrix2x3([[1,2,3],[4,5,6]])
-    let v = vector3([1, 2, 3])
-    let c = complex(1, 2)
-    
-    // Variables panel shows:
-    //   M : Matrix(2,3,ℝ) = [[1,2,3],[4,5,6]]
-    //   v : Vector(3,ℝ) = [1, 2, 3]
-    //   c : ℂ = 1+2i
-}
-</code></pre>
-<p>This is intentional! Kleis is a <strong>symbolic mathematics system</strong>. Variables hold expressions that represent mathematical objects, not just computed values. This enables:</p>
-<ol>
-<li><strong>Symbolic manipulation</strong> — See the structure of expressions</li>
-<li><strong>Z3 verification</strong> — Pass expressions to the theorem prover</li>
-<li><strong>Provenance tracking</strong> — Understand where values came from</li>
-<li><strong>Type checking</strong> — Verify types match expectations</li>
-</ol>
-<h2 id="call-stack"><a class="header" href="#call-stack">Call Stack</a></h2>
-<p>The <strong>Call Stack</strong> panel shows the execution path:</p>
-<pre><code>fibonacci (n=5)          ← Currently here
-fibonacci (n=6)
-example "fib test"       ← Entry point
-</code></pre>
-<p>Click any frame to see its local variables and source location.</p>
-<h2 id="cross-file-debugging"><a class="header" href="#cross-file-debugging">Cross-File Debugging</a></h2>
-<p>When stepping into imported functions, VS Code opens the source file:</p>
-<pre><code class="language-kleis">// main.kleis
-import "helpers.kleis"
+// Clippy patterns
+define check_clippy_len_zero(source) =
+    if contains(source, ".len() == 0") then
+        "fail: clippy::len_zero — use .is_empty() instead"
+    else if contains(source, ".len() &gt; 0") then
+        "fail: clippy::len_zero — use !.is_empty() instead"
+    else "pass"
 
-example "cross-file" {
-    let result = helper_function(5)  // ← Step Into (F11)
-    // VS Code opens helpers.kleis at helper_function definition
-}
+// Style
+define check_no_emoji(source) =
+    if contains(source, "rocket_emoji") then
+        "fail: color emoji in source — use plain text"
+    else "pass"
 </code></pre>
-<h3 id="how-it-works"><a class="header" href="#how-it-works">How It Works</a></h3>
-<p>Every expression carries its <strong>source location</strong> (line, column, file path). When the evaluator processes an expression from an imported file, the debugger reports that file’s location to VS Code, which opens it automatically.</p>
-<h2 id="debug-console"><a class="header" href="#debug-console">Debug Console</a></h2>
-<p>The Debug Console (bottom panel) shows:</p>
-<ul>
-<li>Evaluation progress</li>
-<li>Assertion results (pass/fail)</li>
-<li>Error messages</li>
-</ul>
-<p>You can also evaluate expressions in the console during a paused debug session.</p>
-<h2 id="assert-with-z3-verification"><a class="header" href="#assert-with-z3-verification">Assert with Z3 Verification</a></h2>
-<p><strong>New in v0.93:</strong> Assertions in example blocks use Z3 for symbolic verification!</p>
-<h3 id="how-it-works-1"><a class="header" href="#how-it-works-1">How It Works</a></h3>
-<p>When you write <code>assert(expr)</code>:</p>
-<ol>
-<li><strong>Concrete values</strong> — Checked via structural equality</li>
-<li><strong>Symbolic expressions</strong> — Verified using Z3 theorem prover</li>
-</ol>
-<pre><code class="language-kleis">structure CommutativeRing(R) {
-    operation (+) : R × R → R
-    axiom commutativity: ∀(a b : R). a + b = b + a
-}
+<p>A full policy covers safety (unwrap, unsafe, panic), quality (println, todo,
+dbg), security (hardcoded passwords, API keys, secrets), style (wildcard
+imports, narrating comments, inline use statements), error handling
+(Result&lt;_, String&gt;, clippy suppressions), and clippy <code>-D warnings</code> patterns
+(ptr_arg, len_zero, bool_comparison, redundant_clone).</p>
+<h3 id="running-a-review"><a class="header" href="#running-a-review">Running a Review</a></h3>
+<p>The agent calls <code>check_file</code> with a path:</p>
+<pre><code>check_file: { "path": "src/evaluator.rs" }
 
-example "symbolic verification" {
-    // ✅ Z3 verifies using commutativity axiom!
-    assert(x + y = y + x)
-    
-    // ❌ Z3 disproves with counterexample
-    // assert(x + y = y + y)  // "Counterexample: y!1 -&gt; 1, x!0 -&gt; 0"
-    
-    // ✅ Concrete: structural equality
-    let a = 5
-    assert(a = 5)
-}
+-&gt; Code Review: src/evaluator.rs — 15 passed, 10 failed (out of 25 checks)
+
+   FAIL  check_no_unwrap — contains .unwrap() — use ? or .expect()
+   FAIL  check_no_panic — contains panic!() — return Result instead
+   FAIL  check_no_println — contains println!() — use eprintln! or tracing
+   FAIL  check_no_unsafe — contains unsafe block
+   FAIL  check_no_result_string — Result&lt;(), String&gt; — use thiserror
+   FAIL  check_no_clippy_suppression — fix the lint instead of suppressing
+   FAIL  check_clippy_ptr_arg — use &amp;str instead of &amp;String
+   FAIL  check_no_wildcard_import — wildcard import (::*) — be explicit
+   FAIL  check_no_inline_use — indented use — move imports to top of file
+   FAIL  check_no_narrating_comments — code should speak for itself
+   PASS  (15 other rules)
 </code></pre>
-<h3 id="assertion-results"><a class="header" href="#assertion-results">Assertion Results</a></h3>
+<p>Or <code>check_code</code> with a snippet for in-flight review during development:</p>
+<pre><code>check_code: { "source": "fn greet(name: &amp;String) { println!(\"hi\"); }" }
+
+-&gt; 2 failures:
+   check_clippy_ptr_arg: use &amp;str instead of &amp;String
+   check_no_println: use eprintln!, log macros, or tracing
+</code></pre>
+<h3 id="real-results"><a class="header" href="#real-results">Real Results</a></h3>
+<p>We ran the policy against two Rust codebases:</p>
+<p><strong>Kleis</strong> (12 core source files):</p>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Result</th><th>Badge</th><th>Meaning</th></tr>
+<tr><th>Metric</th><th>Value</th></tr>
 </thead>
 <tbody>
-<tr><td><code>Passed</code></td><td>✓</td><td>Concrete values match structurally</td></tr>
-<tr><td><code>Verified</code></td><td>✓</td><td>Z3 proved the symbolic claim</td></tr>
-<tr><td><code>Failed { expected, actual }</code></td><td>✗</td><td>Concrete values differ</td></tr>
-<tr><td><code>Disproved { counterexample }</code></td><td>✗</td><td>Z3 found a counterexample</td></tr>
-<tr><td><code>Unknown</code></td><td>✗</td><td>Could not verify (treated as failure)</td></tr>
+<tr><td>Files checked</td><td>12</td></tr>
+<tr><td>Passed clean</td><td>1</td></tr>
+<tr><td>Total violations</td><td>71</td></tr>
+<tr><td>Top violations</td><td><code>.unwrap()</code> (8 files), <code>println!</code> (9 files), wildcard imports (9 files)</td></tr>
 </tbody>
 </table>
 </div>
-<p><strong>Note:</strong> The debugger displays verification badges (✓/✗) next to assertion variables in the Variables panel, so you can see at a glance which assertions passed or failed.</p>
-<h3 id="requirements"><a class="header" href="#requirements">Requirements</a></h3>
-<ul>
-<li>Structure axioms must be defined for the operations used</li>
-<li>Z3 must be able to load the relevant axioms</li>
-<li>Works best with algebraic properties (commutativity, associativity, etc.)</li>
-</ul>
-<h2 id="numerical-computations"><a class="header" href="#numerical-computations">Numerical Computations</a></h2>
-<p>For concrete numerical computations, build with the <code>numerical</code> feature:</p>
-<pre><code class="language-bash">cargo build --release --features numerical
-</code></pre>
-<p>This enables LAPACK-backed operations:</p>
-<pre><code class="language-kleis">example "numerical" {
-    let A = Matrix(2, 2, [4, 1, 1, 4])
-    
-    // Compute eigenvalues (requires numerical feature)
-    let eigs = eigenvalues(A)
-    // eigs = [5, 3]
-    
-    // Matrix multiplication
-    let B = Matrix(2, 2, [1, 0, 0, 2])
-    let C = matmul(A, B)
-    
-    // SVD decomposition
-    let usv = svd(A)  // Returns [U, S, V]
-}
-</code></pre>
-<h3 id="available-numerical-operations"><a class="header" href="#available-numerical-operations">Available Numerical Operations</a></h3>
+<p><strong>A sample codebase</strong> (37 source files):</p>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Operation</th><th>Description</th></tr>
+<tr><th>Metric</th><th>Value</th></tr>
 </thead>
 <tbody>
-<tr><td><code>eigenvalues(M)</code></td><td>Compute eigenvalues</td></tr>
-<tr><td><code>eig(M)</code></td><td>Eigenvalues and eigenvectors</td></tr>
-<tr><td><code>svd(M)</code></td><td>Singular value decomposition</td></tr>
-<tr><td><code>solve(A, b)</code></td><td>Solve linear system Ax = b</td></tr>
-<tr><td><code>inv(M)</code></td><td>Matrix inverse</td></tr>
-<tr><td><code>det(M)</code></td><td>Determinant</td></tr>
-<tr><td><code>cholesky(M)</code></td><td>Cholesky decomposition</td></tr>
-<tr><td><code>qr(M)</code></td><td>QR factorization</td></tr>
-<tr><td><code>matmul(A, B)</code></td><td>Matrix multiplication</td></tr>
+<tr><td>Files checked</td><td>37</td></tr>
+<tr><td>Passed clean</td><td>12</td></tr>
+<tr><td>Total violations</td><td>70</td></tr>
+<tr><td>Top violations</td><td><code>.unwrap()</code> (17 files), inline use (15 files)</td></tr>
+<tr><td>Emoji violations</td><td>0</td></tr>
+<tr><td>Clippy suppressions</td><td>0</td></tr>
 </tbody>
 </table>
 </div>
-<p><strong>Note:</strong> Numerical operations require concrete values. Symbolic matrices remain symbolic.</p>
-<h2 id="troubleshooting"><a class="header" href="#troubleshooting">Troubleshooting</a></h2>
-<h3 id="breakpoints-not-hitting"><a class="header" href="#breakpoints-not-hitting">Breakpoints Not Hitting</a></h3>
-<p><strong>Problem:</strong> Breakpoint shows as gray (unverified) or never hits.</p>
-<p><strong>Solutions:</strong></p>
-<ol>
-<li>Ensure breakpoint is on a line inside an example block</li>
-<li>Ensure the example block is actually executed</li>
-<li>Rebuild the Kleis binaries: <code>cargo build --release</code></li>
-</ol>
-<h3 id="file-not-found-errors"><a class="header" href="#file-not-found-errors">“File not found” Errors</a></h3>
-<p><strong>Problem:</strong> Debugger can’t find imported files.</p>
-<p><strong>Solutions:</strong></p>
-<ol>
-<li>Use relative paths in imports: <code>import "stdlib/complex.kleis"</code></li>
-<li>Run debug session from the project root directory</li>
-<li>Check that the imported file exists at the specified path</li>
-</ol>
-<h3 id="slow-stepping"><a class="header" href="#slow-stepping">Slow Stepping</a></h3>
-<p><strong>Problem:</strong> Each step takes several seconds.</p>
-<p><strong>Solutions:</strong></p>
-<ol>
-<li>Use release builds: <code>cargo build --release</code></li>
-<li>Avoid stepping through deeply recursive functions</li>
-<li>Use “Step Over” (F10) instead of “Step Into” (F11) for library functions</li>
-</ol>
-<h3 id="debug-session-wont-start"><a class="header" href="#debug-session-wont-start">Debug Session Won’t Start</a></h3>
-<p><strong>Problem:</strong> F5 does nothing or shows an error.</p>
-<p><strong>Solutions:</strong></p>
-<ol>
-<li>Check <code>.vscode/launch.json</code> exists and is valid JSON</li>
-<li>Ensure Kleis extension is installed and enabled</li>
-<li>Check the Output panel (View → Output → Kleis) for error messages</li>
-<li>Verify binaries exist: <code>ls target/release/kleis*</code></li>
-</ol>
-<h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
-<p>The debugging system uses the <strong>Debug Adapter Protocol (DAP)</strong>:</p>
-<pre><code>┌─────────────┐      DAP         ┌──────────────┐
-│   VS Code   │ ←───────────────→ │ kleis server │
-│   (client)  │    JSON-RPC      │   (adapter)  │
-└─────────────┘                   └──────────────┘
-                                        │
-                                        ▼
-                                  ┌──────────────┐
-                                  │  Evaluator   │
-                                  │  + DebugHook │
-                                  └──────────────┘
+<p>The tool immediately distinguished the two codebases by maturity. The sample
+codebase had zero emoji and zero clippy suppressions — exactly the discipline
+expected from a production CLI tool. Its main debt was <code>.unwrap()</code> calls,
+which is common in CLI applications where panicking on bad input is acceptable.</p>
+<h3 id="adding-new-rules"><a class="header" href="#adding-new-rules">Adding New Rules</a></h3>
+<p>When a pattern bites you in production, add a rule:</p>
+<pre><code class="language-kleis">define check_no_expect_fun_call(source) =
+    if contains(source, ".expect(&amp;format!(") then
+        "fail: clippy::expect_fun_call — use .unwrap_or_else or build msg lazily"
+    else "pass"
 </code></pre>
-<ol>
-<li>VS Code sends DAP commands (setBreakpoints, next, stepIn, etc.)</li>
-<li>Kleis server translates to evaluator debug hook calls</li>
-<li>Evaluator pauses at breakpoints, reports current expression’s span</li>
-<li>Server sends stopped events with location (line, column, file)</li>
-<li>VS Code highlights the current line</li>
-</ol>
-<h3 id="source-span-tracking"><a class="header" href="#source-span-tracking">Source Span Tracking</a></h3>
-<p>The key to accurate debugging is <strong>SourceSpan</strong>:</p>
-<pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub struct SourceSpan {
-    pub line: u32,
-    pub column: u32,
-    pub end_line: u32,
-    pub end_column: u32,
-    pub file: Option&lt;Arc&lt;PathBuf&gt;&gt;,  // File path (Arc for cheap cloning)
+<p>No tooling changes needed. The engine discovers all <code>check_*</code> functions
+automatically on startup. Update the file, restart the MCP, and the new rule
+is live.</p>
+<h3 id="starting-the-server-1"><a class="header" href="#starting-the-server-1">Starting the Server</a></h3>
+<pre><code class="language-bash">kleis review-mcp --policy examples/policies/rust_review_policy.kleis --verbose
+</code></pre>
+<p>In Cursor, add to <code>.cursor/mcp.json</code>:</p>
+<pre><code class="language-json">"kleis-review": {
+    "command": "/Users/you/bin/kleis",
+    "args": ["review-mcp", "--verbose", "--policy",
+             "/path/to/examples/policies/rust_review_policy.kleis"]
 }
-<span class="boring">}</span></code></pre>
-<p>Every <code>Expression</code> node has an optional span. The parser attaches the span during parsing. When evaluating, the span travels with the expression, so the debugger always knows the source location.</p>
-<h2 id="understanding-symbolic-debugging"><a class="header" href="#understanding-symbolic-debugging">Understanding Symbolic Debugging</a></h2>
-<p>Kleis debugging differs from traditional debuggers because Kleis is a <strong>symbolic mathematics system</strong>, not an imperative programming language.</p>
-<h3 id="what-execution-means-in-kleis"><a class="header" href="#what-execution-means-in-kleis">What “Execution” Means in Kleis</a></h3>
-<p>In Kleis, “execution” means <strong>symbolic evaluation</strong>:</p>
-<ol>
-<li><strong>Substitution</strong> — Replace function calls with their definitions</li>
-<li><strong>Pattern matching</strong> — Dispatch based on structure</li>
-<li><strong>Simplification</strong> — Apply algebraic rules</li>
-</ol>
-<p>There’s no “program counter” moving through instructions. Instead, expressions transform into simpler expressions.</p>
-<h3 id="variables-hold-expressions-not-values"><a class="header" href="#variables-hold-expressions-not-values">Variables Hold Expressions, Not Values</a></h3>
-<pre><code class="language-kleis">let y = sin(x) + cos(x)
-// y doesn't hold a number
-// y holds: Operation { name: "plus", args: [sin(x), cos(x)] }
 </code></pre>
-<p>This is intentional! It enables:</p>
-<ul>
-<li>Passing expressions to Z3 for verification</li>
-<li>Symbolic differentiation, integration</li>
-<li>Algebraic manipulation</li>
-</ul>
-<h3 id="when-to-use-the-debugger"><a class="header" href="#when-to-use-the-debugger">When to Use the Debugger</a></h3>
+<hr>
+<h2 id="the-three-mcps-together"><a class="header" href="#the-three-mcps-together">The Three MCPs Together</a></h2>
+<p>The three servers cover different stages of the development workflow:</p>
+<pre><code>kleis-policy          kleis-review          kleis-theory
+     |                     |                     |
+     v                     v                     v
+"Can I do this?"    "Is this code good?"   "Is this math correct?"
+     |                     |                     |
+  Action gating       Code standards       Theory building
+  before editing       during editing       during research
+</code></pre>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Use Case</th><th>Debugger Helps?</th></tr>
+<tr><th>Server</th><th>Policy file</th><th>Convention</th><th>Tools</th></tr>
 </thead>
 <tbody>
-<tr><td>Understanding expression evaluation</td><td>✅ Excellent</td></tr>
-<tr><td>Verifying axiom applications</td><td>✅ See Z3 results</td></tr>
-<tr><td>Finding structural issues</td><td>✅ See AST in Variables</td></tr>
-<tr><td>Computing numeric values</td><td>🔶 Need <code>numerical</code> feature</td></tr>
-<tr><td>Traditional imperative debugging</td><td>❌ Wrong mental model</td></tr>
+<tr><td>kleis-policy</td><td><code>agent_policy.kleis</code></td><td><code>check_*</code> returns “allow”/“deny”</td><td>5</td></tr>
+<tr><td>kleis-review</td><td><code>rust_review_policy.kleis</code></td><td><code>check_*</code> returns “pass”/“fail: reason”</td><td>5</td></tr>
+<tr><td>kleis-theory</td><td>(none — builds interactively)</td><td><code>submit_*</code>, <code>evaluate</code>, <code>save_theory</code></td><td>9</td></tr>
 </tbody>
 </table>
 </div>
-<h2 id="tips-for-effective-debugging"><a class="header" href="#tips-for-effective-debugging">Tips for Effective Debugging</a></h2>
+<p>All three are subcommands of the same <code>kleis</code> binary. One build, one install,
+three servers:</p>
+<pre><code class="language-bash">./scripts/build-kleis.sh
+# Installs to ~/bin/kleis and ~/.cargo/bin/kleis
+# All three MCPs are ready
+</code></pre>
+<h3 id="shared-architecture"><a class="header" href="#shared-architecture">Shared Architecture</a></h3>
+<p>Each MCP server follows the same pattern:</p>
 <ol>
-<li><strong>Start with simple examples</strong> — Debug small example blocks first</li>
-<li><strong>Use Step Over for library code</strong> — Don’t step into stdlib functions unless needed</li>
-<li><strong>Watch the Variables panel</strong> — See how expressions transform as you step</li>
-<li><strong>Set multiple breakpoints</strong> — Mark key points in your logic</li>
-<li><strong>Use the Call Stack</strong> — Understand the substitution chain</li>
-<li><strong>Think symbolically</strong> — Variables hold AST, not computed values</li>
-<li><strong>Use Z3 for verification</strong> — Let <code>assert()</code> prove symbolic claims</li>
+<li><strong>Load</strong> — Parse the <code>.kleis</code> file, build an evaluator with all definitions</li>
+<li><strong>Serve</strong> — Listen on stdin for JSON-RPC 2.0 messages</li>
+<li><strong>Evaluate</strong> — For each tool call, evaluate the corresponding Kleis function</li>
+<li><strong>Respond</strong> — Return structured JSON results to the agent</li>
 </ol>
-<h2 id="see-also"><a class="header" href="#see-also">See Also</a></h2>
-<ul>
-<li><a href="../chapters/20-example-blocks.html">Example Blocks</a> — How to write debuggable code</li>
-<li><a href="../chapters/12-repl.html">The REPL</a> — Interactive exploration</li>
-<li><a href="./grammar.html">Grammar Reference</a> — Full language syntax</li>
-</ul>
+<p>The evaluator is built once at startup. Each tool call is a function evaluation
+against the loaded definitions. No compilation, no network calls, no disk I/O
+per check. This is why reviews of large files complete in milliseconds.</p>
+<hr>
+<p>-&gt; <a href="./27-theory-building.html">Previous: Interactive Theory Building</a></p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../appendix/lisp-interpreter.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../chapters/27-theory-building.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="../appendix/cartan-geometry.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../appendix/grammar.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                             </a>
 
@@ -611,11 +508,11 @@ example "symbolic verification" {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../appendix/lisp-interpreter.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../chapters/27-theory-building.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="../appendix/cartan-geometry.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../appendix/grammar.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
                     </a>
             </nav>

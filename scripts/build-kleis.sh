@@ -219,6 +219,7 @@ if [ -f "$BINARY" ]; then
     echo "  $BINARY repl                                # Interactive REPL"
     echo "  $BINARY mcp -p policy.kleis -v              # Policy MCP server (ADR-030)"
     echo "  $BINARY theory-mcp -v                       # Theory MCP server (ADR-031)"
+    echo "  $BINARY review-mcp -p standards.kleis -v    # Code Review MCP server"
 else
     echo -e "${RED}✗ Build failed${NC}"
     exit 1

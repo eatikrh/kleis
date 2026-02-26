@@ -149,6 +149,20 @@ enum Commands {
         #[arg(short, long)]
         verbose: bool,
     },
+
+    /// Start Review MCP server for code review via formal coding standards
+    ///
+    /// Checks source code against formal coding standards defined in a Kleis
+    /// policy file. Agents or CI can submit code snippets for review.
+    ReviewMcp {
+        /// Path to the Kleis review policy file
+        #[arg(short, long)]
+        policy: PathBuf,
+
+        /// Enable verbose logging (to stderr)
+        #[arg(short, long)]
+        verbose: bool,
+    },
 }
 
 #[tokio::main]
@@ -189,6 +203,9 @@ async fn main() {
         }
         Commands::TheoryMcp { verbose } => {
             run_theory_mcp(verbose, &config);
+        }
+        Commands::ReviewMcp { policy, verbose } => {
+            run_review_mcp(policy, verbose);
         }
     }
 }
@@ -603,6 +620,29 @@ fn run_theory_mcp(verbose: bool, config: &kleis::config::KleisConfig) {
 
     if let Err(e) = server.run() {
         eprintln!("[kleis-theory] Server error: {}", e);
+        std::process::exit(1);
+    }
+}
+
+/// Run Review MCP server for code review via formal coding standards
+fn run_review_mcp(policy: PathBuf, verbose: bool) {
+    use kleis::review_mcp::server::ReviewMcpServer;
+
+    if verbose {
+        eprintln!("[kleis-review] Starting Review MCP Server");
+        eprintln!("[kleis-review] Policy file: {}", policy.display());
+    }
+
+    let server = match ReviewMcpServer::new(&policy, verbose) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("[kleis-review] Failed to load policy: {}", e);
+            std::process::exit(1);
+        }
+    };
+
+    if let Err(e) = server.run() {
+        eprintln!("[kleis-review] Server error: {}", e);
         std::process::exit(1);
     }
 }

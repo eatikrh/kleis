@@ -15,6 +15,15 @@
         "theory-mcp",
         "--verbose"
       ]
+    },
+    "kleis-review": {
+      "command": "/Users/eatik_1/bin/kleis",
+      "args": [
+        "review-mcp",
+        "--verbose",
+        "--policy",
+        "/Users/eatik_1/git/cee/kleis/examples/policies/rust_review_policy.kleis"
+      ]
     }
   }
 }
