@@ -172,6 +172,33 @@ define check_no_command_injection(source) =
     else if contains(source, ".arg(format!(") then "fail: STRIDE/EoP — command arg built with format!, validate and sanitize input"
     else "pass"
 
+// --- Team review patterns (inferred from human code reviews) ---
+
+define check_no_debug_serialization(source) =
+    if and(contains(source, "serde_json::to_string"), contains(source, "debug!("))
+    then "fail: serde_json::to_string in debug! — use {:?} instead of serializing"
+    else if and(contains(source, "serde_json::to_string"), contains(source, "tracing::debug"))
+    then "fail: serde_json::to_string in tracing debug — use {:?} instead"
+    else if and(contains(source, "serde_yml::to_string"), contains(source, "debug!("))
+    then "fail: serde_yml::to_string in debug! — use {:?} instead of serializing"
+    else "pass"
+
+define check_no_ambiguous_status_match(source) =
+    if contains(source, "StatusCode::OK | StatusCode::NO_CONTENT")
+    then "fail: ambiguous status match OK|NO_CONTENT — verify which code the API actually returns"
+    else if contains(source, "StatusCode::NO_CONTENT | StatusCode::OK")
+    then "fail: ambiguous status match NO_CONTENT|OK — verify which code the API actually returns"
+    else "pass"
+
+define check_no_client_layer_filtering(source) =
+    if and(contains(source, "fn find_by_name"), contains(source, ".iter()"))
+    then "fail: find_by_name with .iter() — client should use API search, not filter in code"
+    else if and(contains(source, "fn list_"), contains(source, ".filter("))
+    then "fail: list_ method with .filter() — filtering belongs in application layer, not client"
+    else if and(contains(source, "fn get_used_"), contains(source, ".filter("))
+    then "fail: get_used_ with .filter() — derived views belong in application layer"
+    else "pass"
+
 // =============================================================================
 // Context-Aware Structural Checks (AST-based)
 // =============================================================================
