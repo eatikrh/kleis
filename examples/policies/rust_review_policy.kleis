@@ -184,10 +184,8 @@ define check_no_debug_serialization(source) =
     else "pass"
 
 define check_no_ambiguous_status_match(source) =
-    if contains(source, "StatusCode::OK | StatusCode::NO_CONTENT")
-    then "fail: ambiguous status match OK|NO_CONTENT — verify which code the API actually returns"
-    else if contains(source, "StatusCode::NO_CONTENT | StatusCode::OK")
-    then "fail: ambiguous status match NO_CONTENT|OK — verify which code the API actually returns"
+    if contains(source, "| StatusCode::")
+    then "fail: OR'd status codes in match — each endpoint returns one status code, verify which one"
     else "pass"
 
 define check_no_client_layer_filtering(source) =
