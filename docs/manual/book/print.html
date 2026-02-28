@@ -44,7 +44,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-40a25cd7.js";
+            window.path_to_searchindex_js = "searchindex-b338cf6f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-3f3d019b.js"></script>
@@ -9117,7 +9117,7 @@ Layer 1: rust_review_policy.kleis     (back to the rules)
 <h2 id="the-seed"><a class="header" href="#the-seed">The Seed</a></h2>
 <p>The architecture was not designed top-down. It grew from a seed: the template.</p>
 <p>The Equation Editor uses templates — patterns with placeholders for sub-expressions. A fraction template has slots for numerator and denominator. A matrix template has slots for entries. A summation template has slots for variable, bounds, and body.</p>
-<p>The template system is not a convenience layer — it is an extension point. Templates are designed to be extendable in the same way that Kleis structures and axioms are extendable. Because the platform is axiomatic, a new domain only needs new templates and new structures. Molecular diagrams backed by chemistry structures and reaction axioms written in Kleis. Musical notation backed by counterpoint rules. Circuit schematics backed by Kirchhoff’s laws. The template provides the visual entry; the structure provides the semantics; the axioms provide the verification. Same pattern, new domain.</p>
+<p>The template system is not a convenience layer — it is an extension point. Templates are designed to be extendable in the same way that Kleis structures and axioms are extendable. Because the platform is axiomatic, a new domain only needs new templates and new structures. Molecular diagrams backed by chemistry structures and reaction axioms written in Kleis. Musical notation backed by counterpoint rules. Circuit schematics backed by Kirchhoff’s laws. The template provides the visual entry; the structure provides the semantics; the axioms provide the verification. And because every <code>.kleist</code> template carries rendering strings for all five targets — Unicode, LaTeX, HTML, Typst, and Kleis — the new domain immediately has terminal display, papers, web pages, PDFs, and computation. The template author writes five rendering strings; the platform provides everything else. Same pattern, new domain.</p>
 <p>Templates with placeholders for other templates is a recursive structure. It is also, in embryonic form, the Bourbaki program: mathematics built from structures composed of other structures, all the way down.</p>
 <p>From templates came the Editor AST. From the Editor AST came the multi-target renderer. From the Kleis render target came the connection to the parser. From the parser came the evaluator. From the evaluator came Z3 verification. From verification came the review engine. Each layer emerged because the substrate — structure with slots for more structure — was the right shape for the next thing.</p>
 <h2 id="the-substrate"><a class="header" href="#the-substrate">The Substrate</a></h2>
