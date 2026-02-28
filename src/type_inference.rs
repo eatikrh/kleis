@@ -526,8 +526,6 @@ impl TypeInference {
                 let then_ty = self.infer(then_branch, context_builder)?;
                 let else_ty = self.infer(else_branch, context_builder)?;
                 self.add_constraint(then_ty.clone(), else_ty);
-
-                // Return the type of the branches
                 Ok(then_ty)
             }
 
@@ -838,7 +836,7 @@ impl TypeInference {
             Ok(()) => {} // Exhaustive - good!
             Err(missing) => {
                 eprintln!(
-                    "Warning: Non-exhaustive match. Missing cases: {}",
+                    "Warning: non-exhaustive match. Missing cases: {}",
                     missing.join(", ")
                 );
             }
@@ -848,7 +846,7 @@ impl TypeInference {
         let unreachable = checker.check_reachable(&patterns);
         if !unreachable.is_empty() {
             for idx in unreachable {
-                eprintln!("Warning: Unreachable pattern at case {}", idx + 1);
+                eprintln!("Warning: unreachable pattern at case {}", idx + 1);
             }
         }
     }
@@ -1262,12 +1260,10 @@ impl TypeInference {
                 } else {
                     // Unknown type - could be a type variable in the definition
                     // Treat single capital letters as type variables (Haskell convention)
-                    if name.len() == 1 && name.chars().next().unwrap().is_uppercase() {
-                        // Type variable like T, U, V - create fresh type variable
+                    if name.len() == 1 && name.starts_with(char::is_uppercase) {
                         Ok(self.context.fresh_var())
                     } else {
-                        // Truly unknown type - error
-                        Err(format!("Unknown type: {}", name))
+                        Err(format!("Unknown type: {name}"))
                     }
                 }
             }
@@ -1282,8 +1278,7 @@ impl TypeInference {
                         constructor: name.clone(),
                         args: param_types,
                     })
-                } else if name.len() == 1 && name.chars().next().unwrap().is_uppercase() {
-                    // Treat unknown single-letter constructor as type-level variable: M(A)
+                } else if name.len() == 1 && name.starts_with(char::is_uppercase) {
                     let mut app = self.context.fresh_var();
                     for arg in param_types {
                         app = Type::App(Box::new(app), Box::new(arg));
@@ -1550,10 +1545,6 @@ impl TypeInference {
                 args: vec![],
             });
         }
-
-        // ============================================
-        // BIT-VECTOR OPERATIONS
-        // ============================================
 
         // BitVec binary operations: bvand, bvor, bvxor, bvadd, bvsub, bvmul, bvshl, bvlshr, bvashr
         // These preserve the BitVec type
@@ -1933,34 +1924,6 @@ impl TypeInference {
         })
     }
 
-    /// Infer types of data constructor fields
-    /// This is GENERIC! Works for any data constructor with typed fields.
-    ///
-    /// TODO(ADR-021): This logic is already generic and would work for all data constructors!
-    /// Example: Cons(head: T, tail: List(T)) would validate head and tail fields.
-    #[allow(dead_code)]
-    fn infer_data_constructor_fields(
-        &mut self,
-        field_exprs: &[Expression],
-        context_builder: Option<&crate::type_context::TypeContextBuilder>,
-        expected_type: Type,
-    ) -> Result<(), String> {
-        for field_expr in field_exprs {
-            let field_type = self.infer(field_expr, context_builder)?;
-
-            match field_type {
-                Type::Var(_) => {
-                    // Type variable (placeholder) - OK, will be unified later
-                }
-                _ => {
-                    // Concrete type - add constraint that it matches expected type
-                    self.add_constraint(field_type, expected_type.clone());
-                }
-            }
-        }
-        Ok(())
-    }
-
     /// Solve all constraints using unification
     pub fn solve(&self) -> Result<Substitution, String> {
         let mut subst = Substitution::empty();
@@ -2212,11 +2175,10 @@ fn occurs(v: &TypeVar, t: &Type) -> bool {
 }
 
 impl Type {
-    /// Create a Scalar type (backward compatibility)
+    /// Create a Scalar type (backward compatibility).
     ///
-    /// This is a convenience constructor to ease the transition from
-    /// the old hardcoded Type::Scalar to the new Data-based system.
-    #[allow(clippy::doc_lazy_continuation)]
+    /// Convenience constructor to ease the transition from
+    /// the old hardcoded `Type::Scalar` to the new Data-based system.
     pub fn scalar() -> Type {
         Type::Data {
             type_name: "Type".to_string(),
@@ -2225,18 +2187,13 @@ impl Type {
         }
     }
 
-    /// Create a Vector type (backward compatibility)
+    /// Create a Vector type: `Vector(n, T)`.
     ///
-    /// The dimension is stored as a concrete value, enabling:
-    /// - Vector(3) ≠ Vector(4) (different types!)
-    /// - Dimension checking in operations
+    /// The dimension is stored as a concrete value, enabling
+    /// `Vector(3) ≠ Vector(4)` (different types) and dimension checking.
     ///
-    /// Create a Vector type
-    ///
-    /// Vector(n, T) where:
-    /// - n is dimension (Nat value)
-    /// - T is element type (Type)
-    #[allow(clippy::doc_lazy_continuation)]
+    /// - `n` — dimension (Nat value)
+    /// - `elem_type` — element type
     pub fn vector(n: usize, elem_type: Type) -> Type {
         Type::Data {
             type_name: "Vector".to_string(),
