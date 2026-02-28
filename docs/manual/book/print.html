@@ -44,10 +44,10 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1a049b0c.js";
+            window.path_to_searchindex_js = "searchindex-40a25cd7.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-2fee28f3.js"></script>
+        <script src="toc-3f3d019b.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -9032,6 +9032,115 @@ against the loaded definitions. No compilation, no network calls, no disk I/O
 per check. This is why reviews of large files complete in milliseconds.</p>
 <hr>
 <p>-&gt; <a href="#interactive-theory-building">Previous: Interactive Theory Building</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="structuralism"><a class="header" href="#structuralism">Structuralism</a></h1>
+<blockquote>
+<p><em>“Structure is the universal abstraction.”</em></p>
+</blockquote>
+<p>This chapter is not about Kleis the language. It is about the idea that Kleis embodies — and the architecture that follows from that idea.</p>
+<h2 id="the-thesis"><a class="header" href="#the-thesis">The Thesis</a></h2>
+<p>Any domain amenable to formalization follows the same pattern:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Component</th><th>What it does</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Notation</strong></td><td>Represents objects and relations</td></tr>
+<tr><td><strong>Rules</strong></td><td>Governs what is valid</td></tr>
+<tr><td><strong>Verification</strong></td><td>Checks that rules hold</td></tr>
+<tr><td><strong>Output</strong></td><td>Produces a result for humans</td></tr>
+</tbody>
+</table>
+</div>
+<p>Mathematics has notation (symbols), rules (axioms), verification (proof), and output (papers). Physics has notation (tensor indices), rules (field equations), verification (experiment or proof), and output (predictions). A code review has notation (source code), rules (coding standards), verification (pass/fail checks), and output (a review report).</p>
+<p>Kleis provides the substrate for this universal pattern. Not a tool for one domain — a substrate for all of them.</p>
+<h2 id="presentation-facilitates-cognition"><a class="header" href="#presentation-facilitates-cognition">Presentation Facilitates Cognition</a></h2>
+<p>The fourth component — output — is not an afterthought. Presentation is how knowledge becomes accessible.</p>
+<p>This is why Kleis renders equations in proper mathematical typography rather than displaying raw syntax trees. It is why the Kleis grammar uses <code>∀</code>, <code>∃</code>, <code>→</code>, <code>×</code> instead of ASCII approximations — the notation on screen should be the notation in the textbook. It is why Kleis generates Typst PDFs suitable for papers and theses, not just terminal dumps.</p>
+<p>The principle runs through the entire system. The Equation Editor exists because when you see <code>Γᵏₘₙ</code> rendered with proper indices, you immediately understand what it means — the visual form <em>is</em> the meaning. Stare at <code>christoffel(k, -m, -n)</code> and you have to reconstruct the mathematics in your head. The five render targets exist because the same expression needs to look right in a terminal, a web page, a LaTeX document, a PDF, and a computation engine — and “looking right” is not vanity, it is legibility. Legibility is comprehension. Comprehension is where new ideas come from.</p>
+<p>A system that can verify theorems but cannot present them readably fails at half of its purpose. Structure without presentation is a tree falling in a forest.</p>
+<h2 id="two-asts"><a class="header" href="#two-asts">Two ASTs</a></h2>
+<p>Kleis has two distinct abstract syntax trees. Understanding why is the key to the architecture.</p>
+<p><strong>The Editor AST</strong> lives in the Equation Editor (JavaScript, <code>static/index.html</code>). It carries <em>semantic and visual</em> information: operation names like <code>gamma</code>, <code>riemann</code>, <code>index_mixed</code>, plus typesetting hints — superscripts, subscripts, matrix delimiters, bracket styles. It knows what something <em>is</em> and how it should <em>look</em>.</p>
+<p><strong>The Kleis AST</strong> lives in the parser and evaluator (Rust, <code>src/kleis_parser.rs</code>). It carries <em>semantic and computational</em> information: expressions with source spans, types, operations that can be evaluated, differentiated, and sent to Z3. It knows what something <em>means</em> and how to <em>compute</em> with it.</p>
+<p>The Editor AST is richer visually but cannot compute. The Kleis AST can compute but does not know about rendering. The renderers bridge them.</p>
+<h2 id="five-projections"><a class="header" href="#five-projections">Five Projections</a></h2>
+<p>The Editor AST renders to five targets:</p>
+<pre><code>Editor AST (semantic + visual)
+    │
+    ├── → Unicode    Γᵏₘₙ              (terminal display)
+    ├── → LaTeX      \Gamma^{\lambda}_{\mu\nu}   (papers)
+    ├── → HTML       &lt;sup&gt;λ&lt;/sup&gt;...    (web)
+    ├── → Typst      Gamma^λ_{μν}       (PDF generation)
+    └── → Kleis      Γ(λ, -μ, -ν)      (computation)
+</code></pre>
+<p>The first four targets produce representations for human consumption. The fifth — Kleis notation — produces text that the Kleis parser can ingest, creating a Kleis AST. That AST can then be type-checked, evaluated, differentiated symbolically, or verified by Z3.</p>
+<p>This means the Equation Editor is not just a renderer. It is a <em>compiler</em> — from visual mathematics to executable specification.</p>
+<h2 id="the-equation-editor-knows-mathematics"><a class="header" href="#the-equation-editor-knows-mathematics">The Equation Editor Knows Mathematics</a></h2>
+<p>The Equation Editor is not a drawing tool. Beneath the visual rendering, it displays the algebraic data type of the expression and has buttons for formal verification:</p>
+<ul>
+<li><strong>Type display</strong> — shows the inferred type: <code>Matrix(2, 2, Scalar)</code>, <code>Tensor(Metric, [down, down])</code>, etc.</li>
+<li><strong>Verify</strong> — sends the Kleis-rendered expression to Z3 for verification against loaded axioms</li>
+<li><strong>Sat?</strong> — checks satisfiability of the expression as a constraint</li>
+</ul>
+<p>The editor knows that covariant indices go down and contravariant indices go up. It knows tensor symmetry axioms. It knows dimension constraints on matrix multiplication. None of this is hardcoded — the knowledge comes from axioms written in Kleis structures (<code>stdlib/</code> and user-defined <code>.kleis</code> files). Kleis does not just parse mathematical notation; it understands the axiomatic semantics of what it parses. The grammar tells it <em>how to read</em>. The axioms tell it <em>what things mean</em>.</p>
+<h2 id="self-hosting"><a class="header" href="#self-hosting">Self-Hosting</a></h2>
+<p>The universal formula applies to Kleis itself:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Component</th><th>Kleis-on-Kleis</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Notation</strong></td><td><code>.kleis</code> source files</td></tr>
+<tr><td><strong>Rules</strong></td><td><code>axiom</code> declarations in structures</td></tr>
+<tr><td><strong>Verification</strong></td><td>Pluggable solver backend, type inference, evaluator</td></tr>
+<tr><td><strong>Output</strong></td><td>Typst PDFs, review reports, REPL results</td></tr>
+</tbody>
+</table>
+</div>
+<p>The verification slot is not welded to one tool. Z3 is the default SMT solver, but the backend is pluggable — an experimental branch has integrated Isabelle, whose tactic-based proof strategies are a different shape than Z3’s satisfiability checks. The slot has a contract (accept a proposition, return a judgment), but the strategies behind that contract vary: SMT solving, tactic-based proof search, and model checking are structurally different ways to inhabit the same slot. The architecture accommodates this, but does not pretend the differences are invisible.</p>
+<p>But self-hosting goes deeper than using Kleis to write Kleis programs. The structural scanner for Rust code review — <code>rust_parser.kleis</code> — is written <em>in Kleis</em>. It defines a <code>Crate</code> structure with operations like <code>scan()</code>, <code>crate_functions()</code>, <code>non_test_fns_containing()</code>. The review policy — <code>rust_review_policy.kleis</code> — imports this scanner and uses it to analyze Rust source code.</p>
+<p>The result is three layers of AST, all evaluated by the same tree walker:</p>
+<pre><code>Layer 1: rust_review_policy.kleis     (the rules)
+    ↓ calls into
+Layer 2: rust_parser.kleis            (the scanner)
+    ↓ produces
+Layer 3: Crate structure              (the scanned Rust code)
+    ↓ queried by
+Layer 1: rust_review_policy.kleis     (back to the rules)
+    ↓ produces
+"pass" or "fail: reason"
+</code></pre>
+<p>One evaluator. One tree walker. Three languages deep.</p>
+<h2 id="the-seed"><a class="header" href="#the-seed">The Seed</a></h2>
+<p>The architecture was not designed top-down. It grew from a seed: the template.</p>
+<p>The Equation Editor uses templates — patterns with placeholders for sub-expressions. A fraction template has slots for numerator and denominator. A matrix template has slots for entries. A summation template has slots for variable, bounds, and body.</p>
+<p>The template system is not a convenience layer — it is an extension point. Templates are designed to be extendable in the same way that Kleis structures and axioms are extendable. Because the platform is axiomatic, a new domain only needs new templates and new structures. Molecular diagrams backed by chemistry structures and reaction axioms written in Kleis. Musical notation backed by counterpoint rules. Circuit schematics backed by Kirchhoff’s laws. The template provides the visual entry; the structure provides the semantics; the axioms provide the verification. Same pattern, new domain.</p>
+<p>Templates with placeholders for other templates is a recursive structure. It is also, in embryonic form, the Bourbaki program: mathematics built from structures composed of other structures, all the way down.</p>
+<p>From templates came the Editor AST. From the Editor AST came the multi-target renderer. From the Kleis render target came the connection to the parser. From the parser came the evaluator. From the evaluator came Z3 verification. From verification came the review engine. Each layer emerged because the substrate — structure with slots for more structure — was the right shape for the next thing.</p>
+<h2 id="the-substrate"><a class="header" href="#the-substrate">The Substrate</a></h2>
+<p>Kleis is 7.4 MB. Inside that binary:</p>
+<ul>
+<li>A language parser and evaluator</li>
+<li>Hindley-Milner type inference</li>
+<li>Z3 theorem prover integration</li>
+<li>A WYSIWYG equation editor with five render targets</li>
+<li>LSP server and DAP debugger</li>
+<li>Typst PDF renderer</li>
+<li>Jupyter kernel and REPL</li>
+<li>Three MCP servers (policy, theory, review)</li>
+<li>A structural Rust parser written in itself</li>
+<li>ODE solver, symbolic differentiation, LAPACK numerics</li>
+<li>Tensor calculus, category theory structures, Bell inequality proofs</li>
+</ul>
+<p>It does not announce itself as any one of these things. It shows up as whatever you need today — a code reviewer, an equation editor, a proof assistant, a document generator — and the rest is there when you are ready for it.</p>
+<blockquote>
+<p><em>“Any domain that has notation, rules, and outputs fits the same pattern. Kleis provides the substrate.”</em></p>
+</blockquote>
+<p>Kleis is not a language. It is a structure transformer — accepting structure as input, applying structural rules, and projecting the result into forms that humans and machines can use.</p>
+<p>The architecture is the philosophy. The philosophy is the architecture. Structure all the way down.</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="appendix-a-grammar-reference"><a class="header" href="#appendix-a-grammar-reference">Appendix A: Grammar Reference</a></h1>
 <p>This appendix provides a reference to Kleis syntax based on the formal grammar specification (v0.99).</p>
