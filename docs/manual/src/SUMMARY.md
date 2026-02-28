@@ -57,6 +57,10 @@
 
 - [Agent MCP Servers](./chapters/28-agent-mcps.md)
 
+# Architecture
+
+- [Structuralism](./chapters/29-structuralism.md)
+
 # Appendices
 
 - [Grammar Reference](./appendix/grammar.md)
