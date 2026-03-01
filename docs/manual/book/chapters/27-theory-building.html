@@ -43,7 +43,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-b338cf6f.js";
+            window.path_to_searchindex_js = "../searchindex-c7fcad52.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-3f3d019b.js"></script>
@@ -398,6 +398,178 @@ nullspace membership (axiom). Three hops, fully automatic.</p>
 </code></pre>
 <p>The theory is now a plain <code>.kleis</code> file that can be imported, extended,
 or loaded into a future session.</p>
+<h2 id="walkthrough-un-charter-article-51--legal-cross-examination"><a class="header" href="#walkthrough-un-charter-article-51--legal-cross-examination">Walkthrough: UN Charter Article 51 — Legal Cross-Examination</a></h2>
+<p>The previous walkthrough formalized a physics theory. This one formalizes
+international law and uses Z3 as a cross-examiner.</p>
+<h3 id="the-legal-question"><a class="header" href="#the-legal-question">The Legal Question</a></h3>
+<p>Article 2(4) of the UN Charter prohibits the use of force between states.
+Article 51 provides one exception: self-defense. But two competing doctrines
+disagree on when self-defense is lawful:</p>
+<ul>
+<li><strong>Strict doctrine</strong>: only after an <em>armed attack</em> has occurred</li>
+<li><strong>Anticipatory doctrine</strong>: also when an attack is <em>imminent</em></li>
+</ul>
+<p>This disagreement has real consequences. By formalizing both doctrines as
+axiom packs over a shared ontology, Z3 can identify exactly where they
+diverge — and prove what follows from each.</p>
+<h3 id="the-ontology"><a class="header" href="#the-ontology">The Ontology</a></h3>
+<p>Types and operations that both doctrines share. The key design decision:
+<code>lawful_self_defense</code> and <code>status</code> are parameterized by <code>Doctrine</code>, so
+both doctrines coexist in the same file without axiom collision:</p>
+<pre><code class="language-kleis">data State = US | Iran | Russia | Ukraine | Israel | Lebanon | CustomState(ℤ)
+data Norm = Permitted | Prohibited
+data Act = MilitaryAct(ℤ)
+data ThreatEvidence = Intel(ℤ)
+data Doctrine = Strict | Anticipatory
+
+operation use_of_force   : Act → Bool
+operation attacker       : Act → State
+operation target         : Act → State
+operation sc_authorized  : Act → Bool
+operation necessary      : Act → Bool
+operation proportional   : Act → Bool
+operation armed_attack_occurred : State × State → Bool
+operation imminent_attack       : State × State → Bool
+
+operation lawful_self_defense : Doctrine × Act → Bool
+operation status              : Doctrine × Act → Norm
+</code></pre>
+<h3 id="article-24-the-baseline"><a class="header" href="#article-24-the-baseline">Article 2(4): The Baseline</a></h3>
+<p>Force is prohibited unless an exception applies. A single axiom encodes
+both directions, universally quantified over doctrines:</p>
+<pre><code class="language-kleis">structure Article2_4 {
+    axiom force_status : ∀(d : Doctrine, a : Act).
+        use_of_force(a) →
+            ((status(d, a) = Permitted ↔ (sc_authorized(a) ∨ lawful_self_defense(d, a)))
+           ∧ (status(d, a) = Prohibited ↔ ¬(sc_authorized(a) ∨ lawful_self_defense(d, a))))
+}
+</code></pre>
+<h3 id="the-two-doctrines"><a class="header" href="#the-two-doctrines">The Two Doctrines</a></h3>
+<p>The strict doctrine requires an armed attack. Each axiom is pinned to
+its <code>Doctrine</code> value — <code>Strict</code> or <code>Anticipatory</code> — so they never
+interfere:</p>
+<pre><code class="language-kleis">structure StrictArticle51 {
+    axiom sd_requires : ∀(a : Act).
+        lawful_self_defense(Strict, a) →
+            (necessary(a) ∧ proportional(a) ∧
+             armed_attack_occurred(target(a), attacker(a)))
+}
+</code></pre>
+<p>The anticipatory doctrine also accepts imminence:</p>
+<pre><code class="language-kleis">structure AnticipatoryArticle51 {
+    axiom sd_requires : ∀(a : Act).
+        lawful_self_defense(Anticipatory, a) →
+            (necessary(a) ∧ proportional(a) ∧
+             (armed_attack_occurred(target(a), attacker(a))
+              ∨ imminent_attack(target(a), attacker(a))))
+}
+</code></pre>
+<p>The only difference is one disjunct: <code>∨ imminent_attack(...)</code>. The
+<code>Doctrine</code> parameter ensures each doctrine’s axioms operate independently
+— no silent domination.</p>
+<h3 id="the-case-file-and-evidence-profile"><a class="header" href="#the-case-file-and-evidence-profile">The Case File and Evidence Profile</a></h3>
+<p>Facts of a disputed strike — US attacks Iran, no SC authorization, no prior
+armed attack. The <code>NoEvidence</code> structure prevents Z3 from inventing
+phantom witnesses to satisfy the imminence predicate:</p>
+<pre><code class="language-kleis">structure CaseFacts {
+    element case_act : Act
+    axiom is_force : use_of_force(case_act)
+    axiom who_attacks : attacker(case_act) = US
+    axiom who_is_target : target(case_act) = Iran
+    axiom no_sc_auth : ¬sc_authorized(case_act)
+    axiom no_prior_attack : ¬armed_attack_occurred(Iran, US)
+}
+
+structure NoEvidence {
+    axiom no_ev : ∀(e : ThreatEvidence). ¬evidence(Iran, US, e)
+}
+</code></pre>
+<p>Without <code>NoEvidence</code>, Z3 could freely instantiate <code>Intel(k)</code> for any <code>k</code>
+and set <code>credible</code>, <code>immediate</code>, <code>no_alternative</code> to true — technically
+satisfying the imminence definition. The closed-world guard forces the
+case file to supply evidence or accept its absence.</p>
+<h3 id="verified-theorems"><a class="header" href="#verified-theorems">Verified Theorems</a></h3>
+<p>The file lives under <code>examples/authorization/</code> alongside Zanzibar and OAuth2
+models. This is not an accident — the structure is the same. Authorization
+asks “is this action permitted given these rules and this identity?”
+The UN Charter asks “is this use of force permitted given these doctrines
+and these facts?” Both are judgment functions over acts. The difference
+is that authorization is a gate <em>before</em> the act; international law is
+a judgment <em>after</em> the act has already occurred.</p>
+<p>Load the theory into the kleis-theory MCP:</p>
+<pre><code>load_theory(imports: ["examples/authorization/un_charter_article51.kleis"])
+→ ✅ 6 structures loaded
+</code></pre>
+<h3 id="cross-examination"><a class="header" href="#cross-examination">Cross-Examination</a></h3>
+<p>The human asks questions in natural language. The AI agent inspects the
+loaded axioms and translates each question into a Kleis proposition,
+which Z3 either verifies or disproves. The human never writes Kleis —
+the agent does.</p>
+<p><strong>Human:</strong> <em>“Is the act a use of force?”</em></p>
+<pre><code>evaluate: ∀(a : Act). a = case_act → use_of_force(a)
+→ ✅ VERIFIED
+</code></pre>
+<p><strong>Human:</strong> <em>“Did the Security Council authorize it?”</em></p>
+<pre><code>evaluate: ∀(a : Act). a = case_act → sc_authorized(a)
+→ ❌ DISPROVED
+</code></pre>
+<p><strong>Human:</strong> <em>“Did an armed attack occur?”</em></p>
+<pre><code>evaluate: ∀(dummy : Act). ¬armed_attack_occurred(Iran, US)
+→ ✅ VERIFIED (none occurred)
+</code></pre>
+<p><strong>Human:</strong> <em>“Does any evidence of imminence exist?”</em></p>
+<pre><code>evaluate: ∀(e : ThreatEvidence). ¬evidence(Iran, US, e)
+→ ✅ VERIFIED (none exists)
+</code></pre>
+<p><strong>Human:</strong> <em>“Is imminence established?”</em></p>
+<pre><code>evaluate: ∀(v : State, a : State). v = Iran ∧ a = US → ¬imminent_attack(v, a)
+→ ✅ VERIFIED (impossible without evidence)
+</code></pre>
+<p><strong>Human:</strong> <em>“Can self-defense be claimed under either doctrine?”</em></p>
+<pre><code>evaluate: ∀(a : Act). a = case_act → lawful_self_defense(Strict, a)
+→ ❌ DISPROVED
+
+evaluate: ∀(a : Act). a = case_act → lawful_self_defense(Anticipatory, a)
+→ ❌ DISPROVED
+</code></pre>
+<p><strong>Human:</strong> <em>“What is the legal status?”</em></p>
+<pre><code>evaluate: ∀(a : Act). a = case_act → status(Strict, a) = Prohibited
+→ ✅ VERIFIED
+
+evaluate: ∀(a : Act). a = case_act → status(Anticipatory, a) = Prohibited
+→ ✅ VERIFIED
+</code></pre>
+<p><strong>Human:</strong> <em>“Could it ever be Permitted?”</em></p>
+<pre><code>evaluate: ∀(a : Act). a = case_act → status(Strict, a) = Permitted
+→ ❌ DISPROVED
+
+evaluate: ∀(a : Act). a = case_act → status(Anticipatory, a) = Permitted
+→ ❌ DISPROVED
+</code></pre>
+<p><strong>Human:</strong> <em>“Do both doctrines agree?”</em></p>
+<pre><code>evaluate: ∀(a : Act). a = case_act →
+    (status(Strict, a) = Prohibited ∧ status(Anticipatory, a) = Prohibited)
+→ ✅ VERIFIED
+</code></pre>
+<h3 id="the-verdict"><a class="header" href="#the-verdict">The Verdict</a></h3>
+<p>Both doctrines produce the same verdict: <strong>Prohibited</strong>. The anticipatory
+doctrine <em>could</em> diverge, but only if the case file supplies an
+<code>EvidenceSupported</code> profile instead of <code>NoEvidence</code>. Without evidence,
+imminence is logically impossible, and both doctrines collapse to the
+same judgment. The <code>Doctrine</code> parameter makes this comparison explicit
+in a single Z3 query.</p>
+<h3 id="why-this-matters"><a class="header" href="#why-this-matters">Why This Matters</a></h3>
+<p>The cross-examination is not a simulation — it is a proof. The human
+asked questions in English; the agent translated them into formal
+propositions; Z3 checked every possible model. No rhetoric, no
+ambiguity, no appeal to authority. Just axioms, facts, and a solver.</p>
+<p>Change the case facts (assert <code>sc_authorized</code>, or
+<code>armed_attack_occurred</code>) and the verdict flips — same law, different
+facts, different theorem.</p>
+<p>The same kleis-theory MCP that built a physics theory in the previous
+walkthrough now performs legal reasoning. The substrate is the same:
+structures, axioms, Z3 verification. The domain changed; the method
+did not.</p>
 <h2 id="what-makes-this-different"><a class="header" href="#what-makes-this-different">What Makes This Different</a></h2>
 <h3 id="from-a-chat-about-math"><a class="header" href="#from-a-chat-about-math">From a Chat About Math</a></h3>
 <p>A language model can talk about admissible kernels all day. It can generate
@@ -415,6 +587,29 @@ verification queries. The human guides; the agent formalizes; Z3 verifies.</p>
 cell is independent. In kleis-theory, each submission builds on everything
 before it. The theory grows monotonically. Nothing is forgotten, nothing
 contradicts.</p>
+<h3 id="from-asking-a-lawyer-or-an-llm"><a class="header" href="#from-asking-a-lawyer-or-an-llm">From Asking a Lawyer (or an LLM)</a></h3>
+<p>In the UN Charter cross-examination, the human did not need to know
+international law. The human said “cross-examine this case” and the agent
+did the rest — it queried the loaded theory via the MCP, discovered which
+structures and predicates were available, understood the logical
+dependencies between them, and constructed the propositions in Kleis
+syntax. The human asked in English; the agent translated to formal logic;
+Z3 returned the verdict.</p>
+<p>This is different from asking an LLM “is this attack legal?” An LLM
+would produce a plausible paragraph citing Article 51, hedging with
+“it depends,” and possibly hallucinating case law. The agent does
+something structurally different: it reads the axioms that are actually
+loaded, constructs propositions that reference them precisely, and submits
+those propositions to a solver that checks every possible model.
+If the agent gets the proposition wrong, Z3 rejects it. If the axioms
+are inconsistent, Z3 reports inconsistency. There is no room for
+plausible-sounding nonsense.</p>
+<p>The axioms are self-describing — <code>lawful_self_defense</code>, <code>necessary</code>,
+<code>proportional</code>, <code>armed_attack_occurred</code> — the names carry the semantics.
+The structures tell the agent which predicates gate which conclusions.
+The agent does not “know” international law; it reads the formal encoding
+and reasons over it. The domain knowledge lives in the <code>.kleis</code> file,
+not in the model’s training data.</p>
 <h2 id="the-theory-file"><a class="header" href="#the-theory-file">The Theory File</a></h2>
 <p>The saved theory is a standard Kleis file:</p>
 <pre><code class="language-kleis">import "stdlib/prelude.kleis"
