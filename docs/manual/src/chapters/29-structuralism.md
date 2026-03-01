@@ -227,6 +227,51 @@ not reason about itself. Theories are data; the solver is an oracle. That
 boundary is what keeps a 7.4 MB binary stable across domains from tensor
 calculus to international law.
 
+## The Oracle
+
+The word "oracle" in computer science usually means "black box" — a
+function you call without knowing how it works. Hand it a question, get
+back an answer, move on.
+
+In Kleis, the oracle relationship is richer. Z3 does not merely return
+`sat` or `unsat`. It returns *models* — concrete witnesses that satisfy
+or violate the theory. And Kleis *understands* those answers, because
+the question was formulated in Kleis's own vocabulary: the carriers,
+operations, and axioms that Kleis defined and passed in.
+
+The interaction follows a pattern:
+
+1. **Kleis formulates the question** — in its own language, using its
+   own types and axioms.
+2. **The oracle answers from outside** — using decision procedures,
+   model construction, and satisfiability algorithms that Kleis knows
+   nothing about.
+3. **Kleis interprets the answer** — because the answer is expressed
+   in terms Kleis defined.
+
+The oracle exists because Kleis *cannot* answer these questions itself —
+not without becoming self-reflective. Determining satisfiability,
+constructing models, checking entailment — these require reasoning
+*about* the theory, not *within* it. If Kleis internalized that
+capability, it would need to represent its own axioms as data, quantify
+over its own propositions, and evaluate its own consistency. That is
+the self-referential loop the architecture refuses. The oracle is not
+an optimization; it is the boundary that keeps the system first-order.
+Kleis asks in its own language and interprets the answer in its own
+terms, but the act of judgment happens outside.
+
+This is why the boundary is stable. Kleis does not need to internalize
+what Z3 knows. It needs to formulate questions well and interpret results
+correctly. The knowledge lives outside; the understanding lives inside.
+Neither side needs to become the other.
+
+The ancient meaning of "oracle" was the same — you go to Delphi, you
+ask in your own language, the oracle answers from a source you cannot
+access, and you return home to interpret the answer in your own context.
+The oracle never becomes part of your city. Your city never becomes part
+of the oracle. But the exchange produces knowledge that neither side had
+alone.
+
 ## Why Not a DSL
 
 A natural question: why not build a domain-specific language for verified
