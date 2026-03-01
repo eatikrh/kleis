@@ -43,7 +43,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c7fcad52.js";
+            window.path_to_searchindex_js = "../searchindex-665dfb0e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-3f3d019b.js"></script>
@@ -297,6 +297,149 @@ Layer 1: rust_review_policy.kleis     (back to the rules)
 <p><em>“Any domain that has notation, rules, and outputs fits the same pattern. Kleis provides the substrate.”</em></p>
 </blockquote>
 <p>Kleis is not a language. It is a structure transformer — accepting structure as input, applying structural rules, and projecting the result into forms that humans and machines can use.</p>
+<h2 id="types-with-axioms"><a class="header" href="#types-with-axioms">Types with Axioms</a></h2>
+<p>The deepest structural decision in Kleis is the definition of “type.”</p>
+<p>In most programming languages, a type defines <em>shape</em> — fields, methods,
+memory layout, interface guarantees. In object-oriented programming, a class
+defines elements and operations. In algebraic type theory, a type defines
+constructors and eliminators. These are useful, but they stop short. They
+tell you what you <em>can</em> do with a value; they do not tell you what <em>must
+hold</em> about it.</p>
+<p>Kleis adds the missing third leg:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Component</th><th>OOP (class)</th><th>Algebraic (ADT)</th><th>Kleis (structure)</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Carriers</strong></td><td>Fields</td><td>Constructors</td><td>Elements, data types</td></tr>
+<tr><td><strong>Operations</strong></td><td>Methods</td><td>Functions</td><td>Operations</td></tr>
+<tr><td><strong>Axioms</strong></td><td>—</td><td>—</td><td>Axioms, verified by solver</td></tr>
+</tbody>
+</table>
+</div>
+<p>A Kleis structure is not a container. It is a <em>theory</em>. When you write:</p>
+<pre><code class="language-kleis">structure Group(T) {
+    operation mul : T → T → T
+    element e : T
+    axiom assoc : ∀(a b c : T). mul(mul(a, b), c) = mul(a, mul(b, c))
+    axiom left_id : ∀(a : T). mul(e, a) = a
+}
+</code></pre>
+<p>you are not declaring a data layout. You are defining a logical universe —
+a set of constraints that any inhabitant must satisfy. The solver enforces
+these constraints globally. That is why the same mechanism works for tensor
+symmetry, coding standards, and international law: all are constraint
+systems over a domain. The domain changes; the mechanism does not.</p>
+<h2 id="theory-as-a-first-order-object"><a class="header" href="#theory-as-a-first-order-object">Theory as a First-Order Object</a></h2>
+<p>When Kleis sends a structure to Z3, it passes the carriers, operations,
+and axioms as data — arguments to a function call. The solver receives
+a theory, evaluates a query against it, and returns a result. This is
+not a metaphor; at the implementation level, Z3 is a function:</p>
+<pre><code>solve(context) → sat | unsat | unknown
+</code></pre>
+<p>The consequence is that <em>theory becomes a first-order object</em>. It can be
+versioned, parameterized, compared, and composed. Two competing doctrines
+become two values of a <code>Doctrine</code> type. A case file becomes a structure
+that instantiates fact predicates. The query <code>status(Strict, case_act)</code>
+and <code>status(Anticipatory, case_act)</code> evaluates two theories against the
+same facts in the same call.</p>
+<p>This is reification of theory — turning meta-level concepts into
+manipulable data. Once theory is data, you get <em>executable pluralism</em>:
+comparative jurisprudence, comparative physics, comparative doctrine,
+all become structural comparisons over parameterized theories.</p>
+<h2 id="the-deliberate-boundary"><a class="header" href="#the-deliberate-boundary">The Deliberate Boundary</a></h2>
+<p>This design is stable because of what it does <em>not</em> do.</p>
+<p>Kleis does not internalize proof objects. It does not let axioms quantify
+over axioms. It does not let structures inspect their own consistency.
+It does not identify equivalent structures as equal inside the system.
+The solver is an external oracle, not an internal reasoning engine.</p>
+<p>This is a deliberate boundary. The moment a system allows types to talk
+about types, axioms to quantify over axioms, or structures to reason
+about their own provability, it enters Gödel territory — where stability
+becomes conditional and complexity explodes. Homotopy Type Theory (HoTT)
+takes that step: it internalizes structural equivalence as identity,
+making equivalence between types a first-class concept inside the system.
+That is more expressive, but dramatically heavier.</p>
+<p>Kleis sits between Bourbaki and HoTT:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>System</th><th>Structures are…</th><th>Identity is…</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Bourbaki</strong></td><td>Formal exposition</td><td>External</td></tr>
+<tr><td><strong>Kleis</strong></td><td>Executable first-order theories</td><td>External, solver-checked</td></tr>
+<tr><td><strong>HoTT</strong></td><td>Higher types with internalized equivalence</td><td>Internal (univalence)</td></tr>
+</tbody>
+</table>
+</div>
+<p>Bourbaki described structures but could not execute them. HoTT internalizes
+everything but at the cost of enormous complexity. Kleis occupies the
+middle: structures are executable, axioms are enforced, but the system does
+not reason about itself. Theories are data; the solver is an oracle. That
+boundary is what keeps a 7.4 MB binary stable across domains from tensor
+calculus to international law.</p>
+<h2 id="the-oracle"><a class="header" href="#the-oracle">The Oracle</a></h2>
+<p>The word “oracle” in computer science usually means “black box” — a
+function you call without knowing how it works. Hand it a question, get
+back an answer, move on.</p>
+<p>In Kleis, the oracle relationship is richer. Z3 does not merely return
+<code>sat</code> or <code>unsat</code>. It returns <em>models</em> — concrete witnesses that satisfy
+or violate the theory. And Kleis <em>understands</em> those answers, because
+the question was formulated in Kleis’s own vocabulary: the carriers,
+operations, and axioms that Kleis defined and passed in.</p>
+<p>The interaction follows a pattern:</p>
+<ol>
+<li><strong>Kleis formulates the question</strong> — in its own language, using its
+own types and axioms.</li>
+<li><strong>The oracle answers from outside</strong> — using decision procedures,
+model construction, and satisfiability algorithms that Kleis knows
+nothing about.</li>
+<li><strong>Kleis interprets the answer</strong> — because the answer is expressed
+in terms Kleis defined.</li>
+</ol>
+<p>The oracle exists because Kleis <em>cannot</em> answer these questions itself —
+not without becoming self-reflective. Determining satisfiability,
+constructing models, checking entailment — these require reasoning
+<em>about</em> the theory, not <em>within</em> it. If Kleis internalized that
+capability, it would need to represent its own axioms as data, quantify
+over its own propositions, and evaluate its own consistency. That is
+the self-referential loop the architecture refuses. The oracle is not
+an optimization; it is the boundary that keeps the system first-order.
+Kleis asks in its own language and interprets the answer in its own
+terms, but the act of judgment happens outside.</p>
+<p>This is why the boundary is stable. Kleis does not need to internalize
+what Z3 knows. It needs to formulate questions well and interpret results
+correctly. The knowledge lives outside; the understanding lives inside.
+Neither side needs to become the other.</p>
+<p>The ancient meaning of “oracle” was the same — you go to Delphi, you
+ask in your own language, the oracle answers from a source you cannot
+access, and you return home to interpret the answer in your own context.
+The oracle never becomes part of your city. Your city never becomes part
+of the oracle. But the exchange produces knowledge that neither side had
+alone.</p>
+<h2 id="why-not-a-dsl"><a class="header" href="#why-not-a-dsl">Why Not a DSL</a></h2>
+<p>A natural question: why not build a domain-specific language for verified
+reasoning in an existing host language?</p>
+<p>Because a DSL for verified reasoning is just a programming language in
+denial. You end up re-implementing a parser, an AST, a type system, error
+reporting, modules, imports, and tooling. You need a logic backend —
+either embedding an SMT-LIB generator or writing a custom reasoner. Each
+“nice” feature (records, pattern matching, doctrine packs, case files)
+forces new design decisions. Error messages become a nightmare: domain
+users need “why unsatisfiable?” explanations, not stack traces. The
+boundary between data and logic blurs. You keep adding “just one more”
+construct. You re-discover the need for axiom versioning, doctrine
+isolation, fact profiles, import scoping — all as first-class
+requirements.</p>
+<p>Most DSL projects fail not because the domain is hard, but because the
+<em>meta-domain</em> — semantics, verification, tooling — is harder than the
+domain. Kleis built the meta-domain first: stable grammar, logic
+interface, structuring mechanisms, social discipline (you must declare
+axioms, you must separate fact profiles, you must accept solver
+consequences). That is why formalizing the UN Charter took a session,
+not a quarter.</p>
 <p>The architecture is the philosophy. The philosophy is the architecture. Structure all the way down.</p>
 
                     </main>
