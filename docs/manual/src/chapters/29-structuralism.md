@@ -17,6 +17,10 @@ Any domain amenable to formalization follows the same pattern:
 
 Mathematics has notation (symbols), rules (axioms), verification (proof), and output (papers). Physics has notation (tensor indices), rules (field equations), verification (experiment or proof), and output (predictions). A code review has notation (source code), rules (coding standards), verification (pass/fail checks), and output (a review report).
 
+Law follows the same pattern. International law has notation (treaty articles, doctrine names), rules (Article 2(4), Article 51), verification (does the act satisfy the qualifying conditions?), and output (a judgment: Permitted or Prohibited). This is not a metaphor. The UN Charter Article 51 formalization in `examples/authorization/` axiomatizes two competing self-defense doctrines, encodes case facts as a structure, and lets Z3 deliver the verdict. The same substrate that proves tensor symmetry also proves that an unprovoked military strike is illegal under both doctrines.
+
+This follows an old tradition. The Roman jurists extracted general rules (*regulae iuris*), reduced disputes to structured categories, and separated fact from legal qualification. They were not writing novels — they were building a system. When law is axiomatized, courts become evaluators of constraint satisfaction, lawyers become modelers of fact patterns, and no one can hide behind vague doctrine. They must say: "I am invoking *this* doctrine. I am asserting *this* predicate. I have *this* evidence." The Kleis formalization enacts this aspiration with a theorem prover.
+
 Kleis provides the substrate for this universal pattern. Not a tool for one domain — a substrate for all of them.
 
 ## Presentation Facilitates Cognition

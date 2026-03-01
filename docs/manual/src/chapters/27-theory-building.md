@@ -262,6 +262,243 @@ save_theory(name: "pot_admissible_kernels")
 The theory is now a plain `.kleis` file that can be imported, extended,
 or loaded into a future session.
 
+## Walkthrough: UN Charter Article 51 — Legal Cross-Examination
+
+The previous walkthrough formalized a physics theory. This one formalizes
+international law and uses Z3 as a cross-examiner.
+
+### The Legal Question
+
+Article 2(4) of the UN Charter prohibits the use of force between states.
+Article 51 provides one exception: self-defense. But two competing doctrines
+disagree on when self-defense is lawful:
+
+- **Strict doctrine**: only after an *armed attack* has occurred
+- **Anticipatory doctrine**: also when an attack is *imminent*
+
+This disagreement has real consequences. By formalizing both doctrines as
+axiom packs over a shared ontology, Z3 can identify exactly where they
+diverge — and prove what follows from each.
+
+### The Ontology
+
+Types and operations that both doctrines share. The key design decision:
+`lawful_self_defense` and `status` are parameterized by `Doctrine`, so
+both doctrines coexist in the same file without axiom collision:
+
+```kleis
+data State = US | Iran | Russia | Ukraine | Israel | Lebanon | CustomState(ℤ)
+data Norm = Permitted | Prohibited
+data Act = MilitaryAct(ℤ)
+data ThreatEvidence = Intel(ℤ)
+data Doctrine = Strict | Anticipatory
+
+operation use_of_force   : Act → Bool
+operation attacker       : Act → State
+operation target         : Act → State
+operation sc_authorized  : Act → Bool
+operation necessary      : Act → Bool
+operation proportional   : Act → Bool
+operation armed_attack_occurred : State × State → Bool
+operation imminent_attack       : State × State → Bool
+
+operation lawful_self_defense : Doctrine × Act → Bool
+operation status              : Doctrine × Act → Norm
+```
+
+### Article 2(4): The Baseline
+
+Force is prohibited unless an exception applies. A single axiom encodes
+both directions, universally quantified over doctrines:
+
+```kleis
+structure Article2_4 {
+    axiom force_status : ∀(d : Doctrine, a : Act).
+        use_of_force(a) →
+            ((status(d, a) = Permitted ↔ (sc_authorized(a) ∨ lawful_self_defense(d, a)))
+           ∧ (status(d, a) = Prohibited ↔ ¬(sc_authorized(a) ∨ lawful_self_defense(d, a))))
+}
+```
+
+### The Two Doctrines
+
+The strict doctrine requires an armed attack. Each axiom is pinned to
+its `Doctrine` value — `Strict` or `Anticipatory` — so they never
+interfere:
+
+```kleis
+structure StrictArticle51 {
+    axiom sd_requires : ∀(a : Act).
+        lawful_self_defense(Strict, a) →
+            (necessary(a) ∧ proportional(a) ∧
+             armed_attack_occurred(target(a), attacker(a)))
+}
+```
+
+The anticipatory doctrine also accepts imminence:
+
+```kleis
+structure AnticipatoryArticle51 {
+    axiom sd_requires : ∀(a : Act).
+        lawful_self_defense(Anticipatory, a) →
+            (necessary(a) ∧ proportional(a) ∧
+             (armed_attack_occurred(target(a), attacker(a))
+              ∨ imminent_attack(target(a), attacker(a))))
+}
+```
+
+The only difference is one disjunct: `∨ imminent_attack(...)`. The
+`Doctrine` parameter ensures each doctrine's axioms operate independently
+— no silent domination.
+
+### The Case File and Evidence Profile
+
+Facts of a disputed strike — US attacks Iran, no SC authorization, no prior
+armed attack. The `NoEvidence` structure prevents Z3 from inventing
+phantom witnesses to satisfy the imminence predicate:
+
+```kleis
+structure CaseFacts {
+    element case_act : Act
+    axiom is_force : use_of_force(case_act)
+    axiom who_attacks : attacker(case_act) = US
+    axiom who_is_target : target(case_act) = Iran
+    axiom no_sc_auth : ¬sc_authorized(case_act)
+    axiom no_prior_attack : ¬armed_attack_occurred(Iran, US)
+}
+
+structure NoEvidence {
+    axiom no_ev : ∀(e : ThreatEvidence). ¬evidence(Iran, US, e)
+}
+```
+
+Without `NoEvidence`, Z3 could freely instantiate `Intel(k)` for any `k`
+and set `credible`, `immediate`, `no_alternative` to true — technically
+satisfying the imminence definition. The closed-world guard forces the
+case file to supply evidence or accept its absence.
+
+### Verified Theorems
+
+The file lives under `examples/authorization/` alongside Zanzibar and OAuth2
+models. This is not an accident — the structure is the same. Authorization
+asks "is this action permitted given these rules and this identity?"
+The UN Charter asks "is this use of force permitted given these doctrines
+and these facts?" Both are judgment functions over acts. The difference
+is that authorization is a gate *before* the act; international law is
+a judgment *after* the act has already occurred.
+
+Load the theory into the kleis-theory MCP:
+
+```
+load_theory(imports: ["examples/authorization/un_charter_article51.kleis"])
+→ ✅ 6 structures loaded
+```
+
+### Cross-Examination
+
+The human asks questions in natural language. The AI agent inspects the
+loaded axioms and translates each question into a Kleis proposition,
+which Z3 either verifies or disproves. The human never writes Kleis —
+the agent does.
+
+**Human:** *"Is the act a use of force?"*
+
+```
+evaluate: ∀(a : Act). a = case_act → use_of_force(a)
+→ ✅ VERIFIED
+```
+
+**Human:** *"Did the Security Council authorize it?"*
+
+```
+evaluate: ∀(a : Act). a = case_act → sc_authorized(a)
+→ ❌ DISPROVED
+```
+
+**Human:** *"Did an armed attack occur?"*
+
+```
+evaluate: ∀(dummy : Act). ¬armed_attack_occurred(Iran, US)
+→ ✅ VERIFIED (none occurred)
+```
+
+**Human:** *"Does any evidence of imminence exist?"*
+
+```
+evaluate: ∀(e : ThreatEvidence). ¬evidence(Iran, US, e)
+→ ✅ VERIFIED (none exists)
+```
+
+**Human:** *"Is imminence established?"*
+
+```
+evaluate: ∀(v : State, a : State). v = Iran ∧ a = US → ¬imminent_attack(v, a)
+→ ✅ VERIFIED (impossible without evidence)
+```
+
+**Human:** *"Can self-defense be claimed under either doctrine?"*
+
+```
+evaluate: ∀(a : Act). a = case_act → lawful_self_defense(Strict, a)
+→ ❌ DISPROVED
+
+evaluate: ∀(a : Act). a = case_act → lawful_self_defense(Anticipatory, a)
+→ ❌ DISPROVED
+```
+
+**Human:** *"What is the legal status?"*
+
+```
+evaluate: ∀(a : Act). a = case_act → status(Strict, a) = Prohibited
+→ ✅ VERIFIED
+
+evaluate: ∀(a : Act). a = case_act → status(Anticipatory, a) = Prohibited
+→ ✅ VERIFIED
+```
+
+**Human:** *"Could it ever be Permitted?"*
+
+```
+evaluate: ∀(a : Act). a = case_act → status(Strict, a) = Permitted
+→ ❌ DISPROVED
+
+evaluate: ∀(a : Act). a = case_act → status(Anticipatory, a) = Permitted
+→ ❌ DISPROVED
+```
+
+**Human:** *"Do both doctrines agree?"*
+
+```
+evaluate: ∀(a : Act). a = case_act →
+    (status(Strict, a) = Prohibited ∧ status(Anticipatory, a) = Prohibited)
+→ ✅ VERIFIED
+```
+
+### The Verdict
+
+Both doctrines produce the same verdict: **Prohibited**. The anticipatory
+doctrine *could* diverge, but only if the case file supplies an
+`EvidenceSupported` profile instead of `NoEvidence`. Without evidence,
+imminence is logically impossible, and both doctrines collapse to the
+same judgment. The `Doctrine` parameter makes this comparison explicit
+in a single Z3 query.
+
+### Why This Matters
+
+The cross-examination is not a simulation — it is a proof. The human
+asked questions in English; the agent translated them into formal
+propositions; Z3 checked every possible model. No rhetoric, no
+ambiguity, no appeal to authority. Just axioms, facts, and a solver.
+
+Change the case facts (assert `sc_authorized`, or
+`armed_attack_occurred`) and the verdict flips — same law, different
+facts, different theorem.
+
+The same kleis-theory MCP that built a physics theory in the previous
+walkthrough now performs legal reasoning. The substrate is the same:
+structures, axioms, Z3 verification. The domain changed; the method
+did not.
+
 ## What Makes This Different
 
 ### From a Chat About Math
@@ -285,6 +522,33 @@ A Jupyter notebook runs code. It doesn't accumulate verified knowledge. Each
 cell is independent. In kleis-theory, each submission builds on everything
 before it. The theory grows monotonically. Nothing is forgotten, nothing
 contradicts.
+
+### From Asking a Lawyer (or an LLM)
+
+In the UN Charter cross-examination, the human did not need to know
+international law. The human said "cross-examine this case" and the agent
+did the rest — it queried the loaded theory via the MCP, discovered which
+structures and predicates were available, understood the logical
+dependencies between them, and constructed the propositions in Kleis
+syntax. The human asked in English; the agent translated to formal logic;
+Z3 returned the verdict.
+
+This is different from asking an LLM "is this attack legal?" An LLM
+would produce a plausible paragraph citing Article 51, hedging with
+"it depends," and possibly hallucinating case law. The agent does
+something structurally different: it reads the axioms that are actually
+loaded, constructs propositions that reference them precisely, and submits
+those propositions to a solver that checks every possible model.
+If the agent gets the proposition wrong, Z3 rejects it. If the axioms
+are inconsistent, Z3 reports inconsistency. There is no room for
+plausible-sounding nonsense.
+
+The axioms are self-describing — `lawful_self_defense`, `necessary`,
+`proportional`, `armed_attack_occurred` — the names carry the semantics.
+The structures tell the agent which predicates gate which conclusions.
+The agent does not "know" international law; it reads the formal encoding
+and reasons over it. The domain knowledge lives in the `.kleis` file,
+not in the model's training data.
 
 ## The Theory File
 
