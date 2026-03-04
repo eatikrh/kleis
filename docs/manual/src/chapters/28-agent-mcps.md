@@ -393,6 +393,75 @@ The evaluator is built once at startup. Each tool call is a function evaluation
 against the loaded definitions. No compilation, no network calls, no disk I/O
 per check. This is why reviews of large files complete in milliseconds.
 
+### CLI Review Mode (CI/CD)
+
+The review engine is also available as a standalone CLI command, without the MCP
+protocol overhead. This is suitable for GitLab CI/CD pipelines, GitHub Actions,
+or pre-commit hooks:
+
+```bash
+kleis review src/**/*.rs --policy examples/policies/rust_review_policy.kleis
+```
+
+Use `--failures-only` to suppress passing rules (cleaner CI output):
+
+```bash
+kleis review src/**/*.rs -p policy.kleis --failures-only
+```
+
+The command exits with code 1 if any file fails, making it a drop-in for CI
+pipelines. The kleis binary and the policy file must be available in the CI
+environment — either pre-installed in the builder image or downloaded as a
+release artifact.
+
+#### GitLab CI/CD
+
+Add a `kleis_review` job to your existing pipeline. It uses the same builder
+image and resource configuration as your other Rust jobs:
+
+```yaml
+kleis_review:
+  stage: mr_build
+  image: $YOUR_RUST_BUILDER_IMAGE
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "src/**/*.rs"
+  script:
+    - |
+      FAILED=0
+      for f in $(find src -name '*.rs'); do
+        kleis review "$f" -p policy.kleis --failures-only || FAILED=1
+      done
+      exit $FAILED
+```
+
+#### GitHub Actions
+
+```yaml
+name: kleis-review
+on:
+  pull_request:
+    paths: ['src/**/*.rs']
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download kleis
+        run: |
+          curl -L -o kleis https://your-artifact-store/kleis-linux
+          chmod +x kleis
+      - name: Run kleis review
+        run: |
+          FAILED=0
+          for f in $(find src -name '*.rs'); do
+            ./kleis review "$f" -p policy.kleis --failures-only || FAILED=1
+          done
+          exit $FAILED
+```
+
 ---
 
 -> [Previous: Interactive Theory Building](./27-theory-building.md)

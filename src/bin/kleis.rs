@@ -163,6 +163,28 @@ enum Commands {
         #[arg(short, long)]
         verbose: bool,
     },
+
+    /// Review source files against formal coding standards (CLI / CI mode)
+    ///
+    /// Runs all check_* rules from the policy against each file and prints
+    /// pass/fail results. Exits with code 1 if any file fails.
+    /// Suitable for GitLab CI/CD, GitHub Actions, or pre-commit hooks.
+    Review {
+        /// Source files to review
+        files: Vec<PathBuf>,
+
+        /// Path to the Kleis review policy file
+        #[arg(short, long)]
+        policy: PathBuf,
+
+        /// Show only failed checks (suppress passing rules)
+        #[arg(short, long)]
+        failures_only: bool,
+
+        /// Enable verbose logging (to stderr)
+        #[arg(short, long)]
+        verbose: bool,
+    },
 }
 
 #[tokio::main]
@@ -206,6 +228,14 @@ async fn main() {
         }
         Commands::ReviewMcp { policy, verbose } => {
             run_review_mcp(policy, verbose);
+        }
+        Commands::Review {
+            files,
+            policy,
+            failures_only,
+            verbose,
+        } => {
+            run_review(files, policy, failures_only, verbose);
         }
     }
 }
@@ -643,6 +673,81 @@ fn run_review_mcp(policy: PathBuf, verbose: bool) {
 
     if let Err(e) = server.run() {
         eprintln!("[kleis-review] Server error: {}", e);
+        std::process::exit(1);
+    }
+}
+
+/// Run code review from the command line (CI/CD mode)
+fn run_review(files: Vec<PathBuf>, policy: PathBuf, failures_only: bool, verbose: bool) {
+    use kleis::review_mcp::engine::ReviewEngine;
+
+    if files.is_empty() {
+        eprintln!("No files specified. Usage: kleis review [FILES...] --policy <policy.kleis>");
+        std::process::exit(1);
+    }
+
+    if verbose {
+        eprintln!("[kleis-review] Policy: {}", policy.display());
+        eprintln!("[kleis-review] Files: {}", files.len());
+    }
+
+    let engine = match ReviewEngine::load(&policy) {
+        Ok(e) => e,
+        Err(e) => {
+            eprintln!("Failed to load review policy '{}': {}", policy.display(), e);
+            std::process::exit(1);
+        }
+    };
+
+    let mut total_passed = 0usize;
+    let mut total_failed = 0usize;
+    let mut failed_files: Vec<String> = Vec::new();
+
+    for file_path in &files {
+        let path_str = file_path.to_string_lossy();
+        let result = match engine.check_file(&path_str, "rust") {
+            Ok(r) => r,
+            Err(e) => {
+                eprintln!("  ERROR: {} — {}", path_str, e);
+                total_failed += 1;
+                failed_files.push(path_str.to_string());
+                continue;
+            }
+        };
+
+        let emoji = if result.passed { "✅" } else { "❌" };
+        println!("{} {}", emoji, path_str);
+
+        for verdict in &result.verdicts {
+            if failures_only && verdict.passed {
+                continue;
+            }
+            let v_emoji = if verdict.passed { "  ✅" } else { "  ❌" };
+            println!("{} {} — {}", v_emoji, verdict.rule_name, verdict.message);
+        }
+
+        if result.passed {
+            total_passed += 1;
+        } else {
+            total_failed += 1;
+            failed_files.push(path_str.to_string());
+        }
+    }
+
+    println!();
+    println!(
+        "Review complete: {} passed, {} failed (out of {} files)",
+        total_passed,
+        total_failed,
+        files.len()
+    );
+
+    if !failed_files.is_empty() {
+        println!();
+        println!("Failed files:");
+        for f in &failed_files {
+            println!("  - {}", f);
+        }
         std::process::exit(1);
     }
 }
