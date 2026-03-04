@@ -43,7 +43,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-ecdd0b6e.js";
+            window.path_to_searchindex_js = "../searchindex-52ea9a2a.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-3f3d019b.js"></script>
@@ -476,23 +476,31 @@ the new rule is live.</p>
 <h3 id="starting-the-server-1"><a class="header" href="#starting-the-server-1">Starting the Server</a></h3>
 <pre><code class="language-bash">kleis review-mcp --policy examples/policies/rust_review_policy.kleis --verbose
 </code></pre>
-<p>In Cursor, add to <code>.cursor/mcp.json</code>:</p>
-<pre><code class="language-json">"kleis-review": {
+<p>In Cursor, add to <code>.cursor/mcp.json</code> (one instance per language):</p>
+<pre><code class="language-json">"kleis-review-rust": {
     "command": "/Users/you/bin/kleis",
     "args": ["review-mcp", "--verbose", "--policy",
-             "/path/to/examples/policies/rust_review_policy.kleis"]
+             "/path/to/examples/policies/rust_review_policy.kleis"],
+    "env": { "KLEIS_ROOT": "/path/to/kleis" }
+},
+"kleis-review-python": {
+    "command": "/Users/you/bin/kleis",
+    "args": ["review-mcp", "--verbose", "--policy",
+             "/path/to/examples/policies/python_review_policy.kleis"],
+    "env": { "KLEIS_ROOT": "/path/to/kleis" }
 }
 </code></pre>
+<p>The server name is derived from the policy filename (e.g. <code>python_review_policy.kleis</code> → <code>kleis-review-python</code>). Each instance loads its own rules, advisory prompts, and structural parser.</p>
 <hr>
-<h2 id="the-three-mcps-together"><a class="header" href="#the-three-mcps-together">The Three MCPs Together</a></h2>
-<p>The three servers cover different stages of the development workflow:</p>
-<pre><code>kleis-policy          kleis-review          kleis-theory
-     |                     |                     |
-     v                     v                     v
-"Can I do this?"    "Is this code good?"   "Is this math correct?"
-     |                     |                     |
-  Action gating       Code standards       Theory building
-  before editing       during editing       during research
+<h2 id="the-mcps-together"><a class="header" href="#the-mcps-together">The MCPs Together</a></h2>
+<p>The servers cover different stages of the development workflow:</p>
+<pre><code>kleis-policy      kleis-review-rust     kleis-review-python    kleis-theory
+     |                  |                     |                     |
+     v                  v                     v                     v
+"Can I do this?"  "Is this Rust good?"  "Is this Python good?"  "Is this math correct?"
+     |                  |                     |                     |
+  Action gating     Rust standards       Python standards       Theory building
+  before editing     during editing       during editing        during research
 </code></pre>
 <div class="table-wrapper">
 <table>
@@ -501,12 +509,14 @@ the new rule is live.</p>
 </thead>
 <tbody>
 <tr><td>kleis-policy</td><td><code>agent_policy.kleis</code></td><td><code>check_*</code> returns “allow”/“deny”</td><td>5</td></tr>
-<tr><td>kleis-review</td><td><code>rust_review_policy.kleis</code></td><td><code>check_*</code> returns “pass”/“fail: reason” (3 tiers: string, structural, Z3)</td><td>6</td></tr>
+<tr><td>kleis-review-rust</td><td><code>rust_review_policy.kleis</code></td><td><code>check_*</code> returns “pass”/“fail: reason” (3 tiers: string, structural, Z3)</td><td>6</td></tr>
+<tr><td>kleis-review-python</td><td><code>python_review_policy.kleis</code></td><td><code>check_*</code> returns “pass”/“fail: reason” (string + structural via <code>scan_python</code>)</td><td>6</td></tr>
 <tr><td>kleis-theory</td><td>(none — builds interactively)</td><td><code>submit_*</code>, <code>evaluate</code>, <code>save_theory</code></td><td>9</td></tr>
 </tbody>
 </table>
 </div>
-<p>All three are subcommands of the same <code>kleis</code> binary. One build, one install,
+<p>Each review MCP is a separate process with its own policy, advisory prompt context, and structural parser. The server name is derived from the policy filename. Adding a new language is: write <code>&lt;lang&gt;_review_policy.kleis</code>, add an MCP entry.</p>
+<p>All servers are subcommands of the same <code>kleis</code> binary. One build, one install,
 three servers:</p>
 <pre><code class="language-bash">./scripts/build-kleis.sh
 # Installs to ~/bin/kleis and ~/.cargo/bin/kleis
