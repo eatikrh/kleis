@@ -248,6 +248,114 @@ impl ReviewEngine {
         Ok(self.check_code(&source, language))
     }
 
+    /// Check whether the policy defines any `diff_check_*` functions
+    pub fn has_diff_checks(&self) -> bool {
+        self.evaluator
+            .list_functions()
+            .iter()
+            .any(|name| name.starts_with("diff_check_"))
+    }
+
+    /// Check whether the policy defines a `diff_file_filter` function
+    pub fn has_diff_file_filter(&self) -> bool {
+        self.evaluator
+            .list_functions()
+            .iter()
+            .any(|name| name == "diff_file_filter")
+    }
+
+    /// Evaluate `diff_file_filter(path)` — returns true if the file should be diff-checked
+    pub fn eval_diff_file_filter(&self, path: &str) -> bool {
+        let call_expr = Expression::Operation {
+            name: "diff_file_filter".to_string(),
+            args: vec![Expression::String(path.to_string())],
+            span: None,
+        };
+        match self.evaluator.eval_concrete(&call_expr) {
+            Ok(result) => Self::is_truthy(&result),
+            Err(_) => false,
+        }
+    }
+
+    /// Run all `diff_check_*` rules with (current, base, path) arguments
+    pub fn check_diff(&self, current: &str, base: &str, path: &str) -> ReviewResult {
+        let diff_functions: Vec<String> = self
+            .evaluator
+            .list_functions()
+            .into_iter()
+            .filter(|name| name.starts_with("diff_check_"))
+            .collect();
+
+        let mut verdicts = Vec::new();
+        let mut all_passed = true;
+
+        for func_name in &diff_functions {
+            let call_expr = Expression::Operation {
+                name: func_name.clone(),
+                args: vec![
+                    Expression::String(current.to_string()),
+                    Expression::String(base.to_string()),
+                    Expression::String(path.to_string()),
+                ],
+                span: None,
+            };
+
+            let verdict = match self.evaluator.eval_concrete(&call_expr) {
+                Ok(result) => {
+                    let result_str = Self::expression_to_string(&result);
+                    let passed = Self::is_pass(&result);
+                    if !passed {
+                        all_passed = false;
+                    }
+                    RuleVerdict {
+                        rule_name: func_name.clone(),
+                        passed,
+                        message: result_str,
+                    }
+                }
+                Err(e) => {
+                    all_passed = false;
+                    RuleVerdict {
+                        rule_name: func_name.clone(),
+                        passed: false,
+                        message: format!("error: {}", e),
+                    }
+                }
+            };
+
+            verdicts.push(verdict);
+        }
+
+        let pass_count = verdicts.iter().filter(|v| v.passed).count();
+        let fail_count = verdicts.len() - pass_count;
+
+        let summary = if all_passed {
+            format!("All {} diff checks passed", verdicts.len())
+        } else {
+            format!(
+                "{} passed, {} failed (out of {} diff checks)",
+                pass_count,
+                fail_count,
+                verdicts.len()
+            )
+        };
+
+        ReviewResult {
+            passed: all_passed,
+            verdicts,
+            summary,
+        }
+    }
+
+    fn is_truthy(result: &Expression) -> bool {
+        match result {
+            Expression::Const(v) => v == "true" || v == "1",
+            Expression::Object(name) => name.to_lowercase() == "true",
+            Expression::String(s) => s.to_lowercase() == "true",
+            _ => false,
+        }
+    }
+
     fn is_pass(result: &Expression) -> bool {
         match result {
             Expression::String(s) => {

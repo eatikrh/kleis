@@ -1,21 +1,27 @@
 # Next Session Notes
 
-**Last Updated:** February 26, 2026 (session 9 — review CLI + LLM advisory)
+**Last Updated:** March 4, 2026 (session 10 — diff-aware review rules)
 
 ---
 
-## Session 9 (Feb 26, 2026): Review CLI + LLM Advisory Mode
+## Session 10 (Mar 4, 2026): Diff-Aware Review Rules
 
 ### What Was Done
-- **`kleis review` CLI subcommand** — formal review from command line for CI/CD (GitLab, GitHub Actions)
-- **`--advise` flag** — calls an OpenAI-compatible LLM after formal checks for advisory (non-blocking) findings
-- **Dedup** — formal findings are passed to the LLM prompt so it only reports NEW findings
-- **`[llm]` config section** in `config.toml` — endpoint + model externalized; API key via `KLEIS_LLM_API_KEY` env only
-- **Feature-gated** — `llm-advisory` feature (default on), compiles out cleanly with `--no-default-features`
-- **Tested live** against OpenAI `gpt-4o-mini` — formal + advisory output confirmed, dedup verified
+- **`--base-branch` flag** for `kleis review` — enables cross-branch comparison rules
+- **`diff_check_*` convention** — functions that receive `(current, base, path)` instead of just `(source)`
+- **`diff_file_filter`** — policy-defined function that controls which files trigger `git show` (no unnecessary fetches)
+- **Graceful fallback** — invalid refs warn and skip, new files skip, no flag = no diff rules
+- **`diff_check_version_bump` example** — tested live against `sso-pipelinelib` (IMAGE_TAG enforcement)
+- **Naming convention isolates MCP** — `diff_check_*` is invisible to MCP's `check_*` discovery
+- **Documented** in `28-agent-mcps.md` with CI/CD examples (GitLab + GitHub Actions)
+
+### Also done this session
+- **Claude Code verified** — Sonnet 4.5 via Vertex AI, corporate auth working
+- **Gemini CLI installed** — v0.22.5 on Node 20, but blocked by GCP org policy (need IT to enable Gemini models on `itpc-gcp-it-all-claude` project)
+- **Env var cleanup identified** — `CLOUD_ML_REGION` duplicated in `.bash_profile`, Claude vars duplicated across `.bash_profile`/`.bashrc`/`.zshrc`
 
 ### Branch
-`feature/review-cli-advisory` (not yet merged)
+`feature/diff-aware-review`
 
 ### Open Items
 1. **Externalize `build_system_prompt` text** — the LLM system prompt is currently hardcoded in `src/review_mcp/advisory.rs`. Should be loaded from a file (e.g. `prompts/review_advisory.txt`) or a config.toml field, so users can customize the prompt without recompiling.
@@ -23,6 +29,9 @@
 3. **No timeouts** — `eval_concrete` and Z3 can block indefinitely. STILL OPEN.
 4. **`check_no_hardcoded_urls` false positive** — flags documentation URLs in comments. Needs structural version that skips comments.
 5. **Z3 axioms not wired into automatic review** — `SafeCode`, `SqlSafe` etc. require explicit `evaluate_expression` calls.
+6. **Vertex AI auth for `--advise`** — wire `gcloud auth print-access-token` into `advisory.rs` so `kleis review --advise` can use corporate Claude without a static API key.
+7. **Semver comparison for diff rules** — `diff_check_version_bump` currently checks "different" but not "greater". Add proper `version_gt(a, b)` with major.minor.patch parsing.
+8. **Generic `extract_key_value`** — current `foldLines` approach requires one step function per key. A generic version needs Kleis lambda/closure support in `foldLines` (partial application or 3-arg step functions).
 
 ---
 
