@@ -43,7 +43,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-c29f5fca.js";
+            window.path_to_searchindex_js = "../searchindex-ecdd0b6e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-3f3d019b.js"></script>
@@ -577,6 +577,86 @@ jobs:
           done
           exit $FAILED
 </code></pre>
+<h3 id="diff-aware-rules---base-branch"><a class="header" href="#diff-aware-rules---base-branch">Diff-Aware Rules (<code>--base-branch</code>)</a></h3>
+<p>Some rules need to compare a file on the current branch against the same file
+on a base branch. Version bump enforcement, changelog entry checks, and API
+compatibility validation all follow this pattern.</p>
+<pre><code class="language-bash">kleis review builders/runner/config -p policy.kleis --base-branch main
+</code></pre>
+<p>The <code>--base-branch</code> flag accepts any git ref: branch name, remote ref (<code>origin/main</code>),
+tag, or SHA. When provided, the CLI runs <code>diff_check_*</code> functions in addition to the
+standard <code>check_*</code> rules.</p>
+<h4 id="convention"><a class="header" href="#convention">Convention</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Prefix</th><th>Arguments</th><th>When it runs</th></tr>
+</thead>
+<tbody>
+<tr><td><code>check_*</code></td><td><code>(source)</code></td><td>Always</td></tr>
+<tr><td><code>diff_check_*</code></td><td><code>(current, base, path)</code></td><td>Only with <code>--base-branch</code></td></tr>
+<tr><td><code>diff_file_filter</code></td><td><code>(path)</code></td><td>Controls which files trigger <code>git show</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>The <code>diff_file_filter</code> function prevents unnecessary <code>git show</code> calls. Only files
+where the filter returns <code>true</code> trigger a base branch fetch:</p>
+<pre><code class="language-kleis">define diff_file_filter(path) =
+    if contains(path, "config") then true
+    else if hasSuffix(path, "Cargo.toml") then true
+    else false
+</code></pre>
+<p>If <code>diff_file_filter</code> is not defined, diff rules run for all files.
+If <code>--base-branch</code> is absent, <code>diff_check_*</code> functions are silently skipped.
+If the ref is invalid or the file is new (not on the base branch), diff rules
+are skipped with a warning — the pipeline is never blocked by missing refs.</p>
+<h4 id="example-version-bump-enforcement"><a class="header" href="#example-version-bump-enforcement">Example: version bump enforcement</a></h4>
+<p>For CI builder config files (<code>IMAGE_TAG=3.0.99</code>):</p>
+<pre><code class="language-kleis">define pick_image_tag(line, acc) =
+    if hasPrefix(line, "IMAGE_TAG=") then substring(line, 10, 100)
+    else acc
+
+define diff_check_version_bump(current, base, path) =
+    if not(contains(path, "config")) then "pass"
+    else
+        let cur_ver = foldLines(pick_image_tag, "", current) in
+        let base_ver = foldLines(pick_image_tag, "", base) in
+        if eq(cur_ver, base_ver) then
+            concat("fail: IMAGE_TAG not bumped (still ", concat(cur_ver, ")"))
+        else "pass"
+</code></pre>
+<p>For Rust projects (<code>Cargo.toml</code> with <code>version = "0.0.42"</code>):</p>
+<pre><code class="language-kleis">define pick_cargo_version_line(line, acc) =
+    if hasPrefix(trim(line), "version = ") then trim(line) else acc
+
+define diff_check_cargo_version(current, base, path) =
+    if not(hasSuffix(path, "Cargo.toml")) then "pass"
+    else
+        let cur = foldLines(pick_cargo_version_line, "", current) in
+        let base_line = foldLines(pick_cargo_version_line, "", base) in
+        if eq(cur, base_line) then
+            concat("fail: Cargo.toml version not bumped (", concat(cur, ")"))
+        else "pass"
+</code></pre>
+<h4 id="cicd-with-diff-rules"><a class="header" href="#cicd-with-diff-rules">CI/CD with diff rules</a></h4>
+<p>In GitLab, the target branch is available as <code>$CI_MERGE_REQUEST_TARGET_BRANCH_NAME</code>:</p>
+<pre><code class="language-yaml">kleis_review:
+  stage: mr_build
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  script:
+    - kleis review builders/runner/config
+        -p policy.kleis
+        --base-branch origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+        --failures-only
+</code></pre>
+<p>In GitHub Actions, use <code>origin/${{ github.base_ref }}</code>.</p>
+<p>For local development, run <code>--base-branch main</code> to get early warnings before
+creating a merge request.</p>
+<h4 id="mcp-compatibility"><a class="header" href="#mcp-compatibility">MCP compatibility</a></h4>
+<p>The <code>diff_check_*</code> prefix does not match the MCP’s <code>check_*</code> discovery filter,
+so diff rules are invisible to the kleis-review MCP server. They live in the
+same policy file but only activate via the CLI <code>--base-branch</code> flag.</p>
 <h3 id="advisory-mode-llm-assisted-review"><a class="header" href="#advisory-mode-llm-assisted-review">Advisory Mode (LLM-Assisted Review)</a></h3>
 <p>Formal checks are deterministic and machine-checked — they <strong>block</strong> the pipeline
 on failure. But some code quality concerns are inherently ambiguous: naming
