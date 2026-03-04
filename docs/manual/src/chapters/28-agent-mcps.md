@@ -462,6 +462,105 @@ jobs:
           exit $FAILED
 ```
 
+### Diff-Aware Rules (`--base-branch`)
+
+Some rules need to compare a file on the current branch against the same file
+on a base branch. Version bump enforcement, changelog entry checks, and API
+compatibility validation all follow this pattern.
+
+```bash
+kleis review builders/runner/config -p policy.kleis --base-branch main
+```
+
+The `--base-branch` flag accepts any git ref: branch name, remote ref (`origin/main`),
+tag, or SHA. When provided, the CLI runs `diff_check_*` functions in addition to the
+standard `check_*` rules.
+
+#### Convention
+
+| Prefix | Arguments | When it runs |
+|--------|-----------|-------------|
+| `check_*` | `(source)` | Always |
+| `diff_check_*` | `(current, base, path)` | Only with `--base-branch` |
+| `diff_file_filter` | `(path)` | Controls which files trigger `git show` |
+
+The `diff_file_filter` function prevents unnecessary `git show` calls. Only files
+where the filter returns `true` trigger a base branch fetch:
+
+```kleis
+define diff_file_filter(path) =
+    if contains(path, "config") then true
+    else if hasSuffix(path, "Cargo.toml") then true
+    else false
+```
+
+If `diff_file_filter` is not defined, diff rules run for all files.
+If `--base-branch` is absent, `diff_check_*` functions are silently skipped.
+If the ref is invalid or the file is new (not on the base branch), diff rules
+are skipped with a warning — the pipeline is never blocked by missing refs.
+
+#### Example: version bump enforcement
+
+For CI builder config files (`IMAGE_TAG=3.0.99`):
+
+```kleis
+define pick_image_tag(line, acc) =
+    if hasPrefix(line, "IMAGE_TAG=") then substring(line, 10, 100)
+    else acc
+
+define diff_check_version_bump(current, base, path) =
+    if not(contains(path, "config")) then "pass"
+    else
+        let cur_ver = foldLines(pick_image_tag, "", current) in
+        let base_ver = foldLines(pick_image_tag, "", base) in
+        if eq(cur_ver, base_ver) then
+            concat("fail: IMAGE_TAG not bumped (still ", concat(cur_ver, ")"))
+        else "pass"
+```
+
+For Rust projects (`Cargo.toml` with `version = "0.0.42"`):
+
+```kleis
+define pick_cargo_version_line(line, acc) =
+    if hasPrefix(trim(line), "version = ") then trim(line) else acc
+
+define diff_check_cargo_version(current, base, path) =
+    if not(hasSuffix(path, "Cargo.toml")) then "pass"
+    else
+        let cur = foldLines(pick_cargo_version_line, "", current) in
+        let base_line = foldLines(pick_cargo_version_line, "", base) in
+        if eq(cur, base_line) then
+            concat("fail: Cargo.toml version not bumped (", concat(cur, ")"))
+        else "pass"
+```
+
+#### CI/CD with diff rules
+
+In GitLab, the target branch is available as `$CI_MERGE_REQUEST_TARGET_BRANCH_NAME`:
+
+```yaml
+kleis_review:
+  stage: mr_build
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  script:
+    - kleis review builders/runner/config
+        -p policy.kleis
+        --base-branch origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+        --failures-only
+```
+
+In GitHub Actions, use `origin/${{ github.base_ref }}`.
+
+For local development, run `--base-branch main` to get early warnings before
+creating a merge request.
+
+#### MCP compatibility
+
+The `diff_check_*` prefix does not match the MCP's `check_*` discovery filter,
+so diff rules are invisible to the kleis-review MCP server. They live in the
+same policy file but only activate via the CLI `--base-branch` flag.
+
 ### Advisory Mode (LLM-Assisted Review)
 
 Formal checks are deterministic and machine-checked — they **block** the pipeline

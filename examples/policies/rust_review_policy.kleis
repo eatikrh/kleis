@@ -631,3 +631,57 @@ example "sql_safe_format_in_test_ok" {
     let source = "fn query_db() {\n    sqlx::query!(\"SELECT id FROM users WHERE id = ?\");\n}\n\n#[test]\nfn test_query() {\n    let q = format!(\"SELECT * FROM test\");\n}" in
     out(check_sql_safe_structural(source))
 }
+
+// ============================================================================
+// Diff-Aware Rules (CLI only, invisible to MCP)
+// ============================================================================
+//
+// These rules compare current vs base branch content. They are discovered
+// by the `diff_check_*` prefix and only run when `--base-branch` is provided.
+// The MCP's `check_*` discovery filter does not match this prefix.
+
+// Filter: only fetch base branch content for version-bearing files
+define diff_file_filter(path) =
+    if hasSuffix(path, "Cargo.toml") then true
+    else if contains(path, "config") then true
+    else if hasSuffix(path, "package.json") then true
+    else false
+
+// --- Helpers for version line extraction ---
+
+define pick_cargo_version_line(line, acc) =
+    if hasPrefix(trim(line), "version = ") then trim(line) else acc
+
+define extract_cargo_version_line(source) =
+    foldLines(pick_cargo_version_line, "", source)
+
+define pick_image_tag(line, acc) =
+    if hasPrefix(line, "IMAGE_TAG=") then substring(line, 10, 100)
+    else acc
+
+define extract_image_tag(source) =
+    foldLines(pick_image_tag, "", source)
+
+// --- Diff Rules ---
+
+define diff_check_cargo_version(current, base, path) =
+    if not(hasSuffix(path, "Cargo.toml")) then "pass"
+    else
+        let cur_line = extract_cargo_version_line(current) in
+        let base_line = extract_cargo_version_line(base) in
+        if eq(cur_line, "") then "pass"
+        else if eq(base_line, "") then "pass"
+        else if eq(cur_line, base_line) then
+            concat("fail: Cargo.toml version not bumped (", concat(cur_line, ")"))
+        else "pass"
+
+define diff_check_version_bump(current, base, path) =
+    if not(contains(path, "config")) then "pass"
+    else
+        let cur_ver = extract_image_tag(current) in
+        let base_ver = extract_image_tag(base) in
+        if eq(cur_ver, "") then "pass"
+        else if eq(base_ver, "") then "pass"
+        else if eq(cur_ver, base_ver) then
+            concat("fail: IMAGE_TAG not bumped (still ", concat(cur_ver, ")"))
+        else "pass"

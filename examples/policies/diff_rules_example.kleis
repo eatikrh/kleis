@@ -1,0 +1,68 @@
+// Diff-Aware Review Rules — Example Policy
+//
+// These rules compare a file on the current branch against the same file
+// on a base branch (e.g., main). They are invoked by:
+//
+//   kleis review <files> --policy <this-file> --base-branch main
+//
+// Convention:
+//   - diff_file_filter(path)            → true/false (controls which files trigger git show)
+//   - diff_check_*(current, base, path) → "pass" / "fail: reason"
+//
+// diff_check_* functions are only called when --base-branch is provided.
+// They are invisible to the kleis-review MCP server (prefix is not "check_").
+
+// --- Filter: only fetch base branch content for these files ---
+
+define diff_file_filter(path) =
+    if contains(path, "config") then true
+    else if hasSuffix(path, "Cargo.toml") then true
+    else if hasSuffix(path, "package.json") then true
+    else if hasSuffix(path, "CHANGELOG.md") then true
+    else false
+
+// --- Helpers ---
+
+// foldLines step: if line starts with "IMAGE_TAG=", extract the value.
+define pick_image_tag(line, acc) =
+    if hasPrefix(line, "IMAGE_TAG=") then substring(line, 10, 100)
+    else acc
+
+define extract_image_tag(source) =
+    foldLines(pick_image_tag, "", source)
+
+// foldLines step: capture the full 'version = "..."' line from Cargo.toml.
+// Compares entire lines — avoids need to parse quotes in Kleis string literals.
+define pick_cargo_version_line(line, acc) =
+    let trimmed = trim(line) in
+    if hasPrefix(trimmed, "version = ") then trimmed
+    else acc
+
+define extract_cargo_version_line(source) =
+    foldLines(pick_cargo_version_line, "", source)
+
+// --- Diff Rules ---
+
+// Rule: IMAGE_TAG must change between branches (for builder config files)
+define diff_check_version_bump(current, base, path) =
+    if not(contains(path, "config")) then "pass"
+    else
+        let cur_ver = extract_image_tag(current) in
+        let base_ver = extract_image_tag(base) in
+        if eq(cur_ver, "") then "pass"
+        else if eq(base_ver, "") then "pass"
+        else if eq(cur_ver, base_ver) then
+            concat("fail: IMAGE_TAG not bumped (still ", concat(cur_ver, ")"))
+        else "pass"
+
+// Rule: Cargo.toml version must change between branches
+define diff_check_cargo_version(current, base, path) =
+    if not(hasSuffix(path, "Cargo.toml")) then "pass"
+    else
+        let cur_line = extract_cargo_version_line(current) in
+        let base_line = extract_cargo_version_line(base) in
+        if eq(cur_line, "") then "pass"
+        else if eq(base_line, "") then "pass"
+        else if eq(cur_line, base_line) then
+            concat("fail: Cargo.toml version not bumped (", concat(cur_line, ")"))
+        else "pass"

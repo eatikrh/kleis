@@ -188,6 +188,12 @@ enum Commands {
         /// Run LLM advisory review after formal checks (requires KLEIS_LLM_API_KEY)
         #[arg(short, long)]
         advise: bool,
+
+        /// Base branch for diff-aware rules (e.g., main, origin/main).
+        /// When provided, diff_check_* functions receive both current and base file content.
+        /// Accepts any git ref: branch, tag, SHA, or remote ref.
+        #[arg(short = 'B', long)]
+        base_branch: Option<String>,
     },
 }
 
@@ -239,8 +245,9 @@ async fn main() {
             failures_only,
             verbose,
             advise,
+            base_branch,
         } => {
-            run_review(files, policy, failures_only, verbose, advise);
+            run_review(files, policy, failures_only, verbose, advise, base_branch);
         }
     }
 }
@@ -682,6 +689,56 @@ fn run_review_mcp(policy: PathBuf, verbose: bool) {
     }
 }
 
+/// Get the git repository root directory
+fn git_repo_root() -> Option<PathBuf> {
+    let output = std::process::Command::new("git")
+        .args(["rev-parse", "--show-toplevel"])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    Some(PathBuf::from(
+        String::from_utf8_lossy(&output.stdout).trim(),
+    ))
+}
+
+/// Validate that a git ref exists
+fn git_ref_exists(git_ref: &str) -> bool {
+    std::process::Command::new("git")
+        .args(["rev-parse", "--verify", git_ref])
+        .output()
+        .is_ok_and(|o| o.status.success())
+}
+
+/// Fetch file content from a git ref (e.g., `git show main:path/to/file`)
+fn git_show_file(git_ref: &str, repo_relative_path: &str) -> Option<String> {
+    let ref_path = format!("{}:{}", git_ref, repo_relative_path);
+    let output = std::process::Command::new("git")
+        .args(["show", &ref_path])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    Some(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+/// Compute a file path relative to the git repo root
+fn repo_relative_path(file_path: &Path, repo_root: &Path) -> Option<String> {
+    let abs = if file_path.is_absolute() {
+        file_path.to_path_buf()
+    } else {
+        std::env::current_dir().ok()?.join(file_path)
+    };
+    let canonical = abs.canonicalize().ok()?;
+    let root_canonical = repo_root.canonicalize().ok()?;
+    canonical
+        .strip_prefix(&root_canonical)
+        .ok()
+        .map(|p| p.to_string_lossy().to_string())
+}
+
 /// Run code review from the command line (CI/CD mode)
 fn run_review(
     files: Vec<PathBuf>,
@@ -689,6 +746,7 @@ fn run_review(
     failures_only: bool,
     verbose: bool,
     advise: bool,
+    base_branch: Option<String>,
 ) {
     use kleis::review_mcp::advisory::{self, AdvisoryConfig};
     use kleis::review_mcp::engine::ReviewEngine;
@@ -719,6 +777,29 @@ fn run_review(
         None
     };
 
+    // Validate base branch ref and resolve repo root
+    let diff_context: Option<(String, PathBuf)> = base_branch.and_then(|ref_name| {
+        if !git_ref_exists(&ref_name) {
+            eprintln!(
+                "[kleis-review] warning: base branch '{}' not found, skipping diff rules",
+                ref_name
+            );
+            return None;
+        }
+        let repo_root = match git_repo_root() {
+            Some(r) => r,
+            None => {
+                eprintln!("[kleis-review] warning: not a git repository, skipping diff rules");
+                return None;
+            }
+        };
+        if verbose {
+            eprintln!("[kleis-review] Base branch: {} (verified)", ref_name);
+            eprintln!("[kleis-review] Repo root: {}", repo_root.display());
+        }
+        Some((ref_name, repo_root))
+    });
+
     if verbose {
         eprintln!("[kleis-review] Policy: {}", policy.display());
         eprintln!("[kleis-review] Files: {}", files.len());
@@ -732,6 +813,24 @@ fn run_review(
         }
     };
 
+    let has_diff_checks = engine.has_diff_checks();
+    let has_diff_filter = engine.has_diff_file_filter();
+
+    if verbose && diff_context.is_some() {
+        eprintln!(
+            "[kleis-review] diff_check_* functions: {}",
+            if has_diff_checks { "found" } else { "none" }
+        );
+        eprintln!(
+            "[kleis-review] diff_file_filter: {}",
+            if has_diff_filter {
+                "defined"
+            } else {
+                "not defined (diff checks run for all files)"
+            }
+        );
+    }
+
     let rt = tokio::runtime::Handle::current();
 
     let mut total_passed = 0usize;
@@ -740,6 +839,8 @@ fn run_review(
 
     for file_path in &files {
         let path_str = file_path.to_string_lossy();
+
+        // --- Standard check_* rules ---
         let result = match engine.check_file(&path_str, "rust") {
             Ok(r) => r,
             Err(e) => {
@@ -749,6 +850,8 @@ fn run_review(
                 continue;
             }
         };
+
+        let mut file_passed = result.passed;
 
         let emoji = if result.passed { "✅" } else { "❌" };
         println!("{} {}", emoji, path_str);
@@ -761,13 +864,72 @@ fn run_review(
             println!("{} {} — {}", v_emoji, verdict.rule_name, verdict.message);
         }
 
-        if result.passed {
+        // --- Diff-aware diff_check_* rules ---
+        if let Some((ref base_ref, ref repo_root)) = diff_context {
+            if has_diff_checks {
+                let should_diff = if has_diff_filter {
+                    engine.eval_diff_file_filter(&path_str)
+                } else {
+                    true
+                };
+
+                if should_diff {
+                    if let Some(rel_path) = repo_relative_path(file_path, repo_root) {
+                        match git_show_file(base_ref, &rel_path) {
+                            Some(base_content) => {
+                                let current_content =
+                                    std::fs::read_to_string(file_path).unwrap_or_default();
+                                if verbose {
+                                    eprintln!(
+                                        "[kleis-review] diff_file_filter(\"{}\") = true, fetched {} bytes from {}",
+                                        path_str,
+                                        base_content.len(),
+                                        base_ref
+                                    );
+                                }
+                                let diff_result =
+                                    engine.check_diff(&current_content, &base_content, &path_str);
+                                for verdict in &diff_result.verdicts {
+                                    if !verdict.passed {
+                                        file_passed = false;
+                                    }
+                                    if failures_only && verdict.passed {
+                                        continue;
+                                    }
+                                    let v_emoji = if verdict.passed { "  ✅" } else { "  ❌" };
+                                    println!(
+                                        "{} {} — {}",
+                                        v_emoji, verdict.rule_name, verdict.message
+                                    );
+                                }
+                            }
+                            None => {
+                                if verbose {
+                                    eprintln!(
+                                        "[kleis-review] {} not found on {}, skipping diff rules",
+                                        rel_path, base_ref
+                                    );
+                                }
+                            }
+                        }
+                    }
+                } else if verbose {
+                    eprintln!(
+                        "[kleis-review] diff_file_filter(\"{}\") = false, skipping diff rules",
+                        path_str
+                    );
+                }
+            }
+        }
+
+        if file_passed {
             total_passed += 1;
         } else {
             total_failed += 1;
             failed_files.push(path_str.to_string());
         }
 
+        // --- LLM advisory ---
         if let Some(ref cfg) = llm_config {
             let source = match std::fs::read_to_string(file_path) {
                 Ok(s) => s,
