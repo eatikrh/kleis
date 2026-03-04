@@ -26,6 +26,7 @@ pub mod pattern_matcher;
 pub mod plotting; // Lilaq/Typst plotting integration
 pub mod pretty_print; // Pretty-printer for exporting Kleis source
 pub mod provenance; // Track which file each definition came from
+pub mod python; // Python language support (scanner → Kleis AST)
 pub mod render;
 pub mod render_editor; // EditorNode-only renderer (no Expression conversion)
 pub mod repl; // REPL implementation

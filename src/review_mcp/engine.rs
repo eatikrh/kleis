@@ -639,6 +639,28 @@ impl ReviewEngine {
     }
 }
 
+/// Resolve a `stdlib/` import by checking KLEIS_ROOT, then walking up
+/// from the importing file to find the stdlib directory.
+fn resolve_stdlib_import(import_path_str: &str, from_file: &Path) -> Option<PathBuf> {
+    if let Ok(kleis_root) = std::env::var("KLEIS_ROOT") {
+        let candidate = PathBuf::from(&kleis_root).join(import_path_str);
+        if candidate.exists() {
+            return candidate.canonicalize().ok();
+        }
+    }
+    if let Some(parent) = from_file.parent() {
+        let mut dir = parent.to_path_buf();
+        for _ in 0..10 {
+            let candidate = dir.join(import_path_str);
+            if candidate.exists() {
+                return candidate.canonicalize().ok();
+            }
+            dir = dir.parent()?.to_path_buf();
+        }
+    }
+    None
+}
+
 /// Recursively load imports for a program.
 fn load_imports_recursive(
     program: &Program,
@@ -654,7 +676,15 @@ fn load_imports_recursive(
             let resolved = if import_path.is_absolute() {
                 import_path.to_path_buf()
             } else if import_path_str.starts_with("stdlib/") {
-                PathBuf::from(import_path_str)
+                match resolve_stdlib_import(import_path_str, file_path) {
+                    Some(p) => p,
+                    None => {
+                        return Err(format!(
+                            "Cannot resolve import '{}': set KLEIS_ROOT or run from the kleis project directory",
+                            import_path_str
+                        ));
+                    }
+                }
             } else {
                 base_dir.join(import_path)
             };

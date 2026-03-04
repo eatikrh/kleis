@@ -1,0 +1,564 @@
+// ============================================================================
+// Python Code Review Policy
+// ============================================================================
+//
+// Review rules for Python source code. Uses both string-based checks
+// (fast, language-agnostic) and structural checks via scan_python().
+//
+// Usage:
+//   kleis review src/**/*.py -p examples/policies/python_review_policy.kleis
+//
+// ============================================================================
+
+import "../meta-programming/python_types.kleis"
+
+// ============================================================================
+// String-Based Checks (no parsing needed)
+// ============================================================================
+//
+// These rules are inferred from 1,038 MR review comments across 403 MRs
+// in the sso-pipelinelib codebase. Each rule addresses a recurring pattern
+// that was flagged by reviewers multiple times.
+// ============================================================================
+
+define check_no_wildcard_import(source) =
+    if contains(source, "import *") then "fail: wildcard import — use explicit imports"
+    else "pass"
+
+define check_no_eval(source) =
+    if contains(source, "eval(") then "fail: eval() is a security risk — use ast.literal_eval or safe alternatives"
+    else if contains(source, "exec(") then "fail: exec() is a security risk"
+    else "pass"
+
+define check_no_bare_except(source) =
+    if contains(source, "except:") then "fail: bare except — catch specific exceptions (e.g., except ValueError)"
+    else "pass"
+
+define check_no_hardcoded_password(source) =
+    if contains(source, "password = \"") then "fail: possible hardcoded password — use environment variables or secrets manager"
+    else if contains(source, "password = '") then "fail: possible hardcoded password — use environment variables or secrets manager"
+    else if contains(source, "PASSWORD = \"") then "fail: possible hardcoded password — use environment variables or secrets manager"
+    else if contains(source, "PASSWORD = '") then "fail: possible hardcoded password — use environment variables or secrets manager"
+    else "pass"
+
+define check_no_print_statement(source) =
+    if contains(source, "print(") then "fail: print() found — use logging module instead"
+    else "pass"
+
+define check_no_debug_breakpoint(source) =
+    if contains(source, "breakpoint()") then "fail: breakpoint() left in code"
+    else if contains(source, "pdb.set_trace()") then "fail: pdb.set_trace() left in code"
+    else if contains(source, "import pdb") then "fail: pdb import left in code"
+    else "pass"
+
+// --- MR-inferred: No sys.exit() in library code (12 occurrences) ---
+// "sys.exit(1) is not longer needed, when you return result with error
+//  the caller will handle that for you"
+define check_no_sys_exit(source) =
+    if contains(source, "sys.exit(") then "fail: sys.exit() in library code — return Result with error instead, let the caller handle exit"
+    else "pass"
+
+// --- MR-inferred: No mutable default arguments (flagged by linter + reviewer) ---
+// "I'm getting a critical lint report about this default value []
+//  not being allowed as it is mutable."
+define check_no_mutable_defaults(source) =
+    if contains(source, "=[]") then "fail: mutable default argument [] — use None and initialize inside the function"
+    else if contains(source, "= []") then "fail: mutable default argument [] — use None and initialize inside the function"
+    else if contains(source, "={}") then "fail: mutable default argument {} — use None and initialize inside the function"
+    else if contains(source, "= {}") then "fail: mutable default argument {} — use None and initialize inside the function"
+    else "pass"
+
+// --- MR-inferred: Use single quotes consistently (multiple occurrences) ---
+// "lets use single quotes here, we have been doing that consistently
+//  through the codebase"
+define check_double_quote_strings(source) =
+    if contains(source, "\"\"\"") then "pass"
+    else if contains(source, "f\"") then "fail: use single quotes for f-strings — f'...' instead of f\"...\" (codebase convention)"
+    else "pass"
+
+// --- MR-inferred: No os.environ[] direct access (multiple occurrences) ---
+// "This will throw an exception if any of those are missing...
+//  I do prefer os.environ.get('ENV_VAR', '') or os.environ.get('ENV_VAR', None)"
+define check_no_environ_bracket(source) =
+    if contains(source, "os.environ[") then "fail: os.environ['KEY'] throws KeyError if missing — use os.environ.get('KEY', default) instead"
+    else "pass"
+
+// --- MR-inferred: No Optional type hint (deprecated) ---
+// "Optional is deprecated now: use str|None"
+define check_no_optional_type(source) =
+    if contains(source, "Optional[") then "fail: Optional[X] is deprecated — use X | None (PEP 604)"
+    else "pass"
+
+// ============================================================================
+// Structural Checks (use scan_python AST)
+// ============================================================================
+
+// --- Rule: function body too long (> 50 statements) ---
+define rule_long_function(items) =
+    match items {
+        Nil => ""
+      | Cons(item, rest) =>
+            match item {
+                PyItemFunction(f) =>
+                    match f {
+                        PyFunction(name, _, _, _, body, _, _) =>
+                            let len = count_list(body) in
+                            if len > 50 then
+                                concat("function '", concat(name, concat("' has ", concat(len, concat(" statements (max 50); ", rule_long_function(rest))))))
+                            else rule_long_function(rest)
+                    }
+              | _ => rule_long_function(rest)
+            }
+    }
+
+// --- Rule: class methods too long ---
+define rule_long_methods(items) =
+    match items {
+        Nil => ""
+      | Cons(item, rest) =>
+            match item {
+                PyItemClass(c) =>
+                    match c {
+                        PyClass(cls_name, _, methods, _, _, _) =>
+                            concat(methods_too_long(cls_name, methods), rule_long_methods(rest))
+                    }
+              | _ => rule_long_methods(rest)
+            }
+    }
+
+define methods_too_long(cls_name, methods) =
+    match methods {
+        Nil => ""
+      | Cons(m, rest) =>
+            match m {
+                PyFunction(name, _, _, _, body, _, _) =>
+                    let len = count_list(body) in
+                    let issue = if len > 50 then
+                        concat(cls_name, concat(".", concat(name, concat(" has ", concat(len, " statements; ")))))
+                    else "" in
+                    concat(issue, methods_too_long(cls_name, rest))
+            }
+    }
+
+// --- Rule: imports not at top of file ---
+define rule_import_placement(items) =
+    imports_after_def(items, false)
+
+define imports_after_def(items, saw_def) =
+    match items {
+        Nil => ""
+      | Cons(item, rest) =>
+            match item {
+                PyItemFunction(_) => imports_after_def(rest, true)
+              | PyItemClass(_) => imports_after_def(rest, true)
+              | PyItemImport(imp) =>
+                    match imp {
+                        PyImport(_, line) =>
+                            if saw_def then concat("import at line ", concat(line, concat(" after function/class definition; ", imports_after_def(rest, saw_def))))
+                            else imports_after_def(rest, saw_def)
+                    }
+              | PyItemFromImport(imp) =>
+                    match imp {
+                        PyFromImport(_, _, _, line) =>
+                            if saw_def then concat("from-import at line ", concat(line, concat(" after function/class definition; ", imports_after_def(rest, saw_def))))
+                            else imports_after_def(rest, saw_def)
+                    }
+              | _ => imports_after_def(rest, saw_def)
+            }
+    }
+
+// --- Rule: bare except in structural AST (walks nested bodies) ---
+define rule_bare_except_structural(items) =
+    find_bare_except_in_items(items)
+
+define find_bare_except_in_items(items) =
+    match items {
+        Nil => ""
+      | Cons(item, rest) =>
+            match item {
+                PyItemStmt(stmt) =>
+                    concat(find_bare_except_in_stmt(stmt), find_bare_except_in_items(rest))
+              | PyItemFunction(f) =>
+                    match f {
+                        PyFunction(_, _, _, _, body, _, _) =>
+                            concat(find_bare_except_in_stmts(body), find_bare_except_in_items(rest))
+                    }
+              | PyItemClass(c) =>
+                    match c {
+                        PyClass(_, _, _, body, _, _) =>
+                            concat(find_bare_except_in_stmts(body), find_bare_except_in_items(rest))
+                    }
+              | _ => find_bare_except_in_items(rest)
+            }
+    }
+
+define find_bare_except_in_stmts(stmts) =
+    match stmts {
+        Nil => ""
+      | Cons(s, rest) => concat(find_bare_except_in_stmt(s), find_bare_except_in_stmts(rest))
+    }
+
+define find_bare_except_in_stmt(stmt) =
+    match stmt {
+        PyStmtTry(body, handlers, finally_body, line) =>
+            concat(handlers_have_bare(handlers, line),
+                concat(find_bare_except_in_stmts(body),
+                    find_bare_except_in_stmts(finally_body)))
+      | PyStmtIf(body, else_body, _) =>
+            concat(find_bare_except_in_stmts(body), find_bare_except_in_stmts(else_body))
+      | PyStmtFor(_, body, _) => find_bare_except_in_stmts(body)
+      | PyStmtWhile(body, _) => find_bare_except_in_stmts(body)
+      | PyStmtFunctionDef(f) =>
+            match f {
+                PyFunction(_, _, _, _, body, _, _) => find_bare_except_in_stmts(body)
+            }
+      | PyStmtClassDef(c) =>
+            match c {
+                PyClass(_, _, _, body, _, _) => find_bare_except_in_stmts(body)
+            }
+      | _ => ""
+    }
+
+define handlers_have_bare(handlers, try_line) =
+    match handlers {
+        Nil => ""
+      | Cons(h, rest) =>
+            match h {
+                PyExceptHandler(exc_type, _, _, line) =>
+                    let issue = if eq(exc_type, "") then
+                        concat("bare except at line ", concat(line, "; "))
+                    else "" in
+                    concat(issue, handlers_have_bare(rest, try_line))
+            }
+    }
+
+// --- MR-inferred: functions missing return type annotations (9 occurrences) ---
+// "The return type is missing"
+// "This should return Result[str]"
+// "What is the result type?"
+define rule_missing_return_type(items) =
+    match items {
+        Nil => ""
+      | Cons(item, rest) =>
+            match item {
+                PyItemFunction(f) =>
+                    match f {
+                        PyFunction(name, _, ret_type, _, _, _, _) =>
+                            let issue = if eq(ret_type, "") then
+                                concat("function '", concat(name, "' missing return type annotation; "))
+                            else "" in
+                            concat(issue, rule_missing_return_type(rest))
+                    }
+              | PyItemClass(c) =>
+                    match c {
+                        PyClass(cls_name, _, methods, _, _, _) =>
+                            concat(methods_missing_return_type(cls_name, methods), rule_missing_return_type(rest))
+                    }
+              | _ => rule_missing_return_type(rest)
+            }
+    }
+
+define methods_missing_return_type(cls_name, methods) =
+    match methods {
+        Nil => ""
+      | Cons(m, rest) =>
+            match m {
+                PyFunction(name, _, ret_type, _, _, _, _) =>
+                    let issue = if eq(ret_type, "") then
+                        if eq(name, "__init__") then ""
+                        else concat(cls_name, concat(".", concat(name, "() missing return type; ")))
+                    else "" in
+                    concat(issue, methods_missing_return_type(cls_name, rest))
+            }
+    }
+
+// --- MR-inferred: raise Exception inside library methods (65+ occurrences) ---
+// "This should return Result[str] instead of rising exceptions,
+//  this might make it easier to debug, it will be less verbose too
+//  and that is how we handle most of the stuff in the codebase."
+// "There is no need for exception here, use the Result construct"
+// "All the exits should be handled with the Result construct"
+define rule_raise_in_functions(items) =
+    match items {
+        Nil => ""
+      | Cons(item, rest) =>
+            match item {
+                PyItemFunction(f) =>
+                    match f {
+                        PyFunction(name, _, _, _, body, _, _) =>
+                            concat(stmts_have_raise(name, body), rule_raise_in_functions(rest))
+                    }
+              | PyItemClass(c) =>
+                    match c {
+                        PyClass(cls_name, _, methods, _, _, _) =>
+                            concat(class_methods_have_raise(cls_name, methods), rule_raise_in_functions(rest))
+                    }
+              | _ => rule_raise_in_functions(rest)
+            }
+    }
+
+define class_methods_have_raise(cls_name, methods) =
+    match methods {
+        Nil => ""
+      | Cons(m, rest) =>
+            match m {
+                PyFunction(name, _, _, _, body, _, _) =>
+                    let full_name = concat(cls_name, concat(".", name)) in
+                    concat(stmts_have_raise(full_name, body), class_methods_have_raise(cls_name, rest))
+            }
+    }
+
+define stmts_have_raise(fn_name, stmts) =
+    match stmts {
+        Nil => ""
+      | Cons(s, rest) =>
+            match s {
+                PyStmtRaise(exc, line) =>
+                    if eq(exc, "") then concat(fn_name, concat(" has bare raise at line ", concat(line, " — use Result pattern; ")))
+                    else concat(stmts_have_raise(fn_name, rest), "")
+              | PyStmtTry(body, _, finally_body, _) =>
+                    concat(stmts_have_raise(fn_name, body),
+                        concat(stmts_have_raise(fn_name, finally_body), stmts_have_raise(fn_name, rest)))
+              | PyStmtIf(body, else_body, _) =>
+                    concat(stmts_have_raise(fn_name, body),
+                        concat(stmts_have_raise(fn_name, else_body), stmts_have_raise(fn_name, rest)))
+              | PyStmtFor(_, body, _) =>
+                    concat(stmts_have_raise(fn_name, body), stmts_have_raise(fn_name, rest))
+              | PyStmtWhile(body, _) =>
+                    concat(stmts_have_raise(fn_name, body), stmts_have_raise(fn_name, rest))
+              | _ => stmts_have_raise(fn_name, rest)
+            }
+    }
+
+// --- MR-inferred: unnecessary try/except wrapping (7+ occurrences) ---
+// "We use result, so we do not have to have try catch at this point"
+// "Why do we need try catch here?"
+// "There is not much reason to log the error. Also why is this in try catch?"
+define rule_try_except_count(items) =
+    let count = count_try_except_in_items(items) in
+    if count > 5 then
+        concat("excessive try/except blocks (", concat(count, ") — consider using Result pattern for error propagation; "))
+    else ""
+
+define count_try_except_in_items(items) =
+    match items {
+        Nil => 0
+      | Cons(item, rest) =>
+            match item {
+                PyItemFunction(f) =>
+                    match f {
+                        PyFunction(_, _, _, _, body, _, _) =>
+                            count_try_in_stmts(body) + count_try_except_in_items(rest)
+                    }
+              | PyItemClass(c) =>
+                    match c {
+                        PyClass(_, _, _, body, _, _) =>
+                            count_try_in_stmts(body) + count_try_except_in_items(rest)
+                    }
+              | _ => count_try_except_in_items(rest)
+            }
+    }
+
+define count_try_in_stmts(stmts) =
+    match stmts {
+        Nil => 0
+      | Cons(s, rest) =>
+            match s {
+                PyStmtTry(_, _, _, _) => 1 + count_try_in_stmts(rest)
+              | _ => count_try_in_stmts(rest)
+            }
+    }
+
+// --- Combined structural check ---
+
+define check_python_structural(source) =
+    let m = scan_python(source) in
+    match m {
+        PyModule(items, lines, errors) =>
+            let f1 = rule_long_function(items) in
+            let f2 = rule_long_methods(items) in
+            let f3 = rule_import_placement(items) in
+            let f4 = rule_bare_except_structural(items) in
+            let f5 = rule_missing_return_type(items) in
+            let f6 = rule_try_except_count(items) in
+            let failures = concat(f1, concat(f2, concat(f3, concat(f4, concat(f5, f6))))) in
+            if eq(failures, "") then "pass"
+            else concat("fail: ", failures)
+    }
+
+// ============================================================================
+// Diff-Aware Rules (CLI only, invisible to MCP)
+// ============================================================================
+//
+// These rules compare current vs base branch content. They are discovered
+// by the `diff_check_*` prefix and only run when `--base-branch` is provided.
+//
+// Signature: diff_check_*(current_source, base_source, file_path) → "pass" / "fail: ..."
+// Filter:    diff_file_filter(path) → true/false
+//
+// Inferred from sso-pipelinelib review patterns:
+//   - IMAGE_TAG must be bumped in builder config (multiple MRs flagged)
+//   - requirements.txt pinned deps should change intentionally
+//   - New functions added without return types (most common review comment)
+//   - Structural regression: function grew beyond 50 statements
+// ============================================================================
+
+// --- Filter: which files trigger base branch fetch ---
+
+define diff_file_filter(path) =
+    if hasSuffix(path, ".py") then true
+    else if hasSuffix(path, "requirements.txt") then true
+    else if hasSuffix(path, "requirements-dev.txt") then true
+    else if contains(path, "config") then true
+    else if hasSuffix(path, ".cfg") then true
+    else if hasSuffix(path, ".toml") then true
+    else if hasSuffix(path, ".yml") then true
+    else if hasSuffix(path, ".yaml") then true
+    else false
+
+// --- Helpers: line-based extraction ---
+
+define pick_image_tag(line, acc) =
+    if hasPrefix(line, "IMAGE_TAG=") then substring(line, 10, 100)
+    else acc
+
+define extract_image_tag(source) =
+    foldLines(pick_image_tag, "", source)
+
+// Count lines in source (proxy for file size)
+define count_source_lines(line, acc) = acc + 1
+
+define source_line_count(source) =
+    foldLines(count_source_lines, 0, source)
+
+// Count unpinned deps (no == or ~= or >= in the line, but has content)
+define pick_unpinned(line, acc) =
+    let trimmed = trim(line) in
+    if eq(trimmed, "") then acc
+    else if hasPrefix(trimmed, "#") then acc
+    else if hasPrefix(trimmed, "-r") then acc
+    else if contains(trimmed, "==") then acc
+    else if contains(trimmed, "~=") then acc
+    else if contains(trimmed, ">=") then acc
+    else if contains(trimmed, "<=") then acc
+    else if contains(trimmed, "!=") then acc
+    else concat(acc, concat(trimmed, "; "))
+
+define find_unpinned_deps(source) =
+    foldLines(pick_unpinned, "", source)
+
+// Count "def " lines (functions added/removed)
+define count_def_line(line, acc) =
+    if contains(line, "def ") then acc + 1
+    else acc
+
+define count_defs(source) =
+    foldLines(count_def_line, 0, source)
+
+// --- Diff Rule: IMAGE_TAG must bump between branches ---
+// MR-inferred: reviewers flagged IMAGE_TAG not bumped in builder config
+
+define diff_check_image_tag_bump(current, base, path) =
+    if not(contains(path, "config")) then "pass"
+    else
+        let cur_ver = extract_image_tag(current) in
+        let base_ver = extract_image_tag(base) in
+        if eq(cur_ver, "") then "pass"
+        else if eq(base_ver, "") then "pass"
+        else if eq(cur_ver, base_ver) then
+            concat("fail: IMAGE_TAG not bumped (still ", concat(cur_ver, ")"))
+        else "pass"
+
+// --- Diff Rule: requirements.txt — warn on unpinned new dependencies ---
+// MR-inferred: reviewers flagged missing version pins
+
+define diff_check_requirements_pinned(current, base, path) =
+    if not(hasSuffix(path, "requirements.txt")) then "pass"
+    else
+        let unpinned = find_unpinned_deps(current) in
+        if eq(unpinned, "") then "pass"
+        else concat("fail: unpinned dependencies in requirements.txt — ", unpinned)
+
+// --- Diff Rule: Python file grew significantly (>30% more lines) ---
+// MR-inferred: large files are hard to review, reviewers asked to split
+
+define diff_check_file_growth(current, base, path) =
+    if not(hasSuffix(path, ".py")) then "pass"
+    else
+        let cur_lines = source_line_count(current) in
+        let base_lines = source_line_count(base) in
+        if eq(base_lines, 0) then "pass"
+        else
+            let growth = cur_lines - base_lines in
+            if growth > 100 then
+                concat("fail: file grew by ", concat(growth, " lines — consider splitting into modules"))
+            else "pass"
+
+// --- Diff Rule: new functions must have return type annotations ---
+// MR-inferred: "The return type is missing" (9+ occurrences)
+// Compares function count and checks new functions structurally
+
+define diff_check_new_fns_typed(current, base, path) =
+    if not(hasSuffix(path, ".py")) then "pass"
+    else
+        let cur_defs = count_defs(current) in
+        let base_defs = count_defs(base) in
+        if cur_defs > base_defs then
+            let m = scan_python(current) in
+            match m {
+                PyModule(items, _, _) =>
+                    let missing = rule_missing_return_type(items) in
+                    if eq(missing, "") then "pass"
+                    else concat("fail: new functions added without return types — ", missing)
+            }
+        else "pass"
+
+// --- Diff Rule: sys.exit() introduced in a file that didn't have it ---
+// MR-inferred: "sys.exit(1) is no longer needed" (12 occurrences)
+
+define diff_check_sys_exit_introduced(current, base, path) =
+    if not(hasSuffix(path, ".py")) then "pass"
+    else if contains(base, "sys.exit(") then "pass"
+    else if contains(current, "sys.exit(") then
+        "fail: sys.exit() introduced — use Result pattern and let caller handle exit"
+    else "pass"
+
+// --- Diff Rule: bare except introduced ---
+// MR-inferred: bare except flagged repeatedly
+
+define diff_check_bare_except_introduced(current, base, path) =
+    if not(hasSuffix(path, ".py")) then "pass"
+    else if contains(base, "except:") then "pass"
+    else if contains(current, "except:") then
+        "fail: bare except: introduced — catch specific exceptions"
+    else "pass"
+
+// --- Diff Rule: print() introduced in a file that used logging ---
+// MR-inferred: "No need for this logger" / "use logging module"
+
+define diff_check_print_introduced(current, base, path) =
+    if not(hasSuffix(path, ".py")) then "pass"
+    else if contains(base, "print(") then "pass"
+    else if not(contains(current, "print(")) then "pass"
+    else if contains(current, "logging") then
+        "fail: print() introduced in a file that uses logging — use logger instead"
+    else "pass"
+
+// ============================================================================
+// Examples
+// ============================================================================
+
+example "wildcard_import_detected" {
+    let source = "from os import *\ndef foo():\n    pass\n" in
+    out(check_no_wildcard_import(source))
+}
+
+example "eval_detected" {
+    let source = "x = eval(input())" in
+    out(check_no_eval(source))
+}
+
+example "clean_python" {
+    let source = "import os\nimport sys\ndef main():\n    pass\n" in
+    out(check_no_wildcard_import(source))
+}

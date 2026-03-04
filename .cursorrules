@@ -278,6 +278,17 @@ When implementing abstractions or refactoring:
 2. "What state belongs where?" — Backend state vs. high-level state
 3. "Can this be misused?" — Abstraction boundaries clear?
 
+### Rule: No "Practical Workarounds" for Real Bugs
+
+**If you catch yourself writing "workaround," "for now," or "the practical approach is,"
+STOP. That is a signal you are avoiding the actual fix.**
+
+- A bug in import resolution is not solved by "run from a different directory"
+- A bug in repo detection is not solved by "use absolute paths"
+- A missing feature is not solved by "set an environment variable"
+
+**Fix the root cause. The "workaround" is the shortcut.**
+
 **The Architect's Motto:**
 "No shortcuts for getting a clean build or saving time. Don't make tests lenient. If you're about to change or delete tests, ask first."
 
