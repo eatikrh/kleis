@@ -184,6 +184,10 @@ enum Commands {
         /// Enable verbose logging (to stderr)
         #[arg(short, long)]
         verbose: bool,
+
+        /// Run LLM advisory review after formal checks (requires KLEIS_LLM_API_KEY)
+        #[arg(short, long)]
+        advise: bool,
     },
 }
 
@@ -234,8 +238,9 @@ async fn main() {
             policy,
             failures_only,
             verbose,
+            advise,
         } => {
-            run_review(files, policy, failures_only, verbose);
+            run_review(files, policy, failures_only, verbose, advise);
         }
     }
 }
@@ -678,13 +683,41 @@ fn run_review_mcp(policy: PathBuf, verbose: bool) {
 }
 
 /// Run code review from the command line (CI/CD mode)
-fn run_review(files: Vec<PathBuf>, policy: PathBuf, failures_only: bool, verbose: bool) {
+fn run_review(
+    files: Vec<PathBuf>,
+    policy: PathBuf,
+    failures_only: bool,
+    verbose: bool,
+    advise: bool,
+) {
+    use kleis::review_mcp::advisory::{self, AdvisoryConfig};
     use kleis::review_mcp::engine::ReviewEngine;
 
     if files.is_empty() {
         eprintln!("No files specified. Usage: kleis review [FILES...] --policy <policy.kleis>");
         std::process::exit(1);
     }
+
+    let kleis_cfg = kleis::config::load();
+    let llm_config = if advise {
+        match AdvisoryConfig::from_config(&kleis_cfg.llm) {
+            Some(cfg) => {
+                if verbose {
+                    eprintln!(
+                        "[kleis-review] Advisory mode: {} via {}",
+                        cfg.model, cfg.endpoint
+                    );
+                }
+                Some(cfg)
+            }
+            None => {
+                eprintln!("--advise requires KLEIS_LLM_API_KEY environment variable");
+                std::process::exit(1);
+            }
+        }
+    } else {
+        None
+    };
 
     if verbose {
         eprintln!("[kleis-review] Policy: {}", policy.display());
@@ -698,6 +731,8 @@ fn run_review(files: Vec<PathBuf>, policy: PathBuf, failures_only: bool, verbose
             std::process::exit(1);
         }
     };
+
+    let rt = tokio::runtime::Handle::current();
 
     let mut total_passed = 0usize;
     let mut total_failed = 0usize;
@@ -731,6 +766,44 @@ fn run_review(files: Vec<PathBuf>, policy: PathBuf, failures_only: bool, verbose
         } else {
             total_failed += 1;
             failed_files.push(path_str.to_string());
+        }
+
+        if let Some(ref cfg) = llm_config {
+            let source = match std::fs::read_to_string(file_path) {
+                Ok(s) => s,
+                Err(_) => continue,
+            };
+            let formal_messages: Vec<String> = result
+                .verdicts
+                .iter()
+                .filter(|v| !v.passed)
+                .map(|v| format!("{} — {}", v.rule_name, v.message))
+                .collect();
+            match tokio::task::block_in_place(|| {
+                rt.block_on(advisory::get_advisories(
+                    cfg,
+                    &source,
+                    &path_str,
+                    &formal_messages,
+                ))
+            }) {
+                Ok(advisories) if advisories.is_empty() => {
+                    println!("  [advisory] no findings");
+                }
+                Ok(advisories) => {
+                    for a in &advisories {
+                        let icon = if a.severity == "warning" {
+                            "⚠️ "
+                        } else {
+                            "ℹ️ "
+                        };
+                        println!("  {} [advisory] {} — {}", icon, a.check, a.reason);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("  [advisory] LLM error: {}", e);
+                }
+            }
         }
     }
 

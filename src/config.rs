@@ -6,6 +6,7 @@ pub struct KleisConfig {
     pub z3: Z3Config,
     pub timeouts: TimeoutConfig,
     pub theory: TheoryConfig,
+    pub llm: LlmConfig,
 }
 
 #[derive(Debug, Clone)]
@@ -41,6 +42,14 @@ pub struct TheoryConfig {
     pub save_dir: String,
 }
 
+#[derive(Debug, Clone)]
+pub struct LlmConfig {
+    /// OpenAI-compatible chat completions endpoint
+    pub endpoint: String,
+    /// Model name (e.g. "gpt-4o-mini", "llama3.2:latest")
+    pub model: String,
+}
+
 impl Default for KleisConfig {
     fn default() -> Self {
         Self {
@@ -57,6 +66,10 @@ impl Default for KleisConfig {
             theory: TheoryConfig {
                 workspace_dir: ".theory-sessions".to_string(),
                 save_dir: "theories".to_string(),
+            },
+            llm: LlmConfig {
+                endpoint: "https://api.openai.com/v1/chat/completions".to_string(),
+                model: "gpt-4o-mini".to_string(),
             },
         }
     }
@@ -108,6 +121,7 @@ struct PartialConfig {
     z3: Option<PartialZ3>,
     timeouts: Option<PartialTimeouts>,
     theory: Option<PartialTheory>,
+    llm: Option<PartialLlm>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -132,6 +146,12 @@ struct PartialTimeouts {
 struct PartialTheory {
     workspace_dir: Option<String>,
     save_dir: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct PartialLlm {
+    endpoint: Option<String>,
+    model: Option<String>,
 }
 
 fn read_partial(path: &std::path::Path) -> Option<PartialConfig> {
@@ -176,6 +196,15 @@ impl KleisConfig {
                 self.theory.save_dir = save_dir;
             }
         }
+
+        if let Some(l) = partial.llm {
+            if let Some(endpoint) = l.endpoint {
+                self.llm.endpoint = endpoint;
+            }
+            if let Some(model) = l.model {
+                self.llm.model = model;
+            }
+        }
     }
 }
 
@@ -207,5 +236,11 @@ fn apply_env_overrides(cfg: &mut KleisConfig) {
         if let Ok(v) = v.parse::<u64>() {
             cfg.timeouts.ipc_long_ms = v;
         }
+    }
+    if let Ok(v) = std::env::var("KLEIS_LLM_ENDPOINT") {
+        cfg.llm.endpoint = v;
+    }
+    if let Ok(v) = std::env::var("KLEIS_LLM_MODEL") {
+        cfg.llm.model = v;
     }
 }

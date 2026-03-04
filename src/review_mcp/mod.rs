@@ -19,6 +19,7 @@
 //! kleis review-mcp --policy examples/policies/rust_review_policy.kleis --verbose
 //! ```
 
+pub mod advisory;
 pub mod engine;
 pub mod protocol;
 pub mod server;

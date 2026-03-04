@@ -1,6 +1,28 @@
 # Next Session Notes
 
-**Last Updated:** February 26, 2026 (session 8 — cleaned up, archives created)
+**Last Updated:** February 26, 2026 (session 9 — review CLI + LLM advisory)
+
+---
+
+## Session 9 (Feb 26, 2026): Review CLI + LLM Advisory Mode
+
+### What Was Done
+- **`kleis review` CLI subcommand** — formal review from command line for CI/CD (GitLab, GitHub Actions)
+- **`--advise` flag** — calls an OpenAI-compatible LLM after formal checks for advisory (non-blocking) findings
+- **Dedup** — formal findings are passed to the LLM prompt so it only reports NEW findings
+- **`[llm]` config section** in `config.toml` — endpoint + model externalized; API key via `KLEIS_LLM_API_KEY` env only
+- **Feature-gated** — `llm-advisory` feature (default on), compiles out cleanly with `--no-default-features`
+- **Tested live** against OpenAI `gpt-4o-mini` — formal + advisory output confirmed, dedup verified
+
+### Branch
+`feature/review-cli-advisory` (not yet merged)
+
+### Open Items
+1. **Externalize `build_system_prompt` text** — the LLM system prompt is currently hardcoded in `src/review_mcp/advisory.rs`. Should be loaded from a file (e.g. `prompts/review_advisory.txt`) or a config.toml field, so users can customize the prompt without recompiling.
+2. **Language-agnostic review** — once the system prompt and policy are both external, `kleis review` works for any language. The formal policy is already a `.kleis` file (write `check_*` functions for Python, Go, etc.), and `check_file` already accepts a `language` parameter. The advisory prompt just needs to drop the hardcoded "Rust" and read the language from context. Two external files (policy + prompt) = any language, no recompile.
+3. **No timeouts** — `eval_concrete` and Z3 can block indefinitely. STILL OPEN.
+4. **`check_no_hardcoded_urls` false positive** — flags documentation URLs in comments. Needs structural version that skips comments.
+5. **Z3 axioms not wired into automatic review** — `SafeCode`, `SqlSafe` etc. require explicit `evaluate_expression` calls.
 
 ---
 

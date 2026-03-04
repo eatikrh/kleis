@@ -36,6 +36,9 @@ rustyline = "14.0"
 # CLI argument parsing
 clap = { version = "4.4", features = ["derive"] }
 
+# HTTP client (LLM advisory calls, future integrations)
+reqwest = { version = "0.12", features = ["json"], optional = true }
+
 # Language Server Protocol (LSP)
 tower-lsp = "0.20"
 lsp-types = "0.97"
@@ -51,11 +54,15 @@ ode_solvers = "0.6.1"
 
 [features]
 # Default features (enabled by default)
-default = ["axiom-verification"]
+default = ["axiom-verification", "llm-advisory"]
 
 # Axiom verification using Z3 theorem prover
 # Can be disabled with: cargo build --no-default-features
 axiom-verification = ["z3"]
+
+# LLM advisory for code review (calls OpenAI-compatible endpoints)
+# Reads API key from environment. Can be disabled with: --no-default-features
+llm-advisory = ["reqwest"]
 
 # Numerical linear algebra (BLAS/LAPACK backend)
 # Enables eigenvalues, SVD, solve, Schur, etc.

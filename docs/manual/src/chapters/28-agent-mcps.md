@@ -462,6 +462,78 @@ jobs:
           exit $FAILED
 ```
 
+### Advisory Mode (LLM-Assisted Review)
+
+Formal checks are deterministic and machine-checked — they **block** the pipeline
+on failure. But some code quality concerns are inherently ambiguous: naming
+quality, architectural smell, "this function does two things." For these, Kleis
+can optionally call an LLM after formal checks complete.
+
+```bash
+kleis review src/**/*.rs -p policy.kleis --advise
+```
+
+Advisory findings are printed as warnings but **never affect the exit code**.
+The two-tier model:
+
+| Tier | Engine | Verdict | Blocks CI? |
+|------|--------|---------|------------|
+| Formal | Kleis rules (Z3-backed) | pass/fail | Yes |
+| Advisory | LLM (OpenAI-compatible) | warning/info | No |
+
+#### Configuration
+
+Endpoint and model are configured in `config.toml` (or via env overrides).
+The API key is always an environment variable — never stored in files:
+
+```toml
+# ~/.config/kleis/config.toml
+[llm]
+endpoint = "https://api.openai.com/v1/chat/completions"
+model = "gpt-4o-mini"
+```
+
+| Setting | config.toml | Env override | Default |
+|---------|-------------|-------------|---------|
+| API key | — | `KLEIS_LLM_API_KEY` (required) | — |
+| Endpoint | `[llm] endpoint` | `KLEIS_LLM_ENDPOINT` | OpenAI |
+| Model | `[llm] model` | `KLEIS_LLM_MODEL` | gpt-4o-mini |
+
+Any OpenAI-compatible endpoint works: OpenAI, Azure OpenAI, Ollama
+(`http://localhost:11434/v1/chat/completions`), vLLM, etc.
+
+Example output (`kleis review src/config.rs -p policy.kleis --failures-only --advise`):
+
+```
+❌ src/config.rs
+  ❌ check_structural — fail: 6 functions but no tests — consider adding test coverage
+  ❌ check_no_hardcoded_urls — fail: hardcoded HTTPS URL — use configuration or constants
+  ❌ check_no_unbounded_read — fail: STRIDE/DoS — unbounded read_to_string, use take() to limit input size
+  ℹ️  [advisory] unnecessary-clone — Using `to_string()` can be avoided with string literals directly assigned
+  ⚠️  [advisory] error-handling — Better error handling instead of silently ignoring invalid env variables
+  ℹ️  [advisory] redundant-methods — Consolidating environment variable parsing methods could reduce redundancy
+```
+
+Formal verdicts (❌/✅) block the pipeline. Advisory findings (⚠️/ℹ️) inform but
+never affect the exit code.
+
+#### CI/CD with Advisory
+
+In CI, use `--advise` alongside `--failures-only` so formal failures block the
+pipeline while advisory findings appear as informational annotations:
+
+```yaml
+kleis_review:
+  script:
+    - kleis review src/**/*.rs -p policy.kleis --failures-only --advise
+  variables:
+    KLEIS_LLM_API_KEY: $OPENAI_API_KEY
+```
+
+The `--advise` flag is compiled behind the `llm-advisory` feature (enabled by
+default). To build without LLM support: `cargo build --no-default-features
+--features axiom-verification`.
+
 ---
 
 -> [Previous: Interactive Theory Building](./27-theory-building.md)
