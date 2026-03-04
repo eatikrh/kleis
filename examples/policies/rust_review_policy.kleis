@@ -292,6 +292,20 @@ define rule_struct_naming(c: Crate) : String =
     if eq(bad, "") then ""
     else concat("struct names should be PascalCase: ", bad)
 
+define rule_use_in_fn_body(source: String, c: Crate) : String =
+    let fns = crate_functions(c) in
+    let bad = non_test_fns_containing(source, fns, "use ") in
+    if eq(bad, "") then ""
+    else concat("use statement inside function body — move to top of file: ", bad)
+
+define rule_string_translation(source: String, c: Crate) : String =
+    let fns = crate_functions(c) in
+    let out_match = non_test_fns_containing(source, fns, "=> \"") in
+    let in_match = non_test_fns_containing(source, fns, "\" =>") in
+    let bad = append_failure(out_match, in_match) in
+    if eq(bad, "") then ""
+    else concat("string matching or string translation via match — consider an enum with #[serde(rename/alias)]: ", bad)
+
 define check_structural(source) =
     let c = scan(source) in
     let f1 = rule_wildcard_imports(c) in
@@ -302,13 +316,17 @@ define check_structural(source) =
     let f6 = rule_test_presence(c) in
     let f7 = rule_fn_naming(c) in
     let f8 = rule_struct_naming(c) in
+    let f9 = rule_use_in_fn_body(source, c) in
+    let f10 = rule_string_translation(source, c) in
     let all = append_failure(f1,
               append_failure(f2,
               append_failure(f3,
               append_failure(f4,
               append_failure(f5,
               append_failure(f6,
-              append_failure(f7, f8))))))) in
+              append_failure(f7,
+              append_failure(f8,
+              append_failure(f9, f10))))))))) in
     if eq(all, "") then "pass"
     else concat("fail: ", all)
 

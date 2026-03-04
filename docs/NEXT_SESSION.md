@@ -112,14 +112,12 @@ The cos/sin addition formulas encode the Lie algebra structure of SU(2). They're
 - [x] Extract future/roadmap items to `docs/ROADMAP.md`
 - [x] Archive POT physics notes to `docs/archive/pot-physics-notes.md`
 
-### Future: kleis-review — Context-Aware Parsing for Reduced False Positives
+### kleis-review — Context-Aware Parsing for Reduced False Positives
 
-The current `kleis-review` MCP uses string matching (`contains`, `hasPrefix`, `hasSuffix`) for code review rules. This works well for most patterns but produces false positives in cases where syntactic context matters:
+~~The current `kleis-review` MCP uses string matching for code review rules, producing false positives where syntactic context matters.~~ **All three items resolved with structural (AST-based) rules:**
 
-- **`check_no_wildcard_import`** flags `use super::*;` in test modules (idiomatic Rust).
-- **`check_no_narrating_comments`** flags doc comments (`/// Create a new attribute`) that legitimately start with a verb.
-- **`check_no_inline_use`** flags `use` inside function bodies, which is valid Rust (e.g., inside tests or to limit import scope).
-
-Fixing these requires parsing structure, not just string matching. A future version of the review engine should support AST-aware or at least scope-aware checks — for example, suppressing certain rules inside `#[cfg(test)]` modules or distinguishing `///` doc comments from `//` line comments.
+- ~~**`check_no_wildcard_import`** flags `use super::*;` in test modules~~ — **DONE**: `rule_wildcard_imports` uses `non_test_wildcard_uses(c)`, skips test modules.
+- ~~**`check_no_narrating_comments`** flags doc comments~~ — **DONE**: `rule_narrating_line_comments` uses `has_narrating_line_comment(crate_comments(c))`, distinguishes `//` from `///`.
+- ~~**`check_no_inline_use`** flags `use` inside function bodies~~ — **DONE**: `rule_use_in_fn_body` uses `non_test_fns_containing(source, fns, "use ")`, skips test functions.
 
 ---
