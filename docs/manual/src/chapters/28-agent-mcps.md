@@ -393,6 +393,147 @@ The evaluator is built once at startup. Each tool call is a function evaluation
 against the loaded definitions. No compilation, no network calls, no disk I/O
 per check. This is why reviews of large files complete in milliseconds.
 
+### CLI Review Mode (CI/CD)
+
+The review engine is also available as a standalone CLI command, without the MCP
+protocol overhead. This is suitable for GitLab CI/CD pipelines, GitHub Actions,
+or pre-commit hooks:
+
+```bash
+kleis review src/**/*.rs --policy examples/policies/rust_review_policy.kleis
+```
+
+Use `--failures-only` to suppress passing rules (cleaner CI output):
+
+```bash
+kleis review src/**/*.rs -p policy.kleis --failures-only
+```
+
+The command exits with code 1 if any file fails, making it a drop-in for CI
+pipelines. The kleis binary and the policy file must be available in the CI
+environment — either pre-installed in the builder image or downloaded as a
+release artifact.
+
+#### GitLab CI/CD
+
+Add a `kleis_review` job to your existing pipeline. It uses the same builder
+image and resource configuration as your other Rust jobs:
+
+```yaml
+kleis_review:
+  stage: mr_build
+  image: $YOUR_RUST_BUILDER_IMAGE
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "src/**/*.rs"
+  script:
+    - |
+      FAILED=0
+      for f in $(find src -name '*.rs'); do
+        kleis review "$f" -p policy.kleis --failures-only || FAILED=1
+      done
+      exit $FAILED
+```
+
+#### GitHub Actions
+
+```yaml
+name: kleis-review
+on:
+  pull_request:
+    paths: ['src/**/*.rs']
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download kleis
+        run: |
+          curl -L -o kleis https://your-artifact-store/kleis-linux
+          chmod +x kleis
+      - name: Run kleis review
+        run: |
+          FAILED=0
+          for f in $(find src -name '*.rs'); do
+            ./kleis review "$f" -p policy.kleis --failures-only || FAILED=1
+          done
+          exit $FAILED
+```
+
+### Advisory Mode (LLM-Assisted Review)
+
+Formal checks are deterministic and machine-checked — they **block** the pipeline
+on failure. But some code quality concerns are inherently ambiguous: naming
+quality, architectural smell, "this function does two things." For these, Kleis
+can optionally call an LLM after formal checks complete.
+
+```bash
+kleis review src/**/*.rs -p policy.kleis --advise
+```
+
+Advisory findings are printed as warnings but **never affect the exit code**.
+The two-tier model:
+
+| Tier | Engine | Verdict | Blocks CI? |
+|------|--------|---------|------------|
+| Formal | Kleis rules (Z3-backed) | pass/fail | Yes |
+| Advisory | LLM (OpenAI-compatible) | warning/info | No |
+
+#### Configuration
+
+Endpoint and model are configured in `config.toml` (or via env overrides).
+The API key is always an environment variable — never stored in files:
+
+```toml
+# ~/.config/kleis/config.toml
+[llm]
+endpoint = "https://api.openai.com/v1/chat/completions"
+model = "gpt-4o-mini"
+```
+
+| Setting | config.toml | Env override | Default |
+|---------|-------------|-------------|---------|
+| API key | — | `KLEIS_LLM_API_KEY` (required) | — |
+| Endpoint | `[llm] endpoint` | `KLEIS_LLM_ENDPOINT` | OpenAI |
+| Model | `[llm] model` | `KLEIS_LLM_MODEL` | gpt-4o-mini |
+
+Any OpenAI-compatible endpoint works: OpenAI, Azure OpenAI, Ollama
+(`http://localhost:11434/v1/chat/completions`), vLLM, etc.
+
+Example output (`kleis review src/config.rs -p policy.kleis --failures-only --advise`):
+
+```
+❌ src/config.rs
+  ❌ check_structural — fail: 6 functions but no tests — consider adding test coverage
+  ❌ check_no_hardcoded_urls — fail: hardcoded HTTPS URL — use configuration or constants
+  ❌ check_no_unbounded_read — fail: STRIDE/DoS — unbounded read_to_string, use take() to limit input size
+  ℹ️  [advisory] unnecessary-clone — Using `to_string()` can be avoided with string literals directly assigned
+  ⚠️  [advisory] error-handling — Better error handling instead of silently ignoring invalid env variables
+  ℹ️  [advisory] redundant-methods — Consolidating environment variable parsing methods could reduce redundancy
+```
+
+Formal verdicts (❌/✅) block the pipeline. Advisory findings (⚠️/ℹ️) inform but
+never affect the exit code.
+
+#### CI/CD with Advisory
+
+In CI, use `--advise` alongside `--failures-only` so formal failures block the
+pipeline while advisory findings appear as informational annotations:
+
+```yaml
+kleis_review:
+  script:
+    - kleis review src/**/*.rs -p policy.kleis --failures-only --advise
+  variables:
+    KLEIS_LLM_API_KEY: $OPENAI_API_KEY
+```
+
+The `--advise` flag is compiled behind the `llm-advisory` feature (enabled by
+default). To build without LLM support: `cargo build --no-default-features
+--features axiom-verification`.
+
 ---
 
 -> [Previous: Interactive Theory Building](./27-theory-building.md)

@@ -163,6 +163,32 @@ enum Commands {
         #[arg(short, long)]
         verbose: bool,
     },
+
+    /// Review source files against formal coding standards (CLI / CI mode)
+    ///
+    /// Runs all check_* rules from the policy against each file and prints
+    /// pass/fail results. Exits with code 1 if any file fails.
+    /// Suitable for GitLab CI/CD, GitHub Actions, or pre-commit hooks.
+    Review {
+        /// Source files to review
+        files: Vec<PathBuf>,
+
+        /// Path to the Kleis review policy file
+        #[arg(short, long)]
+        policy: PathBuf,
+
+        /// Show only failed checks (suppress passing rules)
+        #[arg(short, long)]
+        failures_only: bool,
+
+        /// Enable verbose logging (to stderr)
+        #[arg(short, long)]
+        verbose: bool,
+
+        /// Run LLM advisory review after formal checks (requires KLEIS_LLM_API_KEY)
+        #[arg(short, long)]
+        advise: bool,
+    },
 }
 
 #[tokio::main]
@@ -206,6 +232,15 @@ async fn main() {
         }
         Commands::ReviewMcp { policy, verbose } => {
             run_review_mcp(policy, verbose);
+        }
+        Commands::Review {
+            files,
+            policy,
+            failures_only,
+            verbose,
+            advise,
+        } => {
+            run_review(files, policy, failures_only, verbose, advise);
         }
     }
 }
@@ -643,6 +678,149 @@ fn run_review_mcp(policy: PathBuf, verbose: bool) {
 
     if let Err(e) = server.run() {
         eprintln!("[kleis-review] Server error: {}", e);
+        std::process::exit(1);
+    }
+}
+
+/// Run code review from the command line (CI/CD mode)
+fn run_review(
+    files: Vec<PathBuf>,
+    policy: PathBuf,
+    failures_only: bool,
+    verbose: bool,
+    advise: bool,
+) {
+    use kleis::review_mcp::advisory::{self, AdvisoryConfig};
+    use kleis::review_mcp::engine::ReviewEngine;
+
+    if files.is_empty() {
+        eprintln!("No files specified. Usage: kleis review [FILES...] --policy <policy.kleis>");
+        std::process::exit(1);
+    }
+
+    let kleis_cfg = kleis::config::load();
+    let llm_config = if advise {
+        match AdvisoryConfig::from_config(&kleis_cfg.llm) {
+            Some(cfg) => {
+                if verbose {
+                    eprintln!(
+                        "[kleis-review] Advisory mode: {} via {}",
+                        cfg.model, cfg.endpoint
+                    );
+                }
+                Some(cfg)
+            }
+            None => {
+                eprintln!("--advise requires KLEIS_LLM_API_KEY environment variable");
+                std::process::exit(1);
+            }
+        }
+    } else {
+        None
+    };
+
+    if verbose {
+        eprintln!("[kleis-review] Policy: {}", policy.display());
+        eprintln!("[kleis-review] Files: {}", files.len());
+    }
+
+    let engine = match ReviewEngine::load(&policy) {
+        Ok(e) => e,
+        Err(e) => {
+            eprintln!("Failed to load review policy '{}': {}", policy.display(), e);
+            std::process::exit(1);
+        }
+    };
+
+    let rt = tokio::runtime::Handle::current();
+
+    let mut total_passed = 0usize;
+    let mut total_failed = 0usize;
+    let mut failed_files: Vec<String> = Vec::new();
+
+    for file_path in &files {
+        let path_str = file_path.to_string_lossy();
+        let result = match engine.check_file(&path_str, "rust") {
+            Ok(r) => r,
+            Err(e) => {
+                eprintln!("  ERROR: {} — {}", path_str, e);
+                total_failed += 1;
+                failed_files.push(path_str.to_string());
+                continue;
+            }
+        };
+
+        let emoji = if result.passed { "✅" } else { "❌" };
+        println!("{} {}", emoji, path_str);
+
+        for verdict in &result.verdicts {
+            if failures_only && verdict.passed {
+                continue;
+            }
+            let v_emoji = if verdict.passed { "  ✅" } else { "  ❌" };
+            println!("{} {} — {}", v_emoji, verdict.rule_name, verdict.message);
+        }
+
+        if result.passed {
+            total_passed += 1;
+        } else {
+            total_failed += 1;
+            failed_files.push(path_str.to_string());
+        }
+
+        if let Some(ref cfg) = llm_config {
+            let source = match std::fs::read_to_string(file_path) {
+                Ok(s) => s,
+                Err(_) => continue,
+            };
+            let formal_messages: Vec<String> = result
+                .verdicts
+                .iter()
+                .filter(|v| !v.passed)
+                .map(|v| format!("{} — {}", v.rule_name, v.message))
+                .collect();
+            match tokio::task::block_in_place(|| {
+                rt.block_on(advisory::get_advisories(
+                    cfg,
+                    &source,
+                    &path_str,
+                    &formal_messages,
+                ))
+            }) {
+                Ok(advisories) if advisories.is_empty() => {
+                    println!("  [advisory] no findings");
+                }
+                Ok(advisories) => {
+                    for a in &advisories {
+                        let icon = if a.severity == "warning" {
+                            "⚠️ "
+                        } else {
+                            "ℹ️ "
+                        };
+                        println!("  {} [advisory] {} — {}", icon, a.check, a.reason);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("  [advisory] LLM error: {}", e);
+                }
+            }
+        }
+    }
+
+    println!();
+    println!(
+        "Review complete: {} passed, {} failed (out of {} files)",
+        total_passed,
+        total_failed,
+        files.len()
+    );
+
+    if !failed_files.is_empty() {
+        println!();
+        println!("Failed files:");
+        for f in &failed_files {
+            println!("  - {}", f);
+        }
         std::process::exit(1);
     }
 }
