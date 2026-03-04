@@ -435,6 +435,16 @@ impl Evaluator {
                     Ok(None)
                 }
             }
+            "scan_python" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some(source) = self.as_string(&args[0]) {
+                    crate::python::scan_python(&source).map(Some)
+                } else {
+                    Ok(None)
+                }
+            }
             "trimRight" => {
                 // trimRight("hello  ") → "hello"
                 if args.len() != 1 {

@@ -77,21 +77,22 @@ mod inner {
         }
     }
 
-    fn build_system_prompt() -> String {
-        "You are a Rust code reviewer. Review the provided code for:\n\
-         - Potential bugs or logic errors\n\
-         - Idiomatic Rust improvements\n\
-         - Naming and readability\n\
-         - Performance concerns\n\n\
-         IMPORTANT: A formal static analysis tool has already flagged some issues.\n\
-         Those findings will be listed under \"Already flagged by formal checks\".\n\
-         Do NOT repeat those. Only report NEW findings that the formal tool missed.\n\n\
-         Be concise. Return ONLY a JSON array of findings. Each finding has:\n\
-         - \"check\": short name (e.g. \"unnecessary-clone\")\n\
-         - \"severity\": \"warning\" or \"info\"\n\
-         - \"reason\": one-sentence explanation\n\n\
-         If the code looks good (beyond what was already flagged), return an empty array: []"
-            .to_string()
+    fn build_system_prompt(language: &str) -> String {
+        format!(
+            "You are a {language} code reviewer. Review the provided code for:\n\
+             - Potential bugs or logic errors\n\
+             - Idiomatic {language} improvements\n\
+             - Naming and readability\n\
+             - Performance concerns\n\n\
+             IMPORTANT: A formal static analysis tool has already flagged some issues.\n\
+             Those findings will be listed under \"Already flagged by formal checks\".\n\
+             Do NOT repeat those. Only report NEW findings that the formal tool missed.\n\n\
+             Be concise. Return ONLY a JSON array of findings. Each finding has:\n\
+             - \"check\": short name (e.g. \"unnecessary-clone\")\n\
+             - \"severity\": \"warning\" or \"info\"\n\
+             - \"reason\": one-sentence explanation\n\n\
+             If the code looks good (beyond what was already flagged), return an empty array: []"
+        )
     }
 
     fn format_formal_findings(formal_messages: &[String]) -> String {
@@ -112,15 +113,26 @@ mod inner {
         config: &AdvisoryConfig,
         source: &str,
         file_path: &str,
+        language: &str,
         formal_messages: &[String],
     ) -> Result<Vec<Advisory>, String> {
         let client = reqwest::Client::new();
 
+        let lang_lower = language.to_lowercase();
+        let fence_tag = match lang_lower.as_str() {
+            "python" => "python",
+            "rust" => "rust",
+            "go" => "go",
+            "java" => "java",
+            "typescript" | "javascript" => &lang_lower,
+            _ => &lang_lower,
+        };
+
         let already_flagged = format_formal_findings(formal_messages);
         let user_content = format!(
-            "Review this Rust file ({file_path}):\n\n\
+            "Review this {language} file ({file_path}):\n\n\
              Already flagged by formal checks:\n{already_flagged}\n\n\
-             ```rust\n{source}\n```"
+             ```{fence_tag}\n{source}\n```"
         );
 
         let request = ChatRequest {
@@ -128,7 +140,7 @@ mod inner {
             messages: vec![
                 Message {
                     role: "system".to_string(),
-                    content: build_system_prompt(),
+                    content: build_system_prompt(language),
                 },
                 Message {
                     role: "user".to_string(),

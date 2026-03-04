@@ -690,9 +690,10 @@ fn run_review_mcp(policy: PathBuf, verbose: bool) {
 }
 
 /// Get the git repository root directory
-fn git_repo_root() -> Option<PathBuf> {
+fn git_repo_root_for(dir: &Path) -> Option<PathBuf> {
     let output = std::process::Command::new("git")
         .args(["rev-parse", "--show-toplevel"])
+        .current_dir(dir)
         .output()
         .ok()?;
     if !output.status.success() {
@@ -703,19 +704,19 @@ fn git_repo_root() -> Option<PathBuf> {
     ))
 }
 
-/// Validate that a git ref exists
-fn git_ref_exists(git_ref: &str) -> bool {
+fn git_ref_exists_in(git_ref: &str, repo_root: &Path) -> bool {
     std::process::Command::new("git")
         .args(["rev-parse", "--verify", git_ref])
+        .current_dir(repo_root)
         .output()
         .is_ok_and(|o| o.status.success())
 }
 
-/// Fetch file content from a git ref (e.g., `git show main:path/to/file`)
-fn git_show_file(git_ref: &str, repo_relative_path: &str) -> Option<String> {
+fn git_show_file(git_ref: &str, repo_relative_path: &str, repo_root: &Path) -> Option<String> {
     let ref_path = format!("{}:{}", git_ref, repo_relative_path);
     let output = std::process::Command::new("git")
         .args(["show", &ref_path])
+        .current_dir(repo_root)
         .output()
         .ok()?;
     if !output.status.success() {
@@ -737,6 +738,20 @@ fn repo_relative_path(file_path: &Path, repo_root: &Path) -> Option<String> {
         .strip_prefix(&root_canonical)
         .ok()
         .map(|p| p.to_string_lossy().to_string())
+}
+
+fn language_from_path(path: &Path) -> String {
+    match path.extension().and_then(|e| e.to_str()) {
+        Some("rs") => "Rust".to_string(),
+        Some("py") => "Python".to_string(),
+        Some("go") => "Go".to_string(),
+        Some("ts") | Some("tsx") => "TypeScript".to_string(),
+        Some("js") | Some("jsx") => "JavaScript".to_string(),
+        Some("java") => "Java".to_string(),
+        Some("kleis") => "Kleis".to_string(),
+        Some(ext) => ext.to_string(),
+        None => "unknown".to_string(),
+    }
 }
 
 /// Run code review from the command line (CI/CD mode)
@@ -777,22 +792,36 @@ fn run_review(
         None
     };
 
-    // Validate base branch ref and resolve repo root
+    // Derive git repo root from the first target file, not cwd.
+    // This allows reviewing files in a different repo than the one containing
+    // the policy (e.g. reviewing sso-pipelinelib Python files with a kleis policy).
     let diff_context: Option<(String, PathBuf)> = base_branch.and_then(|ref_name| {
-        if !git_ref_exists(&ref_name) {
-            eprintln!(
-                "[kleis-review] warning: base branch '{}' not found, skipping diff rules",
-                ref_name
-            );
-            return None;
-        }
-        let repo_root = match git_repo_root() {
+        let first_file = files.first()?;
+        let file_dir = if first_file.is_absolute() {
+            first_file.parent().unwrap_or(Path::new(".")).to_path_buf()
+        } else {
+            std::env::current_dir()
+                .ok()?
+                .join(first_file)
+                .parent()
+                .unwrap_or(Path::new("."))
+                .to_path_buf()
+        };
+        let repo_root = match git_repo_root_for(&file_dir) {
             Some(r) => r,
             None => {
-                eprintln!("[kleis-review] warning: not a git repository, skipping diff rules");
+                eprintln!("[kleis-review] warning: target files not in a git repository, skipping diff rules");
                 return None;
             }
         };
+        if !git_ref_exists_in(&ref_name, &repo_root) {
+            eprintln!(
+                "[kleis-review] warning: base branch '{}' not found in {}, skipping diff rules",
+                ref_name,
+                repo_root.display()
+            );
+            return None;
+        }
         if verbose {
             eprintln!("[kleis-review] Base branch: {} (verified)", ref_name);
             eprintln!("[kleis-review] Repo root: {}", repo_root.display());
@@ -840,8 +869,10 @@ fn run_review(
     for file_path in &files {
         let path_str = file_path.to_string_lossy();
 
+        let language = language_from_path(file_path);
+
         // --- Standard check_* rules ---
-        let result = match engine.check_file(&path_str, "rust") {
+        let result = match engine.check_file(&path_str, &language) {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("  ERROR: {} — {}", path_str, e);
@@ -875,7 +906,7 @@ fn run_review(
 
                 if should_diff {
                     if let Some(rel_path) = repo_relative_path(file_path, repo_root) {
-                        match git_show_file(base_ref, &rel_path) {
+                        match git_show_file(base_ref, &rel_path, repo_root) {
                             Some(base_content) => {
                                 let current_content =
                                     std::fs::read_to_string(file_path).unwrap_or_default();
@@ -946,6 +977,7 @@ fn run_review(
                     cfg,
                     &source,
                     &path_str,
+                    &language,
                     &formal_messages,
                 ))
             }) {

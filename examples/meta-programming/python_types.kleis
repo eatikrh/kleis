@@ -1,0 +1,195 @@
+// ============================================================================
+// PYTHON STRUCTURAL TYPES FOR KLEIS
+// ============================================================================
+//
+// Data types produced by the scan_python(source) builtin.
+// The builtin is a hand-written Rust line scanner that tracks indentation
+// to build a nested AST — function and class bodies contain lists of
+// statements, enabling structural review rules.
+//
+// Grammar reference: https://docs.python.org/3/reference/grammar.html
+// Data type names follow Python grammar productions, prefixed with Py.
+//
+// Usage:
+//   :eval scan_python("def foo():\n    return 42\n")
+//   :eval scan_python(readFile("path/to/file.py"))
+//
+// ============================================================================
+
+import "stdlib/prelude.kleis"
+
+// ============================================================================
+// PART 1: Data Types
+// ============================================================================
+
+// Top-level module: the result of scan_python(source)
+data PyModule = PyModule(items: List(PyItem), line_count: ℤ, parse_errors: ℤ)
+
+// Top-level items (module-level statements)
+data PyItem =
+    PyItemImport(decl: PyImport)
+  | PyItemFromImport(decl: PyFromImport)
+  | PyItemFunction(decl: PyFunction)
+  | PyItemClass(decl: PyClass)
+  | PyItemStmt(decl: PyStmt)
+
+// import foo, bar, baz
+data PyImport = PyImport(names: List(String), line: ℤ)
+
+// from foo.bar import baz, qux   or   from foo import *
+data PyFromImport = PyFromImport(
+    module: String,
+    names: List(String),
+    is_wildcard: Bool,
+    line: ℤ)
+
+// @decorator_name
+data PyDecorator = PyDecorator(name: String, line: ℤ)
+
+// def name(params) -> return_type:
+//     body
+data PyFunction = PyFunction(
+    name: String,
+    params: String,
+    return_type: String,
+    is_async: Bool,
+    body: List(PyStmt),
+    decorators: List(PyDecorator),
+    line: ℤ)
+
+// class Name(bases):
+//     body
+data PyClass = PyClass(
+    name: String,
+    bases: List(String),
+    methods: List(PyFunction),
+    body: List(PyStmt),
+    decorators: List(PyDecorator),
+    line: ℤ)
+
+// Statements — recursive, enabling structural inspection of bodies
+data PyStmt =
+    PyStmtAssign(target: String, has_type_hint: Bool, line: ℤ)
+  | PyStmtReturn(line: ℤ)
+  | PyStmtRaise(exception: String, line: ℤ)
+  | PyStmtYield(line: ℤ)
+  | PyStmtIf(body: List(PyStmt), else_body: List(PyStmt), line: ℤ)
+  | PyStmtFor(target: String, body: List(PyStmt), line: ℤ)
+  | PyStmtWhile(body: List(PyStmt), line: ℤ)
+  | PyStmtTry(body: List(PyStmt), handlers: List(PyExceptHandler), finally_body: List(PyStmt), line: ℤ)
+  | PyStmtWith(line: ℤ)
+  | PyStmtFunctionDef(decl: PyFunction)
+  | PyStmtClassDef(decl: PyClass)
+  | PyStmtImport(decl: PyImport)
+  | PyStmtFromImport(decl: PyFromImport)
+  | PyStmtPass(line: ℤ)
+  | PyStmtBreak(line: ℤ)
+  | PyStmtContinue(line: ℤ)
+  | PyStmtExpr(text: String, line: ℤ)
+  | PyStmtGlobal(names: List(String), line: ℤ)
+  | PyStmtNonlocal(names: List(String), line: ℤ)
+
+// except ExceptionType as name:
+//     body
+data PyExceptHandler = PyExceptHandler(
+    exception_type: String,
+    name: String,
+    body: List(PyStmt),
+    line: ℤ)
+
+// ============================================================================
+// PART 2: Query Helpers
+// ============================================================================
+
+// Extract all top-level functions from a module
+define module_functions(m: PyModule) : List(PyFunction) =
+    match m {
+        PyModule(items, _, _) => extract_functions_py(items)
+    }
+
+define extract_functions_py(items: List(PyItem)) : List(PyFunction) =
+    match items {
+        Nil => Nil
+      | Cons(item, rest) =>
+            match item {
+                PyItemFunction(f) => Cons(f, extract_functions_py(rest))
+              | _ => extract_functions_py(rest)
+            }
+    }
+
+// Extract all top-level classes from a module
+define module_classes(m: PyModule) : List(PyClass) =
+    match m {
+        PyModule(items, _, _) => extract_classes_py(items)
+    }
+
+define extract_classes_py(items: List(PyItem)) : List(PyClass) =
+    match items {
+        Nil => Nil
+      | Cons(item, rest) =>
+            match item {
+                PyItemClass(c) => Cons(c, extract_classes_py(rest))
+              | _ => extract_classes_py(rest)
+            }
+    }
+
+// Extract all top-level imports from a module
+define module_imports(m: PyModule) : List(PyImport) =
+    match m {
+        PyModule(items, _, _) => extract_imports_py(items)
+    }
+
+define extract_imports_py(items: List(PyItem)) : List(PyImport) =
+    match items {
+        Nil => Nil
+      | Cons(item, rest) =>
+            match item {
+                PyItemImport(i) => Cons(i, extract_imports_py(rest))
+              | _ => extract_imports_py(rest)
+            }
+    }
+
+// Extract all from-imports from a module
+define module_from_imports(m: PyModule) : List(PyFromImport) =
+    match m {
+        PyModule(items, _, _) => extract_from_imports_py(items)
+    }
+
+define extract_from_imports_py(items: List(PyItem)) : List(PyFromImport) =
+    match items {
+        Nil => Nil
+      | Cons(item, rest) =>
+            match item {
+                PyItemFromImport(i) => Cons(i, extract_from_imports_py(rest))
+              | _ => extract_from_imports_py(rest)
+            }
+    }
+
+// Count items in a list
+define count_list(items) =
+    match items {
+        Nil => 0
+      | Cons(_, rest) => 1 + count_list(rest)
+    }
+
+// Get function body statement count
+define fn_body_stmt_count(f: PyFunction) : ℤ =
+    match f { PyFunction(_, _, _, _, body, _, _) => count_list(body) }
+
+// Check if a function has a specific decorator
+define has_decorator(f: PyFunction, name: String) : Bool =
+    match f {
+        PyFunction(_, _, _, _, _, decorators, _) =>
+            any_decorator_named(decorators, name)
+    }
+
+define any_decorator_named(decs: List(PyDecorator), name: String) : Bool =
+    match decs {
+        Nil => false
+      | Cons(dec, rest) =>
+            match dec {
+                PyDecorator(n, _) =>
+                    if contains(n, name) then true
+                    else any_decorator_named(rest, name)
+            }
+    }

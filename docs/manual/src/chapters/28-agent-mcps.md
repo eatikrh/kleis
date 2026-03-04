@@ -339,39 +339,51 @@ the new rule is live.
 kleis review-mcp --policy examples/policies/rust_review_policy.kleis --verbose
 ```
 
-In Cursor, add to `.cursor/mcp.json`:
+In Cursor, add to `.cursor/mcp.json` (one instance per language):
 
 ```json
-"kleis-review": {
+"kleis-review-rust": {
     "command": "/Users/you/bin/kleis",
     "args": ["review-mcp", "--verbose", "--policy",
-             "/path/to/examples/policies/rust_review_policy.kleis"]
+             "/path/to/examples/policies/rust_review_policy.kleis"],
+    "env": { "KLEIS_ROOT": "/path/to/kleis" }
+},
+"kleis-review-python": {
+    "command": "/Users/you/bin/kleis",
+    "args": ["review-mcp", "--verbose", "--policy",
+             "/path/to/examples/policies/python_review_policy.kleis"],
+    "env": { "KLEIS_ROOT": "/path/to/kleis" }
 }
 ```
 
+The server name is derived from the policy filename (e.g. `python_review_policy.kleis` → `kleis-review-python`). Each instance loads its own rules, advisory prompts, and structural parser.
+
 ---
 
-## The Three MCPs Together
+## The MCPs Together
 
-The three servers cover different stages of the development workflow:
+The servers cover different stages of the development workflow:
 
 ```
-kleis-policy          kleis-review          kleis-theory
-     |                     |                     |
-     v                     v                     v
-"Can I do this?"    "Is this code good?"   "Is this math correct?"
-     |                     |                     |
-  Action gating       Code standards       Theory building
-  before editing       during editing       during research
+kleis-policy      kleis-review-rust     kleis-review-python    kleis-theory
+     |                  |                     |                     |
+     v                  v                     v                     v
+"Can I do this?"  "Is this Rust good?"  "Is this Python good?"  "Is this math correct?"
+     |                  |                     |                     |
+  Action gating     Rust standards       Python standards       Theory building
+  before editing     during editing       during editing        during research
 ```
 
 | Server | Policy file | Convention | Tools |
 |--------|-------------|------------|-------|
 | kleis-policy | `agent_policy.kleis` | `check_*` returns "allow"/"deny" | 5 |
-| kleis-review | `rust_review_policy.kleis` | `check_*` returns "pass"/"fail: reason" (3 tiers: string, structural, Z3) | 6 |
+| kleis-review-rust | `rust_review_policy.kleis` | `check_*` returns "pass"/"fail: reason" (3 tiers: string, structural, Z3) | 6 |
+| kleis-review-python | `python_review_policy.kleis` | `check_*` returns "pass"/"fail: reason" (string + structural via `scan_python`) | 6 |
 | kleis-theory | (none — builds interactively) | `submit_*`, `evaluate`, `save_theory` | 9 |
 
-All three are subcommands of the same `kleis` binary. One build, one install,
+Each review MCP is a separate process with its own policy, advisory prompt context, and structural parser. The server name is derived from the policy filename. Adding a new language is: write `<lang>_review_policy.kleis`, add an MCP entry.
+
+All servers are subcommands of the same `kleis` binary. One build, one install,
 three servers:
 
 ```bash

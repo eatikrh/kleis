@@ -11,11 +11,12 @@ use super::protocol::{
 };
 use serde_json::Value;
 use std::io::{self, BufRead, Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Review MCP Server state
 pub struct ReviewMcpServer {
     engine: ReviewEngine,
+    server_name: String,
     verbose: bool,
 }
 
@@ -23,7 +24,27 @@ impl ReviewMcpServer {
     /// Create a new review MCP server with a loaded policy
     pub fn new(policy_path: &PathBuf, verbose: bool) -> Result<Self, String> {
         let engine = ReviewEngine::load(policy_path)?;
-        Ok(Self { engine, verbose })
+        let server_name = Self::derive_server_name(policy_path);
+        Ok(Self {
+            engine,
+            server_name,
+            verbose,
+        })
+    }
+
+    /// Derive a server name from the policy filename.
+    /// e.g. "python_review_policy.kleis" -> "kleis-review-python"
+    ///      "rust_review_policy.kleis"   -> "kleis-review-rust"
+    fn derive_server_name(policy_path: &Path) -> String {
+        let stem = policy_path
+            .file_stem()
+            .and_then(|s: &std::ffi::OsStr| s.to_str())
+            .unwrap_or("");
+        if let Some(lang) = stem.strip_suffix("_review_policy") {
+            format!("kleis-review-{}", lang)
+        } else {
+            "kleis-review".to_string()
+        }
     }
 
     /// Run the server over stdio (blocking)
@@ -154,7 +175,7 @@ impl ReviewMcpServer {
                         tools: Some(serde_json::json!({})),
                     },
                     server_info: McpServerInfo {
-                        name: "kleis-review".to_string(),
+                        name: self.server_name.clone(),
                         version: env!("CARGO_PKG_VERSION").to_string(),
                     },
                 };

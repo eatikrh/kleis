@@ -1,37 +1,78 @@
 # Next Session Notes
 
-**Last Updated:** March 4, 2026 (session 10 — diff-aware review rules)
+**Last Updated:** March 4, 2026 (session 12 — Polyglot review: Python MCP + end-to-end validation)
 
 ---
 
-## Session 10 (Mar 4, 2026): Diff-Aware Review Rules
+## Session 12 (Mar 4, 2026): Polyglot Review — Python Parser, MCP, End-to-End
 
 ### What Was Done
-- **`--base-branch` flag** for `kleis review` — enables cross-branch comparison rules
-- **`diff_check_*` convention** — functions that receive `(current, base, path)` instead of just `(source)`
-- **`diff_file_filter`** — policy-defined function that controls which files trigger `git show` (no unnecessary fetches)
-- **Graceful fallback** — invalid refs warn and skip, new files skip, no flag = no diff rules
-- **`diff_check_version_bump` example** — tested live against `sso-pipelinelib` (IMAGE_TAG enforcement)
-- **Naming convention isolates MCP** — `diff_check_*` is invisible to MCP's `check_*` discovery
-- **Documented** in `28-agent-mcps.md` with CI/CD examples (GitLab + GitHub Actions)
 
-### Also done this session
-- **Claude Code verified** — Sonnet 4.5 via Vertex AI, corporate auth working
-- **Gemini CLI installed** — v0.22.5 on Node 20, but blocked by GCP org policy (need IT to enable Gemini models on `itpc-gcp-it-all-claude` project)
-- **Env var cleanup identified** — `CLOUD_ML_REGION` duplicated in `.bash_profile`, Claude vars duplicated across `.bash_profile`/`.bashrc`/`.zshrc`
+**Python Scanner (Rust)**
+- **`scan_python(source)` builtin** — hand-written line scanner (~600 lines, zero dependencies) emitting nested Kleis AST
+- **9 Kleis data types** — `PyModule`, `PyItem`, `PyFunction`, `PyClass`, `PyStmt`, `PyImport`, `PyFromImport`, `PyDecorator`, `PyExceptHandler`
+- **12 query helpers** in `python_types.kleis` — `module_functions`, `module_classes`, `has_decorator`, `count_list`, etc.
+- **Code organized** under `src/python/` (scanner.rs + mod.rs)
+
+**Python Review Policy (46 rules)**
+- **12 string-based checks** — `check_no_eval`, `check_no_sys_exit`, `check_no_mutable_defaults`, `check_no_bare_except`, `check_no_print_statement`, `check_no_environ_bracket`, `check_no_optional_type`, `check_no_hardcoded_password`, `check_no_debug_breakpoint`, `check_double_quote_strings`, `check_no_wildcard_import`, `check_no_eval`
+- **1 structural check** (`check_python_structural`) with 6 sub-rules: long functions, long methods, import placement, bare except (AST with line numbers), missing return types (skips `__init__`), excessive try/except
+- **7 diff-aware rules** — `diff_check_image_tag_bump`, `diff_check_requirements_pinned`, `diff_check_file_growth`, `diff_check_new_fns_typed`, `diff_check_sys_exit_introduced`, `diff_check_bare_except_introduced`, `diff_check_print_introduced`
+- **Rules inferred from 1,038 MR comments** across 403 MRs in `sso-pipelinelib`
+
+**Polyglot MCP Architecture**
+- **Separate MCP instances per language** — `kleis-review-rust` and `kleis-review-python` (not a single MCP with naming hacks)
+- **Dynamic server name** — derived from policy filename (`python_review_policy.kleis` → `kleis-review-python`)
+- **Language-aware LLM advisory** — `build_system_prompt` accepts language parameter, code fences use correct language tag
+- **Stdlib import resolution** — `KLEIS_ROOT` env var + directory walk for `stdlib/` imports, works from any working directory
+- **Git context from target files** — `git_repo_root_for(dir)` derives repo root from the files being reviewed, not cwd
+
+**End-to-End Validation**
+- Tested `kleis review` CLI against `sso-pipelinelib` — catches real issues (mutable defaults, missing return types, print(), Optional[], sys.exit())
+- Tested all MCP tools: `list_rules`, `describe_standards`, `explain_rule`, `check_file`, `check_code`
+- **AI agent autonomy test** — a fresh Cursor agent in `sso-pipelinelib` discovered `kleis-review-python`, queried its rules, reviewed 3 changed files, and proposed the correct fix — with zero prior knowledge of Kleis
 
 ### Branch
-`feature/diff-aware-review`
+`feature/python-parser`
+
+### Files Changed
+- `src/python/scanner.rs` — Python line scanner (new)
+- `src/python/mod.rs` — module root (new)
+- `src/lib.rs` — added `pub mod python`
+- `src/evaluator/builtins.rs` — `scan_python` builtin
+- `src/evaluator/mod.rs` — removed old `python_bridge` module
+- `src/review_mcp/advisory.rs` — language-aware prompts
+- `src/review_mcp/engine.rs` — stdlib import resolution via `KLEIS_ROOT`
+- `src/review_mcp/server.rs` — dynamic server name from policy filename
+- `src/bin/kleis.rs` — `language_from_path`, `git_repo_root_for`, target-file git context
+- `examples/meta-programming/python_types.kleis` — Kleis data types + helpers (new)
+- `examples/policies/python_review_policy.kleis` — full Python policy (new)
+- `.cursor/mcp.json` — parallel `kleis-review-rust` / `kleis-review-python`
+- `docs/manual/src/chapters/28-agent-mcps.md` — polyglot MCP documentation
+- `.cursorrules` — "no practical workarounds" rule
+
+### Known Limitations (Python Scanner)
+- **Multi-line function signatures** — extracts params from first line only
+- **Multi-line `from` imports** — parses first line only
+- **Triple-quote tracking** — doesn't distinguish docstrings from strings
+- **No expression parsing** — assignments capture target but not value
+
+### Migration Path
+If structural rules need expression-level detail, add `ruff_python_parser` (MIT, Rust crate) behind a feature flag. Replace scanner internals; Kleis data types and policies stay unchanged.
+
+### Architecture Decision: Separate MCPs per Language
+- Each language gets its own MCP instance with its own policy, advisory prompt, and structural parser
+- Cleaner than language-prefix naming conventions (`check_py_*` / `check_rs_*`)
+- Future: Kleis structures could namespace rules (`structure PythonReview { ... }`) — the engine would discover `check_*` inside structures instead of only top-level functions
 
 ### Open Items
-1. **Externalize `build_system_prompt` text** — the LLM system prompt is currently hardcoded in `src/review_mcp/advisory.rs`. Should be loaded from a file (e.g. `prompts/review_advisory.txt`) or a config.toml field, so users can customize the prompt without recompiling.
-2. **Language-agnostic review** — once the system prompt and policy are both external, `kleis review` works for any language. The formal policy is already a `.kleis` file (write `check_*` functions for Python, Go, etc.), and `check_file` already accepts a `language` parameter. The advisory prompt just needs to drop the hardcoded "Rust" and read the language from context. Two external files (policy + prompt) = any language, no recompile.
-3. **No timeouts** — `eval_concrete` and Z3 can block indefinitely. STILL OPEN.
-4. **`check_no_hardcoded_urls` false positive** — flags documentation URLs in comments. Needs structural version that skips comments.
-5. **Z3 axioms not wired into automatic review** — `SafeCode`, `SqlSafe` etc. require explicit `evaluate_expression` calls.
-6. **Vertex AI auth for `--advise`** — wire `gcloud auth print-access-token` into `advisory.rs` so `kleis review --advise` can use corporate Claude without a static API key.
-7. **Semver comparison for diff rules** — `diff_check_version_bump` currently checks "different" but not "greater". Add proper `version_gt(a, b)` with major.minor.patch parsing.
-8. **Generic `extract_key_value`** — current `foldLines` approach requires one step function per key. A generic version needs Kleis lambda/closure support in `foldLines` (partial application or 3-arg step functions).
+1. **No timeouts** — `eval_concrete` and Z3 can block indefinitely. STILL OPEN.
+2. **`check_no_hardcoded_urls` false positive** — flags documentation URLs in comments. Needs structural version that skips comments.
+3. **Z3 axioms not wired into automatic review** — `SafeCode`, `SqlSafe` etc. require explicit `evaluate_expression` calls.
+4. **Vertex AI auth for `--advise`** — wire `gcloud auth print-access-token` into `advisory.rs` so `kleis review --advise` can use corporate Claude without a static API key.
+5. **Semver comparison for diff rules** — `diff_check_version_bump` currently checks "different" but not "greater". Add proper `version_gt(a, b)`.
+6. **Generic `extract_key_value`** — needs Kleis lambda/closure support in `foldLines`.
+7. **Externalize `build_system_prompt` text** — load from file or config so users can customize without recompiling.
 
 ---
 
