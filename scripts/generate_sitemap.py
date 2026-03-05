@@ -13,6 +13,7 @@ Output:
 """
 
 import re
+import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import List, Tuple
@@ -101,10 +102,25 @@ def get_static_pages() -> List[Tuple[str, str]]:
     return pages
 
 
+def git_last_modified(filepath: str) -> str:
+    """Get the last git commit date for a file, or today if untracked."""
+    resolved = MANUAL_SRC / filepath if not Path(filepath).is_absolute() else Path(filepath)
+    if not resolved.exists():
+        resolved = REPO_ROOT / filepath
+    try:
+        result = subprocess.run(
+            ["git", "log", "-1", "--format=%aI", "--", str(resolved)],
+            capture_output=True, text=True, cwd=REPO_ROOT, timeout=5,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()[:10]
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+    return datetime.now().strftime("%Y-%m-%d")
+
+
 def generate_sitemap(pages: List[Tuple[str, str]]) -> str:
     """Generate sitemap XML content."""
-    today = datetime.now().strftime("%Y-%m-%d")
-    
     xml_parts = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
@@ -118,10 +134,11 @@ def generate_sitemap(pages: List[Tuple[str, str]]) -> str:
         seen_urls.add(url_path)
         
         priority = get_priority(url_path)
+        lastmod = git_last_modified(source)
         
         xml_parts.append(f"""  <url>
     <loc>{BASE_URL}{url_path}</loc>
-    <lastmod>{today}</lastmod>
+    <lastmod>{lastmod}</lastmod>
     <priority>{priority}</priority>
   </url>""")
     

@@ -1,6 +1,48 @@
 # Next Session Notes
 
-**Last Updated:** March 5, 2026 (session 13 — Equation Editor Z3 witness display + axiom theory investigation)
+**Last Updated:** March 5, 2026 (session 14 — Native Rust Scanner for Kleis Review)
+
+---
+
+## Session 14 (Mar 5, 2026): Native Rust Scanner (`scan_rust` builtin)
+
+### What Was Done
+
+**Native Rust structural scanner** — hand-written tokenizer + recursive descent parser (~2400 lines, zero dependencies) that emits Kleis AST identical to the Kleis-based `scan()` in `rust_parser.kleis`.
+
+- **Tokenizer**: Handles string literals (including raw strings `r#"..."#`), all 6 comment types (line, outer/inner line doc, block, outer/inner block doc with nesting), attributes, keywords, punctuation, lifetimes, spans with line numbers.
+- **Recursive descent parser**: Parses top-level items (fn, struct, enum, trait, impl, use, mod, const, static, type, macro_rules!), visibility variants (pub, pub(crate), pub(super), pub(self)), function qualifiers (async, const, unsafe, extern), generic parameters, `where` clauses, and computes `body_line_count` + `max_nesting` for function bodies.
+- **Kleis AST emission**: Internal Rust AST types (`FnDecl`, `StructDecl`, etc.) convert to Kleis `Expression` via `to_expr()` methods, producing `Crate(items, comments, line_count)` — identical structure to the Kleis-based scanner.
+- **`\n` auto-detection**: Matches the `foldLines` builtin behavior — detects whether source contains real newlines or escaped two-char `\n` from Kleis string literals.
+- **`scan()` delegation**: `rust_parser.kleis` now delegates `scan(source)` to the native `scan_rust(source)` builtin. All 146 helper functions, 17 data types, and review query functions are unchanged.
+- **19 Rust unit tests** + **25/25 Kleis example tests** pass.
+- **`kleis review` integration verified** — ran against `verify-cli/src/storage/*.rs` (8 files, 86 rules). Structural rules (`check_structural`, `check_safe_structural`, `check_secure_structural`) fire correctly with accurate line numbers.
+
+### Resolved Limitations
+
+These limitations from the Kleis-based scanner are now fixed:
+
+1. ~~**Brace depth is lexical, not semantic.**~~ — **RESOLVED**: The native tokenizer skips braces inside string literals and comments.
+2. ~~**Block comments are not nest-aware.**~~ — **RESOLVED**: The native tokenizer correctly handles nested block comments (`/* /* */ */`).
+3. ~~**Multi-line item headers may be incomplete.**~~ — **RESOLVED**: The native parser operates on the full token stream, so multi-line function signatures, `where` clauses, and attributes parse correctly.
+
+### Branch
+`feature/rust-scanner`
+
+### Files Changed
+- `src/rust_scanner/mod.rs` — module root (new)
+- `src/rust_scanner/scanner.rs` — tokenizer + parser + Kleis AST emission (new, ~2400 lines)
+- `src/lib.rs` — added `pub mod rust_scanner`
+- `src/evaluator/builtins.rs` — `scan_rust` builtin registration
+- `examples/meta-programming/rust_parser.kleis` — `scan()` delegates to `scan_rust()`
+
+### Architecture: Why Hand-Written
+
+Evaluated Pest (PEG), LALRPOP (LR(1)), Nom (combinators), and rust-peg. All add dependencies and generate full expression/type parsers we don't need. The native scanner only needs structural extraction (items, signatures, metrics) — a two-phase tokenizer + recursive descent is the right tool. Grammar reference: IntelliJ Rust BNF (MIT).
+
+### Performance
+
+The native scanner processes the full token stream in a single pass. Previously, `scan()` used Kleis-interpreted `foldLines` which executed hundreds of Kleis function calls per source line. The native version eliminates this overhead entirely.
 
 ---
 
@@ -135,15 +177,15 @@ If structural rules need expression-level detail, add `ruff_python_parser` (MIT,
 
 ### Known Limitations: `rust_parser.kleis` Structural Scanner
 
-The Kleis-based Rust structural parser (`rust_parser.kleis`) is intentionally **not** a compiler-grade parser. It's a lightweight scanner for review tooling. Rule authors should be aware of these sharp edges:
+The Rust structural parser now delegates to a native Rust scanner (`scan_rust` builtin, session 14). Most previous limitations are resolved:
 
-1. **Brace depth is lexical, not semantic.** `brace_delta(line)` counts `{`/`}` even inside string literals, raw strings, and comments. This can skew nesting depth and any body-size metrics. Fix: a lightweight string/comment-aware brace counter (still not a full tokenizer).
+1. ~~**Brace depth is lexical, not semantic.**~~ — **RESOLVED** (session 14): Native tokenizer skips braces inside strings/comments.
 
-2. **Block comments are not nest-aware.** Continuation detection uses `contains("*/")`, but Rust block comments can nest (`/* /* */ */`). Robust "ignore content in comments" needs a nesting counter rather than a boolean `in_block`.
+2. ~~**Block comments are not nest-aware.**~~ — **RESOLVED** (session 14): Native tokenizer handles nested block comments.
 
-3. **Multi-line item headers may be incomplete.** Function signatures, `where` clauses, and attributes can span lines. The scanner works line-by-line, so some item facts may be partial unless a "header accumulation" mode is added.
+3. ~~**Multi-line item headers may be incomplete.**~~ — **RESOLVED** (session 14): Native parser operates on full token stream.
 
-4. **Macros can masquerade as items.** `macro_rules!`, attribute macros, and DSL-like macros can confuse `is_*_line` heuristics. This is acceptable for review tooling but should be documented so users don't assume compiler-grade accuracy.
+4. **Macros can masquerade as items.** `macro_rules!` is parsed; attribute macros and DSL-like macros may confuse item detection. Acceptable for review tooling.
 
 ### Known Limitations: `kleis_review_policy.kleis` Checks
 

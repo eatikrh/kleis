@@ -177,11 +177,14 @@ The review engine operates at three distinct levels of sophistication:
 | **3. Z3 axioms** | `structure` with `axiom`, verified by Z3 | Formal properties over all possible inputs (e.g., SafeCode, SqlSafe) |
 
 Tier 1 runs simple pattern matching — fast but context-blind.
-Tier 2 parses the source into a `Crate` AST using a structural parser written
-in Kleis itself (`rust_parser.kleis`), then queries the AST for functions,
+Tier 2 parses the source into a `Crate` AST and queries it for functions,
 structs, use declarations, and comments. This enables context-aware analysis:
 `.unwrap()` in a `#[test]` function is fine; `.unwrap()` in production code
-is flagged. Tier 3 uses Z3 to prove properties hold universally.
+is flagged. The structural parser was originally written in pure Kleis
+(`rust_parser.kleis`) — a Rust parser written in Kleis itself. For performance,
+`scan()` now delegates to a native Rust tokenizer and recursive descent parser
+(`scan_rust` builtin), while all query helpers and data types remain in Kleis.
+Tier 3 uses Z3 to prove properties hold universally.
 
 ### The Standards File
 
@@ -289,7 +292,7 @@ inputs.
 | `check_structural` | Wildcard imports, narrating comments, missing pub fn docs, too many params (>5), function/struct naming, function count (>50), missing tests |
 | `check_safe_structural` | `.unwrap()`, `panic!()`, `unsafe {}` — skips test functions |
 | `check_clean_structural` | `println!()`, `todo!()`, `dbg!()` — skips test functions |
-| `check_secure_structural` | Hardcoded `password =`, `secret =`, `api_key =` — skips test code |
+| `check_secure_structural` | Hardcoded credential string literals (`password = "..."`, `secret = "..."`) — skips test code |
 | `check_sql_safe_structural` | `format!` with SQL keywords, `.push_str` with `WHERE` — skips test code |
 
 ### Running a Review

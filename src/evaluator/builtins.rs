@@ -445,6 +445,16 @@ impl Evaluator {
                     Ok(None)
                 }
             }
+            "scan_rust" => {
+                if args.len() != 1 {
+                    return Ok(None);
+                }
+                if let Some(source) = self.as_string(&args[0]) {
+                    crate::rust_scanner::scan_rust(&source).map(Some)
+                } else {
+                    Ok(None)
+                }
+            }
             "trimRight" => {
                 // trimRight("hello  ") → "hello"
                 if args.len() != 1 {

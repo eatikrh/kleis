@@ -156,11 +156,35 @@ define check_no_tls_bypass(source) =
     else "pass"
 
 define check_no_credential_logging(source) =
-    if and(contains(source, "password"), contains(source, "println!(")) then "fail: STRIDE/Disclosure — printing password to stdout"
-    else if and(contains(source, "secret"), contains(source, "println!(")) then "fail: STRIDE/Disclosure — printing secret to stdout"
-    else if and(contains(source, "password"), contains(source, "log::")) then "fail: STRIDE/Disclosure — logging password"
-    else if and(contains(source, "password"), contains(source, "tracing::")) then "fail: STRIDE/Disclosure — logging password via tracing"
-    else "pass"
+    let prod = production_code(source) in
+    let c = scan(prod) in
+    let fns = crate_functions(c) in
+    let f1 = non_test_fns_containing(prod, fns, "println!(\"{}\", password") in
+    let f2 = non_test_fns_containing(prod, fns, "println!(\"{}\", secret") in
+    let f3 = non_test_fns_containing(prod, fns, "println!(\"{:?}\", password") in
+    let f4 = non_test_fns_containing(prod, fns, "println!(\"{:?}\", secret") in
+    let f5 = non_test_fns_containing(prod, fns, "debug!(password") in
+    let f6 = non_test_fns_containing(prod, fns, "debug!(secret") in
+    let f7 = non_test_fns_containing(prod, fns, "info!(password") in
+    let f8 = non_test_fns_containing(prod, fns, "info!(secret") in
+    let all = append_failure(
+        if eq(f1, "") then "" else concat("STRIDE/Disclosure — printing password to stdout in: ", f1),
+        append_failure(
+        if eq(f2, "") then "" else concat("STRIDE/Disclosure — printing secret to stdout in: ", f2),
+        append_failure(
+        if eq(f3, "") then "" else concat("STRIDE/Disclosure — debug-printing password in: ", f3),
+        append_failure(
+        if eq(f4, "") then "" else concat("STRIDE/Disclosure — debug-printing secret in: ", f4),
+        append_failure(
+        if eq(f5, "") then "" else concat("STRIDE/Disclosure — debug-logging password in: ", f5),
+        append_failure(
+        if eq(f6, "") then "" else concat("STRIDE/Disclosure — debug-logging secret in: ", f6),
+        append_failure(
+        if eq(f7, "") then "" else concat("STRIDE/Disclosure — info-logging password in: ", f7),
+        if eq(f8, "") then "" else concat("STRIDE/Disclosure — info-logging secret in: ", f8)
+        ))))))) in
+    if eq(all, "") then "pass"
+    else concat("fail: ", all)
 
 define check_no_unbounded_read(source) =
     if contains(source, "read_to_end(") then "fail: STRIDE/DoS — unbounded read_to_end, use take() or read with a size limit"
@@ -363,10 +387,12 @@ define check_clean_structural(source) =
 
 define check_secure_structural(source) =
     let prod = production_code(source) in
-    let f1 = if contains(prod, "password =") then "hardcoded password in production code" else "" in
-    let f2 = if contains(prod, "secret =") then "hardcoded secret in production code" else "" in
-    let f3 = if contains(prod, "api_key =") then "hardcoded api_key in production code" else "" in
-    let all = append_failure(f1, append_failure(f2, f3)) in
+    let f1 = if contains(prod, "password = \"") then "hardcoded password literal in production code" else "" in
+    let f2 = if contains(prod, "secret = \"") then "hardcoded secret literal in production code" else "" in
+    let f3 = if contains(prod, "api_key = \"") then "hardcoded api_key literal in production code" else "" in
+    let f4 = if contains(prod, "password: \"") then "hardcoded password literal in struct init" else "" in
+    let f5 = if contains(prod, "secret: \"") then "hardcoded secret literal in struct init" else "" in
+    let all = append_failure(f1, append_failure(f2, append_failure(f3, append_failure(f4, f5)))) in
     if eq(all, "") then "pass"
     else concat("fail: ", all)
 
