@@ -883,15 +883,31 @@ fn run_review(
         };
 
         let mut file_passed = result.passed;
+        let has_advisories = result
+            .verdicts
+            .iter()
+            .any(|v| !v.passed && v.severity == kleis::review_mcp::engine::RuleSeverity::Advisory);
 
-        let emoji = if result.passed { "✅" } else { "❌" };
+        let emoji = if !result.passed {
+            "❌"
+        } else if has_advisories {
+            "⚠️"
+        } else {
+            "✅"
+        };
         println!("{} {}", emoji, path_str);
 
         for verdict in &result.verdicts {
             if failures_only && verdict.passed {
                 continue;
             }
-            let v_emoji = if verdict.passed { "  ✅" } else { "  ❌" };
+            let v_emoji = if verdict.passed {
+                "  ✅"
+            } else if verdict.severity == kleis::review_mcp::engine::RuleSeverity::Advisory {
+                "  ⚠️"
+            } else {
+                "  ❌"
+            };
             println!("{} {} — {}", v_emoji, verdict.rule_name, verdict.message);
         }
 
@@ -921,13 +937,24 @@ fn run_review(
                                 let diff_result =
                                     engine.check_diff(&current_content, &base_content, &path_str);
                                 for verdict in &diff_result.verdicts {
-                                    if !verdict.passed {
+                                    if !verdict.passed
+                                        && verdict.severity
+                                            == kleis::review_mcp::engine::RuleSeverity::Error
+                                    {
                                         file_passed = false;
                                     }
                                     if failures_only && verdict.passed {
                                         continue;
                                     }
-                                    let v_emoji = if verdict.passed { "  ✅" } else { "  ❌" };
+                                    let v_emoji = if verdict.passed {
+                                        "  ✅"
+                                    } else if verdict.severity
+                                        == kleis::review_mcp::engine::RuleSeverity::Advisory
+                                    {
+                                        "  ⚠️"
+                                    } else {
+                                        "  ❌"
+                                    };
                                     println!(
                                         "{} {} — {}",
                                         v_emoji, verdict.rule_name, verdict.message

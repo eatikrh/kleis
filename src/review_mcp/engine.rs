@@ -14,11 +14,21 @@ use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
+/// Severity level for review rules
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RuleSeverity {
+    /// Blocking error — fails CI (exit code 1)
+    Error,
+    /// Non-blocking advisory — warns but does not fail CI
+    Advisory,
+}
+
 /// Result of checking code against a single rule
 #[derive(Debug, Clone)]
 pub struct RuleVerdict {
     pub rule_name: String,
     pub passed: bool,
+    pub severity: RuleSeverity,
     pub message: String,
 }
 
@@ -41,6 +51,7 @@ pub struct ReviewRule {
 #[derive(Debug, Clone)]
 pub enum ReviewRuleKind {
     CheckFunction,
+    AdviseFunction,
     Axiom,
     Helper,
 }
@@ -118,6 +129,8 @@ impl ReviewEngine {
                 TopLevel::FunctionDef(func) => {
                     let kind = if func.name.starts_with("check_") {
                         ReviewRuleKind::CheckFunction
+                    } else if func.name.starts_with("advise_") {
+                        ReviewRuleKind::AdviseFunction
                     } else {
                         ReviewRuleKind::Helper
                     };
@@ -152,22 +165,30 @@ impl ReviewEngine {
         rules
     }
 
-    /// Check source code against all `check_*` rules in the policy.
+    /// Check source code against all `check_*` and `advise_*` rules in the policy.
     ///
-    /// Each `check_*` function is called with the source code string.
-    /// Returns "pass" or "fail: <reason>".
+    /// `check_*` functions are blocking errors; `advise_*` functions are non-blocking advisories.
+    /// Only `check_*` failures set `passed = false`.
     pub fn check_code(&self, source: &str, _language: &str) -> ReviewResult {
-        let check_functions: Vec<String> = self
+        let rule_functions: Vec<(String, RuleSeverity)> = self
             .evaluator
             .list_functions()
             .into_iter()
-            .filter(|name| name.starts_with("check_"))
+            .filter_map(|name| {
+                if name.starts_with("check_") {
+                    Some((name, RuleSeverity::Error))
+                } else if name.starts_with("advise_") {
+                    Some((name, RuleSeverity::Advisory))
+                } else {
+                    None
+                }
+            })
             .collect();
 
         let mut verdicts = Vec::new();
         let mut all_passed = true;
 
-        for func_name in &check_functions {
+        for (func_name, severity) in &rule_functions {
             let call_expr = Expression::Operation {
                 name: func_name.clone(),
                 args: vec![Expression::String(source.to_string())],
@@ -179,21 +200,25 @@ impl ReviewEngine {
                     let result_str = Self::expression_to_string(&result);
                     let passed = Self::is_pass(&result);
 
-                    if !passed {
+                    if !passed && *severity == RuleSeverity::Error {
                         all_passed = false;
                     }
 
                     RuleVerdict {
                         rule_name: func_name.clone(),
                         passed,
+                        severity: *severity,
                         message: result_str,
                     }
                 }
                 Err(e) => {
-                    all_passed = false;
+                    if *severity == RuleSeverity::Error {
+                        all_passed = false;
+                    }
                     RuleVerdict {
                         rule_name: func_name.clone(),
                         passed: false,
+                        severity: *severity,
                         message: format!("error: {}", e),
                     }
                 }
@@ -202,19 +227,7 @@ impl ReviewEngine {
             verdicts.push(verdict);
         }
 
-        let pass_count = verdicts.iter().filter(|v| v.passed).count();
-        let fail_count = verdicts.len() - pass_count;
-
-        let summary = if all_passed {
-            format!("All {} checks passed", verdicts.len())
-        } else {
-            format!(
-                "{} passed, {} failed (out of {} checks)",
-                pass_count,
-                fail_count,
-                verdicts.len()
-            )
-        };
+        let summary = Self::build_summary(&verdicts, all_passed);
 
         ReviewResult {
             passed: all_passed,
@@ -277,19 +290,27 @@ impl ReviewEngine {
         }
     }
 
-    /// Run all `diff_check_*` rules with (current, base, path) arguments
+    /// Run all `diff_check_*` and `diff_advise_*` rules with (current, base, path) arguments
     pub fn check_diff(&self, current: &str, base: &str, path: &str) -> ReviewResult {
-        let diff_functions: Vec<String> = self
+        let diff_functions: Vec<(String, RuleSeverity)> = self
             .evaluator
             .list_functions()
             .into_iter()
-            .filter(|name| name.starts_with("diff_check_"))
+            .filter_map(|name| {
+                if name.starts_with("diff_check_") {
+                    Some((name, RuleSeverity::Error))
+                } else if name.starts_with("diff_advise_") {
+                    Some((name, RuleSeverity::Advisory))
+                } else {
+                    None
+                }
+            })
             .collect();
 
         let mut verdicts = Vec::new();
         let mut all_passed = true;
 
-        for func_name in &diff_functions {
+        for (func_name, severity) in &diff_functions {
             let call_expr = Expression::Operation {
                 name: func_name.clone(),
                 args: vec![
@@ -304,20 +325,24 @@ impl ReviewEngine {
                 Ok(result) => {
                     let result_str = Self::expression_to_string(&result);
                     let passed = Self::is_pass(&result);
-                    if !passed {
+                    if !passed && *severity == RuleSeverity::Error {
                         all_passed = false;
                     }
                     RuleVerdict {
                         rule_name: func_name.clone(),
                         passed,
+                        severity: *severity,
                         message: result_str,
                     }
                 }
                 Err(e) => {
-                    all_passed = false;
+                    if *severity == RuleSeverity::Error {
+                        all_passed = false;
+                    }
                     RuleVerdict {
                         rule_name: func_name.clone(),
                         passed: false,
+                        severity: *severity,
                         message: format!("error: {}", e),
                     }
                 }
@@ -326,24 +351,50 @@ impl ReviewEngine {
             verdicts.push(verdict);
         }
 
-        let pass_count = verdicts.iter().filter(|v| v.passed).count();
-        let fail_count = verdicts.len() - pass_count;
-
-        let summary = if all_passed {
-            format!("All {} diff checks passed", verdicts.len())
-        } else {
-            format!(
-                "{} passed, {} failed (out of {} diff checks)",
-                pass_count,
-                fail_count,
-                verdicts.len()
-            )
-        };
+        let summary = Self::build_summary(&verdicts, all_passed);
 
         ReviewResult {
             passed: all_passed,
             verdicts,
             summary,
+        }
+    }
+
+    fn build_summary(verdicts: &[RuleVerdict], all_passed: bool) -> String {
+        let error_count = verdicts
+            .iter()
+            .filter(|v| !v.passed && v.severity == RuleSeverity::Error)
+            .count();
+        let advisory_count = verdicts
+            .iter()
+            .filter(|v| !v.passed && v.severity == RuleSeverity::Advisory)
+            .count();
+        let pass_count = verdicts.iter().filter(|v| v.passed).count();
+
+        if all_passed && advisory_count == 0 {
+            format!("All {} checks passed", verdicts.len())
+        } else if all_passed {
+            format!(
+                "{} passed, {} advisories (out of {} checks)",
+                pass_count,
+                advisory_count,
+                verdicts.len()
+            )
+        } else if advisory_count > 0 {
+            format!(
+                "{} passed, {} errors, {} advisories (out of {} checks)",
+                pass_count,
+                error_count,
+                advisory_count,
+                verdicts.len()
+            )
+        } else {
+            format!(
+                "{} passed, {} failed (out of {} checks)",
+                pass_count,
+                error_count,
+                verdicts.len()
+            )
         }
     }
 
@@ -395,6 +446,13 @@ impl ReviewEngine {
             self.rules
                 .iter()
                 .filter(|r| matches!(r.kind, ReviewRuleKind::CheckFunction))
+                .count(),
+        );
+        stats.insert(
+            "advise_functions".to_string(),
+            self.rules
+                .iter()
+                .filter(|r| matches!(r.kind, ReviewRuleKind::AdviseFunction))
                 .count(),
         );
         stats.insert(
@@ -469,12 +527,21 @@ impl ReviewEngine {
             })
             .collect();
 
+        let advise_fns: Vec<&Value> = functions
+            .iter()
+            .filter(|f| {
+                f.get("name")
+                    .and_then(|n| n.as_str())
+                    .is_some_and(|n| n.starts_with("advise_"))
+            })
+            .collect();
+
         let helper_fns: Vec<&Value> = functions
             .iter()
             .filter(|f| {
                 f.get("name")
                     .and_then(|n| n.as_str())
-                    .is_some_and(|n| !n.starts_with("check_"))
+                    .is_some_and(|n| !n.starts_with("check_") && !n.starts_with("advise_"))
             })
             .collect();
 
@@ -482,11 +549,13 @@ impl ReviewEngine {
             "policy_file": self.policy_file.display().to_string(),
             "structures": structures,
             "check_functions": check_fns,
+            "advise_functions": advise_fns,
             "helper_functions": helper_fns,
             "stats": {
                 "structures": structures.len(),
                 "functions": functions.len(),
                 "check_functions": check_fns.len(),
+                "advise_functions": advise_fns.len(),
             }
         })
     }

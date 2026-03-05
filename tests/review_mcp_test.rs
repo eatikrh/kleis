@@ -46,10 +46,13 @@ fn test_load_review_policy_with_checks() {
             if contains(source, ".unwrap()") then "fail: unwrap" else "pass"
         define check_no_panic(source) =
             if contains(source, "panic!(") then "fail: panic" else "pass"
+        define advise_style(source) =
+            if contains(source, "bad") then "fail: bad style" else "pass"
     "#,
     );
     let stats = engine.stats();
     assert_eq!(*stats.get("check_functions").unwrap(), 2);
+    assert_eq!(*stats.get("advise_functions").unwrap(), 1);
 }
 
 // =============================================================================
@@ -180,6 +183,62 @@ fn test_check_code_summary() {
 }
 
 // =============================================================================
+// Advisory severity — advise_* failures don't block passed
+// =============================================================================
+
+#[test]
+fn test_advisory_failures_do_not_block() {
+    let engine = load_review_policy(
+        r#"
+        define check_no_unwrap(source) =
+            if contains(source, ".unwrap()") then "fail: unwrap" else "pass"
+        define advise_no_emoji(source) =
+            if contains(source, "emoji") then "fail: emoji" else "pass"
+    "#,
+    );
+
+    // Code that triggers only the advisory — overall should still pass
+    let result = engine.check_code("let msg = \"emoji\";", "rust");
+    assert!(
+        result.passed,
+        "Advisory failure should not block: {:?}",
+        result.summary
+    );
+    assert!(result.verdicts.iter().any(|v| {
+        v.rule_name == "advise_no_emoji"
+            && !v.passed
+            && v.severity == kleis::review_mcp::engine::RuleSeverity::Advisory
+    }));
+
+    // Code that triggers the error — should block
+    let result = engine.check_code("fn f() { foo().unwrap(); }", "rust");
+    assert!(!result.passed);
+    assert!(result.verdicts.iter().any(|v| {
+        v.rule_name == "check_no_unwrap"
+            && !v.passed
+            && v.severity == kleis::review_mcp::engine::RuleSeverity::Error
+    }));
+
+    // Code that triggers both — should still block (because of the error)
+    let result = engine.check_code("fn f() { foo().unwrap(); } // emoji", "rust");
+    assert!(!result.passed);
+}
+
+#[test]
+fn test_advisory_summary_counts() {
+    let engine = load_review_policy(
+        r#"
+        define check_a(source) = "pass"
+        define advise_b(source) = if contains(source, "warn") then "fail: warn" else "pass"
+    "#,
+    );
+
+    let result = engine.check_code("warn me", "rust");
+    assert!(result.passed);
+    assert!(result.summary.contains("advisory") || result.summary.contains("advisories"));
+}
+
+// =============================================================================
 // list_rules / explain_rule
 // =============================================================================
 
@@ -262,10 +321,17 @@ fn real_rust_review_policy_assertions(path: PathBuf) {
     let engine = ReviewEngine::load(&path).expect("load rust_review_policy.kleis");
     let stats = engine.stats();
 
+    let check_count = *stats.get("check_functions").unwrap();
+    let advise_count = *stats.get("advise_functions").unwrap();
     assert!(
-        *stats.get("check_functions").unwrap() >= 28,
+        check_count >= 28,
         "Expected >= 28 check functions, got {}",
-        stats.get("check_functions").unwrap()
+        check_count
+    );
+    assert!(
+        advise_count >= 15,
+        "Expected >= 15 advise functions, got {}",
+        advise_count
     );
 
     // Clean code should pass all checks
@@ -459,21 +525,24 @@ fn real_rust_review_policy_assertions(path: PathBuf) {
 
     // --- No emoji ---
 
-    // Emoji in string literal should fail
+    // Emoji in string literal should trigger advisory (but not block)
     let result = engine.check_code("let msg = \"Done ✅\";", "rust");
-    assert!(!result.passed);
     assert!(result
         .verdicts
         .iter()
-        .any(|v| v.rule_name == "check_no_emoji" && !v.passed));
+        .any(|v| v.rule_name == "advise_no_emoji" && !v.passed));
+    assert!(result
+        .verdicts
+        .iter()
+        .any(|v| v.rule_name == "advise_no_emoji"
+            && v.severity == kleis::review_mcp::engine::RuleSeverity::Advisory));
 
-    // Emoji in comment should fail
+    // Emoji in comment should trigger advisory
     let result = engine.check_code("// TODO: fix this 🐛\nfn f() {}", "rust");
-    assert!(!result.passed);
     assert!(result
         .verdicts
         .iter()
-        .any(|v| v.rule_name == "check_no_emoji" && !v.passed));
+        .any(|v| v.rule_name == "advise_no_emoji" && !v.passed));
 
     // Plain text should pass
     let result_clean = engine.check_code("let msg = \"Done\";", "rust");
@@ -481,8 +550,8 @@ fn real_rust_review_policy_assertions(path: PathBuf) {
         !result_clean
             .verdicts
             .iter()
-            .any(|v| v.rule_name == "check_no_emoji" && !v.passed),
-        "Plain text should pass check_no_emoji"
+            .any(|v| v.rule_name == "advise_no_emoji" && !v.passed),
+        "Plain text should pass advise_no_emoji"
     );
 }
 

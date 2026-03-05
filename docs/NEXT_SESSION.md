@@ -1,6 +1,54 @@
 # Next Session Notes
 
-**Last Updated:** March 5, 2026 (session 14 — Native Rust Scanner for Kleis Review)
+**Last Updated:** March 5, 2026 (session 15 — Advisory Severity Levels)
+
+---
+
+## Session 15 (Mar 5, 2026): Advisory Severity Levels for Review Rules
+
+### What Was Done
+
+**Advisory severity levels** — two-tier rule system (`check_*` = blocking error, `advise_*` = non-blocking advisory) so style/documentation rules don't break CI.
+
+- **Engine** (`src/review_mcp/engine.rs`): Added `RuleSeverity` enum (Error, Advisory), `severity` field on `RuleVerdict`, `AdviseFunction` variant on `ReviewRuleKind`. `check_code` and `check_diff` discover both prefixes; only `check_*` failures set `passed = false`. Summary shows three-way counts (errors/advisories/passed).
+- **CLI** (`src/bin/kleis.rs`): Advisory failures render as `⚠️` instead of `❌`. Only `check_*` failures contribute to exit code 1 — advisories never break CI.
+- **MCP Server** (`src/review_mcp/server.rs`): JSON verdicts include `"severity": "error"|"advisory"`. `list_rules` and `describe_standards` show separate sections. `explain_rule` reports severity-aware kind.
+- **Policy** (`examples/policies/rust_review_policy.kleis`): 19 rules renamed from `check_*` to `advise_*` (style, docs, team patterns, AI artifacts). 29 rules remain as blocking `check_*` (safety, security, clippy -D, structural).
+- **Tests** (`tests/review_mcp_test.rs`): 2 new tests (`test_advisory_failures_do_not_block`, `test_advisory_summary_counts`). Updated emoji test references and stat assertions. All 36 tests pass.
+
+### Note: LLM advisories (`--advise`) are a separate system
+
+The LLM advisory path (`src/review_mcp/advisory.rs`, `Advisory` struct with `severity: String`) is independent of `RuleSeverity`. Both are non-blocking, but they flow through different code paths. No unification was done — they're conceptually aligned but structurally separate.
+
+### Branch
+`feature/microsoft-rust-guidelines`
+
+### Files Changed
+- `src/review_mcp/engine.rs` — RuleSeverity enum, severity on verdicts, advise_* discovery
+- `src/review_mcp/server.rs` — severity in JSON, list_rules/explain_rule sections
+- `src/bin/kleis.rs` — advisory emoji rendering, exit code logic
+- `examples/policies/rust_review_policy.kleis` — 19 rules renamed to advise_*
+- `tests/review_mcp_test.rs` — 2 new tests, updated assertions
+
+### Microsoft Rust Guidelines Coverage Analysis
+
+The current policy covers **~15 of ~88** combined guidelines from the Microsoft Pragmatic Rust Guidelines and Rust API Guidelines. The covered rules are the ones mechanically detectable via string matching or structural AST analysis.
+
+**What the current scanner CAN'T address** (architectural/runtime, ~50 rules):
+M-SMALLER-CRATES, M-HOTPATH, M-THROUGHPUT, M-YIELD-POINTS, M-DESIGN-FOR-AI, M-MOCKABLE-SYSCALLS, M-IMPL-IO, M-INIT-CASCADED, M-INIT-BUILDER, M-DI-HIERARCHY, M-SIMPLE-ABSTRACTIONS, C-BUILDER, C-NEWTYPE, C-OBJECT, C-GENERIC, etc. These require human/LLM judgment or runtime profiling — the `--advise` LLM path is the right tool.
+
+**What an improved Rust parser/scanner COULD address** (~20-25 more rules):
+- **Type resolution** → M-PUBLIC-DISPLAY, M-TYPES-SEND, M-ERRORS-CANONICAL-STRUCTS, precise C-GOOD-ERR
+- **Trait impl tracking** → C-COMMON-TRAITS (Debug, Clone, PartialEq on pub types), C-CONV-TRAITS, C-DEREF
+- **Expression-level parsing** → M-PANIC-ON-BUG, M-REGULAR-FN, precise clippy-style checks
+- **Doc comment structure** → M-FIRST-DOC-SENTENCE, M-CANONICAL-DOCS, M-MODULE-DOCS, M-DOC-INLINE, per-fn C-FAILURE
+
+**Low-hanging fruit (no parser upgrade needed):**
+- M-DOC-INLINE: `pub use` without `#[doc(inline)]` — string match
+- M-PUBLIC-DISPLAY: pub structs missing `Display` derive — structural check (already have pub struct detection)
+- M-FIRST-DOC-SENTENCE: doc comment length — structural check on doc comments
+
+A parser with type resolution and trait impl tracking could bring coverage from ~15/88 to ~35-40/88.
 
 ---
 

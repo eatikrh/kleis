@@ -22,16 +22,17 @@ define check_no_allow_unused(source) =
 // --- Error handling ---
 
 define check_no_result_string(source) =
-    if contains(source, "Result<Self, String>") then "fail: Result<_, String> — use thiserror for typed errors"
-    else if contains(source, "Result<(), String>") then "fail: Result<(), String> — use thiserror for typed errors"
-    else if contains(source, ", String>") then "fail: possible Result<_, String> — prefer thiserror or anyhow"
+    if contains(source, "Result<Self, String>") then "fail: C-GOOD-ERR — Result<_, String> use thiserror for typed errors (https://rust-lang.github.io/api-guidelines/interoperability.html#c-good-err)"
+    else if contains(source, "Result<(), String>") then "fail: C-GOOD-ERR — Result<(), String> use thiserror for typed errors (https://rust-lang.github.io/api-guidelines/interoperability.html#c-good-err)"
+    else if contains(source, "Result<String, String>") then "fail: C-GOOD-ERR — Result<String, String> use thiserror for typed errors (https://rust-lang.github.io/api-guidelines/interoperability.html#c-good-err)"
+    else if contains(source, "Result<Vec<String>, String>") then "fail: C-GOOD-ERR — Result<_, String> use thiserror for typed errors (https://rust-lang.github.io/api-guidelines/interoperability.html#c-good-err)"
     else "pass"
 
 // --- Clippy discipline ---
 
 define check_no_clippy_suppression(source) =
-    if contains(source, "#[allow(clippy::") then "fail: clippy suppression — fix the lint instead of suppressing it"
-    else if contains(source, "#![allow(clippy::") then "fail: module-wide clippy suppression — fix the lints"
+    if contains(source, "#[allow(clippy::") then "fail: clippy suppression — fix the lint or use #[expect(clippy::..., reason = \"...\")] (https://microsoft.github.io/rust-guidelines/universal/#M-LINT-OVERRIDE-EXPECT)"
+    else if contains(source, "#![allow(clippy::") then "fail: module-wide clippy suppression — fix the lints or use #![expect(...)] (https://microsoft.github.io/rust-guidelines/universal/#M-LINT-OVERRIDE-EXPECT)"
     else "pass"
 
 define check_no_too_many_arguments(source) =
@@ -88,7 +89,7 @@ define check_clippy_expect_fun_call(source) =
 // --- No color emoji or decorative icons in Rust source ---
 // Unicode strings are fine; decorative emoji are not.
 
-define check_no_emoji(source) =
+define advise_no_emoji(source) =
     if contains(source, "✅") then "fail: color emoji in source — use plain text"
     else if contains(source, "❌") then "fail: color emoji in source — use plain text"
     else if contains(source, "🔥") then "fail: color emoji in source — use plain text"
@@ -114,7 +115,7 @@ define check_no_emoji(source) =
     else if contains(source, "➡️") then "fail: color emoji in source — use plain text"
     else "pass"
 
-define check_no_separator_comments(source) =
+define advise_no_separator_comments(source) =
     if contains(source, "// ====") then "fail: decorative separator comment — use blank lines instead"
     else if contains(source, "// ----") then "fail: decorative separator comment — use blank lines instead"
     else if contains(source, "// ****") then "fail: decorative separator comment — use blank lines instead"
@@ -123,8 +124,8 @@ define check_no_separator_comments(source) =
     else "pass"
 
 define check_no_transmute(source) =
-    if contains(source, "transmute(") then "fail: std::mem::transmute — use safe conversions (From/Into, as, bytemuck)"
-    else if contains(source, "transmute_copy(") then "fail: std::mem::transmute_copy — use safe conversions"
+    if contains(source, "transmute(") then "fail: M-UNSAFE — std::mem::transmute, use safe conversions (From/Into, as, bytemuck) (https://microsoft.github.io/rust-guidelines/safety/#M-UNSAFE)"
+    else if contains(source, "transmute_copy(") then "fail: M-UNSAFE — std::mem::transmute_copy, use safe conversions (https://microsoft.github.io/rust-guidelines/safety/#M-UNSAFE)"
     else "pass"
 
 define check_no_deprecated_syntax(source) =
@@ -132,18 +133,281 @@ define check_no_deprecated_syntax(source) =
     else if contains(source, "extern crate ") then "fail: extern crate is unnecessary since Rust 2018 — use 'use' imports"
     else "pass"
 
-define check_no_hardcoded_urls(source) =
-    if contains(source, "http://") then "fail: hardcoded HTTP URL — use configuration or constants"
-    else if contains(source, "https://") then "fail: hardcoded HTTPS URL — use configuration or constants"
+// Only flag hardcoded URLs in production code (skip test modules and doc comments).
+// Doc comment URLs (/// https://, //! https://) are legitimate references.
+define advise_no_hardcoded_urls(source) =
+    let prod = production_code(source) in
+    if contains(prod, "http://")
+    then if or(contains(prod, "http://localhost"), contains(prod, "http://127.0.0.1"))
+         then "pass"
+         else "fail: hardcoded HTTP URL in production code — use configuration or constants"
+    else if contains(prod, "https://")
+    then if or(contains(prod, "/// https://"), or(contains(prod, "//! https://"), contains(prod, "// https://")))
+         then "pass"
+         else "fail: hardcoded HTTPS URL in production code — use configuration or constants"
     else "pass"
 
-define check_no_ignored_tests(source) =
+define advise_no_ignored_tests(source) =
     if contains(source, "#[ignore]") then "fail: #[ignore] test — provide a reason or remove the test"
     else "pass"
 
-define check_no_needless_collect(source) =
+define advise_no_needless_collect(source) =
     if contains(source, ".collect::<Vec<") then "fail: possible needless .collect() — consider using iterator directly"
     else "pass"
+
+// =============================================================================
+// Microsoft Pragmatic Rust Guidelines + Rust API Guidelines
+// =============================================================================
+// Rules derived from:
+//   https://microsoft.github.io/rust-guidelines/
+//   https://rust-lang.github.io/api-guidelines/checklist.html
+// Only rules NOT already caught by default clippy lints are included here.
+
+// --- M-LOG-STRUCTURED: Structured logging with message templates ---
+// format! in logging allocates at runtime; use message templates instead.
+// https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED
+
+define advise_no_format_in_log(source) =
+    if contains(source, "tracing::info!(format!(")
+    then "fail: M-LOG-STRUCTURED — format! in tracing::info!, use message template instead (https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED)"
+    else if contains(source, "tracing::warn!(format!(")
+    then "fail: M-LOG-STRUCTURED — format! in tracing::warn!, use message template instead (https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED)"
+    else if contains(source, "tracing::error!(format!(")
+    then "fail: M-LOG-STRUCTURED — format! in tracing::error!, use message template instead (https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED)"
+    else if contains(source, "tracing::debug!(format!(")
+    then "fail: M-LOG-STRUCTURED — format! in tracing::debug!, use message template instead (https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED)"
+    else if contains(source, "log::info!(format!(")
+    then "fail: M-LOG-STRUCTURED — format! in log::info!, use message template instead (https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED)"
+    else if contains(source, "log::warn!(format!(")
+    then "fail: M-LOG-STRUCTURED — format! in log::warn!, use message template instead (https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED)"
+    else if contains(source, "log::error!(format!(")
+    then "fail: M-LOG-STRUCTURED — format! in log::error!, use message template instead (https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED)"
+    else if contains(source, "info!(format!(")
+    then "fail: M-LOG-STRUCTURED — format! in info!, use structured fields instead (https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED)"
+    else if contains(source, "warn!(format!(")
+    then "fail: M-LOG-STRUCTURED — format! in warn!, use structured fields instead (https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED)"
+    else if contains(source, "error!(format!(")
+    then "fail: M-LOG-STRUCTURED — format! in error!, use structured fields instead (https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED)"
+    else if contains(source, "debug!(format!(")
+    then "fail: M-LOG-STRUCTURED — format! in debug!, use structured fields instead (https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED)"
+    else "pass"
+
+// --- C-CONV-TRAITS: Conversions use standard traits From, AsRef, AsMut ---
+// impl Into<T> and impl TryInto<T> should never be implemented directly;
+// implement From<T> and TryFrom<T> instead (blanket impls cover Into/TryInto).
+// https://rust-lang.github.io/api-guidelines/interoperability.html#c-conv-traits
+
+define check_no_impl_into(source) =
+    if contains(source, "impl Into<")
+    then "fail: C-CONV-TRAITS — implement From<T> instead of Into<T> (blanket impl covers Into) (https://rust-lang.github.io/api-guidelines/interoperability.html#c-conv-traits)"
+    else if contains(source, "impl TryInto<")
+    then "fail: C-CONV-TRAITS — implement TryFrom<T> instead of TryInto<T> (blanket impl covers TryInto) (https://rust-lang.github.io/api-guidelines/interoperability.html#c-conv-traits)"
+    else "pass"
+
+// --- M-UNSAFE: unsafe needs reason, should be avoided ---
+// Every unsafe block must have a // SAFETY: comment explaining invariants.
+// Clippy has undocumented_unsafe_blocks but only in restriction group (opt-in).
+// https://microsoft.github.io/rust-guidelines/safety/#M-UNSAFE
+
+define check_unsafe_documented(source) =
+    if and(contains(source, "unsafe {"), not(contains(source, "// SAFETY:")))
+    then "fail: M-UNSAFE — unsafe block without // SAFETY: comment explaining invariants (https://microsoft.github.io/rust-guidelines/safety/#M-UNSAFE)"
+    else "pass"
+
+// --- C-GOOD-ERR: Error types are meaningful and well-behaved ---
+// Never use () as an error type.
+// Clippy has result_unit_err but only in pedantic group (opt-in).
+// https://rust-lang.github.io/api-guidelines/interoperability.html#c-good-err
+
+define check_no_unit_error(source) =
+    if contains(source, "Result<(), ()>")
+    then "fail: C-GOOD-ERR — Result<(), ()> uses unit error type, define a meaningful error (https://rust-lang.github.io/api-guidelines/interoperability.html#c-good-err)"
+    else if contains(source, "Result<bool, ()>")
+    then "fail: C-GOOD-ERR — Result<_, ()> uses unit error type, define a meaningful error (https://rust-lang.github.io/api-guidelines/interoperability.html#c-good-err)"
+    else if contains(source, "Result<String, ()>")
+    then "fail: C-GOOD-ERR — Result<_, ()> uses unit error type, define a meaningful error (https://rust-lang.github.io/api-guidelines/interoperability.html#c-good-err)"
+    else if contains(source, "Result<usize, ()>")
+    then "fail: C-GOOD-ERR — Result<_, ()> uses unit error type, define a meaningful error (https://rust-lang.github.io/api-guidelines/interoperability.html#c-good-err)"
+    else "pass"
+
+// --- M-NO-GLOB-REEXPORTS: Don't glob re-export items ---
+// pub use foo::* can accidentally leak unintended types.
+// Clippy does not catch this.
+// https://microsoft.github.io/rust-guidelines/libs/resilience/#M-NO-GLOB-REEXPORTS
+
+define check_no_glob_reexport(source) =
+    if contains(source, "pub use ")
+    then if contains(source, "::*;")
+         then "fail: M-NO-GLOB-REEXPORTS — pub use with glob re-export, list items explicitly (https://microsoft.github.io/rust-guidelines/libs/resilience/#M-NO-GLOB-REEXPORTS)"
+         else "pass"
+    else "pass"
+
+// --- C-GETTER: Getter names follow Rust convention ---
+// The get_ prefix is not used for getters in Rust.
+// Clippy does not catch this.
+// https://rust-lang.github.io/api-guidelines/naming.html#c-getter
+
+// Only flag get_ on &self methods (field getters). Exclude: get_unchecked, get_mut,
+// get_or_, get_ref, get_all, get_from, get_user (lookup/query methods are fine).
+define advise_no_get_prefix(source) =
+    if and(contains(source, "fn get_"), contains(source, "&self"))
+    then if or(contains(source, "fn get_unchecked"),
+           or(contains(source, "fn get_mut"),
+           or(contains(source, "fn get_or_"),
+           or(contains(source, "fn get_ref"),
+           or(contains(source, "fn get_all"),
+           or(contains(source, "fn get_from"),
+           or(contains(source, "fn get_user"),
+           or(contains(source, "fn get_paths"),
+              contains(source, "fn get_by")))))))))
+         then "pass"
+         else "fail: C-GETTER — fn get_ prefix on &self getter, use field name directly: foo() not get_foo() (https://rust-lang.github.io/api-guidelines/naming.html#c-getter)"
+    else "pass"
+
+// --- M-AVOID-STATICS: Libraries should avoid static items ---
+// static mut is unsound in most contexts and being deprecated.
+// Clippy does not specifically flag static mut declarations.
+// https://microsoft.github.io/rust-guidelines/libs/resilience/#M-AVOID-STATICS
+
+define check_no_static_mut(source) =
+    if contains(source, "static mut ")
+    then "fail: M-AVOID-STATICS — static mut is unsound in most contexts, use AtomicT, Mutex, or OnceLock instead (https://microsoft.github.io/rust-guidelines/libs/resilience/#M-AVOID-STATICS)"
+    else "pass"
+
+// --- M-AVOID-WRAPPERS: Avoid smart pointers and wrappers in APIs ---
+// Arc<Mutex<...>> in public fn signatures exposes implementation details.
+// Clippy does not catch this.
+// https://microsoft.github.io/rust-guidelines/libs/ux/#M-AVOID-WRAPPERS
+
+define check_no_arc_mutex_api(source) =
+    if contains(source, "pub fn ")
+    then if contains(source, "Arc<Mutex<")
+         then "fail: M-AVOID-WRAPPERS — Arc<Mutex<>> in public API, hide behind a clean interface (https://microsoft.github.io/rust-guidelines/libs/ux/#M-AVOID-WRAPPERS)"
+         else if contains(source, "Rc<RefCell<")
+              then "fail: M-AVOID-WRAPPERS — Rc<RefCell<>> in public API, hide behind a clean interface (https://microsoft.github.io/rust-guidelines/libs/ux/#M-AVOID-WRAPPERS)"
+              else "pass"
+    else "pass"
+
+// --- M-CONCISE-NAMES: Names are free of weasel words ---
+// Type names should not contain Service, Manager, Factory.
+// Clippy does not catch this.
+// https://microsoft.github.io/rust-guidelines/universal/#M-CONCISE-NAMES
+
+define rule_weasel_word_types(c: Crate) : String =
+    let structs = crate_structs(c) in
+    weasel_word_acc(structs, "")
+
+define weasel_word_acc(structs: List(StructDecl), acc: String) : String =
+    match structs {
+        Nil => acc
+      | Cons(s, rest) =>
+            let n = struct_name(s) in
+            if contains(n, "Service")
+            then weasel_word_acc(rest,
+                append_name(acc, concat("M-CONCISE-NAMES — weasel word 'Service' in type name, be more specific: ",
+                    concat(name_at(n, struct_line(s)), " (https://microsoft.github.io/rust-guidelines/universal/#M-CONCISE-NAMES)"))))
+            else if contains(n, "Manager")
+            then weasel_word_acc(rest,
+                append_name(acc, concat("M-CONCISE-NAMES — weasel word 'Manager' in type name, be more specific: ",
+                    concat(name_at(n, struct_line(s)), " (https://microsoft.github.io/rust-guidelines/universal/#M-CONCISE-NAMES)"))))
+            else if contains(n, "Factory")
+            then weasel_word_acc(rest,
+                append_name(acc, concat("M-CONCISE-NAMES — weasel word 'Factory' in type name, use Builder: ",
+                    concat(name_at(n, struct_line(s)), " (https://microsoft.github.io/rust-guidelines/universal/#M-CONCISE-NAMES)"))))
+            else weasel_word_acc(rest, acc)
+    }
+
+// --- M-PANIC-IS-STOP: Panic means 'stop the program' ---
+// .expect("") with an empty message is a programming error indicator without context.
+// https://microsoft.github.io/rust-guidelines/universal/#M-PANIC-IS-STOP
+
+define advise_expect_has_message(source) =
+    if contains(source, ".expect(\"\")")
+    then "fail: M-PANIC-IS-STOP — .expect(\"\") with empty message, provide context for the panic (https://microsoft.github.io/rust-guidelines/universal/#M-PANIC-IS-STOP)"
+    else "pass"
+
+// --- M-DOCUMENTED-MAGIC: Magic values are documented ---
+// Hardcoded timeout/retry/size values without named constants.
+// Clippy does not catch domain-specific magic numbers.
+// https://microsoft.github.io/rust-guidelines/universal/#M-DOCUMENTED-MAGIC
+
+define advise_no_magic_timeout(source) =
+    if and(contains(source, "Duration::from_secs("), not(contains(source, "const ")))
+    then if or(contains(source, "Duration::from_secs(60)"), or(contains(source, "Duration::from_secs(3600)"), contains(source, "Duration::from_secs(86400)")))
+         then "fail: M-DOCUMENTED-MAGIC — magic timeout value, use a named constant with a comment (https://microsoft.github.io/rust-guidelines/universal/#M-DOCUMENTED-MAGIC)"
+         else "pass"
+    else "pass"
+
+// --- C-FAILURE: Function docs include error, panic, and safety considerations ---
+// Functions returning Result should have # Errors doc section.
+// Functions with unsafe should have # Safety doc section.
+// Clippy does not check for missing # Errors sections.
+// https://rust-lang.github.io/api-guidelines/documentation.html#c-failure
+
+define rule_result_fn_missing_errors_doc(source: String, c: Crate) : String =
+    let fns = crate_functions(c) in
+    result_errors_doc_acc(source, fns, "")
+
+define result_errors_doc_acc(source: String, fns: List(Function), acc: String) : String =
+    match fns {
+        Nil => acc
+      | Cons(f, rest) =>
+            let n = fn_name(f) in
+            let ret = fn_return_type(f) in
+            if and(fn_is_pub(f), not(fn_is_test(f)))
+            then if and(contains(ret, "Result"), not(contains(source, "# Errors")))
+                 then result_errors_doc_acc(source, rest,
+                     append_name(acc, concat("C-FAILURE — pub fn returning Result missing '# Errors' doc section: ",
+                         concat(name_at(n, fn_line(f)), " (https://rust-lang.github.io/api-guidelines/documentation.html#c-failure)"))))
+                 else result_errors_doc_acc(source, rest, acc)
+            else result_errors_doc_acc(source, rest, acc)
+    }
+
+// =============================================================================
+// Wiring: add guideline rules to check_structural
+// =============================================================================
+
+// --- M-PUBLIC-DEBUG / C-COMMON-TRAITS: Public types should implement Debug ---
+// Most pub structs should derive Debug. Clippy has missing_debug_implementations
+// but only as a compiler lint (opt-in). This is frequently forgotten.
+// https://microsoft.github.io/rust-guidelines/universal/#M-PUBLIC-DEBUG
+// https://rust-lang.github.io/api-guidelines/interoperability.html#c-common-traits
+
+define rule_pub_struct_missing_debug(source: String, c: Crate) : String =
+    let structs = crate_structs(c) in
+    pub_struct_debug_acc(source, structs, "")
+
+define pub_struct_debug_acc(source: String, structs: List(StructDecl), acc: String) : String =
+    match structs {
+        Nil => acc
+      | Cons(s, rest) =>
+            if struct_is_pub(s)
+            then let n = struct_name(s) in
+                 if or(contains(source, "derive(Debug"), contains(source, ", Debug"))
+                 then pub_struct_debug_acc(source, rest, acc)
+                 else pub_struct_debug_acc(source, rest,
+                     append_name(acc, concat("M-PUBLIC-DEBUG — pub struct missing #[derive(Debug)]: ",
+                         concat(name_at(n, struct_line(s)), " (https://microsoft.github.io/rust-guidelines/universal/#M-PUBLIC-DEBUG)"))))
+            else pub_struct_debug_acc(source, rest, acc)
+    }
+
+define advise_pub_struct_debug(source) =
+    let c = scan(source) in
+    let f1 = rule_pub_struct_missing_debug(source, c) in
+    if eq(f1, "") then "pass"
+    else concat("fail: ", f1)
+
+define advise_weasel_word_types(source) =
+    let c = scan(source) in
+    let f1 = rule_weasel_word_types(c) in
+    if eq(f1, "") then "pass"
+    else concat("fail: ", f1)
+
+define advise_result_fn_errors_doc(source) =
+    let c = scan(source) in
+    let f1 = rule_result_fn_missing_errors_doc(source, c) in
+    if eq(f1, "") then "pass"
+    else concat("fail: ", f1)
 
 // --- STRIDE threat model coverage ---
 
@@ -198,7 +462,7 @@ define check_no_command_injection(source) =
 
 // --- Team review patterns (inferred from human code reviews) ---
 
-define check_no_debug_serialization(source) =
+define advise_no_debug_serialization(source) =
     if and(contains(source, "serde_json::to_string"), contains(source, "debug!("))
     then "fail: serde_json::to_string in debug! — use {:?} instead of serializing"
     else if and(contains(source, "serde_json::to_string"), contains(source, "tracing::debug"))
@@ -207,12 +471,12 @@ define check_no_debug_serialization(source) =
     then "fail: serde_yml::to_string in debug! — use {:?} instead of serializing"
     else "pass"
 
-define check_no_ambiguous_status_match(source) =
+define advise_no_ambiguous_status_match(source) =
     if contains(source, "| StatusCode::")
     then "fail: OR'd status codes in match — each endpoint returns one status code, verify which one"
     else "pass"
 
-define check_no_client_layer_filtering(source) =
+define advise_no_client_layer_filtering(source) =
     if and(contains(source, "fn find_by_name"), contains(source, ".iter()"))
     then "fail: find_by_name with .iter() — client should use API search, not filter in code"
     else if and(contains(source, "fn list_"), contains(source, ".filter("))
@@ -223,7 +487,7 @@ define check_no_client_layer_filtering(source) =
 
 // --- AI-generated artifacts (gpt-5.3-codex style signatures) ---
 
-define check_no_step_comments(source) =
+define advise_no_step_comments(source) =
     if contains(source, "// Step 1")
     then "fail: numbered step comments — AI artifact, refactor into named functions"
     else if contains(source, "// Step 2")
@@ -232,14 +496,14 @@ define check_no_step_comments(source) =
     then "fail: numbered step comments — AI artifact, refactor into named functions"
     else "pass"
 
-define check_no_region_comments(source) =
+define advise_no_region_comments(source) =
     if contains(source, "// region")
     then "fail: IDE region marker — AI artifact, use modules/blank lines for organization"
     else if contains(source, "// endregion")
     then "fail: IDE region marker — AI artifact, use modules/blank lines for organization"
     else "pass"
 
-define check_no_ai_breadcrumbs(source) =
+define advise_no_ai_breadcrumbs(source) =
     if contains(source, "AI-generated")
     then "fail: AI breadcrumb in source — remove generation attribution comments"
     else if contains(source, "Generated by ChatGPT")
@@ -250,7 +514,7 @@ define check_no_ai_breadcrumbs(source) =
     then "fail: AI breadcrumb in source — remove generation attribution comments"
     else "pass"
 
-define check_no_self_referential_docs(source) =
+define advise_no_self_referential_docs(source) =
     if contains(source, "/// This function")
     then "fail: self-referential doc comment — describe intent/behavior, not boilerplate"
     else if contains(source, "/// This method")
