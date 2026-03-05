@@ -13,7 +13,7 @@
 
 import "stdlib/prelude.kleis"
 import "stdlib/templates/arxiv_paper.kleis"
-import "../../../theories/pot_flat_rotation_v3.kleis"
+import "../../theories/pot_flat_rotation_v3.kleis"
 
 // =============================================================================
 // Paper Metadata

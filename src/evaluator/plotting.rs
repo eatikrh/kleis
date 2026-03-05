@@ -457,7 +457,7 @@ impl Evaluator {
         let v = self.eval_concrete(&args[0])?;
         match v {
             Expression::String(s) | Expression::Const(s) | Expression::Object(s) => {
-                Ok(Some(Expression::Object(self.unescape_basic(&s))))
+                Ok(Some(Expression::Object(s)))
             }
             other => Err(format!(
                 "typst_raw(): expected string/object, got {:?}",

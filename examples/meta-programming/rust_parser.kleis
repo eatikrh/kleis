@@ -620,14 +620,11 @@ define initial_state : ScanState =
     State(Nil, Nil, Nil, 0, false, 1)
 
 // Main entry point: scan a Rust source string into a Crate
-// Uses the built-in foldLines for O(n) iterative processing — no recursion,
-// no stack overflow, handles 10K+ line files.
+// Delegates to the native Rust scanner (scan_rust builtin) for performance.
+// The native scanner emits identical Kleis ASTs; all helper functions below
+// continue to work unchanged.
 define scan(source: String) : Crate =
-    let final_state = foldLines(scan_one_line, initial_state, source) in
-    match final_state {
-        State(items, comments, _, _, _, line_num) =>
-            Crate(rev_items(items), rev_comments(comments), line_num - 1)
-    }
+    scan_rust(source)
 
 // Convenience: scan a file from disk
 define scan_file(path: String) : Crate =

@@ -282,6 +282,31 @@ impl KleisParser {
         Ok(self.input[start..self.pos].iter().collect())
     }
 
+    /// Unescape a raw string literal content at parse time.
+    /// Handles: \n → newline, \t → tab, \" → ", \\ → \
+    fn unescape_string(raw: &str) -> String {
+        let mut out = String::with_capacity(raw.len());
+        let mut chars = raw.chars();
+        while let Some(c) = chars.next() {
+            if c == '\\' {
+                match chars.next() {
+                    Some('n') => out.push('\n'),
+                    Some('t') => out.push('\t'),
+                    Some('"') => out.push('"'),
+                    Some('\\') => out.push('\\'),
+                    Some(other) => {
+                        out.push('\\');
+                        out.push(other);
+                    }
+                    None => out.push('\\'),
+                }
+            } else {
+                out.push(c);
+            }
+        }
+        out
+    }
+
     /// Parse a string literal enclosed in double quotes
     /// Example: "path/to/file.kleis"
     fn parse_string_literal(&mut self) -> Result<String, KleisParseError> {
@@ -309,7 +334,7 @@ impl KleisParser {
             }
         }
 
-        let content: String = self.input[start..self.pos].iter().collect();
+        let raw: String = self.input[start..self.pos].iter().collect();
 
         if self.peek() != Some('"') {
             return Err(KleisParseError {
@@ -319,7 +344,7 @@ impl KleisParser {
         }
         self.advance(); // consume closing "
 
-        Ok(content)
+        Ok(Self::unescape_string(&raw))
     }
 
     fn parse_arguments(&mut self) -> Result<Vec<Expression>, KleisParseError> {

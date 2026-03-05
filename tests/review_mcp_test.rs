@@ -332,8 +332,8 @@ fn real_rust_review_policy_assertions(path: PathBuf) {
         .iter()
         .any(|v| v.rule_name == "check_clean_structural" && !v.passed));
 
-    // Code with hardcoded password should fail (check_secure_structural)
-    let result = engine.check_code("fn init() {\n    let password = get_secret();\n}", "rust");
+    // Code with hardcoded password literal should fail (check_secure_structural)
+    let result = engine.check_code("fn init() {\n    let password = \"hunter2\";\n}", "rust");
     assert!(!result.passed);
     assert!(result
         .verdicts

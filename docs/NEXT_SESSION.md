@@ -1,6 +1,86 @@
 # Next Session Notes
 
-**Last Updated:** March 4, 2026 (session 12 — Polyglot review: Python MCP + end-to-end validation)
+**Last Updated:** March 5, 2026 (session 14 — Native Rust Scanner for Kleis Review)
+
+---
+
+## Session 14 (Mar 5, 2026): Native Rust Scanner (`scan_rust` builtin)
+
+### What Was Done
+
+**Native Rust structural scanner** — hand-written tokenizer + recursive descent parser (~2400 lines, zero dependencies) that emits Kleis AST identical to the Kleis-based `scan()` in `rust_parser.kleis`.
+
+- **Tokenizer**: Handles string literals (including raw strings `r#"..."#`), all 6 comment types (line, outer/inner line doc, block, outer/inner block doc with nesting), attributes, keywords, punctuation, lifetimes, spans with line numbers.
+- **Recursive descent parser**: Parses top-level items (fn, struct, enum, trait, impl, use, mod, const, static, type, macro_rules!), visibility variants (pub, pub(crate), pub(super), pub(self)), function qualifiers (async, const, unsafe, extern), generic parameters, `where` clauses, and computes `body_line_count` + `max_nesting` for function bodies.
+- **Kleis AST emission**: Internal Rust AST types (`FnDecl`, `StructDecl`, etc.) convert to Kleis `Expression` via `to_expr()` methods, producing `Crate(items, comments, line_count)` — identical structure to the Kleis-based scanner.
+- **`\n` auto-detection**: Matches the `foldLines` builtin behavior — detects whether source contains real newlines or escaped two-char `\n` from Kleis string literals.
+- **`scan()` delegation**: `rust_parser.kleis` now delegates `scan(source)` to the native `scan_rust(source)` builtin. All 146 helper functions, 17 data types, and review query functions are unchanged.
+- **19 Rust unit tests** + **25/25 Kleis example tests** pass.
+- **`kleis review` integration verified** — ran against `verify-cli/src/storage/*.rs` (8 files, 86 rules). Structural rules (`check_structural`, `check_safe_structural`, `check_secure_structural`) fire correctly with accurate line numbers.
+
+### Resolved Limitations
+
+These limitations from the Kleis-based scanner are now fixed:
+
+1. ~~**Brace depth is lexical, not semantic.**~~ — **RESOLVED**: The native tokenizer skips braces inside string literals and comments.
+2. ~~**Block comments are not nest-aware.**~~ — **RESOLVED**: The native tokenizer correctly handles nested block comments (`/* /* */ */`).
+3. ~~**Multi-line item headers may be incomplete.**~~ — **RESOLVED**: The native parser operates on the full token stream, so multi-line function signatures, `where` clauses, and attributes parse correctly.
+
+### Branch
+`feature/rust-scanner`
+
+### Files Changed
+- `src/rust_scanner/mod.rs` — module root (new)
+- `src/rust_scanner/scanner.rs` — tokenizer + parser + Kleis AST emission (new, ~2400 lines)
+- `src/lib.rs` — added `pub mod rust_scanner`
+- `src/evaluator/builtins.rs` — `scan_rust` builtin registration
+- `examples/meta-programming/rust_parser.kleis` — `scan()` delegates to `scan_rust()`
+
+### Architecture: Why Hand-Written
+
+Evaluated Pest (PEG), LALRPOP (LR(1)), Nom (combinators), and rust-peg. All add dependencies and generate full expression/type parsers we don't need. The native scanner only needs structural extraction (items, signatures, metrics) — a two-phase tokenizer + recursive descent is the right tool. Grammar reference: IntelliJ Rust BNF (MIT).
+
+### Performance
+
+The native scanner processes the full token stream in a single pass. Previously, `scan()` used Kleis-interpreted `foldLines` which executed hundreds of Kleis function calls per source line. The native version eliminates this overhead entirely.
+
+---
+
+## Session 13 (Mar 5, 2026): Equation Editor Z3 + Axiom Consistency Investigation
+
+### What Was Done
+
+**Equation Editor witness display** (stashed, not merged)
+- Wired `PrettyPrinter` into `check_sat_handler` and `verify_handler` for human-readable Z3 witness output
+- Tracked free variables in `quantifier_vars` so `model_to_witness` extracts structured bindings
+
+**Axiom loading investigation** (stashed, not merged)
+- Loading ALL stdlib axioms at once via `initialize_from_registry()` causes UNSAT — but **the individual axioms are proven correct** (tensor symmetries, Einstein equations, Bell violations, Cartan algebra all pass their Z3 proofs)
+- The issue is **bulk loading strategy**, not axiom correctness. Each `.kleis` proof file loads only the structures it needs; the Equation Editor was the first place we tried loading everything into one Z3 context
+- When abstract algebra structures (`Field(F)`, `Ring(R)`) are loaded with type parameters defaulting to `Int`, and `×` maps to Z3's integer multiplication, the combination creates unsatisfiable constraints — but that's a loading problem, not a math problem
+- Added `ConsInjectivity` and `MatrixInjectivity` axioms to stdlib (stashed) — mathematically correct, need proper loading context
+
+### Key Finding: Equation Editor Needs Selective Axiom Loading
+
+The Equation Editor should load axioms the same way `.kleis` proof files do — selectively, based on what the user is working with. The `initialize_from_registry()` bulk-load approach was the wrong strategy. Options:
+1. **Load on demand** — detect which structures the expression references, load only those
+2. **User-driven** — let the user choose which theory context to work in (matrices, tensors, etc.)
+3. **Expression analysis** — inspect the AST for operation names, load matching structures
+
+### Branch
+`fix/equation-editor-witness-display` — changes stashed (`git stash`), branch clean
+
+### Stashed Changes
+- `src/bin/server.rs` — PrettyPrinter witness display + `initialize_from_registry()` call
+- `src/solvers/z3/backend.rs` — parametric structure skip filter + free var tracking
+- `stdlib/lists.kleis` — `ConsInjectivity` axioms
+- `stdlib/matrices.kleis` — `MatrixInjectivity` axioms
+- `docs/NEXT_SESSION.md` — session notes
+
+### Open Items
+1. **Equation Editor witness display** — the PrettyPrinter fix itself is clean and correct, but was bundled with the axiom loading work. Could be extracted as a standalone change.
+2. **Selective axiom loading for Equation Editor** — needs a strategy to load only relevant structures (like `.kleis` files do), not all 68+ at once.
+3. **Matrix Z3 semantics** — `ConsInjectivity` and `MatrixInjectivity` axioms are ready (stashed), need proper loading context in the Equation Editor.
 
 ---
 
@@ -97,15 +177,15 @@ If structural rules need expression-level detail, add `ruff_python_parser` (MIT,
 
 ### Known Limitations: `rust_parser.kleis` Structural Scanner
 
-The Kleis-based Rust structural parser (`rust_parser.kleis`) is intentionally **not** a compiler-grade parser. It's a lightweight scanner for review tooling. Rule authors should be aware of these sharp edges:
+The Rust structural parser now delegates to a native Rust scanner (`scan_rust` builtin, session 14). Most previous limitations are resolved:
 
-1. **Brace depth is lexical, not semantic.** `brace_delta(line)` counts `{`/`}` even inside string literals, raw strings, and comments. This can skew nesting depth and any body-size metrics. Fix: a lightweight string/comment-aware brace counter (still not a full tokenizer).
+1. ~~**Brace depth is lexical, not semantic.**~~ — **RESOLVED** (session 14): Native tokenizer skips braces inside strings/comments.
 
-2. **Block comments are not nest-aware.** Continuation detection uses `contains("*/")`, but Rust block comments can nest (`/* /* */ */`). Robust "ignore content in comments" needs a nesting counter rather than a boolean `in_block`.
+2. ~~**Block comments are not nest-aware.**~~ — **RESOLVED** (session 14): Native tokenizer handles nested block comments.
 
-3. **Multi-line item headers may be incomplete.** Function signatures, `where` clauses, and attributes can span lines. The scanner works line-by-line, so some item facts may be partial unless a "header accumulation" mode is added.
+3. ~~**Multi-line item headers may be incomplete.**~~ — **RESOLVED** (session 14): Native parser operates on full token stream.
 
-4. **Macros can masquerade as items.** `macro_rules!`, attribute macros, and DSL-like macros can confuse `is_*_line` heuristics. This is acceptable for review tooling but should be documented so users don't assume compiler-grade accuracy.
+4. **Macros can masquerade as items.** `macro_rules!` is parsed; attribute macros and DSL-like macros may confuse item detection. Acceptable for review tooling.
 
 ### Known Limitations: `kleis_review_policy.kleis` Checks
 
