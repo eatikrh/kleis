@@ -44,7 +44,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-52ea9a2a.js";
+            window.path_to_searchindex_js = "searchindex-5c3a345e.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-3f3d019b.js"></script>
@@ -9050,11 +9050,14 @@ the input and returns a per-rule verdict.</p>
 </table>
 </div>
 <p>Tier 1 runs simple pattern matching — fast but context-blind.
-Tier 2 parses the source into a <code>Crate</code> AST using a structural parser written
-in Kleis itself (<code>rust_parser.kleis</code>), then queries the AST for functions,
+Tier 2 parses the source into a <code>Crate</code> AST and queries it for functions,
 structs, use declarations, and comments. This enables context-aware analysis:
 <code>.unwrap()</code> in a <code>#[test]</code> function is fine; <code>.unwrap()</code> in production code
-is flagged. Tier 3 uses Z3 to prove properties hold universally.</p>
+is flagged. The structural parser was originally written in pure Kleis
+(<code>rust_parser.kleis</code>) — a Rust parser written in Kleis itself. For performance,
+<code>scan()</code> now delegates to a native Rust tokenizer and recursive descent parser
+(<code>scan_rust</code> builtin), while all query helpers and data types remain in Kleis.
+Tier 3 uses Z3 to prove properties hold universally.</p>
 <h3 id="the-standards-file"><a class="header" href="#the-standards-file">The Standards File</a></h3>
 <p>The standards file is a <code>.kleis</code> file. It imports the structural parser and
 defines rules at each tier. Here is a representative sample:</p>
@@ -9141,7 +9144,7 @@ inputs.</p>
 <tr><td><code>check_structural</code></td><td>Wildcard imports, narrating comments, missing pub fn docs, too many params (&gt;5), function/struct naming, function count (&gt;50), missing tests</td></tr>
 <tr><td><code>check_safe_structural</code></td><td><code>.unwrap()</code>, <code>panic!()</code>, <code>unsafe {}</code> — skips test functions</td></tr>
 <tr><td><code>check_clean_structural</code></td><td><code>println!()</code>, <code>todo!()</code>, <code>dbg!()</code> — skips test functions</td></tr>
-<tr><td><code>check_secure_structural</code></td><td>Hardcoded <code>password =</code>, <code>secret =</code>, <code>api_key =</code> — skips test code</td></tr>
+<tr><td><code>check_secure_structural</code></td><td>Hardcoded credential string literals (<code>password = "..."</code>, <code>secret = "..."</code>) — skips test code</td></tr>
 <tr><td><code>check_sql_safe_structural</code></td><td><code>format!</code> with SQL keywords, <code>.push_str</code> with <code>WHERE</code> — skips test code</td></tr>
 </tbody>
 </table>
