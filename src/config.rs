@@ -48,6 +48,9 @@ pub struct LlmConfig {
     pub endpoint: String,
     /// Model name (e.g. "gpt-4o-mini", "llama3.2:latest")
     pub model: String,
+    /// Path to a guidelines file for LLM advisory prompts.
+    /// Overrides per-language auto-discovery when set.
+    pub guidelines_file: Option<String>,
 }
 
 impl Default for KleisConfig {
@@ -70,6 +73,7 @@ impl Default for KleisConfig {
             llm: LlmConfig {
                 endpoint: "https://api.openai.com/v1/chat/completions".to_string(),
                 model: "gpt-4o-mini".to_string(),
+                guidelines_file: None,
             },
         }
     }
@@ -152,6 +156,7 @@ struct PartialTheory {
 struct PartialLlm {
     endpoint: Option<String>,
     model: Option<String>,
+    guidelines_file: Option<String>,
 }
 
 fn read_partial(path: &std::path::Path) -> Option<PartialConfig> {
@@ -204,6 +209,9 @@ impl KleisConfig {
             if let Some(model) = l.model {
                 self.llm.model = model;
             }
+            if let Some(guidelines_file) = l.guidelines_file {
+                self.llm.guidelines_file = Some(guidelines_file);
+            }
         }
     }
 }
@@ -242,5 +250,8 @@ fn apply_env_overrides(cfg: &mut KleisConfig) {
     }
     if let Ok(v) = std::env::var("KLEIS_LLM_MODEL") {
         cfg.llm.model = v;
+    }
+    if let Ok(v) = std::env::var("KLEIS_LLM_GUIDELINES_FILE") {
+        cfg.llm.guidelines_file = Some(v);
     }
 }

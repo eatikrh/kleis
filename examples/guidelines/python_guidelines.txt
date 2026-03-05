@@ -1,0 +1,13 @@
+# Python Code Review Guidelines
+#
+# Add your team's Python coding standards here. Examples:
+# - PEP 8 style guide
+# - Type annotation requirements
+# - Project-specific patterns
+#
+# This file is loaded automatically when reviewing Python files with
+# `kleis review --advise`. The contents are included in the LLM system
+# prompt so the reviewer checks against these standards.
+#
+# Format: plain text or markdown. The LLM will interpret the content
+# as coding guidelines to enforce during review.

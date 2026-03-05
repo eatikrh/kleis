@@ -772,7 +772,7 @@ fn run_review(
     }
 
     let kleis_cfg = kleis::config::load();
-    let llm_config = if advise {
+    let mut llm_config = if advise {
         match AdvisoryConfig::from_config(&kleis_cfg.llm) {
             Some(cfg) => {
                 if verbose {
@@ -842,6 +842,9 @@ fn run_review(
         }
     };
 
+    let formal_rule_names: Vec<String> =
+        engine.list_rules().iter().map(|r| r.name.clone()).collect();
+
     let has_diff_checks = engine.has_diff_checks();
     let has_diff_filter = engine.has_diff_file_filter();
 
@@ -858,6 +861,25 @@ fn run_review(
                 "not defined (diff checks run for all files)"
             }
         );
+    }
+
+    // Load per-language LLM guidelines once at startup.
+    // Uses first target file's language for initial resolution; reloads if language changes.
+    if let Some(ref mut cfg) = llm_config {
+        if let Some(first) = files.first() {
+            let lang = language_from_path(first);
+            cfg.load_guidelines(&lang, &kleis_cfg.llm.guidelines_file);
+            if verbose {
+                if cfg.guidelines.is_some() {
+                    eprintln!("[kleis-review] Loaded {} guidelines for LLM prompt", lang);
+                } else {
+                    eprintln!(
+                        "[kleis-review] No guidelines file found for {}, using generic prompt",
+                        lang
+                    );
+                }
+            }
+        }
     }
 
     let rt = tokio::runtime::Handle::current();
@@ -1006,6 +1028,7 @@ fn run_review(
                     &path_str,
                     &language,
                     &formal_messages,
+                    &formal_rule_names,
                 ))
             }) {
                 Ok(advisories) if advisories.is_empty() => {
