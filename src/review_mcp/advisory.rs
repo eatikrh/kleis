@@ -25,7 +25,9 @@ mod inner {
     #[derive(Debug, Clone)]
     pub struct Advisory {
         pub check: String,
+        pub line: Option<u32>,
         pub severity: String,
+        pub evidence: Option<String>,
         pub reason: String,
     }
 
@@ -59,7 +61,9 @@ mod inner {
     #[derive(Deserialize)]
     struct AdvisoryItem {
         check: Option<String>,
+        line: Option<u32>,
         severity: Option<String>,
+        evidence: Option<String>,
         reason: Option<String>,
     }
 
@@ -200,10 +204,18 @@ mod inner {
              ## Coding Standards\n\n\
              {guidelines_text}\n\n\
              ---\n\n\
-             Be concise. Return ONLY a JSON array of findings. Each finding has:\n\
+             CRITICAL RULES:\n\
+             - Every finding MUST reference a specific line number from the code.\n\
+             - Every finding MUST include a short code snippet as evidence.\n\
+             - If you cannot point to a concrete line that violates a guideline, do NOT report it.\n\
+             - Do NOT report guidelines that are simply \"not demonstrated\" in the file.\n\
+             - Only report violations you can SEE in the provided code.\n\n\
+             Return ONLY a JSON array of findings. Each finding has:\n\
              - \"check\": the guideline ID (e.g. \"M-INIT-BUILDER\", \"C-NEWTYPE\")\n\
+             - \"line\": the line number where the violation occurs (integer)\n\
              - \"severity\": \"warning\" or \"info\"\n\
-             - \"reason\": one-sentence explanation\n\n\
+             - \"evidence\": the code snippet from that line (copy from the source)\n\
+             - \"reason\": one-sentence explanation of why this specific code violates the guideline\n\n\
              If the code looks good, return an empty array: []"
         )
     }
@@ -218,12 +230,29 @@ mod inner {
              IMPORTANT: A formal static analysis tool has already flagged some issues.\n\
              Those findings will be listed under \"Already flagged by formal checks\".\n\
              Do NOT repeat those. Only report NEW findings that the formal tool missed.\n\n\
-             Be concise. Return ONLY a JSON array of findings. Each finding has:\n\
+             CRITICAL RULES:\n\
+             - Every finding MUST reference a specific line number from the code.\n\
+             - Every finding MUST include a short code snippet as evidence.\n\
+             - If you cannot point to a concrete line, do NOT report it.\n\n\
+             Return ONLY a JSON array of findings. Each finding has:\n\
              - \"check\": short name (e.g. \"unnecessary-clone\")\n\
+             - \"line\": the line number where the issue occurs (integer)\n\
              - \"severity\": \"warning\" or \"info\"\n\
+             - \"evidence\": the code snippet from that line (copy from the source)\n\
              - \"reason\": one-sentence explanation\n\n\
              If the code looks good (beyond what was already flagged), return an empty array: []"
         )
+    }
+
+    fn add_line_numbers(source: &str) -> String {
+        let lines: Vec<&str> = source.lines().collect();
+        let width = lines.len().to_string().len();
+        lines
+            .iter()
+            .enumerate()
+            .map(|(i, line)| format!("{:>width$}| {line}", i + 1))
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 
     fn format_formal_findings(formal_messages: &[String]) -> String {
@@ -262,11 +291,12 @@ mod inner {
             _ => &lang_lower,
         };
 
+        let numbered_source = add_line_numbers(source);
         let already_flagged = format_formal_findings(formal_messages);
         let user_content = format!(
             "Review this {language} file ({file_path}):\n\n\
              Already flagged by formal checks:\n{already_flagged}\n\n\
-             ```{fence_tag}\n{source}\n```"
+             ```{fence_tag}\n{numbered_source}\n```"
         );
 
         let system_prompt =
@@ -331,9 +361,12 @@ mod inner {
 
         Ok(items
             .into_iter()
+            .filter(|item| item.line.is_some())
             .map(|item| Advisory {
                 check: item.check.unwrap_or_else(|| "unnamed".to_string()),
+                line: item.line,
                 severity: item.severity.unwrap_or_else(|| "info".to_string()),
+                evidence: item.evidence,
                 reason: item.reason.unwrap_or_else(|| "no reason given".to_string()),
             })
             .collect())
@@ -345,25 +378,49 @@ mod inner {
 
         #[test]
         fn parse_clean_json() {
-            let input = r#"[{"check":"unnecessary-clone","severity":"warning","reason":"Clone is not needed here."}]"#;
+            let input = r#"[{"check":"unnecessary-clone","line":42,"severity":"warning","evidence":"let x = y.clone();","reason":"Clone is not needed here."}]"#;
             let result = parse_advisories(input).unwrap();
             assert_eq!(result.len(), 1);
             assert_eq!(result[0].check, "unnecessary-clone");
+            assert_eq!(result[0].line, Some(42));
             assert_eq!(result[0].severity, "warning");
+            assert_eq!(result[0].evidence.as_deref(), Some("let x = y.clone();"));
         }
 
         #[test]
         fn parse_markdown_fenced_json() {
-            let input = "```json\n[{\"check\":\"use-iter\",\"severity\":\"info\",\"reason\":\"Use iterator.\"}]\n```";
+            let input = "```json\n[{\"check\":\"use-iter\",\"line\":10,\"severity\":\"info\",\"reason\":\"Use iterator.\"}]\n```";
             let result = parse_advisories(input).unwrap();
             assert_eq!(result.len(), 1);
             assert_eq!(result[0].check, "use-iter");
+            assert_eq!(result[0].line, Some(10));
         }
 
         #[test]
         fn parse_empty_array() {
             let result = parse_advisories("[]").unwrap();
             assert!(result.is_empty());
+        }
+
+        #[test]
+        fn parse_filters_ungrounded_findings() {
+            let input = r#"[
+                {"check":"grounded","line":5,"severity":"warning","evidence":"bad code","reason":"real issue"},
+                {"check":"hallucinated","severity":"info","reason":"no line given"}
+            ]"#;
+            let result = parse_advisories(input).unwrap();
+            assert_eq!(result.len(), 1);
+            assert_eq!(result[0].check, "grounded");
+            assert_eq!(result[0].line, Some(5));
+        }
+
+        #[test]
+        fn add_line_numbers_formats_correctly() {
+            let source = "fn main() {\n    println!(\"hello\");\n}";
+            let numbered = add_line_numbers(source);
+            assert!(numbered.starts_with("1| fn main() {"));
+            assert!(numbered.contains("2|     println!(\"hello\");"));
+            assert!(numbered.contains("3| }"));
         }
 
         #[test]
@@ -483,7 +540,9 @@ mod stub {
     #[derive(Debug, Clone)]
     pub struct Advisory {
         pub check: String,
+        pub line: Option<u32>,
         pub severity: String,
+        pub evidence: Option<String>,
         pub reason: String,
     }
 

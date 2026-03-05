@@ -1041,7 +1041,11 @@ fn run_review(
                         } else {
                             "ℹ️ "
                         };
-                        println!("  {} [advisory] {} — {}", icon, a.check, a.reason);
+                        let loc = a.line.map(|l| format!(" (line {l})")).unwrap_or_default();
+                        println!("  {} [advisory] {} — {}{}", icon, a.check, a.reason, loc);
+                        if let Some(ref ev) = a.evidence {
+                            println!("     | {}", ev.trim());
+                        }
                     }
                 }
                 Err(e) => {
