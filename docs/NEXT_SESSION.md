@@ -1,6 +1,45 @@
 # Next Session Notes
 
-**Last Updated:** March 5, 2026 (session 15 — Advisory Severity Levels)
+**Last Updated:** March 5, 2026 (session 16 — Configurable LLM Guidelines Prompt)
+
+---
+
+## Session 16 (Mar 5, 2026): Configurable Per-Language LLM Guidelines Prompt
+
+### What Was Done
+
+**Configurable LLM guidelines** — load per-language coding standards into the LLM advisory system prompt so the reviewer checks against specific guidelines (Microsoft Rust, PEP 8, etc.) instead of generic heuristics.
+
+**Grounded findings** — require every LLM finding to cite a specific line number and code snippet. Findings without a line reference are silently dropped, eliminating hallucinated/parroted guideline violations.
+
+- **Config** (`src/config.rs`): Added `guidelines_file: Option<String>` to `LlmConfig` + `PartialLlm` + `KLEIS_LLM_GUIDELINES_FILE` env var override.
+- **Advisory** (`src/review_mcp/advisory.rs`):
+  - `resolve_guidelines_path()` — 4-step resolution: env var > config > auto-discovery (`examples/guidelines/{lang}_guidelines.txt`) > none
+  - `load_guidelines_text()` — reads file, skips comment-only placeholder files
+  - `build_system_prompt()` — structured prompt with guidelines + formal rule names when available, generic fallback otherwise
+  - `add_line_numbers()` — prepends line numbers to source so LLM can cite them
+  - `Advisory` struct now has `line: Option<u32>` and `evidence: Option<String>`
+  - `parse_advisories()` filters out findings without a line number
+  - 15 unit tests (8 new: prompt generation, resolution order, grounding, line numbers)
+- **CLI** (`src/bin/kleis.rs`): Loads guidelines for detected language, extracts formal rule names from engine, passes both to LLM. Renders `(line N)` and evidence snippet.
+- **Guidelines files**: `examples/guidelines/rust_guidelines.txt` (condensed Microsoft Pragmatic Rust Guidelines, 157 lines / 8.7KB — distilled from 90KB original), `examples/guidelines/python_guidelines.txt` (placeholder).
+
+### Key Design Decisions
+
+- **Condensed guidelines (8.7KB not 90KB)**: Full guidelines wasted ~22K tokens on prose/examples an LLM already knows. Condensed to guideline ID + one-line rule + "Check for" triggers. ~2100 tokens.
+- **Grounded findings**: Without line numbers + evidence requirement, gpt-4o-mini parroted guidelines back as fabricated findings (5/5 were hallucinated in first test). With grounding, findings cite real code and ungrounded ones are filtered out.
+- **Per-language**: Resolution auto-discovers `{lang}_guidelines.txt` so adding Python/Go guidelines is just dropping a file.
+
+### Branch / PR
+
+`feature/llm-guidelines-prompt` — merged via PR #151 into `feature/microsoft-rust-guidelines`
+
+### Files Changed
+- `src/config.rs` — guidelines_file in LlmConfig + PartialLlm + env override
+- `src/review_mcp/advisory.rs` — guidelines resolution, grounded prompts, line numbers, evidence
+- `src/bin/kleis.rs` — guidelines loading, rule name extraction, evidence rendering
+- `examples/guidelines/rust_guidelines.txt` — condensed Microsoft Rust Guidelines
+- `examples/guidelines/python_guidelines.txt` — placeholder
 
 ---
 
