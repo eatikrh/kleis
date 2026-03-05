@@ -1,6 +1,44 @@
 # Next Session Notes
 
-**Last Updated:** March 4, 2026 (session 12 — Polyglot review: Python MCP + end-to-end validation)
+**Last Updated:** March 5, 2026 (session 13 — Equation Editor Z3 witness display + axiom theory investigation)
+
+---
+
+## Session 13 (Mar 5, 2026): Equation Editor Z3 + Axiom Consistency Investigation
+
+### What Was Done
+
+**Equation Editor witness display** (stashed, not merged)
+- Wired `PrettyPrinter` into `check_sat_handler` and `verify_handler` for human-readable Z3 witness output
+- Tracked free variables in `quantifier_vars` so `model_to_witness` extracts structured bindings
+
+**Axiom loading investigation** (stashed, not merged)
+- Loading ALL stdlib axioms at once via `initialize_from_registry()` causes UNSAT — but **the individual axioms are proven correct** (tensor symmetries, Einstein equations, Bell violations, Cartan algebra all pass their Z3 proofs)
+- The issue is **bulk loading strategy**, not axiom correctness. Each `.kleis` proof file loads only the structures it needs; the Equation Editor was the first place we tried loading everything into one Z3 context
+- When abstract algebra structures (`Field(F)`, `Ring(R)`) are loaded with type parameters defaulting to `Int`, and `×` maps to Z3's integer multiplication, the combination creates unsatisfiable constraints — but that's a loading problem, not a math problem
+- Added `ConsInjectivity` and `MatrixInjectivity` axioms to stdlib (stashed) — mathematically correct, need proper loading context
+
+### Key Finding: Equation Editor Needs Selective Axiom Loading
+
+The Equation Editor should load axioms the same way `.kleis` proof files do — selectively, based on what the user is working with. The `initialize_from_registry()` bulk-load approach was the wrong strategy. Options:
+1. **Load on demand** — detect which structures the expression references, load only those
+2. **User-driven** — let the user choose which theory context to work in (matrices, tensors, etc.)
+3. **Expression analysis** — inspect the AST for operation names, load matching structures
+
+### Branch
+`fix/equation-editor-witness-display` — changes stashed (`git stash`), branch clean
+
+### Stashed Changes
+- `src/bin/server.rs` — PrettyPrinter witness display + `initialize_from_registry()` call
+- `src/solvers/z3/backend.rs` — parametric structure skip filter + free var tracking
+- `stdlib/lists.kleis` — `ConsInjectivity` axioms
+- `stdlib/matrices.kleis` — `MatrixInjectivity` axioms
+- `docs/NEXT_SESSION.md` — session notes
+
+### Open Items
+1. **Equation Editor witness display** — the PrettyPrinter fix itself is clean and correct, but was bundled with the axiom loading work. Could be extracted as a standalone change.
+2. **Selective axiom loading for Equation Editor** — needs a strategy to load only relevant structures (like `.kleis` files do), not all 68+ at once.
+3. **Matrix Z3 semantics** — `ConsInjectivity` and `MatrixInjectivity` axioms are ready (stashed), need proper loading context in the Equation Editor.
 
 ---
 
