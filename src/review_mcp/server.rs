@@ -4,7 +4,7 @@
 //! Reads JSON-RPC messages from stdin, dispatches to review tool handlers,
 //! and writes responses to stdout.
 
-use super::engine::{ReviewEngine, ReviewRuleKind};
+use super::engine::{ReviewEngine, ReviewRuleKind, RuleSeverity};
 use super::protocol::{
     self, JsonRpcRequest, JsonRpcResponse, McpCapabilities, McpInitializeResult, McpServerInfo,
     McpToolContent,
@@ -59,8 +59,9 @@ impl ReviewMcpServer {
 
         let stats = self.engine.stats();
         self.log(&format!(
-            "Loaded: {} check functions, {} total rules",
+            "Loaded: {} check functions, {} advise functions, {} total rules",
             stats.get("check_functions").unwrap_or(&0),
+            stats.get("advise_functions").unwrap_or(&0),
             stats.get("total_rules").unwrap_or(&0),
         ));
 
@@ -262,12 +263,28 @@ impl ReviewMcpServer {
 
         let result = self.engine.check_code(source, language);
 
-        let emoji = if result.passed { "✅" } else { "❌" };
+        let has_advisories = result
+            .verdicts
+            .iter()
+            .any(|v| !v.passed && v.severity == RuleSeverity::Advisory);
+        let emoji = if !result.passed {
+            "❌"
+        } else if has_advisories {
+            "⚠️"
+        } else {
+            "✅"
+        };
 
         let mut text = format!("{} Code Review: {}\n\n", emoji, result.summary);
 
         for verdict in &result.verdicts {
-            let v_emoji = if verdict.passed { "✅" } else { "❌" };
+            let v_emoji = if verdict.passed {
+                "✅"
+            } else if verdict.severity == RuleSeverity::Advisory {
+                "⚠️"
+            } else {
+                "❌"
+            };
             text.push_str(&format!(
                 "{} {} — {}\n",
                 v_emoji, verdict.rule_name, verdict.message
@@ -291,6 +308,10 @@ impl ReviewMcpServer {
             "verdicts": result.verdicts.iter().map(|v| serde_json::json!({
                 "rule": v.rule_name,
                 "passed": v.passed,
+                "severity": match v.severity {
+                    RuleSeverity::Error => "error",
+                    RuleSeverity::Advisory => "advisory",
+                },
                 "message": v.message,
             })).collect::<Vec<_>>(),
         })
@@ -321,12 +342,28 @@ impl ReviewMcpServer {
             Err(e) => return self.check_file_error(&e),
         };
 
-        let emoji = if result.passed { "✅" } else { "❌" };
+        let has_advisories = result
+            .verdicts
+            .iter()
+            .any(|v| !v.passed && v.severity == RuleSeverity::Advisory);
+        let emoji = if !result.passed {
+            "❌"
+        } else if has_advisories {
+            "⚠️"
+        } else {
+            "✅"
+        };
 
         let mut text = format!("{} Code Review: {} — {}\n\n", emoji, path, result.summary);
 
         for verdict in &result.verdicts {
-            let v_emoji = if verdict.passed { "✅" } else { "❌" };
+            let v_emoji = if verdict.passed {
+                "✅"
+            } else if verdict.severity == RuleSeverity::Advisory {
+                "⚠️"
+            } else {
+                "❌"
+            };
             text.push_str(&format!(
                 "{} {} — {}\n",
                 v_emoji, verdict.rule_name, verdict.message
@@ -344,6 +381,10 @@ impl ReviewMcpServer {
             "verdicts": result.verdicts.iter().map(|v| serde_json::json!({
                 "rule": v.rule_name,
                 "passed": v.passed,
+                "severity": match v.severity {
+                    RuleSeverity::Error => "error",
+                    RuleSeverity::Advisory => "advisory",
+                },
                 "message": v.message,
             })).collect::<Vec<_>>(),
         })
@@ -358,12 +399,23 @@ impl ReviewMcpServer {
             self.engine.policy_file().display()
         );
 
-        text.push_str("## Check Functions\n\n");
+        text.push_str("## Check Functions (blocking errors)\n\n");
         for rule in rules
             .iter()
             .filter(|r| matches!(r.kind, ReviewRuleKind::CheckFunction))
         {
             text.push_str(&format!("  - {} — {}\n", rule.name, rule.description));
+        }
+
+        let advise_rules: Vec<_> = rules
+            .iter()
+            .filter(|r| matches!(r.kind, ReviewRuleKind::AdviseFunction))
+            .collect();
+        if !advise_rules.is_empty() {
+            text.push_str("\n## Advise Functions (non-blocking advisories)\n\n");
+            for rule in advise_rules {
+                text.push_str(&format!("  - {} — {}\n", rule.name, rule.description));
+            }
         }
 
         let axiom_rules: Vec<_> = rules
@@ -404,7 +456,8 @@ impl ReviewMcpServer {
 
         let text = if let Some(rule) = self.engine.explain_rule(rule_name) {
             let kind_str = match rule.kind {
-                ReviewRuleKind::CheckFunction => "Check Function (code review rule)",
+                ReviewRuleKind::CheckFunction => "Check Function (blocking error)",
+                ReviewRuleKind::AdviseFunction => "Advise Function (non-blocking advisory)",
                 ReviewRuleKind::Axiom => "Axiom (formal invariant)",
                 ReviewRuleKind::Helper => "Helper Function",
             };
@@ -455,8 +508,20 @@ impl ReviewMcpServer {
 
         if let Some(fns) = schema.get("check_functions").and_then(|f| f.as_array()) {
             if !fns.is_empty() {
-                text.push_str("\n## Check Functions\n\n");
+                text.push_str("\n## Check Functions (blocking errors)\n\n");
                 text.push_str("Each function receives source code and returns \"pass\" or \"fail: <reason>\".\n\n");
+                for f in fns {
+                    if let Some(kleis) = f.get("kleis").and_then(|k| k.as_str()) {
+                        text.push_str(&format!("```\n{}\n```\n\n", kleis));
+                    }
+                }
+            }
+        }
+
+        if let Some(fns) = schema.get("advise_functions").and_then(|f| f.as_array()) {
+            if !fns.is_empty() {
+                text.push_str("\n## Advise Functions (non-blocking advisories)\n\n");
+                text.push_str("Each function receives source code and returns \"pass\" or \"fail: <reason>\".\nAdvisory failures warn but do not block CI.\n\n");
                 for f in fns {
                     if let Some(kleis) = f.get("kleis").and_then(|k| k.as_str()) {
                         text.push_str(&format!("```\n{}\n```\n\n", kleis));
