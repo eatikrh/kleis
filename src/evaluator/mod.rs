@@ -209,6 +209,9 @@ impl Evaluator {
     }
 
     /// Basic unescape for common sequences (\n, \t, \", \\)
+    /// Note: since session 15, the parser unescapes at parse time, so this is
+    /// rarely needed. Kept for edge cases (external string sources).
+    #[allow(dead_code)]
     fn unescape_basic(&self, s: &str) -> String {
         let mut out = String::with_capacity(s.len());
         let mut chars = s.chars().peekable();
@@ -1692,13 +1695,14 @@ mod tests {
     #[test]
     fn test_typst_raw_unescape_concat() {
         let mut eval = Evaluator::new();
+        // Strings are already unescaped (as the parser now produces them)
         let expr = Expression::Operation {
             name: "typst_raw".to_string(),
             args: vec![Expression::Operation {
                 name: "concat".to_string(),
                 args: vec![
-                    Expression::String("a\\n".to_string()),
-                    Expression::String("b\\\"c".to_string()),
+                    Expression::String("a\n".to_string()),
+                    Expression::String("b\"c".to_string()),
                 ],
                 span: None,
             }],

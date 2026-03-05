@@ -3404,11 +3404,11 @@ impl Evaluator {
             let v = self.eval_concrete(a)?;
             match v {
                 Expression::String(s) | Expression::Const(s) => {
-                    parts.push(self.unescape_basic(&s));
+                    parts.push(s);
                 }
                 Expression::Object(s) => {
                     has_object = true;
-                    parts.push(self.unescape_basic(&s));
+                    parts.push(s);
                 }
                 other => {
                     return Err(format!(

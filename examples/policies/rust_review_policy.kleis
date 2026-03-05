@@ -75,8 +75,8 @@ define check_clippy_manual_is_ascii(source) =
     else "pass"
 
 define check_clippy_single_char_pattern(source) =
-    if contains(source, ".split(\"\n\")") then "fail: clippy::single_char_pattern — use .split('\\n') with a char"
-    else if contains(source, ".contains(\"\n\")") then "fail: clippy::single_char_pattern — use .contains('\\n') with a char"
+    if contains(source, ".split(\"\\n\")") then "fail: clippy::single_char_pattern — use .split('\\n') with a char"
+    else if contains(source, ".contains(\"\\n\")") then "fail: clippy::single_char_pattern — use .contains('\\n') with a char"
     else if contains(source, ".starts_with(\"/\")") then "fail: clippy::single_char_pattern — use .starts_with('/') with a char"
     else if contains(source, ".ends_with(\"/\")") then "fail: clippy::single_char_pattern — use .ends_with('/') with a char"
     else "pass"
