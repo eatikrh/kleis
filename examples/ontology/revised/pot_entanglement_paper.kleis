@@ -789,7 +789,7 @@ example "theorem_no_signaling" {
 example "theorem1_singlet_correlation" {
     assert(∀(G : GreenKernel, a b : DetectorAngle).
         is_admissible(G) ⟹
-            correlation(G, psi_AB, a, b) = neg_cos(angle_between(a, b)))
+            correlation(G, psi_AB, a, b) = 0 - cos(angle_between(a, b)))
     out("Theorem 1: E(a,b) = -cos(θ) for singlet state — VERIFIED")
 }
 
