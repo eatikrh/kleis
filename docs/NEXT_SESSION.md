@@ -1,6 +1,52 @@
 # Next Session Notes
 
-**Last Updated:** March 6, 2026 (session 17 — eval_concrete + Z3 Matrix Solving, stdlib Alignment)
+**Last Updated:** March 6, 2026 (session 18 — Skolemization of POT entanglement axioms)
+
+---
+
+## Session 18 (Mar 6, 2026): Skolemization of POT Entanglement Axioms — 24/24 Verified
+
+### What Was Done
+
+**Diagnosed Z3 `Unknown` results** for `spinor_2d_basis`, `R_irreducibility`, and `theorem1_singlet_correlation` in the entanglement paper.
+
+**Root cause for `spinor_2d_basis` and `R_irreducibility`:** Both axioms had `∀∃` quantifier alternation where the universally quantified variable `s` appeared bare (not inside a function call), giving Z3 no E-matching trigger for instantiation. The Complex (`ℂ`) type of `spinor_smul`'s first argument further inflated the existential search space via the `mk_complex(re: Real, im: Real)` ADT.
+
+**Fix: Skolemization** — replaced existential quantifiers with explicit Skolem witness functions:
+- `SpinorBasis`: introduced `coord_up : SpinorField → ℂ` and `coord_down : SpinorField → ℂ`, replacing `∃(alpha beta : ℂ)` in `basis_spans` with `basis_decomposition`
+- `RepIrreducibility`: introduced `irred_witness : SpinorField → SU2`, replacing `∃(g : SU2)` in `R_irreducible`
+
+Both axioms went from 7-second timeouts to instant verification (<200ms).
+
+**Root cause for `theorem1_singlet_correlation`:** Stale reference to `neg_cos` (a v1 operation) instead of `0 - cos(...)` (the v2 formulation via `correlation_def` + `spin_half_overlap`).
+
+**Paper updated:**
+- New subsection "Skolemization of Quantified Axioms" in Section 9 (Discussion) explaining the technique, why it's logically equivalent, and when to apply it
+- Appendix axiom listing updated for V2 and V6
+- PDF regenerated
+
+**Result: 21/24 → 24/24 verified examples.** The entanglement paper is fully machine-checked.
+
+### Manual page: kleis-review-python has no section
+
+`docs/manual/src/chapters/28-agent-mcps.md` opens with "Kleis ships **three** MCP servers" but there are four. The summary table at the bottom already lists all four, but the intro and body treat kleis-review as a single Rust-only server. The Python review MCP — `scan_python` builtin, `python_types.kleis`, 12 string checks, 1 structural check, 7 diff-aware rules — has no dedicated section. Change "three" → "four" and add a parallel "kleis-review-python" section.
+
+### Key Rule: Uppercase Constructor Convention
+
+`decompose_constructor_equalities` in `ast.rs` uses an uppercase-first-letter check to distinguish constructors (which should be decomposed into field equalities) from non-constructor operations. **This is now a Kleis convention: constructor names start with an uppercase letter.** This prevents accidental decomposition of operations like `component(g, mu, nu)`.
+
+### Key Technique: Skolemization for ∀∃ Axioms
+
+Any axiom with `∀x. ∃y. P(x, y)` where `x` appears bare (not in a function application) will cause Z3 `Unknown`. The fix is to replace with `∀x. P(x, f(x))` where `f` is an explicit Skolem function. This gives Z3 the `f(x)` term it needs for E-matching. The transformation preserves satisfiability and validity by the Skolem normal form theorem.
+
+### Files Changed
+- `theories/pot_entanglement_v2.kleis` — Skolemized `SpinorBasis` and `RepIrreducibility`
+- `examples/ontology/revised/pot_entanglement_paper.kleis` — updated tests + Skolemization subsection + appendix
+- `examples/ontology/revised/pot_entanglement_paper.typ` — regenerated
+- `examples/ontology/revised/pot_entanglement_paper.pdf` — regenerated
+
+### Branch / PR
+`feature/eqnlib-z3-matrix` — PR #153
 
 ---
 
@@ -74,7 +120,7 @@ All 2186 Rust tests (`cargo test`) pass. Below are the `kleis test` failures.
 | `pot_arxiv_paper.kleis` | 8/8 | |
 | `pot_channel_units.kleis` | 1/1 | |
 | `pot_core_kernel_projection.kleis` | — | Z3 hangs (killed after 12+ min) |
-| `pot_entanglement_paper.kleis` | 21/24 | `spinor_2d_basis`, `R_irreducibility`, `theorem1_singlet_correlation` |
+| `pot_entanglement_paper.kleis` | 24/24 | All pass (Skolemized in session 18) |
 | `rotation_curve_numerical.kleis` | 2/2 | |
 
 ### Open Items
