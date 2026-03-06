@@ -335,6 +335,14 @@ set_complement = { arity = 1, theory = "Set", native = true, description = "Alia
 subset = { arity = 2, theory = "Set", native = true, description = "Subset test: A ⊆ B" }
 set_subset = { arity = 2, theory = "Set", native = true, description = "Alias for subset" }
 
+# ============================================
+# LIST / DATATYPE OPERATIONS (native Z3 ADT)
+# ============================================
+# When list_adt is enabled, cons/nil use a monomorphic KleisList datatype
+# with built-in injectivity and distinctness (no quantifier axioms needed).
+cons = { arity = 2, theory = "Datatype", native = true, description = "List constructor: cons(head, tail) via KleisList ADT" }
+nil = { arity = 0, theory = "Datatype", native = true, description = "Empty list via KleisList ADT" }
+
 # Note: Z3 supports many more operations via its built-in theories,
 # but these are the ones explicitly translated in our current implementation.
 # Other operations (sin, cos, matrix_multiply, etc.) are treated as
@@ -355,6 +363,10 @@ regex_support = true   # Regular expression constraints via str.in_re
 bitvector_theory = true   # BitVec (_ BitVec n) - NOW SUPPORTED in Kleis (Dec 2024)
 set_theory = true      # Set(T) with membership, union, intersection, etc.
 array_theory = false   # Array available in Z3 but NOT YET USED in Kleis
+
+# Algebraic Data Types (ADT) and preprocessing
+list_adt = true                    # Monomorphic KleisList ADT: cons(Int, KleisList) | nil
+constructor_decomposition = true   # Rewrite equals(F(a1..an), F(b1..bn)) → and(eq(a1,b1)..eq(an,bn))
 
 # Encoded/Emulated support
 rational_numbers = true   # ℚ mapped to Z3 Real (which is actually Algebraic Reals ⊃ ℚ)

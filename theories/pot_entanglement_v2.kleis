@@ -69,14 +69,20 @@ structure SpinorBasis {
     element e_up : SpinorField
     element e_down : SpinorField
 
+    // Coordinate projections (Skolemized form of basis_spans).
+    // Instead of ∃(alpha beta : ℂ), we name the witnesses as functions.
+    // This gives Z3 E-matching triggers on coord_up(s) and coord_down(s).
+    operation coord_up   : SpinorField → ℂ
+    operation coord_down : SpinorField → ℂ
+
     // {e_up, e_down} are distinct and span SpinorField
     axiom basis_distinct : not(e_up = e_down)
     axiom basis_nonzero_up : not(e_up = spinor_zero)
     axiom basis_nonzero_down : not(e_down = spinor_zero)
 
-    // Every spinor is a linear combination of e_up and e_down
-    axiom basis_spans : ∀(s : SpinorField).
-        ∃(alpha beta : ℂ). s = spinor_add(spinor_smul(alpha, e_up), spinor_smul(beta, e_down))
+    // Every spinor decomposes into the basis (Skolemized — no ∃)
+    axiom basis_decomposition : ∀(s : SpinorField).
+        s = spinor_add(spinor_smul(coord_up(s), e_up), spinor_smul(coord_down(s), e_down))
 
     // Inner product on the basis (standard orthonormal)
     axiom basis_orthonormal_uu : spinor_inner(e_up, e_up) = 1
@@ -94,24 +100,37 @@ structure SpinorBasis {
 // invariant inner product, this uniquely determines the angle-dependence
 // of the correlation as cosine.
 //
+// SKOLEMIZATION NOTE:
+//
+// The mathematical statement of irreducibility is:
+//   ∀(s ≠ 0). ∃(g ∈ SU2). ∀(c ∈ ℂ). R(g,s) ≠ c·s
+//
+// This ∀∃∀ quantifier alternation causes Z3 to return Unknown: the bare
+// variable s in the outer ∀ has no function application to serve as an
+// E-matching trigger, and the Complex-typed inner ∀c inflates the search.
+//
+// We Skolemize the ∃(g) by introducing an explicit witness function
+// irred_witness : SpinorField → SU2. This names the group element that
+// "rotates s out of its own eigenspace." The resulting formula is:
+//   ∀(s ≠ 0). ∀(c ∈ ℂ). R(irred_witness(s), s) ≠ c·s
+//
+// This is logically equivalent: every ∃ can be replaced by a Skolem
+// function without changing satisfiability or validity. Z3 now has
+// irred_witness(s) as a trigger for the outer ∀, and when checking
+// validity (negating to ∃s.∃c. ...), the Skolem constants give triggers
+// for the inner ∀c as well.
+//
+// NOTE on generator-pair approach (gX/gZ with concrete actions):
+// Tested with axioms like R(gX, e_up) = e_down. These load fine but
+// Z3 crashes (SIGBUS/SIGSEGV) during solver.check() due to exponential
+// E-matching against basis_decomposition. The Skolemized form avoids this.
+//
 structure RepIrreducibility {
+    operation irred_witness : SpinorField → SU2
+
     axiom R_irreducible : ∀(s : SpinorField).
         not(s = spinor_zero) ⟹
-            ∃(g : SU2). not(∃(c : ℂ). R(g, s) = spinor_smul(c, s))
-
-    // NOTE on generator-pair approach (gX/gZ with concrete actions on e_up/e_down):
-    //
-    // Tested with axioms like R(gX, e_up) = e_down. These load fine (all 115
-    // axioms asserted in <1ms), but Z3 crashes (SIGBUS/SIGSEGV) during
-    // solver.check() when the concrete equalities trigger exponential
-    // E-matching against basis_spans (∀s.∃α β...). This is unbounded
-    // divergence — no memory limit or timeout can prevent the crash because
-    // Z3's C internals corrupt before the limit is checked.
-    //
-    // The R_irreducible axiom is retained as a structural premise. Z3 returns
-    // Unknown for it (cannot constructively prove ∀s ≠ 0 ⟹ ∃g...), which
-    // is the correct SMT answer for this class of representation-theoretic
-    // statements.
+            not(∃(c : ℂ). R(irred_witness(s), s) = spinor_smul(c, s))
 }
 
 // =============================================================================

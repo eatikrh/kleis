@@ -47,8 +47,12 @@ pub fn translate_equals(left: &Dynamic, right: &Dynamic) -> Result<Bool, String>
         return Ok(l.eq(&r));
     }
 
-    // Fall back to Dynamic equality (may fail if sorts differ)
-    Ok(left.eq(right))
+    // Sorts differ and aren't promotable — return error instead of panicking
+    Err(format!(
+        "Cannot compare values of different sorts: {:?} vs {:?}",
+        left.sort_kind(),
+        right.sort_kind()
+    ))
 }
 
 /// Translate not_equals/neq operation (≠)

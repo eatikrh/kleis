@@ -1,6 +1,88 @@
 # Next Session Notes
 
-**Last Updated:** March 5, 2026 (session 16 — Configurable LLM Guidelines Prompt)
+**Last Updated:** March 6, 2026 (session 17 — eval_concrete + Z3 Matrix Solving, stdlib Alignment)
+
+---
+
+## Session 17 (Mar 6, 2026): eval_concrete + Z3 Matrix Solving, stdlib Alignment
+
+### What Was Done
+
+**eval_concrete integration with Z3** — reduce concrete sub-expressions (e.g. `multiply(ones, ones)` → `Matrix(2,2,...)`) before sending to Z3, preserving the top-level equality for symbolic solving. This enables the equation editor to verify matrix multiplication results.
+
+**stdlib alignment** — aligned `stdlib/lists.kleis` and `stdlib/matrices.kleis` with eqnlib notation (infix `=` instead of `equals()` wrapper, `→` guards, constructor injectivity axioms, associativity/distributivity).
+
+**Server switched from eqnlib to stdlib** — equation editor server now loads `stdlib/minimal_prelude.kleis`, `stdlib/lists.kleis`, `stdlib/matrices.kleis` (36 structures instead of 11 from eqnlib).
+
+### Key Changes
+- `server.rs`: apply `eval_concrete` only to LHS/RHS of top-level `equals`, not the equality itself; switched from eqnlib to stdlib
+- `backend.rs`: gate axiom loading to prevent double-load, transactional rollback for `declared_ops` on axiom translation failure, skip injectivity axioms
+- `ast.rs`: `decompose_constructor_equalities` with uppercase-first guard, `collect_ops` methods
+- `comparison.rs`: return `Err` on sort mismatch instead of panicking
+- `axiom_verifier.rs`: transactional `declared_ops` restore on failure
+- `stdlib/lists.kleis`: `equals()` → infix `=`, added `→` guard on `nth_succ`, added `ListConstructor` injectivity
+- `stdlib/matrices.kleis`: `MatrixConstructor` now has injectivity axiom, added `MatrixMulAssoc` + `MatrixDistributive`
+- New `eqnlib/` directory with base, lists, matrix, and test_matrix libs
+
+### Branch / PR
+`feature/eqnlib-z3-matrix` — PR #153
+
+### `kleis test` Failure Inventory (as of session 17)
+
+All 2186 Rust tests (`cargo test`) pass. Below are the `kleis test` failures.
+
+#### eqnlib/
+- All 6/6 pass (including distributivity)
+
+#### stdlib/
+| File | Result | Failures |
+|------|--------|----------|
+| `combinatorics.kleis` | 10/12 | `all perms 2`, `n perms equals n factorial` — `concat()` doesn't support nested lists |
+| `tensors_functional.kleis` | 13/29 | `tensor_get`, `tensor_add`, `tensor_scale`, wedge ops, EM tensor, d-squared — evaluator limitations with tensor indexing and wedge product computation |
+
+#### examples/ (non-ontology)
+| File | Result | Issue |
+|------|--------|-------|
+| `chess/chess.kleis` | 1/10 | Evaluator limitations |
+| `contractbridge/contractbridge.kleis` | 3/8 | Evaluator limitations |
+| `debug_main.kleis` | 0/1 | Symbolic assertion can't verify |
+| `inverted_pendulum_discrete.kleis` | 0/1 | `dlqr` not fully evaluated |
+| `ontology/pot_core.kleis` | 8/9 | Z3 quantifier inconclusive |
+| `ontology/spacetime_type.kleis` | 0/1 | `component(make(...))` not reduced |
+| `petri-nets/mutex_bounded.kleis` | 9/11 | Z3 counterexample |
+| `petri-nets/mutex_example.kleis` | 0/4 | Z3 counterexample |
+| `petri-nets/mutex_verified.kleis` | 2/8 | Z3 counterexample |
+| `sudoku/sudoku.kleis` | 6/10 | Solver limitations |
+
+#### examples/ (errors — parse or panic)
+| File | Error |
+|------|-------|
+| `hardware/alu_verification.kleis` | Panic: `bvadd` sort mismatch in Z3 |
+| `hardware/simple_alu.kleis` | Panic: `bvadd` sort mismatch in Z3 |
+| `export/render_to_typst_demo.kleis` | Missing import file |
+| `debug_test.kleis` | Parse error |
+| `lps/test.kleis` | Parse error |
+| `mass_from_residue.kleis` | Parse error |
+| `ontology/pot_foundations.kleis` | Parse error |
+
+#### examples/ontology/revised/
+| File | Result | Issue |
+|------|--------|-------|
+| `bell_violation_test.kleis` | 9/9 | |
+| `cosine_uniqueness_test.kleis` | 4/5 | `z3_inconsistency_detector` (expected failure) |
+| `minimal_admissable_kernel_class.kleis` | 2/2 | |
+| `pot_arxiv_paper.kleis` | 8/8 | |
+| `pot_channel_units.kleis` | 1/1 | |
+| `pot_core_kernel_projection.kleis` | — | Z3 hangs (killed after 12+ min) |
+| `pot_entanglement_paper.kleis` | 21/24 | `spinor_2d_basis`, `R_irreducibility`, `theorem1_singlet_correlation` |
+| `rotation_curve_numerical.kleis` | 2/2 | |
+
+### Open Items
+1. **`bvadd` sort mismatch panic** — `hardware/alu_verification.kleis` and `hardware/simple_alu.kleis` panic in Z3 bitvector operations. Needs investigation.
+2. **`pot_core_kernel_projection.kleis` hangs Z3** — too many axioms loaded; Z3 solver doesn't terminate.
+3. **Petri net counterexamples** — Z3 finds counterexamples for mutex properties. May need axiom refinement or different encoding.
+4. **Tensor indexing in evaluator** — `tensor_get`, `tensor_add`, `tensor_scale` not reduced by evaluator.
+5. **Parse errors** — `debug_test.kleis`, `lps/test.kleis`, `mass_from_residue.kleis`, `ontology/pot_foundations.kleis` have parse errors.
 
 ---
 

@@ -22,19 +22,12 @@ implements Matrix(m, n, ℝ) {
     operation transpose = builtin_transpose
 }
 
-/* Matrix Value Constructor
- * 
- * Creates matrix values from elements.
- * Dimensions (m, n) must be provided by type annotation or inferred from context.
- * 
- * Example: matrix(1, 2, 3, 4) : Matrix(2, 2, ℝ)
- */
+// Matrix constructor injectivity: Matrix is a true data constructor.
+// If two Matrix calls with the same dimensions produce the same value,
+// their element lists must be identical.
 structure MatrixConstructor(m: Nat, n: Nat, T) {
-    operation matrix : Matrix(m, n, T)
-}
-
-implements MatrixConstructor(m, n, ℝ) {
-    operation matrix = builtin_matrix_constructor
+    axiom matrix_injective : ∀ e1 : List(T) . ∀ e2 : List(T) .
+        Matrix(m, n, e1) = Matrix(m, n, e2) → e1 = e2
 }
 
 /* Matrix Addition/Subtraction - Only when dimensions match
@@ -91,6 +84,21 @@ structure MatrixUnits(n: Nat, T: Type) {
 
 implements MatrixUnits(n, ℝ) {
     operation identity = builtin_identity
+}
+
+// Associativity of multiplication
+structure MatrixMulAssoc(m: Nat, n: Nat, p: Nat, q: Nat, T) {
+    axiom mul_assoc : ∀ (A : Matrix(m, n, T)) (B : Matrix(n, p, T)) (C : Matrix(p, q, T)).
+        multiply(multiply(A, B), C) = multiply(A, multiply(B, C))
+}
+
+// Distributivity over addition
+structure MatrixDistributive(m: Nat, n: Nat, p: Nat, T) {
+    axiom left_dist : ∀ (A : Matrix(m, n, T)) (B : Matrix(n, p, T)) (C : Matrix(n, p, T)).
+        multiply(A, matrix_add(B, C)) = matrix_add(multiply(A, B), multiply(A, C))
+
+    axiom right_dist : ∀ (A : Matrix(m, n, T)) (B : Matrix(m, n, T)) (C : Matrix(n, p, T)).
+        multiply(matrix_add(A, B), C) = matrix_add(multiply(A, C), multiply(B, C))
 }
 
 /* Block Matrix Support

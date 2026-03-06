@@ -92,7 +92,7 @@ fn load_imports_recursive(
     Ok(())
 }
 
-/// Load stdlib files into a StructureRegistry for Z3 verification
+/// Load stdlib files into a StructureRegistry for Z3 verification.
 fn load_stdlib_registry() -> kleis::structure_registry::StructureRegistry {
     use kleis::evaluator::Evaluator;
     use kleis::kleis_parser::parse_kleis_program_with_file;
@@ -102,14 +102,10 @@ fn load_stdlib_registry() -> kleis::structure_registry::StructureRegistry {
     let mut registry = StructureRegistry::default();
     let mut loaded_files = std::collections::HashSet::new();
 
-    // List of stdlib files to load (order matters - prelude first)
     let stdlib_files = [
-        "stdlib/prelude.kleis",
         "stdlib/minimal_prelude.kleis",
-        "stdlib/bigops.kleis",
+        "stdlib/lists.kleis",
         "stdlib/matrices.kleis",
-        "stdlib/tensors.kleis",
-        "stdlib/quantum.kleis",
     ];
 
     for file_path_str in &stdlib_files {
@@ -315,10 +311,9 @@ async fn main() {
         }
     };
 
-    // Initialize StructureRegistry with stdlib for Z3 verification
     let registry = load_stdlib_registry();
     println!(
-        "✅ StructureRegistry initialized with {} structures, {} operations",
+        "✅ StructureRegistry initialized from stdlib/ with {} structures, {} operations",
         registry.structure_count(),
         registry.operation_count()
     );
@@ -1657,30 +1652,25 @@ async fn verify_handler(
         }
     }
 
-    // Create Z3 backend with preloaded stdlib registry
+    // Use AxiomVerifier (same code path as `kleis test`) for Z3 verification.
+    // This ensures axioms + identity elements are loaded consistently.
     let registry = &*state.registry;
-    let mut backend = match kleis::solvers::z3::backend::Z3Backend::new(registry) {
-        Ok(b) => b,
+    let mut verifier = match kleis::axiom_verifier::AxiomVerifier::new(registry) {
+        Ok(v) => v,
         Err(e) => {
             return Json(VerifyResponse {
                 success: false,
                 result: "error".to_string(),
                 kleis_syntax,
                 counterexample: None,
-                error: Some(format!("Failed to create Z3 backend: {}", e)),
+                error: Some(format!("Failed to create verifier: {}", e)),
             });
         }
     };
 
-    // Pass type information to Z3 backend for type-dispatched operations
-    if !inferred_types.is_empty() {
-        backend.set_inferred_types(inferred_types);
-    }
-
-    // Try to verify
-    match backend.verify_axiom(&expr) {
+    match verifier.verify_axiom(&expr) {
         Ok(result) => {
-            use kleis::solvers::backend::VerificationResult;
+            use kleis::axiom_verifier::VerificationResult;
             let (result_str, counterexample) = match result {
                 VerificationResult::Valid => ("valid".to_string(), None),
                 VerificationResult::ValidWithWitness { witness } => {
@@ -1690,6 +1680,14 @@ async fn verify_handler(
                     ("invalid".to_string(), Some(witness.to_string()))
                 }
                 VerificationResult::Unknown => ("unknown".to_string(), None),
+                VerificationResult::InconsistentAxioms => (
+                    "error".to_string(),
+                    Some("Axioms are inconsistent".to_string()),
+                ),
+                VerificationResult::Disabled => (
+                    "error".to_string(),
+                    Some("Axiom verification disabled".to_string()),
+                ),
             };
             Json(VerifyResponse {
                 success: true,
@@ -1805,9 +1803,31 @@ async fn check_sat_handler(
     let kleis_syntax =
         kleis::render::render_expression(&expr, &ctx, &kleis::render::RenderTarget::Kleis);
 
-    // Create Z3 backend with preloaded stdlib registry
+    // Reduce concrete sub-expressions (e.g. multiply(ones, ones) → Matrix)
+    // but preserve the top-level equality for Z3 to solve.
+    let expr = if let kleis::ast::Expression::Operation { name, args, span } = &expr {
+        if (name == "equals" || name == "eq") && args.len() == 2 {
+            let evaluator = kleis::evaluator::Evaluator::new();
+            let lhs = evaluator
+                .eval_concrete(&args[0])
+                .unwrap_or_else(|_| args[0].clone());
+            let rhs = evaluator
+                .eval_concrete(&args[1])
+                .unwrap_or_else(|_| args[1].clone());
+            kleis::ast::Expression::Operation {
+                name: name.clone(),
+                args: vec![lhs, rhs],
+                span: span.clone(),
+            }
+        } else {
+            expr
+        }
+    } else {
+        expr
+    };
+
     let registry = &*state.registry;
-    let mut backend = match kleis::solvers::z3::backend::Z3Backend::new(registry) {
+    let mut backend = match kleis::solvers::Z3Backend::new(registry) {
         Ok(b) => b,
         Err(e) => {
             return Json(CheckSatResponse {
@@ -1815,17 +1835,11 @@ async fn check_sat_handler(
                 result: "error".to_string(),
                 kleis_syntax,
                 example: None,
-                error: Some(format!("Failed to create Z3 backend: {}", e)),
+                error: Some(format!("Failed to create solver backend: {}", e)),
             });
         }
     };
 
-    // Pass type information to Z3 backend for type-dispatched operations
-    if !inferred_types.is_empty() {
-        backend.set_inferred_types(inferred_types);
-    }
-
-    // Check satisfiability
     match backend.check_satisfiability(&expr) {
         Ok(result) => {
             use kleis::solvers::backend::SatisfiabilityResult;

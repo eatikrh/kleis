@@ -1,0 +1,31 @@
+// Eqnlib - Minimal Base Operations
+// No axioms. Just operation signatures and builtin implementations
+// so that the type checker and Z3 can resolve basic arithmetic.
+
+structure Arithmetic(T) {
+  operation plus : T → T → T
+  operation minus : T → T → T
+  operation times : T → T → T
+  operation divide : T → T → T
+  operation scalar_multiply : T → T → T
+  operation frac : T → T → T
+}
+
+structure Equatable(T) {
+  operation equals : T → T → Bool
+  operation not_equals : T → T → Bool
+}
+
+implements Arithmetic(ℝ) {
+  operation plus = builtin_add
+  operation minus = builtin_sub
+  operation times = builtin_mul
+  operation divide = builtin_div
+  operation scalar_multiply = builtin_mul
+  operation frac = builtin_div
+}
+
+implements Equatable(ℝ) {
+  operation equals = builtin_eq
+  operation not_equals = builtin_neq
+}

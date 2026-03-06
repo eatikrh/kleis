@@ -160,8 +160,8 @@ fi
 # Force target directory to be the project's own target/, not any sandbox redirect
 export CARGO_TARGET_DIR="$PROJECT_ROOT/target"
 
-# Build command
-BUILD_CMD="cargo build --bin kleis"
+# Build command (kleis CLI + equation editor server)
+BUILD_CMD="cargo build --bin kleis --bin server"
 
 if [ "$BUILD_TYPE" = "release" ]; then
     BUILD_CMD="$BUILD_CMD --release"
@@ -205,6 +205,18 @@ if [ -f "$BINARY" ]; then
         if [ -d "$HOME/bin" ]; then
             ln -sf "$(cd "$(dirname "$BINARY")" && pwd)/$(basename "$BINARY")" "$HOME/bin/kleis"
             INSTALLED+=("~/bin/kleis")
+        fi
+        # Also install equation editor server if it was built
+        SERVER_BINARY="target/release/server"
+        if [ -f "$SERVER_BINARY" ]; then
+            if [ -d "$HOME/.cargo/bin" ]; then
+                cp "$SERVER_BINARY" "$HOME/.cargo/bin/kleis-server"
+                INSTALLED+=("~/.cargo/bin/kleis-server")
+            fi
+            if [ -d "$HOME/bin" ]; then
+                ln -sf "$(cd "$(dirname "$SERVER_BINARY")" && pwd)/$(basename "$SERVER_BINARY")" "$HOME/bin/kleis-server"
+                INSTALLED+=("~/bin/kleis-server")
+            fi
         fi
         if [ ${#INSTALLED[@]} -gt 0 ]; then
             echo -e "${GREEN}✓ Installed to:${NC} ${INSTALLED[*]}"

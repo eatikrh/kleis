@@ -142,6 +142,15 @@ pub struct FeatureFlags {
     /// Supports proof generation
     #[serde(default)]
     pub proof_generation: bool,
+
+    /// Native List ADT (cons/nil with built-in injectivity)
+    #[serde(default)]
+    pub list_adt: bool,
+
+    /// Constructor decomposition preprocessing:
+    /// equals(F(a1..an), F(b1..bn)) → and(eq(a1,b1)..eq(an,bn))
+    #[serde(default)]
+    pub constructor_decomposition: bool,
 }
 
 /// Performance hints

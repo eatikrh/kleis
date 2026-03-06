@@ -1,0 +1,49 @@
+// Eqnlib - Matrix Structures
+// Self-contained, no stdlib dependency.
+// Axioms are added incrementally to isolate Z3 compatibility.
+
+// Matrix type constructor
+structure Matrix(m: Nat, n: Nat, T) {
+    operation transpose : Matrix(m, n, T) → Matrix(n, m, T)
+}
+
+// Matrix constructor injectivity: Matrix is a true data constructor.
+// If two Matrix calls with the same dimensions produce the same value,
+// their element lists must be identical.
+structure MatrixConstructor(m: Nat, n: Nat, T) {
+    axiom matrix_injective : ∀ e1 : List(T) . ∀ e2 : List(T) .
+        Matrix(m, n, e1) = Matrix(m, n, e2) → e1 = e2
+}
+
+// Matrix addition (dimensions must match)
+structure MatrixAddable(m: Nat, n: Nat, T) {
+    operation matrix_add : Matrix(m, n, T) → Matrix(m, n, T) → Matrix(m, n, T)
+    operation matrix_sub : Matrix(m, n, T) → Matrix(m, n, T) → Matrix(m, n, T)
+}
+
+// Matrix multiplication: (m×n) · (n×p) → (m×p)
+structure MatrixMultipliable(m: Nat, n: Nat, p: Nat, T) {
+    operation multiply : Matrix(m, n, T) → Matrix(n, p, T) → Matrix(m, p, T)
+}
+
+// Phase 2: Identity element + unit axioms
+structure MatrixUnits(n: Nat, T: Type) {
+    operation identity : Matrix(n, n, T)
+    axiom left_unit  : ∀ A : Matrix(n, n, T). multiply(identity, A) = A
+    axiom right_unit : ∀ A : Matrix(n, n, T). multiply(A, identity) = A
+}
+
+// Phase 3: Associativity of multiplication
+structure MatrixMulAssoc(m: Nat, n: Nat, p: Nat, q: Nat, T) {
+    axiom mul_assoc : ∀ (A : Matrix(m, n, T)) (B : Matrix(n, p, T)) (C : Matrix(p, q, T)).
+        multiply(multiply(A, B), C) = multiply(A, multiply(B, C))
+}
+
+// Phase 4: Distributivity over addition
+structure MatrixDistributive(m: Nat, n: Nat, p: Nat, T) {
+    axiom left_dist : ∀ (A : Matrix(m, n, T)) (B : Matrix(n, p, T)) (C : Matrix(n, p, T)).
+        multiply(A, matrix_add(B, C)) = matrix_add(multiply(A, B), multiply(A, C))
+
+    axiom right_dist : ∀ (A : Matrix(m, n, T)) (B : Matrix(m, n, T)) (C : Matrix(n, p, T)).
+        multiply(matrix_add(A, B), C) = matrix_add(multiply(A, C), multiply(B, C))
+}

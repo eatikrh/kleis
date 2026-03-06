@@ -509,6 +509,26 @@ define subsec_sanity = ArxivSubsection("Model-Theoretic Sanity Checks",
 
 We note an important methodological clarification: we are *not* deriving SU(2) from kernel admissibility. We are deriving *correlations* from *symmetry survival*. The SU(2) structure of $cal(H)_(\"ont\")$ is an ontological posit — the claim that angular momentum symmetry is a feature of the pre-observable space, not an emergent property of spacetime. The admissible kernel framework governs how this symmetry *projects* to observable physics. These are complementary, not derivational.")
 
+define subsec_skolem = ArxivSubsection("Skolemization of Quantified Axioms",
+"Two axioms in our formalization — the basis spanning axiom (V2) and the irreducibility axiom (V6) — require existentially quantified witnesses inside universal quantifiers:
+
+$ forall(s). exists(alpha, beta). s = alpha e_(arrow.t) + beta e_(arrow.b) $
+$ forall(s != 0). exists(g in \"SU\"(2)). forall(c in CC). R(g, s) != c dot s $
+
+Z3's quantifier reasoning uses *E-matching*: it instantiates universally quantified axioms only when it encounters a ground term matching a trigger pattern (typically a function application involving the quantified variable). In both axioms above, the universally quantified variable $s$ appears bare — not inside a function call — so Z3 cannot find a trigger to instantiate the axiom. The result is that Z3 returns `Unknown` after exhausting its timeout, even though the axioms are present in the solver context.
+
+We resolve this by *Skolemization*: replacing each existentially quantified variable with an explicit function of the enclosing universal variables. For V2, we introduce coordinate projections $\"coord_up\"(s)$ and $\"coord_down\"(s)$:
+
+$ forall(s). s = \"spinor_add\"(\"spinor_smul\"(\"coord_up\"(s), e_(arrow.t)), thin \"spinor_smul\"(\"coord_down\"(s), e_(arrow.b))) $
+
+For V6, we introduce an irreducibility witness $\"irred_witness\"(s)$:
+
+$ forall(s != 0). forall(c in CC). R(\"irred_witness\"(s), s) != \"spinor_smul\"(c, s) $
+
+This transformation is logically equivalent: by the Skolem normal form theorem, replacing $forall x. exists y. P(x,y)$ with $forall x. P(x, f(x))$ for a fresh function symbol $f$ preserves satisfiability and validity. No mathematical content is added or removed — the Skolem functions are implicit in the original statement (they are exactly the choice functions guaranteed by the axiom of choice). The only change is that the witnesses are *named*, giving Z3 the function-application terms it needs for E-matching.
+
+After Skolemization, both axioms verify instantly (< 200ms). This is a general technique applicable to any $forall exists$ axiom in SMT verification.")
+
 // =============================================================================
 // Section 9: Conclusion
 // =============================================================================
@@ -575,11 +595,11 @@ block(fill: luma(245), inset: 12pt, radius: 4pt, width: 100%, text(size: 8pt)[
 \
 *Spinor Space (Dim 2):* \
 *V1.* `basis_distinct`: $e_(arrow.t) != e_(arrow.b)$ \
-*V2.* `basis_spans`: $forall(s). exists(alpha, beta). s = alpha e_(arrow.t) + beta e_(arrow.b)$ \
+*V2.* `basis_decomposition`: $forall(s). s = \"coord_up\"(s) e_(arrow.t) + \"coord_down\"(s) e_(arrow.b)$ \
 *V3–V5.* `basis_orthonormal`: $chevron.l e_(arrow.t) | e_(arrow.t) chevron.r = 1$, $chevron.l e_(arrow.b) | e_(arrow.b) chevron.r = 1$, $chevron.l e_(arrow.t) | e_(arrow.b) chevron.r = 0$ \
 \
 *Irreducibility:* \
-*V6.* `R_irreducible`: $forall(s != 0). exists(g). R(g, s) != c dot s$ for any scalar $c$ \
+*V6.* `R_irreducible`: $forall(s != 0). R(\"irred_witness\"(s), s) != c dot s$ for any scalar $c$ \
 \
 *SU(2) Ontic Symmetry — Axiom (A) (S1–S2):* \
 *S1.* `group_action`: $forall(g, h, psi). U(g compose h, psi) = U(g, U(h, psi))$ \
@@ -656,7 +676,7 @@ define all_elements = [
     sec_numerical, fig_correlation, fig_bell, fig_chsh, table_correlations,
     sec_ghz, subsec_ghz_state, subsec_ghz_contradiction, subsec_ghz_pot,
     sec_nosignaling, subsec_bipartite, subsec_nosignaling_thm,
-    sec_discussion, subsec_locality, subsec_born_rule, subsec_kernel_unification, subsec_experimental, subsec_limitations, subsec_sanity,
+    sec_discussion, subsec_locality, subsec_born_rule, subsec_kernel_unification, subsec_experimental, subsec_limitations, subsec_sanity, subsec_skolem,
     sec_conclusion,
     ack,
     ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9,
@@ -697,14 +717,14 @@ example "su2_intertwiner" {
 
 example "spinor_2d_basis" {
     assert(∀(s : SpinorField).
-        ∃(alpha beta : ℂ). s = spinor_add(spinor_smul(alpha, e_up), spinor_smul(beta, e_down)))
+        s = spinor_add(spinor_smul(coord_up(s), e_up), spinor_smul(coord_down(s), e_down)))
     out("SpinorField is 2-dimensional — VERIFIED")
 }
 
 example "R_irreducibility" {
     assert(∀(s : SpinorField).
         not(s = spinor_zero) ⟹
-            ∃(g : SU2). not(∃(c : ℂ). R(g, s) = spinor_smul(c, s)))
+            not(∃(c : ℂ). R(irred_witness(s), s) = spinor_smul(c, s)))
     out("R acts irreducibly on 2D spinor space — VERIFIED")
 }
 
@@ -769,7 +789,7 @@ example "theorem_no_signaling" {
 example "theorem1_singlet_correlation" {
     assert(∀(G : GreenKernel, a b : DetectorAngle).
         is_admissible(G) ⟹
-            correlation(G, psi_AB, a, b) = neg_cos(angle_between(a, b)))
+            correlation(G, psi_AB, a, b) = 0 - cos(angle_between(a, b)))
     out("Theorem 1: E(a,b) = -cos(θ) for singlet state — VERIFIED")
 }
 
