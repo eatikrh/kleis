@@ -43,7 +43,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-2a168627.js";
+            window.path_to_searchindex_js = "../searchindex-5b537a0d.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-3f3d019b.js"></script>
@@ -189,12 +189,13 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="agent-mcp-servers"><a class="header" href="#agent-mcp-servers">Agent MCP Servers</a></h1>
-<p>Kleis ships three Model Context Protocol (MCP) servers that turn Kleis policies
+<p>Kleis ships four Model Context Protocol (MCP) servers that turn Kleis policies
 and structures into live tools for AI agents. The previous chapter covered
 <strong>kleis-theory</strong> — the interactive theory-building server. This chapter covers
-the other two: <strong>kleis-policy</strong> for agent action gating, and <strong>kleis-review</strong>
-for code review against formal coding standards.</p>
-<p>All three share the same architecture: a Kleis <code>.kleis</code> file defines the rules,
+the other three: <strong>kleis-policy</strong> for agent action gating, and
+<strong>kleis-review-rust</strong> / <strong>kleis-review-python</strong> for code review against formal
+coding standards.</p>
+<p>All four share the same architecture: a Kleis <code>.kleis</code> file defines the rules,
 the Kleis evaluator loads them into memory, and the MCP server exposes them as
 JSON-RPC tools over stdio. The rules are declarative, version-controlled, and
 readable by both humans and machines.</p>
@@ -320,7 +321,7 @@ layer — team conventions, hard-won lessons, project-specific standards —
 falls through the cracks. It lives in people’s heads, gets enforced
 inconsistently, and slows down every review.</p>
 <h3 id="the-solution-1"><a class="header" href="#the-solution-1">The Solution</a></h3>
-<p>The kleis-review MCP loads a coding standards file and exposes six tools:</p>
+<p>The kleis-review MCP loads a coding standards file and exposes seven tools:</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -329,6 +330,7 @@ inconsistently, and slows down every review.</p>
 <tbody>
 <tr><td><code>check_code</code></td><td>Check a source code snippet against all standards</td></tr>
 <tr><td><code>check_file</code></td><td>Check a file on disk against all standards</td></tr>
+<tr><td><code>diff_check_file</code></td><td>Check a file against diff-based rules by comparing with a base branch</td></tr>
 <tr><td><code>list_rules</code></td><td>List all loaded coding standard rules</td></tr>
 <tr><td><code>explain_rule</code></td><td>Explain a specific rule in detail</td></tr>
 <tr><td><code>describe_standards</code></td><td>Show the full schema of loaded standards</td></tr>
@@ -518,18 +520,18 @@ the new rule is live.</p>
 </thead>
 <tbody>
 <tr><td>kleis-policy</td><td><code>agent_policy.kleis</code></td><td><code>check_*</code> returns “allow”/“deny”</td><td>5</td></tr>
-<tr><td>kleis-review-rust</td><td><code>rust_review_policy.kleis</code></td><td><code>check_*</code> returns “pass”/“fail: reason” (3 tiers: string, structural, Z3)</td><td>6</td></tr>
-<tr><td>kleis-review-python</td><td><code>python_review_policy.kleis</code></td><td><code>check_*</code> returns “pass”/“fail: reason” (string + structural via <code>scan_python</code>)</td><td>6</td></tr>
+<tr><td>kleis-review-rust</td><td><code>rust_review_policy.kleis</code></td><td><code>check_*</code> returns “pass”/“fail: reason” (3 tiers: string, structural, Z3)</td><td>7</td></tr>
+<tr><td>kleis-review-python</td><td><code>python_review_policy.kleis</code></td><td><code>check_*</code> returns “pass”/“fail: reason” (string + structural via <code>scan_python</code>)</td><td>7</td></tr>
 <tr><td>kleis-theory</td><td>(none — builds interactively)</td><td><code>submit_*</code>, <code>evaluate</code>, <code>save_theory</code></td><td>9</td></tr>
 </tbody>
 </table>
 </div>
 <p>Each review MCP is a separate process with its own policy, advisory prompt context, and structural parser. The server name is derived from the policy filename. Adding a new language is: write <code>&lt;lang&gt;_review_policy.kleis</code>, add an MCP entry.</p>
 <p>All servers are subcommands of the same <code>kleis</code> binary. One build, one install,
-three servers:</p>
+four servers:</p>
 <pre><code class="language-bash">./scripts/build-kleis.sh
 # Installs to ~/bin/kleis and ~/.cargo/bin/kleis
-# All three MCPs are ready
+# All four MCPs are ready
 </code></pre>
 <h3 id="shared-architecture"><a class="header" href="#shared-architecture">Shared Architecture</a></h3>
 <p>Each MCP server follows the same pattern:</p>
@@ -673,9 +675,70 @@ define diff_check_cargo_version(current, base, path) =
 <p>For local development, run <code>--base-branch main</code> to get early warnings before
 creating a merge request.</p>
 <h4 id="mcp-compatibility"><a class="header" href="#mcp-compatibility">MCP compatibility</a></h4>
-<p>The <code>diff_check_*</code> prefix does not match the MCP’s <code>check_*</code> discovery filter,
-so diff rules are invisible to the kleis-review MCP server. They live in the
-same policy file but only activate via the CLI <code>--base-branch</code> flag.</p>
+<p>Diff rules are available via the <code>diff_check_file</code> MCP tool. The agent calls
+<code>diff_check_file</code> with a <code>path</code> and an optional <code>base</code> (defaults to <code>main</code>).
+The server reads the current file from disk, retrieves the base version via
+<code>git show</code>, and runs all <code>diff_check_*</code> and <code>diff_advise_*</code> rules against both
+versions. If the file is new (not in the base branch), an empty base is used.</p>
+<p>The <code>list_rules</code> and <code>describe_standards</code> tools show diff rules in a separate
+section with explicit guidance to use <code>diff_check_file</code>. Standard <code>check_file</code>
+calls do <strong>not</strong> trigger diff rules — the agent must use <code>diff_check_file</code>.</p>
+<h3 id="extra-review-files-review_extra_files"><a class="header" href="#extra-review-files-review_extra_files">Extra Review Files (<code>review_extra_files</code>)</a></h3>
+<p>Code reviews often need to inspect non-source files: <code>Cargo.toml</code> for version
+bumps, <code>requirements.txt</code> for pinned dependencies, <code>builders/runner/config</code> for
+image tags. These files don’t match the usual <code>*.rs</code> or <code>*.py</code> globs, so they
+get silently excluded.</p>
+<p>The <code>review_extra_files()</code> convention solves this. The policy declares which
+non-source files should be included:</p>
+<pre><code class="language-kleis">// Rust: version and lock files
+define review_extra_files() =
+    "Cargo.toml\nCargo.lock"
+
+// Python: deps, config, CI builder
+define review_extra_files() =
+    "requirements.txt\nrequirements-dev.txt\nbuilders/runner/config"
+</code></pre>
+<p>The function returns a newline-separated string of file patterns, resolved
+relative to the git repo root of the target files.</p>
+<h4 id="discovery-via-mcp"><a class="header" href="#discovery-via-mcp">Discovery via MCP</a></h4>
+<p>When an AI agent calls <code>describe_standards</code>, the response includes the extra
+files list:</p>
+<pre><code>## Extra Review Files
+
+These non-source files should also be included in reviews:
+
+  - Cargo.toml
+  - Cargo.lock
+</code></pre>
+<p>The <code>"extra_review_files"</code> key also appears in the JSON schema, so agents can
+programmatically discover which files to feed alongside source code.</p>
+<h4 id="cli-usage"><a class="header" href="#cli-usage">CLI usage</a></h4>
+<p>The CLI auto-discovers extra files from the policy by default. When you run:</p>
+<pre><code class="language-bash">kleis review src/**/*.rs -p rust_review_policy.kleis --failures-only
+</code></pre>
+<p>the engine evaluates <code>review_extra_files()</code>, resolves each pattern relative to
+the git repo root, and appends any existing files to the review list. No extra
+flags needed.</p>
+<p>To add files manually (overriding or supplementing the policy):</p>
+<pre><code class="language-bash">kleis review src/**/*.rs --include Cargo.toml --include README.md -p policy.kleis
+</code></pre>
+<p>To disable auto-discovery:</p>
+<pre><code class="language-bash">kleis review src/**/*.rs -p policy.kleis --include-from-policy false
+</code></pre>
+<h4 id="convention-1"><a class="header" href="#convention-1">Convention</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Arguments</th><th>Returns</th><th>When it runs</th></tr>
+</thead>
+<tbody>
+<tr><td>review_extra_files</td><td>(none)</td><td>Newline-separated file patterns</td><td>Auto on CLI; via <code>describe_standards</code> on MCP</td></tr>
+</tbody>
+</table>
+</div>
+<p>If <code>review_extra_files</code> is not defined, no extra files are added. The engine
+checks for its presence the same way it checks for <code>diff_file_filter</code> — by
+scanning the policy’s function list at startup.</p>
 <h3 id="advisory-mode-llm-assisted-review"><a class="header" href="#advisory-mode-llm-assisted-review">Advisory Mode (LLM-Assisted Review)</a></h3>
 <p>Formal checks are deterministic and machine-checked — they <strong>block</strong> the pipeline
 on failure. But some code quality concerns are inherently ambiguous: naming
