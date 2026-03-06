@@ -1,0 +1,33 @@
+// Eqnlib - List Constructor Semantics + Element Access
+// Gives Z3 the constructor properties of cons/nil
+// and nth-based element access for matrices.
+
+// Core list operations and element access
+structure ListOps(T) {
+    operation nth : List(T) → Nat → T
+    operation head : List(T) → T
+    operation tail : List(T) → List(T)
+
+    axiom nth_zero : ∀ x : T . ∀ xs : List(T) .
+        nth(cons(x, xs), 0) = x
+
+    axiom nth_succ : ∀ x : T . ∀ xs : List(T) . ∀ n : Nat .
+        geq(n, 0) → nth(cons(x, xs), plus(n, 1)) = nth(xs, n)
+
+    axiom head_cons : ∀ x : T . ∀ xs : List(T) .
+        head(cons(x, xs)) = x
+
+    axiom tail_cons : ∀ x : T . ∀ xs : List(T) .
+        tail(cons(x, xs)) = xs
+}
+
+// Constructor injectivity: cons is a true data constructor.
+// Z3 treats cons as uninterpreted by default; these axioms
+// restore the constructor semantics it needs.
+structure ListConstructor(T) {
+    axiom cons_injective_head : ∀ x1 : T . ∀ x2 : T . ∀ xs1 : List(T) . ∀ xs2 : List(T) .
+        cons(x1, xs1) = cons(x2, xs2) → x1 = x2
+
+    axiom cons_injective_tail : ∀ x1 : T . ∀ x2 : T . ∀ xs1 : List(T) . ∀ xs2 : List(T) .
+        cons(x1, xs1) = cons(x2, xs2) → xs1 = xs2
+}

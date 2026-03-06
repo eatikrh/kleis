@@ -531,6 +531,196 @@ impl Expression {
         }
     }
 
+    /// Collect all operation names used in this expression tree.
+    /// Includes implicit `cons`/`nil` for `Expression::List` nodes.
+    pub fn collect_operation_names(&self) -> std::collections::HashSet<String> {
+        let mut names = std::collections::HashSet::new();
+        self.collect_ops_recursive(&mut names);
+        names
+    }
+
+    fn collect_ops_recursive(&self, acc: &mut std::collections::HashSet<String>) {
+        match self {
+            Expression::Operation { name, args, .. } => {
+                acc.insert(name.clone());
+                for arg in args {
+                    arg.collect_ops_recursive(acc);
+                }
+            }
+            Expression::List(items) => {
+                acc.insert("cons".to_string());
+                acc.insert("nil".to_string());
+                for item in items {
+                    item.collect_ops_recursive(acc);
+                }
+            }
+            Expression::Quantifier {
+                body, where_clause, ..
+            } => {
+                body.collect_ops_recursive(acc);
+                if let Some(wc) = where_clause {
+                    wc.collect_ops_recursive(acc);
+                }
+            }
+            Expression::Match {
+                scrutinee, cases, ..
+            } => {
+                scrutinee.collect_ops_recursive(acc);
+                for case in cases {
+                    case.body.collect_ops_recursive(acc);
+                }
+            }
+            Expression::Conditional {
+                condition,
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                condition.collect_ops_recursive(acc);
+                then_branch.collect_ops_recursive(acc);
+                else_branch.collect_ops_recursive(acc);
+            }
+            Expression::Let { value, body, .. } => {
+                value.collect_ops_recursive(acc);
+                body.collect_ops_recursive(acc);
+            }
+            Expression::Ascription { expr, .. } => {
+                expr.collect_ops_recursive(acc);
+            }
+            Expression::Lambda { body, .. } => {
+                body.collect_ops_recursive(acc);
+            }
+            Expression::Const(_)
+            | Expression::String(_)
+            | Expression::Object(_)
+            | Expression::Placeholder { .. } => {}
+        }
+    }
+
+    /// Decompose constructor equalities into element-wise conjunctions.
+    ///
+    /// `equals(F(a1,..,an), F(b1,..,bn))` → `and(equals(a1,b1), .., equals(an,bn))`
+    ///
+    /// This is a pure AST rewrite that replaces quantified injectivity axioms
+    /// with deterministic structure: if both sides of an equality are the same
+    /// operation with the same arity, the equality is decomposed into
+    /// component-wise equalities joined by conjunction.
+    ///
+    /// Logical/arithmetic builtins (`plus`, `implies`, etc.) are not
+    /// decomposed — only domain constructors.
+    pub fn decompose_constructor_equalities(&self) -> Expression {
+        static BUILTINS: &[&str] = &[
+            "equals",
+            "eq",
+            "neq",
+            "not_equals",
+            "less_than",
+            "lt",
+            "greater_than",
+            "gt",
+            "leq",
+            "geq",
+            "and",
+            "logical_and",
+            "or",
+            "logical_or",
+            "not",
+            "logical_not",
+            "implies",
+            "iff",
+            "biconditional",
+            "plus",
+            "add",
+            "minus",
+            "subtract",
+            "times",
+            "multiply",
+            "negate",
+            "neg",
+            "divide",
+            "power",
+            "pow",
+            "abs",
+            "absolute",
+            "sqrt",
+            "nth_root",
+        ];
+
+        match self {
+            Expression::Operation { name, args, span } if name == "equals" && args.len() == 2 => {
+                let lhs = &args[0];
+                let rhs = &args[1];
+
+                if let (
+                    Expression::Operation {
+                        name: ln, args: la, ..
+                    },
+                    Expression::Operation {
+                        name: rn, args: ra, ..
+                    },
+                ) = (lhs, rhs)
+                {
+                    let is_constructor = ln.chars().next().is_some_and(|c| c.is_uppercase());
+                    if ln == rn
+                        && la.len() == ra.len()
+                        && is_constructor
+                        && !BUILTINS.contains(&ln.as_str())
+                    {
+                        let conjuncts: Vec<Expression> = la
+                            .iter()
+                            .zip(ra.iter())
+                            .map(|(a, b)| {
+                                Expression::operation("equals", vec![a.clone(), b.clone()])
+                                    .decompose_constructor_equalities()
+                            })
+                            .collect();
+                        return conjuncts
+                            .into_iter()
+                            .reduce(|acc, c| Expression::operation("and", vec![acc, c]))
+                            .unwrap();
+                    }
+                }
+
+                if let (Expression::List(la), Expression::List(ra)) = (lhs, rhs) {
+                    if la.len() == ra.len() {
+                        let conjuncts: Vec<Expression> = la
+                            .iter()
+                            .zip(ra.iter())
+                            .map(|(a, b)| {
+                                Expression::operation("equals", vec![a.clone(), b.clone()])
+                                    .decompose_constructor_equalities()
+                            })
+                            .collect();
+                        if let Some(result) = conjuncts
+                            .into_iter()
+                            .reduce(|acc, c| Expression::operation("and", vec![acc, c]))
+                        {
+                            return result;
+                        }
+                    }
+                }
+
+                Expression::Operation {
+                    name: name.clone(),
+                    args: args
+                        .iter()
+                        .map(|a| a.decompose_constructor_equalities())
+                        .collect(),
+                    span: span.clone(),
+                }
+            }
+            Expression::Operation { name, args, span } => Expression::Operation {
+                name: name.clone(),
+                args: args
+                    .iter()
+                    .map(|a| a.decompose_constructor_equalities())
+                    .collect(),
+                span: span.clone(),
+            },
+            other => other.clone(),
+        }
+    }
+
     /// Traverse the expression tree to find all placeholders
     pub fn find_placeholders(&self) -> Vec<(usize, String)> {
         let mut placeholders = Vec::new();

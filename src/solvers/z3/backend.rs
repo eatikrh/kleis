@@ -82,8 +82,13 @@ pub struct Z3Backend<'r> {
     /// Capability manifest (loaded from capabilities.toml)
     capabilities: SolverCapabilities,
 
-    /// Track which operations have been declared as uninterpreted functions
-    declared_ops: HashSet<String>,
+    /// Cached sort signature for each uninterpreted operation: (domain sorts, range sort).
+    /// The first declaration fixes the signature; subsequent calls re-create
+    /// the FuncDecl from the cached sorts, which Z3 interns to the same object.
+    /// This enforces sort consistency: a second call with different argument
+    /// sorts will produce a mismatch error instead of silently creating a
+    /// different overloaded declaration.
+    declared_ops: HashMap<String, (Vec<Sort>, Sort)>,
 
     /// Track which structures' axioms are currently loaded
     loaded_structures: HashSet<String>,
@@ -105,6 +110,10 @@ pub struct Z3Backend<'r> {
     /// Maps data type name (e.g., "Channel") to its Z3 DatatypeSort
     /// Enables automatic constructor distinctness and exhaustiveness
     declared_data_types: HashMap<String, DatatypeSort>,
+
+    /// When true, cons/nil use the "List" ADT from `declared_data_types`
+    /// for native injectivity and distinctness.
+    list_adt_enabled: bool,
 
     /// Warnings collected during translation (e.g., unknown types, duplicate operations)
     /// These are surfaced when verification fails to help diagnose issues
@@ -359,13 +368,14 @@ impl<'r> Z3Backend<'r> {
             solver,
             registry,
             capabilities,
-            declared_ops: HashSet::new(),
+            declared_ops: HashMap::new(),
             loaded_structures: HashSet::new(),
             identity_elements: HashMap::new(),
             free_variables: HashMap::new(),
             converter: Z3ResultConverter,
             complex_datatype: Some(complex_datatype),
             declared_data_types: HashMap::new(),
+            list_adt_enabled: false,
             warnings: Vec::new(),
             inferred_types: None,
             quantifier_vars: Vec::new(),
@@ -959,6 +969,7 @@ impl<'r> Z3Backend<'r> {
                     eprintln!("   [Z3 DEBUG]   asserting '{}'...", axiom_name);
                 }
                 let t = std::time::Instant::now();
+                let ops_snapshot = self.declared_ops.clone();
                 match self.translate_and_assert_axiom(&axiom_name, axiom_expr, &empty_vars) {
                     Ok(()) => {
                         count += 1;
@@ -971,6 +982,7 @@ impl<'r> Z3Backend<'r> {
                         }
                     }
                     Err(e) => {
+                        self.declared_ops = ops_snapshot;
                         eprintln!("   [Z3 DEBUG]   '{}' FAILED: {}", axiom_name, e);
                     }
                 }
@@ -983,6 +995,406 @@ impl<'r> Z3Backend<'r> {
         }
 
         Ok(count)
+    }
+
+    /// Operations that Z3 translates natively (not as uninterpreted functions).
+    /// These are always "known" for dependency analysis because they don't
+    /// introduce new uninterpreted symbols.
+    ///
+    /// TODO: derive this from capabilities.toml instead of hardcoding
+    fn z3_builtin_ops() -> HashSet<String> {
+        [
+            // Equality / comparison
+            "equals",
+            "eq",
+            "neq",
+            "not_equals",
+            "less_than",
+            "lt",
+            "greater_than",
+            "gt",
+            "leq",
+            "geq",
+            // Boolean
+            "and",
+            "logical_and",
+            "or",
+            "logical_or",
+            "not",
+            "logical_not",
+            "implies",
+            "iff",
+            "biconditional",
+            // Arithmetic
+            "plus",
+            "add",
+            "minus",
+            "subtract",
+            "times",
+            "multiply",
+            "negate",
+            "neg",
+            "divide",
+            "power",
+            "pow",
+            "abs",
+            "absolute",
+            "sqrt",
+            "nth_root",
+            // Rational
+            "rat_add",
+            "rat_sub",
+            "rat_mul",
+            "rat_div",
+            "rat_neg",
+            "rat_inv",
+            "reciprocal",
+            "rat_lt",
+            "rat_gt",
+            "rat_le",
+            "rat_ge",
+            // List ADT (native when list_adt is enabled)
+            "cons",
+            "nil",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect()
+    }
+
+    /// Extract concrete argument bindings from constructor calls in an expression.
+    ///
+    /// Walks the expression tree and for each `Operation(name, args)`, records
+    /// which argument positions hold `Const` values.  Returns a map:
+    ///   `(operation_name, arg_position) → Const value`
+    ///
+    /// Example: `Matrix(2, 2, [a,b,c,d])` → `{("Matrix",0) → "2", ("Matrix",1) → "2"}`
+    fn collect_concrete_args(expr: &Expression) -> HashMap<(String, usize), String> {
+        let mut map = HashMap::new();
+        Self::collect_concrete_args_recursive(expr, &mut map);
+        map
+    }
+
+    fn collect_concrete_args_recursive(
+        expr: &Expression,
+        map: &mut HashMap<(String, usize), String>,
+    ) {
+        match expr {
+            Expression::Operation { name, args, .. } => {
+                for (pos, arg) in args.iter().enumerate() {
+                    if let Expression::Const(val) = arg {
+                        map.insert((name.clone(), pos), val.clone());
+                    }
+                    Self::collect_concrete_args_recursive(arg, map);
+                }
+            }
+            Expression::List(items) => {
+                for item in items {
+                    Self::collect_concrete_args_recursive(item, map);
+                }
+            }
+            Expression::Quantifier {
+                body, where_clause, ..
+            } => {
+                Self::collect_concrete_args_recursive(body, map);
+                if let Some(wc) = where_clause {
+                    Self::collect_concrete_args_recursive(wc, map);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Ground an axiom by substituting structure parameters with concrete
+    /// dimension values inferred from the expression.
+    ///
+    /// For each `Object("m")` in the axiom that appears at the same
+    /// `(operation, position)` where the expression has a `Const`, replace
+    /// `Object("m")` → `Const("2")` throughout the axiom.
+    fn ground_axiom(
+        axiom_expr: &Expression,
+        concrete_args: &HashMap<(String, usize), String>,
+    ) -> Expression {
+        // 1. Find which Object names should be substituted
+        let mut subst: HashMap<String, String> = HashMap::new();
+        Self::find_groundable_params(axiom_expr, concrete_args, &mut subst);
+        if subst.is_empty() {
+            return axiom_expr.clone();
+        }
+        // 2. Apply substitution recursively
+        Self::apply_param_subst(axiom_expr, &subst)
+    }
+
+    /// Walk the axiom to find Object refs at positions where the expression
+    /// had Const values for the same operation.
+    fn find_groundable_params(
+        expr: &Expression,
+        concrete_args: &HashMap<(String, usize), String>,
+        subst: &mut HashMap<String, String>,
+    ) {
+        match expr {
+            Expression::Operation { name, args, .. } => {
+                for (pos, arg) in args.iter().enumerate() {
+                    if let Expression::Object(param_name) = arg {
+                        if let Some(val) = concrete_args.get(&(name.clone(), pos)) {
+                            subst.insert(param_name.clone(), val.clone());
+                        }
+                    }
+                    Self::find_groundable_params(arg, concrete_args, subst);
+                }
+            }
+            Expression::Quantifier {
+                body,
+                where_clause,
+                variables,
+                ..
+            } => {
+                let bound: HashSet<&str> = variables.iter().map(|v| v.name.as_str()).collect();
+                Self::find_groundable_params_excluding(body, concrete_args, subst, &bound);
+                if let Some(wc) = where_clause {
+                    Self::find_groundable_params_excluding(wc, concrete_args, subst, &bound);
+                }
+            }
+            Expression::List(items) => {
+                for item in items {
+                    Self::find_groundable_params(item, concrete_args, subst);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn find_groundable_params_excluding(
+        expr: &Expression,
+        concrete_args: &HashMap<(String, usize), String>,
+        subst: &mut HashMap<String, String>,
+        bound: &HashSet<&str>,
+    ) {
+        match expr {
+            Expression::Operation { name, args, .. } => {
+                for (pos, arg) in args.iter().enumerate() {
+                    if let Expression::Object(param_name) = arg {
+                        if !bound.contains(param_name.as_str()) {
+                            if let Some(val) = concrete_args.get(&(name.clone(), pos)) {
+                                subst.insert(param_name.clone(), val.clone());
+                            }
+                        }
+                    }
+                    Self::find_groundable_params_excluding(arg, concrete_args, subst, bound);
+                }
+            }
+            Expression::Quantifier {
+                body,
+                where_clause,
+                variables,
+                ..
+            } => {
+                let mut inner_bound = bound.clone();
+                for v in variables {
+                    inner_bound.insert(v.name.as_str());
+                }
+                Self::find_groundable_params_excluding(body, concrete_args, subst, &inner_bound);
+                if let Some(wc) = where_clause {
+                    Self::find_groundable_params_excluding(wc, concrete_args, subst, &inner_bound);
+                }
+            }
+            Expression::List(items) => {
+                for item in items {
+                    Self::find_groundable_params_excluding(item, concrete_args, subst, bound);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Replace `Object(name)` → `Const(val)` throughout an expression.
+    fn apply_param_subst(expr: &Expression, subst: &HashMap<String, String>) -> Expression {
+        match expr {
+            Expression::Object(name) => {
+                if let Some(val) = subst.get(name) {
+                    Expression::Const(val.clone())
+                } else {
+                    expr.clone()
+                }
+            }
+            Expression::Operation { name, args, span } => Expression::Operation {
+                name: name.clone(),
+                args: args
+                    .iter()
+                    .map(|a| Self::apply_param_subst(a, subst))
+                    .collect(),
+                span: span.clone(),
+            },
+            Expression::Quantifier {
+                quantifier,
+                variables,
+                where_clause,
+                body,
+            } => Expression::Quantifier {
+                quantifier: quantifier.clone(),
+                variables: variables.clone(),
+                where_clause: where_clause
+                    .as_ref()
+                    .map(|wc| Box::new(Self::apply_param_subst(wc, subst))),
+                body: Box::new(Self::apply_param_subst(body, subst)),
+            },
+            Expression::List(items) => Expression::List(
+                items
+                    .iter()
+                    .map(|i| Self::apply_param_subst(i, subst))
+                    .collect(),
+            ),
+            other => other.clone(),
+        }
+    }
+
+    /// Load axioms relevant to `expr` via transitive dependency closure,
+    /// grounding structure parameters with concrete dimensions from `expr`.
+    ///
+    /// 1. Collect concrete constructor args from the expression
+    /// 2. For each registry axiom whose operations are in the known set,
+    ///    ground its free parameters using dimension matching, then assert
+    /// 3. Repeat until no new axioms qualify (transitive closure)
+    pub fn load_axioms_for_expression(&mut self, expr: &Expression) -> Result<usize, String> {
+        if self.memout {
+            return Err("Z3 memory exhausted (memout)".to_string());
+        }
+
+        let mut known_ops = expr.collect_operation_names();
+        known_ops.extend(Self::z3_builtin_ops());
+        let concrete_args = Self::collect_concrete_args(expr);
+        let z3_debug = std::env::var("KLEIS_Z3_DEBUG").unwrap_or_default() == "1";
+
+        // If expression uses cons/nil, enable the List ADT for native
+        // injectivity instead of quantified axioms (avoids E-matching divergence)
+        if known_ops.contains("cons") || known_ops.contains("nil") {
+            self.enable_list_adt();
+        }
+
+        if z3_debug {
+            let builtins = Self::z3_builtin_ops();
+            let domain_ops: Vec<_> = known_ops.difference(&builtins).collect();
+            eprintln!(
+                "   [Z3 DEBUG] load_axioms_for_expression: domain ops = {:?}",
+                domain_ops
+            );
+            eprintln!(
+                "   [Z3 DEBUG] load_axioms_for_expression: concrete args = {:?}",
+                concrete_args
+            );
+        }
+
+        let empty_vars: HashMap<String, Dynamic> = HashMap::new();
+
+        let structures_with_axioms: Vec<String> = self
+            .registry
+            .structures_with_axioms()
+            .iter()
+            .map(|s| (*s).clone())
+            .collect();
+
+        // Collect (structure, axiom_name, axiom_expr, axiom_ops) once
+        let mut candidates: Vec<(String, String, Expression, HashSet<String>)> = Vec::new();
+        for structure_name in &structures_with_axioms {
+            if self.loaded_structures.contains(structure_name) {
+                continue;
+            }
+            for (axiom_name, axiom_expr) in self.registry.get_axioms(structure_name) {
+                let axiom_ops = axiom_expr.collect_operation_names();
+                candidates.push((
+                    structure_name.clone(),
+                    axiom_name,
+                    axiom_expr.clone(),
+                    axiom_ops,
+                ));
+            }
+        }
+
+        let mut total_loaded = 0;
+        let mut loaded_indices: HashSet<usize> = HashSet::new();
+
+        loop {
+            let mut progress = false;
+
+            for (i, (struct_name, axiom_name, axiom_expr, axiom_ops)) in
+                candidates.iter().enumerate()
+            {
+                if loaded_indices.contains(&i) {
+                    continue;
+                }
+
+                if axiom_ops.is_subset(&known_ops) {
+                    // Skip injectivity axioms — handled by
+                    // decompose_constructor_equalities and List ADT
+                    if axiom_name.contains("injective") {
+                        if z3_debug {
+                            eprintln!(
+                                "   [Z3 DEBUG]   skipping '{}::{}' (injectivity handled by decomposition)",
+                                struct_name, axiom_name
+                            );
+                        }
+                        loaded_indices.insert(i);
+                        continue;
+                    }
+                    if self.list_adt_enabled && struct_name == "ListConstructor" {
+                        if z3_debug {
+                            eprintln!(
+                                "   [Z3 DEBUG]   skipping '{}::{}' (List ADT provides injectivity)",
+                                struct_name, axiom_name
+                            );
+                        }
+                        loaded_indices.insert(i);
+                        continue;
+                    }
+
+                    // Ground structure parameters with concrete dimensions
+                    let grounded = Self::ground_axiom(axiom_expr, &concrete_args);
+
+                    if z3_debug {
+                        eprintln!(
+                            "   [Z3 DEBUG]   loading '{}::{}' (grounded: {})",
+                            struct_name,
+                            axiom_name,
+                            if &grounded != axiom_expr { "yes" } else { "no" }
+                        );
+                    }
+                    // Snapshot declared_ops so a failed axiom translation
+                    // doesn't leave partial declarations with wrong sorts.
+                    let ops_snapshot = self.declared_ops.clone();
+                    match self.translate_and_assert_axiom(axiom_name, &grounded, &empty_vars) {
+                        Ok(()) => {
+                            total_loaded += 1;
+                            for op in axiom_ops {
+                                known_ops.insert(op.clone());
+                            }
+                        }
+                        Err(e) => {
+                            self.declared_ops = ops_snapshot;
+                            if z3_debug {
+                                eprintln!(
+                                    "   [Z3 DEBUG]   '{}::{}' FAILED: {}",
+                                    struct_name, axiom_name, e
+                                );
+                            }
+                        }
+                    }
+                    loaded_indices.insert(i);
+                    progress = true;
+                }
+            }
+
+            if !progress {
+                break;
+            }
+        }
+
+        if z3_debug {
+            eprintln!(
+                "   [Z3 DEBUG] load_axioms_for_expression: loaded {} axioms",
+                total_loaded
+            );
+        }
+        Ok(total_loaded)
     }
 
     // =========================================================================
@@ -1646,16 +2058,22 @@ impl<'r> Z3Backend<'r> {
                     "String" | "Str" => z3::ast::String::fresh_const(&var.name).into(),
 
                     type_name => {
-                        // Check if it's a declared data type
+                        // Check if it's a declared data type (exact match)
                         if let Some(dt_sort) = self.declared_data_types.get(type_name) {
                             Dynamic::fresh_const(&var.name, &dt_sort.sort)
+                        }
+                        // Parameterized types: "List(T)" → base "List"
+                        else if let Some(base) = type_name.split('(').next() {
+                            if let Some(dt_sort) = self.declared_data_types.get(base) {
+                                Dynamic::fresh_const(&var.name, &dt_sort.sort)
+                            } else {
+                                self.add_warning(format!(
+                                    "Unknown type '{}' for variable '{}'. Treating as Int.",
+                                    type_name, var.name
+                                ));
+                                Int::fresh_const(&var.name).into()
+                            }
                         } else {
-                            // Unknown type - add warning and default to Int
-                            self.add_warning(format!(
-                                "Unknown type '{}' for variable '{}'. Treating as Int. \
-                                 Consider adding: data {} = ...  or ensure it's imported.",
-                                type_name, var.name, type_name
-                            ));
                             Int::fresh_const(&var.name).into()
                         }
                     }
@@ -1699,30 +2117,73 @@ impl<'r> Z3Backend<'r> {
         Ok(result)
     }
 
+    /// Declare a monomorphic List ADT: `cons(head: Int, tail: List) | nil`.
+    ///
+    /// When enabled, `cons`/`nil` use Z3 algebraic datatype constructors,
+    /// giving Z3 native injectivity (`cons(a,x) = cons(b,y) → a=b ∧ x=y`)
+    /// and distinctness (`cons(a,x) ≠ nil`) with zero quantifier axioms.
+    pub fn enable_list_adt(&mut self) {
+        if self.list_adt_enabled {
+            return;
+        }
+        let list_sort = DatatypeBuilder::new("KleisList")
+            .variant(
+                "cons",
+                vec![
+                    ("head", DatatypeAccessor::Sort(Sort::int())),
+                    ("tail", DatatypeAccessor::Datatype("KleisList".into())),
+                ],
+            )
+            .variant("nil", vec![])
+            .finish();
+
+        let z3_debug = std::env::var("KLEIS_Z3_DEBUG").unwrap_or_default() == "1";
+        if z3_debug {
+            eprintln!("   [Z3 DEBUG] Declared List ADT (KleisList) — cons/nil are now injective constructors");
+        }
+        self.declared_data_types
+            .insert("List".to_string(), list_sort);
+        self.list_adt_enabled = true;
+    }
+
     /// Translate a Kleis List to a cons-chain
     ///
     /// [a, b, c] -> cons(a, cons(b, cons(c, nil)))
     ///
-    /// This enables axioms from stdlib/lists.kleis to work:
-    /// - nth(cons(x, xs), 0) = x
-    /// - nth(cons(x, xs), n+1) = nth(xs, n)
+    /// When the List ADT is enabled (`enable_list_adt`), uses Z3 datatype
+    /// constructors for native injectivity.  Otherwise falls back to
+    /// uninterpreted functions.
     fn translate_list_to_cons(
         &mut self,
         items: &[Expression],
         vars: &HashMap<String, Dynamic>,
     ) -> Result<Dynamic, String> {
-        // nil is represented as an uninterpreted constant
-        let nil_func = self.declare_uninterpreted("nil", 0);
-        let mut result = nil_func.apply(&[]);
-
-        // Build cons chain from right to left
-        for item in items.iter().rev() {
-            let item_z3 = self.kleis_to_z3(item, vars)?;
-            let cons_func = self.declare_uninterpreted("cons", 2);
-            result = cons_func.apply(&[&item_z3 as &dyn Ast, &result as &dyn Ast]);
+        if self.list_adt_enabled {
+            let list_adt = self
+                .declared_data_types
+                .get("List")
+                .expect("List ADT enabled but not in declared_data_types");
+            // cons = variant 0, nil = variant 1
+            let mut result = list_adt.variants[1].constructor.apply(&[]);
+            for item in items.iter().rev() {
+                let item_z3 = self.kleis_to_z3(item, vars)?;
+                let list_adt = self.declared_data_types.get("List").unwrap();
+                result = list_adt.variants[0]
+                    .constructor
+                    .apply(&[&item_z3 as &dyn Ast, &result as &dyn Ast]);
+            }
+            Ok(result)
+        } else {
+            // Uninterpreted function fallback
+            let nil_func = self.declare_uninterpreted("nil", 0);
+            let mut result = nil_func.apply(&[]);
+            for item in items.iter().rev() {
+                let item_z3 = self.kleis_to_z3(item, vars)?;
+                let cons_func = self.declare_uninterpreted("cons", 2);
+                result = cons_func.apply(&[&item_z3 as &dyn Ast, &result as &dyn Ast]);
+            }
+            Ok(result)
         }
-
-        Ok(result)
     }
 
     /// Translate Kleis expression to Z3 Dynamic
@@ -3823,13 +4284,27 @@ impl<'r> Z3Backend<'r> {
                 }
             }
 
-            // Unknown operation - use uninterpreted function with proper typing
+            // Unknown operation — declare as uninterpreted function.
+            // declare_uninterpreted checks the cache first (sort consistency),
+            // then the registry for a typed signature, then falls back to
+            // all-Int domain. For operations with ADT-sorted arguments (e.g.
+            // KleisList) that have no registry signature, we infer domain
+            // sorts from the actual arguments on first declaration only.
             _ => {
-                let func_decl = self.declare_uninterpreted(name, args.len());
+                let func_decl = if !self.declared_ops.contains_key(name)
+                    && self.registry.get_operation_signature(name).is_none()
+                {
+                    let domain: Vec<Sort> = args.iter().map(|a| a.get_sort()).collect();
+                    let range = Sort::int();
+                    let domain_refs: Vec<&Sort> = domain.iter().collect();
+                    let fd = FuncDecl::new(name, &domain_refs, &range);
+                    self.declared_ops.insert(name.to_string(), (domain, range));
+                    fd
+                } else {
+                    self.declare_uninterpreted(name, args.len())
+                };
 
-                // CRITICAL: Check for sort mismatches BEFORE calling apply()
-                // Z3's apply() panics on sort mismatch - we want a helpful error instead
-                // Auto-promote Int→Real when the function expects Real (standard numeric coercion)
+                // Auto-promote Int→Real when the function expects Real
                 let mut promoted_args: Vec<Dynamic> = args.to_vec();
                 let arity = func_decl.arity();
                 for i in 0..arity {
@@ -3885,25 +4360,32 @@ impl<'r> Z3Backend<'r> {
     /// - Bool → Bool sort  
     /// - Everything else → Int sort (uninterpreted as integers)
     fn declare_uninterpreted(&mut self, name: &str, arity: usize) -> FuncDecl {
+        // Return from cached sort signature if we've seen this operation.
+        // Z3 interns FuncDecl by (name, sorts), so re-creating with the
+        // same sorts returns the same declaration object.
+        if let Some((domain, range)) = self.declared_ops.get(name) {
+            let domain_refs: Vec<&Sort> = domain.iter().collect();
+            return FuncDecl::new(name, &domain_refs, range);
+        }
+
         // Try to get the operation signature from the registry
         if let Some(type_sig) = self.registry.get_operation_signature(name) {
             return self.declare_typed_function(name, type_sig, arity);
         }
 
         // No signature found: default to Int → Int (uninterpreted)
-        // Operations that need Bool return type MUST be declared with proper signatures
-        if !self.declared_ops.contains(name) {
-            self.add_warning(format!(
-                "Operation '{}' has no type signature in registry. Using untyped fallback (Int → Int). \
-                 Consider adding: operation {} : <args> → <return_type>",
-                name, name
-            ));
-            self.declared_ops.insert(name.to_string());
-        }
+        self.add_warning(format!(
+            "Operation '{}' has no type signature in registry. Using untyped fallback (Int → Int). \
+             Consider adding: operation {} : <args> → <return_type>",
+            name, name
+        ));
 
         let domain: Vec<_> = (0..arity).map(|_| Sort::int()).collect();
-        let domain_refs: Vec<_> = domain.iter().collect();
-        FuncDecl::new(name, &domain_refs, &Sort::int())
+        let range = Sort::int();
+        let domain_refs: Vec<&Sort> = domain.iter().collect();
+        let func_decl = FuncDecl::new(name, &domain_refs, &range);
+        self.declared_ops.insert(name.to_string(), (domain, range));
+        func_decl
     }
 
     /// Declare a function with proper types from its signature
@@ -3913,12 +4395,14 @@ impl<'r> Z3Backend<'r> {
         type_sig: &TypeExpr,
         arity: usize,
     ) -> FuncDecl {
-        // Extract argument types and return type from signature
+        if let Some((domain, range)) = self.declared_ops.get(name) {
+            let domain_refs: Vec<&Sort> = domain.iter().collect();
+            return FuncDecl::new(name, &domain_refs, range);
+        }
+
         let (arg_types, ret_type) = self.extract_signature_types(type_sig);
 
-        // Convert to Z3 sorts
         let domain: Vec<Sort> = if arg_types.is_empty() {
-            // Fallback if we couldn't extract arg types
             (0..arity).map(|_| Sort::int()).collect()
         } else {
             arg_types
@@ -3929,19 +4413,18 @@ impl<'r> Z3Backend<'r> {
 
         let range = self.type_expr_to_sort(&ret_type);
 
-        if !self.declared_ops.contains(name) {
-            let domain_strs: Vec<String> = domain.iter().map(|s| format!("{}", s)).collect();
-            eprintln!(
-                "   🔧 Declaring typed function: {} : {} → {}",
-                name,
-                domain_strs.join(" × "),
-                range
-            );
-            self.declared_ops.insert(name.to_string());
-        }
+        let domain_strs: Vec<String> = domain.iter().map(|s| format!("{}", s)).collect();
+        eprintln!(
+            "   🔧 Declaring typed function: {} : {} → {}",
+            name,
+            domain_strs.join(" × "),
+            range
+        );
 
         let domain_refs: Vec<_> = domain.iter().collect();
-        FuncDecl::new(name, &domain_refs, &range)
+        let func_decl = FuncDecl::new(name, &domain_refs, &range);
+        self.declared_ops.insert(name.to_string(), (domain, range));
+        func_decl
     }
 
     /// Extract argument types and return type from a function signature
@@ -4118,16 +4601,22 @@ impl<'r> Z3Backend<'r> {
                     "String" | "Str" => z3::ast::String::fresh_const(&var.name).into(),
 
                     type_name => {
-                        // Check if it's a declared data type
+                        // Check if it's a declared data type (exact match)
                         if let Some(dt_sort) = self.declared_data_types.get(type_name) {
                             Dynamic::fresh_const(&var.name, &dt_sort.sort)
+                        }
+                        // Parameterized types: "List(T)" → base "List"
+                        else if let Some(base) = type_name.split('(').next() {
+                            if let Some(dt_sort) = self.declared_data_types.get(base) {
+                                Dynamic::fresh_const(&var.name, &dt_sort.sort)
+                            } else {
+                                self.add_warning(format!(
+                                    "Unknown type '{}' for variable '{}'. Treating as Int.",
+                                    type_name, var.name
+                                ));
+                                Int::fresh_const(&var.name).into()
+                            }
                         } else {
-                            // Unknown type - add warning and default to Int
-                            self.add_warning(format!(
-                                "Unknown type '{}' for variable '{}'. Treating as Int. \
-                                 Consider adding: data {} = ...  or ensure it's imported.",
-                                type_name, var.name, type_name
-                            ));
                             Int::fresh_const(&var.name).into()
                         }
                     }
@@ -4814,20 +5303,41 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         // Clear quantifier variable tracking for this satisfiability pass
         self.quantifier_vars.clear();
 
+        // Decompose constructor equalities into element-wise conjunctions
+        // before translating to Z3. This avoids quantified injectivity axioms
+        // and the E-matching divergence they cause.
+        let decomposed = expr.decompose_constructor_equalities();
+
+        // Enable List ADT if the expression involves list constructors
+        let ops = decomposed.collect_operation_names();
+        if ops.contains("cons") || ops.contains("nil") || matches!(expr, Expression::List(_)) {
+            self.enable_list_adt();
+        }
+
+        let z3_debug = std::env::var("KLEIS_Z3_DEBUG").unwrap_or_default() == "1";
+
+        // Load relevant computational axioms for operations in the expression.
+        // Injectivity axioms are skipped — handled by decomposition + List ADT.
+        // Skip if axioms were already loaded (e.g., via initialize_from_registry).
+        if self.loaded_structures.is_empty() {
+            if let Err(e) = self.load_axioms_for_expression(&decomposed) {
+                if z3_debug {
+                    eprintln!("   [Z3 DEBUG] axiom loading warning: {}", e);
+                }
+            }
+        }
+
         // Use push/pop for incremental solving
         self.solver.push();
 
         // Translate to Z3 (populates self.quantifier_vars via translate_quantifier)
-        let z3_expr = self.kleis_to_z3(expr, &HashMap::new())?;
+        let z3_expr = self.kleis_to_z3(&decomposed, &HashMap::new())?;
         let z3_bool = z3_expr
             .as_bool()
             .ok_or_else(|| "Expression must be a boolean proposition".to_string())?;
 
         // Assert the expression directly (not negated)
         self.solver.assert(&z3_bool);
-
-        // Check satisfiability with watchdog to prevent E-matching divergence
-        let z3_debug = std::env::var("KLEIS_Z3_DEBUG").unwrap_or_default() == "1";
         let timeout_ms: u32 = std::env::var("KLEIS_Z3_TIMEOUT_MS")
             .ok()
             .and_then(|v| v.parse().ok())
@@ -4843,9 +5353,34 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         let result = match solver_check_with_watchdog(&self.solver, wall_timeout) {
             SatResult::Sat => {
                 let witness = if let Some(model) = self.solver.get_model() {
+                    if z3_debug {
+                        eprintln!("   [Z3 DEBUG] === RAW MODEL ===\n{}", model);
+                        eprintln!(
+                            "   [Z3 DEBUG] free_variables: {:?}",
+                            self.free_variables.keys().collect::<Vec<_>>()
+                        );
+                        eprintln!(
+                            "   [Z3 DEBUG] quantifier_vars: {:?}",
+                            self.quantifier_vars
+                                .iter()
+                                .map(|(n, _)| n.as_str())
+                                .collect::<Vec<_>>()
+                        );
+                        for (name, z3_var) in &self.free_variables {
+                            let evald = model.eval(z3_var, true);
+                            eprintln!(
+                                "   [Z3 DEBUG] free_var '{}': z3_var={}, eval={:?}",
+                                name, z3_var, evald
+                            );
+                        }
+                    }
+                    let mut all_vars = self.quantifier_vars.clone();
+                    for (name, z3_var) in &self.free_variables {
+                        all_vars.push((name.clone(), z3_var.clone()));
+                    }
                     super::witness::model_to_witness(
                         &model,
-                        &self.quantifier_vars,
+                        &all_vars,
                         &self.converter,
                         &self.declared_data_types,
                     )

@@ -1,0 +1,38 @@
+// Eqnlib - Matrix Z3 Verification Tests
+
+import "base.kleis"
+import "lists.kleis"
+import "matrix.kleis"
+
+// === Identity axioms ===
+
+example "identity is left unit" {
+    assert(∀ A : Matrix(2, 2, ℝ). multiply(identity, A) = A)
+}
+
+example "identity is right unit" {
+    assert(∀ A : Matrix(2, 2, ℝ). multiply(A, identity) = A)
+}
+
+example "identity times identity is identity" {
+    assert(multiply(identity, identity) = identity)
+}
+
+// === Associativity ===
+
+example "multiplication is associative (square)" {
+    assert(∀ (A : Matrix(2, 2, ℝ)) (B : Matrix(2, 2, ℝ)) (C : Matrix(2, 2, ℝ)).
+        multiply(multiply(A, B), C) = multiply(A, multiply(B, C)))
+}
+
+// === Distributivity ===
+
+example "left distributivity" {
+    assert(∀ (A : Matrix(2, 2, ℝ)) (B : Matrix(2, 2, ℝ)) (C : Matrix(2, 2, ℝ)).
+        multiply(A, matrix_add(B, C)) = matrix_add(multiply(A, B), multiply(A, C)))
+}
+
+example "right distributivity" {
+    assert(∀ (A : Matrix(2, 2, ℝ)) (B : Matrix(2, 2, ℝ)) (C : Matrix(2, 2, ℝ)).
+        multiply(matrix_add(A, B), C) = matrix_add(multiply(A, C), multiply(B, C)))
+}

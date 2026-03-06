@@ -680,23 +680,11 @@ impl<'r> AxiomVerifier<'r> {
             self.ensure_structure_loaded(structure)?;
         }
 
-        // Step 3: Load ALL structure axioms from registry (same as verify_axiom_impl)
-        let all_structures: Vec<String> = self
-            .registry
-            .structures_with_axioms()
-            .iter()
-            .map(|s| (*s).clone())
-            .collect();
+        // Unlike verify_axiom (which needs ALL axioms for completeness),
+        // check_sat only needs axioms for operations actually present in the
+        // expression. Loading unrelated axioms causes E-matching divergence.
 
-        for structure in &all_structures {
-            if !self.loaded_structures.contains(structure) {
-                if let Err(e) = self.ensure_structure_loaded(structure) {
-                    eprintln!("   ⚠️ Warning: Failed to load {}: {}", structure, e);
-                }
-            }
-        }
-
-        // Step 4: Delegate to backend for satisfiability check
+        // Step 3: Delegate to backend for satisfiability check
         self.backend.check_satisfiability(expr)
     }
 
