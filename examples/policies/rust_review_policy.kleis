@@ -975,6 +975,12 @@ example "sql_safe_format_in_test_ok" {
 // by the `diff_check_*` prefix and only run when `--base-branch` is provided.
 // The MCP's `check_*` discovery filter does not match this prefix.
 
+// Extra files that should be included alongside *.rs source in reviews.
+// The engine and MCP expose this so agents and CI scripts know which
+// non-source files to feed to the reviewer.
+define review_extra_files() =
+    "Cargo.toml\nCargo.lock"
+
 // Filter: only fetch base branch content for version-bearing files
 define diff_file_filter(path) =
     if hasSuffix(path, "Cargo.toml") then true

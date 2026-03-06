@@ -403,6 +403,12 @@ define check_python_structural(source) =
 //   - Structural regression: function grew beyond 50 statements
 // ============================================================================
 
+// --- Extra files to include alongside *.py source in reviews ---
+// The engine and MCP expose this so agents and CI scripts know which
+// non-source files to feed to the reviewer.
+define review_extra_files() =
+    "requirements.txt\nrequirements-dev.txt\nbuilders/runner/config"
+
 // --- Filter: which files trigger base branch fetch ---
 
 define diff_file_filter(path) =

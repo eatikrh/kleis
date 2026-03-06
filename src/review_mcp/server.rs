@@ -548,6 +548,24 @@ impl ReviewMcpServer {
             }
         }
 
+        if let Some(files) = schema
+            .get("extra_review_files")
+            .and_then(|f| f.as_array())
+        {
+            if !files.is_empty() {
+                text.push_str("\n## Extra Review Files\n\n");
+                text.push_str(
+                    "These non-source files should also be included in reviews:\n\n",
+                );
+                for f in files {
+                    if let Some(s) = f.as_str() {
+                        text.push_str(&format!("  - {}\n", s));
+                    }
+                }
+                text.push('\n');
+            }
+        }
+
         let content = McpToolContent {
             content_type: "text".to_string(),
             text,

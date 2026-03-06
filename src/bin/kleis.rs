@@ -194,6 +194,17 @@ enum Commands {
         /// Accepts any git ref: branch, tag, SHA, or remote ref.
         #[arg(short = 'B', long)]
         base_branch: Option<String>,
+
+        /// Extra file paths to include in the review (repeatable).
+        /// Use for non-source files like Cargo.toml or requirements.txt.
+        #[arg(long = "include")]
+        include: Vec<PathBuf>,
+
+        /// Auto-discover extra files from the policy's review_extra_files() function.
+        /// Resolves patterns relative to the git repo root of the target files.
+        /// Enabled by default when the policy defines review_extra_files().
+        #[arg(long, default_value_t = true)]
+        include_from_policy: bool,
     },
 }
 
@@ -246,8 +257,19 @@ async fn main() {
             verbose,
             advise,
             base_branch,
+            include,
+            include_from_policy,
         } => {
-            run_review(files, policy, failures_only, verbose, advise, base_branch);
+            run_review(
+                files,
+                policy,
+                failures_only,
+                verbose,
+                advise,
+                base_branch,
+                include,
+                include_from_policy,
+            );
         }
     }
 }
@@ -756,12 +778,14 @@ fn language_from_path(path: &Path) -> String {
 
 /// Run code review from the command line (CI/CD mode)
 fn run_review(
-    files: Vec<PathBuf>,
+    mut files: Vec<PathBuf>,
     policy: PathBuf,
     failures_only: bool,
     verbose: bool,
     advise: bool,
     base_branch: Option<String>,
+    include: Vec<PathBuf>,
+    include_from_policy: bool,
 ) {
     use kleis::review_mcp::advisory::{self, AdvisoryConfig};
     use kleis::review_mcp::engine::ReviewEngine;
@@ -831,7 +855,6 @@ fn run_review(
 
     if verbose {
         eprintln!("[kleis-review] Policy: {}", policy.display());
-        eprintln!("[kleis-review] Files: {}", files.len());
     }
 
     let engine = match ReviewEngine::load(&policy) {
@@ -841,6 +864,65 @@ fn run_review(
             std::process::exit(1);
         }
     };
+
+    // Append --include files
+    if !include.is_empty() {
+        if verbose {
+            eprintln!(
+                "[kleis-review] --include: {} extra file(s)",
+                include.len()
+            );
+        }
+        files.extend(include);
+    }
+
+    // Auto-discover extra files from the policy's review_extra_files()
+    if include_from_policy {
+        if let Some(extra) = engine.extra_review_files() {
+            let repo_root = diff_context
+                .as_ref()
+                .map(|(_, root)| root.clone())
+                .or_else(|| {
+                    files.first().and_then(|f| {
+                        let dir = if f.is_absolute() {
+                            f.parent().unwrap_or(Path::new(".")).to_path_buf()
+                        } else {
+                            std::env::current_dir()
+                                .ok()?
+                                .join(f)
+                                .parent()
+                                .unwrap_or(Path::new("."))
+                                .to_path_buf()
+                        };
+                        git_repo_root_for(&dir)
+                    })
+                });
+
+            if let Some(root) = repo_root {
+                for pattern in &extra {
+                    let candidate = root.join(pattern);
+                    if candidate.exists() {
+                        if verbose {
+                            eprintln!(
+                                "[kleis-review] auto-include from policy: {}",
+                                candidate.display()
+                            );
+                        }
+                        files.push(candidate);
+                    } else if verbose {
+                        eprintln!(
+                            "[kleis-review] auto-include: {} not found (skipped)",
+                            candidate.display()
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    if verbose {
+        eprintln!("[kleis-review] Files: {}", files.len());
+    }
 
     let formal_rule_names: Vec<String> =
         engine.list_rules().iter().map(|r| r.name.clone()).collect();

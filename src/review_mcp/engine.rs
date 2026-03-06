@@ -290,6 +290,42 @@ impl ReviewEngine {
         }
     }
 
+    /// Check whether the policy defines a `review_extra_files` function
+    pub fn has_extra_review_files(&self) -> bool {
+        self.evaluator
+            .list_functions()
+            .iter()
+            .any(|name| name == "review_extra_files")
+    }
+
+    /// Evaluate `review_extra_files()` and return the list of file patterns.
+    /// Returns `None` if the function is not defined or evaluation fails.
+    pub fn extra_review_files(&self) -> Option<Vec<String>> {
+        if !self.has_extra_review_files() {
+            return None;
+        }
+        let call_expr = Expression::Operation {
+            name: "review_extra_files".to_string(),
+            args: vec![],
+            span: None,
+        };
+        match self.evaluator.eval_concrete(&call_expr) {
+            Ok(Expression::String(s)) => {
+                let files: Vec<String> = s
+                    .split('\n')
+                    .map(|f| f.trim().to_string())
+                    .filter(|f| !f.is_empty())
+                    .collect();
+                if files.is_empty() {
+                    None
+                } else {
+                    Some(files)
+                }
+            }
+            _ => None,
+        }
+    }
+
     /// Run all `diff_check_*` and `diff_advise_*` rules with (current, base, path) arguments
     pub fn check_diff(&self, current: &str, base: &str, path: &str) -> ReviewResult {
         let diff_functions: Vec<(String, RuleSeverity)> = self
@@ -545,12 +581,15 @@ impl ReviewEngine {
             })
             .collect();
 
+        let extra_files = self.extra_review_files().unwrap_or_default();
+
         serde_json::json!({
             "policy_file": self.policy_file.display().to_string(),
             "structures": structures,
             "check_functions": check_fns,
             "advise_functions": advise_fns,
             "helper_functions": helper_fns,
+            "extra_review_files": extra_files,
             "stats": {
                 "structures": structures.len(),
                 "functions": functions.len(),
