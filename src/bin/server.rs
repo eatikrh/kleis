@@ -92,10 +92,7 @@ fn load_imports_recursive(
     Ok(())
 }
 
-/// Load eqnlib files into a StructureRegistry for Z3 verification.
-/// Uses eqnlib/ (minimal, self-contained) instead of stdlib/ to avoid
-/// axiom conflicts that cause UNSAT when all stdlib axioms are loaded
-/// into a single Z3 context.
+/// Load stdlib files into a StructureRegistry for Z3 verification.
 fn load_stdlib_registry() -> kleis::structure_registry::StructureRegistry {
     use kleis::evaluator::Evaluator;
     use kleis::kleis_parser::parse_kleis_program_with_file;
@@ -106,9 +103,9 @@ fn load_stdlib_registry() -> kleis::structure_registry::StructureRegistry {
     let mut loaded_files = std::collections::HashSet::new();
 
     let stdlib_files = [
-        "eqnlib/base.kleis",
-        "eqnlib/lists.kleis",
-        "eqnlib/matrix.kleis",
+        "stdlib/minimal_prelude.kleis",
+        "stdlib/lists.kleis",
+        "stdlib/matrices.kleis",
     ];
 
     for file_path_str in &stdlib_files {
@@ -314,12 +311,9 @@ async fn main() {
         }
     };
 
-    // Initialize StructureRegistry with eqnlib for Z3 verification
-    // Uses eqnlib/ (minimal, self-contained) instead of stdlib/ to avoid
-    // axiom conflicts that cause UNSAT when all stdlib axioms are loaded together.
     let registry = load_stdlib_registry();
     println!(
-        "✅ StructureRegistry initialized from eqnlib/ with {} structures, {} operations",
+        "✅ StructureRegistry initialized from stdlib/ with {} structures, {} operations",
         registry.structure_count(),
         registry.operation_count()
     );
