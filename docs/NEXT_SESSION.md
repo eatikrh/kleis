@@ -27,6 +27,10 @@ Both axioms went from 7-second timeouts to instant verification (<200ms).
 
 **Result: 21/24 → 24/24 verified examples.** The entanglement paper is fully machine-checked.
 
+### Manual page: kleis-review-python has no section
+
+`docs/manual/src/chapters/28-agent-mcps.md` opens with "Kleis ships **three** MCP servers" but there are four. The summary table at the bottom already lists all four, but the intro and body treat kleis-review as a single Rust-only server. The Python review MCP — `scan_python` builtin, `python_types.kleis`, 12 string checks, 1 structural check, 7 diff-aware rules — has no dedicated section. Change "three" → "four" and add a parallel "kleis-review-python" section.
+
 ### Key Rule: Uppercase Constructor Convention
 
 `decompose_constructor_equalities` in `ast.rs` uses an uppercase-first-letter check to distinguish constructors (which should be decomposed into field equalities) from non-constructor operations. **This is now a Kleis convention: constructor names start with an uppercase letter.** This prevents accidental decomposition of operations like `component(g, mu, nu)`.

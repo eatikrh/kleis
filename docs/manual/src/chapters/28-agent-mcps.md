@@ -132,6 +132,11 @@ In Cursor, add to `.cursor/mcp.json`:
 
 ## kleis-review: Code Review via Formal Standards
 
+> **Note:** Review MCPs are now specialized as `kleis-review-rust` and
+> `kleis-review-python`. There may be more specialized review tools in the
+> future, or we may combine them into one that is able to review multiple
+> languages.
+
 ### The Problem
 
 Code reviews catch two categories of issues:
