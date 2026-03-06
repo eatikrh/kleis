@@ -157,12 +157,13 @@ inconsistently, and slows down every review.
 
 ### The Solution
 
-The kleis-review MCP loads a coding standards file and exposes six tools:
+The kleis-review MCP loads a coding standards file and exposes seven tools:
 
 | Tool | Purpose |
 |------|---------|
 | `check_code` | Check a source code snippet against all standards |
 | `check_file` | Check a file on disk against all standards |
+| `diff_check_file` | Check a file against diff-based rules by comparing with a base branch |
 | `list_rules` | List all loaded coding standard rules |
 | `explain_rule` | Explain a specific rule in detail |
 | `describe_standards` | Show the full schema of loaded standards |
@@ -386,8 +387,8 @@ kleis-policy      kleis-review-rust     kleis-review-python    kleis-theory
 | Server | Policy file | Convention | Tools |
 |--------|-------------|------------|-------|
 | kleis-policy | `agent_policy.kleis` | `check_*` returns "allow"/"deny" | 5 |
-| kleis-review-rust | `rust_review_policy.kleis` | `check_*` returns "pass"/"fail: reason" (3 tiers: string, structural, Z3) | 6 |
-| kleis-review-python | `python_review_policy.kleis` | `check_*` returns "pass"/"fail: reason" (string + structural via `scan_python`) | 6 |
+| kleis-review-rust | `rust_review_policy.kleis` | `check_*` returns "pass"/"fail: reason" (3 tiers: string, structural, Z3) | 7 |
+| kleis-review-python | `python_review_policy.kleis` | `check_*` returns "pass"/"fail: reason" (string + structural via `scan_python`) | 7 |
 | kleis-theory | (none — builds interactively) | `submit_*`, `evaluate`, `save_theory` | 9 |
 
 Each review MCP is a separate process with its own policy, advisory prompt context, and structural parser. The server name is derived from the policy filename. Adding a new language is: write `<lang>_review_policy.kleis`, add an MCP entry.
@@ -578,9 +579,15 @@ creating a merge request.
 
 #### MCP compatibility
 
-The `diff_check_*` prefix does not match the MCP's `check_*` discovery filter,
-so diff rules are invisible to the kleis-review MCP server. They live in the
-same policy file but only activate via the CLI `--base-branch` flag.
+Diff rules are available via the `diff_check_file` MCP tool. The agent calls
+`diff_check_file` with a `path` and an optional `base` (defaults to `main`).
+The server reads the current file from disk, retrieves the base version via
+`git show`, and runs all `diff_check_*` and `diff_advise_*` rules against both
+versions. If the file is new (not in the base branch), an empty base is used.
+
+The `list_rules` and `describe_standards` tools show diff rules in a separate
+section with explicit guidance to use `diff_check_file`. Standard `check_file`
+calls do **not** trigger diff rules — the agent must use `diff_check_file`.
 
 ### Extra Review Files (`review_extra_files`)
 

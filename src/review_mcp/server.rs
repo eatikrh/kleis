@@ -211,6 +211,7 @@ impl ReviewMcpServer {
                 let result = match tool_name {
                     "check_code" => self.handle_check_code(&arguments),
                     "check_file" => self.handle_check_file(&arguments),
+                    "diff_check_file" => self.handle_diff_check_file(&arguments),
                     "list_rules" => self.handle_list_rules(),
                     "explain_rule" => self.handle_explain_rule(&arguments),
                     "describe_standards" => self.handle_describe_standards(),
@@ -390,6 +391,136 @@ impl ReviewMcpServer {
         })
     }
 
+    fn handle_diff_check_file(&self, arguments: &Value) -> Value {
+        let path = arguments.get("path").and_then(|p| p.as_str()).unwrap_or("");
+        let base = arguments
+            .get("base")
+            .and_then(|b| b.as_str())
+            .unwrap_or("main");
+
+        if path.is_empty() {
+            return self.check_file_error("'path' argument is required but was empty");
+        }
+
+        self.log(&format!("diff_check_file: {} (base={})", path, base));
+
+        let file_path = std::path::Path::new(path);
+        if !file_path.exists() {
+            return self.check_file_error(&format!("File not found: '{}'", path));
+        }
+
+        let current = match std::fs::read_to_string(file_path) {
+            Ok(s) => s,
+            Err(e) => return self.check_file_error(&format!("Cannot read '{}': {}", path, e)),
+        };
+
+        let repo_root = std::process::Command::new("git")
+            .args(["rev-parse", "--show-toplevel"])
+            .current_dir(file_path.parent().unwrap_or(std::path::Path::new(".")))
+            .output();
+
+        let relative_path = match &repo_root {
+            Ok(output) if output.status.success() => {
+                let root = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                let abs = file_path
+                    .canonicalize()
+                    .unwrap_or_else(|_| file_path.to_path_buf());
+                abs.strip_prefix(&root)
+                    .map(|p| p.to_string_lossy().to_string())
+                    .unwrap_or_else(|_| path.to_string())
+            }
+            _ => path.to_string(),
+        };
+
+        let git_show = std::process::Command::new("git")
+            .args(["show", &format!("{}:{}", base, relative_path)])
+            .current_dir(file_path.parent().unwrap_or(std::path::Path::new(".")))
+            .output();
+
+        let base_content = match git_show {
+            Ok(output) if output.status.success() => {
+                String::from_utf8_lossy(&output.stdout).to_string()
+            }
+            Ok(output) => {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                if stderr.contains("does not exist") || stderr.contains("not in") {
+                    self.log(&format!(
+                        "  File '{}' is new (not in base '{}'). Using empty base.",
+                        relative_path, base
+                    ));
+                    String::new()
+                } else {
+                    return self.check_file_error(&format!(
+                        "git show {}:{} failed: {}",
+                        base, relative_path, stderr
+                    ));
+                }
+            }
+            Err(e) => {
+                return self.check_file_error(&format!("Failed to run git: {}", e));
+            }
+        };
+
+        let result = self.engine.check_diff(&current, &base_content, path);
+
+        let has_advisories = result
+            .verdicts
+            .iter()
+            .any(|v| !v.passed && v.severity == RuleSeverity::Advisory);
+        let emoji = if !result.passed {
+            "❌"
+        } else if has_advisories {
+            "⚠️"
+        } else {
+            "✅"
+        };
+
+        let mut text = format!(
+            "{} Diff Review: {} (base={})\n{}\n\n",
+            emoji, path, base, result.summary
+        );
+
+        for verdict in &result.verdicts {
+            let v_emoji = if verdict.passed {
+                "✅"
+            } else if verdict.severity == RuleSeverity::Advisory {
+                "⚠️"
+            } else {
+                "❌"
+            };
+            text.push_str(&format!(
+                "{} {} — {}\n",
+                v_emoji, verdict.rule_name, verdict.message
+            ));
+        }
+
+        self.log(&format!(
+            "  → {} {} ({} rules)",
+            emoji,
+            if result.passed { "PASS" } else { "FAIL" },
+            result.verdicts.len()
+        ));
+
+        let content = McpToolContent {
+            content_type: "text".to_string(),
+            text,
+        };
+
+        serde_json::json!({
+            "content": [content],
+            "passed": result.passed,
+            "verdicts": result.verdicts.iter().map(|v| serde_json::json!({
+                "rule": v.rule_name,
+                "passed": v.passed,
+                "severity": match v.severity {
+                    RuleSeverity::Error => "error",
+                    RuleSeverity::Advisory => "advisory",
+                },
+                "message": v.message,
+            })).collect::<Vec<_>>(),
+        })
+    }
+
     fn handle_list_rules(&self) -> Value {
         let rules = self.engine.list_rules();
 
@@ -429,9 +560,27 @@ impl ReviewMcpServer {
             }
         }
 
+        let diff_rules: Vec<_> = rules
+            .iter()
+            .filter(|r| {
+                matches!(r.kind, ReviewRuleKind::Helper)
+                    && (r.name.starts_with("diff_check_") || r.name.starts_with("diff_advise_"))
+            })
+            .collect();
+        if !diff_rules.is_empty() {
+            text.push_str("\n## Diff Rules (use `diff_check_file` tool to run these)\n\n");
+            for rule in &diff_rules {
+                text.push_str(&format!("  - {} — {}\n", rule.name, rule.description));
+            }
+        }
+
         let helper_rules: Vec<_> = rules
             .iter()
-            .filter(|r| matches!(r.kind, ReviewRuleKind::Helper))
+            .filter(|r| {
+                matches!(r.kind, ReviewRuleKind::Helper)
+                    && !r.name.starts_with("diff_check_")
+                    && !r.name.starts_with("diff_advise_")
+            })
             .collect();
         if !helper_rules.is_empty() {
             text.push_str("\n## Helper Functions\n\n");
@@ -530,6 +679,45 @@ impl ReviewMcpServer {
             }
         }
 
+        let has_diff_rules = schema
+            .get("diff_check_functions")
+            .and_then(|f| f.as_array())
+            .is_some_and(|a| !a.is_empty())
+            || schema
+                .get("diff_advise_functions")
+                .and_then(|f| f.as_array())
+                .is_some_and(|a| !a.is_empty());
+
+        if has_diff_rules {
+            text.push_str("\n## Diff Rules (use the `diff_check_file` tool)\n\n");
+            text.push_str(
+                "These rules compare a file against a base branch (default: main).\n\
+                 **To run them, call the `diff_check_file` tool with `path` and optional `base`.**\n\
+                 They do NOT run via `check_file` — you must use `diff_check_file`.\n\n",
+            );
+
+            if let Some(fns) = schema
+                .get("diff_check_functions")
+                .and_then(|f| f.as_array())
+            {
+                for f in fns {
+                    if let Some(kleis) = f.get("kleis").and_then(|k| k.as_str()) {
+                        text.push_str(&format!("```\n{}\n```\n\n", kleis));
+                    }
+                }
+            }
+            if let Some(fns) = schema
+                .get("diff_advise_functions")
+                .and_then(|f| f.as_array())
+            {
+                for f in fns {
+                    if let Some(kleis) = f.get("kleis").and_then(|k| k.as_str()) {
+                        text.push_str(&format!("```\n{}\n```\n\n", kleis));
+                    }
+                }
+            }
+        }
+
         if let Some(structures) = schema.get("structures").and_then(|s| s.as_array()) {
             if !structures.is_empty() {
                 text.push_str("## Structures\n\n");
@@ -548,15 +736,10 @@ impl ReviewMcpServer {
             }
         }
 
-        if let Some(files) = schema
-            .get("extra_review_files")
-            .and_then(|f| f.as_array())
-        {
+        if let Some(files) = schema.get("extra_review_files").and_then(|f| f.as_array()) {
             if !files.is_empty() {
                 text.push_str("\n## Extra Review Files\n\n");
-                text.push_str(
-                    "These non-source files should also be included in reviews:\n\n",
-                );
+                text.push_str("These non-source files should also be included in reviews:\n\n");
                 for f in files {
                     if let Some(s) = f.as_str() {
                         text.push_str(&format!("  - {}\n", s));

@@ -572,12 +572,33 @@ impl ReviewEngine {
             })
             .collect();
 
-        let helper_fns: Vec<&Value> = functions
+        let diff_check_fns: Vec<&Value> = functions
             .iter()
             .filter(|f| {
                 f.get("name")
                     .and_then(|n| n.as_str())
-                    .is_some_and(|n| !n.starts_with("check_") && !n.starts_with("advise_"))
+                    .is_some_and(|n| n.starts_with("diff_check_"))
+            })
+            .collect();
+
+        let diff_advise_fns: Vec<&Value> = functions
+            .iter()
+            .filter(|f| {
+                f.get("name")
+                    .and_then(|n| n.as_str())
+                    .is_some_and(|n| n.starts_with("diff_advise_"))
+            })
+            .collect();
+
+        let helper_fns: Vec<&Value> = functions
+            .iter()
+            .filter(|f| {
+                f.get("name").and_then(|n| n.as_str()).is_some_and(|n| {
+                    !n.starts_with("check_")
+                        && !n.starts_with("advise_")
+                        && !n.starts_with("diff_check_")
+                        && !n.starts_with("diff_advise_")
+                })
             })
             .collect();
 
@@ -588,6 +609,8 @@ impl ReviewEngine {
             "structures": structures,
             "check_functions": check_fns,
             "advise_functions": advise_fns,
+            "diff_check_functions": diff_check_fns,
+            "diff_advise_functions": diff_advise_fns,
             "helper_functions": helper_fns,
             "extra_review_files": extra_files,
             "stats": {
@@ -595,6 +618,8 @@ impl ReviewEngine {
                 "functions": functions.len(),
                 "check_functions": check_fns.len(),
                 "advise_functions": advise_fns.len(),
+                "diff_check_functions": diff_check_fns.len(),
+                "diff_advise_functions": diff_advise_fns.len(),
             }
         })
     }

@@ -777,6 +777,7 @@ fn language_from_path(path: &Path) -> String {
 }
 
 /// Run code review from the command line (CI/CD mode)
+#[allow(clippy::too_many_arguments)]
 fn run_review(
     mut files: Vec<PathBuf>,
     policy: PathBuf,
@@ -868,10 +869,7 @@ fn run_review(
     // Append --include files
     if !include.is_empty() {
         if verbose {
-            eprintln!(
-                "[kleis-review] --include: {} extra file(s)",
-                include.len()
-            );
+            eprintln!("[kleis-review] --include: {} extra file(s)", include.len());
         }
         files.extend(include);
     }

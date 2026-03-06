@@ -1159,7 +1159,9 @@ fn test_extra_review_files_real_rust_policy() {
     }
     let engine = ReviewEngine::load(&path).expect("load policy");
     assert!(engine.has_extra_review_files());
-    let files = engine.extra_review_files().expect("rust policy defines extra files");
+    let files = engine
+        .extra_review_files()
+        .expect("rust policy defines extra files");
     assert!(files.contains(&"Cargo.toml".to_string()));
 }
 
@@ -1171,6 +1173,8 @@ fn test_extra_review_files_real_python_policy() {
     }
     let engine = ReviewEngine::load(&path).expect("load policy");
     assert!(engine.has_extra_review_files());
-    let files = engine.extra_review_files().expect("python policy defines extra files");
+    let files = engine
+        .extra_review_files()
+        .expect("python policy defines extra files");
     assert!(files.contains(&"requirements.txt".to_string()));
 }
