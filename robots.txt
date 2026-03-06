@@ -13,3 +13,6 @@ Disallow: /node_modules/
 Disallow: /.git/
 Disallow: /vendor/
 
+# Block mdbook print page (duplicates all chapters in one page)
+Disallow: /docs/manual/book/print.html
+

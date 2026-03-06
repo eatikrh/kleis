@@ -25,14 +25,13 @@ MANUAL_SRC = REPO_ROOT / "docs" / "manual" / "src"
 SUMMARY_FILE = MANUAL_SRC / "SUMMARY.md"
 OUTPUT_FILE = REPO_ROOT / "sitemap.xml"
 
-# Priority settings
-PRIORITY_MAP = {
-    "/": 1.0,
-    "/docs/manual/book/index.html": 0.9,
-    "/docs/manual/book/introduction.html": 0.9,
-    "chapters/": 0.8,
-    "appendix/": 0.7,
-}
+# Priority settings (checked in order; first match wins)
+PRIORITY_MAP = [
+    ("/docs/manual/book/index.html", 0.9),
+    ("/docs/manual/book/introduction.html", 0.9),
+    ("chapters/", 0.8),
+    ("appendix/", 0.6),
+]
 
 # Additional resources not discovered from SUMMARY.md (PDFs, data files, etc.)
 # Format: (source_description, url_path, priority)
@@ -49,7 +48,7 @@ def get_priority(path: str) -> float:
     for _, url, pri in EXTRA_ENTRIES:
         if path == url:
             return pri
-    for pattern, priority in PRIORITY_MAP.items():
+    for pattern, priority in PRIORITY_MAP:
         if pattern in path:
             return priority
     return 0.5
