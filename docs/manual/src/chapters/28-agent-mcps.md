@@ -1,12 +1,13 @@
 # Agent MCP Servers
 
-Kleis ships three Model Context Protocol (MCP) servers that turn Kleis policies
+Kleis ships four Model Context Protocol (MCP) servers that turn Kleis policies
 and structures into live tools for AI agents. The previous chapter covered
 **kleis-theory** — the interactive theory-building server. This chapter covers
-the other two: **kleis-policy** for agent action gating, and **kleis-review**
-for code review against formal coding standards.
+the other three: **kleis-policy** for agent action gating, and
+**kleis-review-rust** / **kleis-review-python** for code review against formal
+coding standards.
 
-All three share the same architecture: a Kleis `.kleis` file defines the rules,
+All four share the same architecture: a Kleis `.kleis` file defines the rules,
 the Kleis evaluator loads them into memory, and the MCP server exposes them as
 JSON-RPC tools over stdio. The rules are declarative, version-controlled, and
 readable by both humans and machines.
@@ -156,12 +157,13 @@ inconsistently, and slows down every review.
 
 ### The Solution
 
-The kleis-review MCP loads a coding standards file and exposes six tools:
+The kleis-review MCP loads a coding standards file and exposes seven tools:
 
 | Tool | Purpose |
 |------|---------|
 | `check_code` | Check a source code snippet against all standards |
 | `check_file` | Check a file on disk against all standards |
+| `diff_check_file` | Check a file against diff-based rules by comparing with a base branch |
 | `list_rules` | List all loaded coding standard rules |
 | `explain_rule` | Explain a specific rule in detail |
 | `describe_standards` | Show the full schema of loaded standards |
@@ -385,19 +387,19 @@ kleis-policy      kleis-review-rust     kleis-review-python    kleis-theory
 | Server | Policy file | Convention | Tools |
 |--------|-------------|------------|-------|
 | kleis-policy | `agent_policy.kleis` | `check_*` returns "allow"/"deny" | 5 |
-| kleis-review-rust | `rust_review_policy.kleis` | `check_*` returns "pass"/"fail: reason" (3 tiers: string, structural, Z3) | 6 |
-| kleis-review-python | `python_review_policy.kleis` | `check_*` returns "pass"/"fail: reason" (string + structural via `scan_python`) | 6 |
+| kleis-review-rust | `rust_review_policy.kleis` | `check_*` returns "pass"/"fail: reason" (3 tiers: string, structural, Z3) | 7 |
+| kleis-review-python | `python_review_policy.kleis` | `check_*` returns "pass"/"fail: reason" (string + structural via `scan_python`) | 7 |
 | kleis-theory | (none — builds interactively) | `submit_*`, `evaluate`, `save_theory` | 9 |
 
 Each review MCP is a separate process with its own policy, advisory prompt context, and structural parser. The server name is derived from the policy filename. Adding a new language is: write `<lang>_review_policy.kleis`, add an MCP entry.
 
 All servers are subcommands of the same `kleis` binary. One build, one install,
-three servers:
+four servers:
 
 ```bash
 ./scripts/build-kleis.sh
 # Installs to ~/bin/kleis and ~/.cargo/bin/kleis
-# All three MCPs are ready
+# All four MCPs are ready
 ```
 
 ### Shared Architecture
@@ -577,9 +579,89 @@ creating a merge request.
 
 #### MCP compatibility
 
-The `diff_check_*` prefix does not match the MCP's `check_*` discovery filter,
-so diff rules are invisible to the kleis-review MCP server. They live in the
-same policy file but only activate via the CLI `--base-branch` flag.
+Diff rules are available via the `diff_check_file` MCP tool. The agent calls
+`diff_check_file` with a `path` and an optional `base` (defaults to `main`).
+The server reads the current file from disk, retrieves the base version via
+`git show`, and runs all `diff_check_*` and `diff_advise_*` rules against both
+versions. If the file is new (not in the base branch), an empty base is used.
+
+The `list_rules` and `describe_standards` tools show diff rules in a separate
+section with explicit guidance to use `diff_check_file`. Standard `check_file`
+calls do **not** trigger diff rules — the agent must use `diff_check_file`.
+
+### Extra Review Files (`review_extra_files`)
+
+Code reviews often need to inspect non-source files: `Cargo.toml` for version
+bumps, `requirements.txt` for pinned dependencies, `builders/runner/config` for
+image tags. These files don't match the usual `*.rs` or `*.py` globs, so they
+get silently excluded.
+
+The `review_extra_files()` convention solves this. The policy declares which
+non-source files should be included:
+
+```kleis
+// Rust: version and lock files
+define review_extra_files() =
+    "Cargo.toml\nCargo.lock"
+
+// Python: deps, config, CI builder
+define review_extra_files() =
+    "requirements.txt\nrequirements-dev.txt\nbuilders/runner/config"
+```
+
+The function returns a newline-separated string of file patterns, resolved
+relative to the git repo root of the target files.
+
+#### Discovery via MCP
+
+When an AI agent calls `describe_standards`, the response includes the extra
+files list:
+
+```
+## Extra Review Files
+
+These non-source files should also be included in reviews:
+
+  - Cargo.toml
+  - Cargo.lock
+```
+
+The `"extra_review_files"` key also appears in the JSON schema, so agents can
+programmatically discover which files to feed alongside source code.
+
+#### CLI usage
+
+The CLI auto-discovers extra files from the policy by default. When you run:
+
+```bash
+kleis review src/**/*.rs -p rust_review_policy.kleis --failures-only
+```
+
+the engine evaluates `review_extra_files()`, resolves each pattern relative to
+the git repo root, and appends any existing files to the review list. No extra
+flags needed.
+
+To add files manually (overriding or supplementing the policy):
+
+```bash
+kleis review src/**/*.rs --include Cargo.toml --include README.md -p policy.kleis
+```
+
+To disable auto-discovery:
+
+```bash
+kleis review src/**/*.rs -p policy.kleis --include-from-policy false
+```
+
+#### Convention
+
+| Function | Arguments | Returns | When it runs |
+| --- | --- | --- | --- |
+| review\_extra\_files | (none) | Newline-separated file patterns | Auto on CLI; via `describe_standards` on MCP |
+
+If `review_extra_files` is not defined, no extra files are added. The engine
+checks for its presence the same way it checks for `diff_file_filter` — by
+scanning the policy's function list at startup.
 
 ### Advisory Mode (LLM-Assisted Review)
 

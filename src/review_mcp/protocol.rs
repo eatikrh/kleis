@@ -87,6 +87,29 @@ pub fn review_tool_definitions() -> Vec<McpTool> {
             }),
         },
         McpTool {
+            name: "diff_check_file".to_string(),
+            description:
+                "Check a file against diff-based rules by comparing the current \
+                         version on disk with the version from a base branch (via git). \
+                         Runs all diff_check_* and diff_advise_* rules (e.g., version bump checks)."
+                    .to_string(),
+            input_schema: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "Path to the file to review (absolute or relative to repo root)"
+                    },
+                    "base": {
+                        "type": "string",
+                        "description": "Base branch or commit to compare against (default: main)",
+                        "default": "main"
+                    }
+                },
+                "required": ["path"]
+            }),
+        },
+        McpTool {
             name: "evaluate".to_string(),
             description: "Evaluate a Kleis expression or verify a proposition via Z3 \
                          in the context of the loaded review policy. Propositions \

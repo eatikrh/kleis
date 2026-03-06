@@ -1104,3 +1104,77 @@ fn test_z3_concrete_clean_code() {
         "Clean code (no println/todo/dbg) should be clean"
     );
 }
+
+// =============================================================================
+// Extra Review Files Discovery
+// =============================================================================
+
+#[test]
+fn test_extra_review_files_not_defined() {
+    let engine = load_review_policy(
+        r#"
+        define check_dummy(source) = "pass"
+        "#,
+    );
+    assert!(!engine.has_extra_review_files());
+    assert!(engine.extra_review_files().is_none());
+}
+
+#[test]
+fn test_extra_review_files_returns_list() {
+    let engine = load_review_policy(
+        r#"
+        define check_dummy(source) = "pass"
+        define review_extra_files() = "Cargo.toml\nCargo.lock"
+        "#,
+    );
+    assert!(engine.has_extra_review_files());
+    let files = engine.extra_review_files().expect("should return files");
+    assert_eq!(files, vec!["Cargo.toml", "Cargo.lock"]);
+}
+
+#[test]
+fn test_extra_review_files_in_describe_schema() {
+    let engine = load_review_policy(
+        r#"
+        define check_dummy(source) = "pass"
+        define review_extra_files() = "Cargo.toml\nrequirements.txt"
+        "#,
+    );
+    let schema = engine.describe_schema();
+    let extra = schema
+        .get("extra_review_files")
+        .and_then(|v| v.as_array())
+        .expect("schema should contain extra_review_files");
+    assert_eq!(extra.len(), 2);
+    assert_eq!(extra[0].as_str().unwrap(), "Cargo.toml");
+    assert_eq!(extra[1].as_str().unwrap(), "requirements.txt");
+}
+
+#[test]
+fn test_extra_review_files_real_rust_policy() {
+    let path = PathBuf::from("examples/policies/rust_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+    assert!(engine.has_extra_review_files());
+    let files = engine
+        .extra_review_files()
+        .expect("rust policy defines extra files");
+    assert!(files.contains(&"Cargo.toml".to_string()));
+}
+
+#[test]
+fn test_extra_review_files_real_python_policy() {
+    let path = PathBuf::from("examples/policies/python_review_policy.kleis");
+    if !path.exists() {
+        return;
+    }
+    let engine = ReviewEngine::load(&path).expect("load policy");
+    assert!(engine.has_extra_review_files());
+    let files = engine
+        .extra_review_files()
+        .expect("python policy defines extra files");
+    assert!(files.contains(&"requirements.txt".to_string()));
+}
