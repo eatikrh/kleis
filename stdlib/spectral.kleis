@@ -1,0 +1,296 @@
+// ============================================
+// Kleis Standard Library - Spectral Theory
+// ============================================
+// Hilbert spaces, bounded operators, self-adjoint
+// operators, compact operators, spectral theorem,
+// and trace-class operators.
+//
+// All textbook-level mathematics. Research-level
+// conjectures (Hilbert-Pólya operator, admissible
+// Riemann operators) belong in examples/ontology/.
+//
+// Extends: prelude.kleis (VectorSpace, Field(ℂ))
+//          complex.kleis (ComplexAxioms)
+// ============================================
+
+import "stdlib/prelude.kleis"
+import "stdlib/complex.kleis"
+
+// ============================================
+// UNINTERPRETED TYPES
+// ============================================
+
+// Abstract Hilbert space
+data HilbertSpace = HS(ℤ)
+
+// Elements of a Hilbert space
+data HVector = HV(ℤ)
+
+// Bounded linear operator
+data Operator = Op(ℤ)
+
+// ============================================
+// INNER PRODUCT SPACES
+// ============================================
+
+structure InnerProductSpace {
+    // Which space a vector belongs to
+    operation in_space : HVector × HilbertSpace → Bool
+
+    // Inner product ⟨u, v⟩ (conjugate-linear in first argument)
+    operation ip : HVector × HVector → ℂ
+
+    // Vector addition
+    operation h_add : HVector × HVector → HVector
+
+    // Scalar multiplication
+    operation h_smul : ℂ × HVector → HVector
+
+    // Zero vector
+    element h_zero : HVector
+
+    // Norm squared: ‖v‖² = ⟨v, v⟩
+    operation h_norm_sq : HVector → ℝ
+
+    // Conjugate symmetry: ⟨u, v⟩ = conj(⟨v, u⟩)
+    axiom ip_conjugate_sym:
+        ∀(u v : HVector). ip(u, v) = conj(ip(v, u))
+
+    // Linearity in second argument: ⟨u, αv⟩ = α⟨u, v⟩
+    axiom ip_linear_second:
+        ∀(u v : HVector, alpha : ℂ).
+            ip(u, h_smul(alpha, v)) = complex_mul(alpha, ip(u, v))
+
+    // Additivity in second argument
+    axiom ip_additive_second:
+        ∀(u v w : HVector).
+            ip(u, h_add(v, w)) = complex_add(ip(u, v), ip(u, w))
+
+    // Positive definiteness: ⟨v, v⟩ ≥ 0
+    axiom ip_positive:
+        ∀(v : HVector). re(ip(v, v)) ≥ 0
+
+    // Definiteness: ⟨v, v⟩ = 0 ⟹ v = 0
+    axiom ip_definite:
+        ∀(v : HVector). ip(v, v) = complex(0, 0) → v = h_zero
+
+    // Inner product is real on diagonal
+    axiom ip_self_real:
+        ∀(v : HVector). im(ip(v, v)) = 0
+
+    // Norm squared definition
+    axiom norm_sq_def:
+        ∀(v : HVector). h_norm_sq(v) = re(ip(v, v))
+
+    // Zero vector annihilates inner product
+    axiom ip_zero_left:
+        ∀(v : HVector). ip(h_zero, v) = complex(0, 0)
+
+    axiom ip_zero_right:
+        ∀(v : HVector). ip(v, h_zero) = complex(0, 0)
+
+    // Cauchy-Schwarz inequality: |⟨u,v⟩|² ≤ ⟨u,u⟩·⟨v,v⟩
+    axiom cauchy_schwarz:
+        ∀(u v : HVector).
+            abs_squared(ip(u, v)) ≤ re(ip(u, u)) * re(ip(v, v))
+}
+
+// ============================================
+// BOUNDED LINEAR OPERATORS
+// ============================================
+
+structure BoundedOperator {
+    // Apply operator to vector
+    operation op_apply : Operator × HVector → HVector
+
+    // Operator is bounded
+    operation is_bounded : Operator → Bool
+
+    // Operator norm
+    operation op_norm : Operator → ℝ
+
+    // Adjoint operator T*
+    operation adjoint : Operator → Operator
+
+    // Operator composition
+    operation op_compose : Operator × Operator → Operator
+
+    // Identity operator
+    element op_id : Operator
+
+    // Zero operator
+    element op_zero : Operator
+
+    // Linearity
+    axiom op_linear_add:
+        ∀(T : Operator, u v : HVector).
+            is_bounded(T) →
+            op_apply(T, h_add(u, v)) = h_add(op_apply(T, u), op_apply(T, v))
+
+    axiom op_linear_smul:
+        ∀(T : Operator, alpha : ℂ, v : HVector).
+            is_bounded(T) →
+            op_apply(T, h_smul(alpha, v)) = h_smul(alpha, op_apply(T, v))
+
+    // Adjoint: ⟨T*u, v⟩ = ⟨u, Tv⟩
+    axiom adjoint_def:
+        ∀(T : Operator, u v : HVector).
+            is_bounded(T) →
+            ip(op_apply(adjoint(T), u), v) = ip(u, op_apply(T, v))
+
+    // Double adjoint: (T*)* = T
+    axiom adjoint_involution:
+        ∀(T : Operator). is_bounded(T) → adjoint(adjoint(T)) = T
+
+    // Adjoint of composition: (ST)* = T*S*
+    axiom adjoint_composition:
+        ∀(S T : Operator).
+            is_bounded(S) ∧ is_bounded(T) →
+            adjoint(op_compose(S, T)) = op_compose(adjoint(T), adjoint(S))
+
+    // Identity and zero
+    axiom id_apply:
+        ∀(v : HVector). op_apply(op_id, v) = v
+
+    axiom zero_apply:
+        ∀(v : HVector). op_apply(op_zero, v) = h_zero
+
+    // Norm is non-negative
+    axiom norm_nonneg:
+        ∀(T : Operator). is_bounded(T) → op_norm(T) ≥ 0
+
+    // Norm of adjoint equals norm
+    axiom norm_adjoint:
+        ∀(T : Operator). is_bounded(T) → op_norm(adjoint(T)) = op_norm(T)
+}
+
+// ============================================
+// SELF-ADJOINT OPERATORS
+// ============================================
+
+structure SelfAdjointOperator {
+    operation is_self_adjoint : Operator → Bool
+
+    // T* = T
+    axiom self_adjoint_def:
+        ∀(T : Operator).
+            is_self_adjoint(T) → adjoint(T) = T
+
+    // Self-adjoint ⟹ eigenvalues are real
+    axiom eigenvalues_real:
+        ∀(T : Operator, v : HVector, lam : ℂ).
+            is_self_adjoint(T) ∧ v ≠ h_zero ∧
+            op_apply(T, v) = h_smul(lam, v) →
+            im(lam) = 0
+
+    // Eigenvectors for distinct eigenvalues are orthogonal
+    axiom eigenvectors_orthogonal:
+        ∀(T : Operator, u v : HVector, lam mu : ℂ).
+            is_self_adjoint(T) ∧
+            op_apply(T, u) = h_smul(lam, u) ∧
+            op_apply(T, v) = h_smul(mu, v) ∧
+            lam ≠ mu →
+            ip(u, v) = complex(0, 0)
+
+    // ⟨Tv, v⟩ is real for self-adjoint T
+    axiom expectation_real:
+        ∀(T : Operator, v : HVector).
+            is_self_adjoint(T) →
+            im(ip(op_apply(T, v), v)) = 0
+}
+
+// ============================================
+// COMPACT OPERATORS
+// ============================================
+
+structure CompactOperator {
+    operation is_compact : Operator → Bool
+
+    // Compact ⟹ bounded
+    axiom compact_bounded:
+        ∀(T : Operator). is_compact(T) → is_bounded(T)
+
+    // Composition with bounded preserves compactness
+    axiom compact_compose_left:
+        ∀(K T : Operator).
+            is_compact(K) ∧ is_bounded(T) → is_compact(op_compose(T, K))
+
+    axiom compact_compose_right:
+        ∀(K T : Operator).
+            is_compact(K) ∧ is_bounded(T) → is_compact(op_compose(K, T))
+
+    // Adjoint of compact is compact
+    axiom compact_adjoint:
+        ∀(T : Operator). is_compact(T) → is_compact(adjoint(T))
+}
+
+// ============================================
+// SPECTRAL THEOREM (compact self-adjoint)
+// ============================================
+
+structure SpectralTheorem {
+    // Eigenvalue of T (indexed by ℕ, ordered by decreasing magnitude)
+    operation eigenvalue : Operator × ℕ → ℝ
+
+    // Eigenvector of T (indexed)
+    operation eigenvector : Operator × ℕ → HVector
+
+    // Compact self-adjoint ⟹ complete orthonormal eigenbasis
+    axiom spectral_eigenpair:
+        ∀(T : Operator, n : ℕ).
+            is_compact(T) ∧ is_self_adjoint(T) →
+            op_apply(T, eigenvector(T, n))
+            = h_smul(complex(eigenvalue(T, n), 0), eigenvector(T, n))
+
+    // Eigenvectors are orthonormal
+    axiom spectral_orthonormal:
+        ∀(T : Operator, m n : ℕ).
+            is_compact(T) ∧ is_self_adjoint(T) ∧ m ≠ n →
+            ip(eigenvector(T, m), eigenvector(T, n)) = complex(0, 0)
+
+    axiom spectral_normalized:
+        ∀(T : Operator, n : ℕ).
+            is_compact(T) ∧ is_self_adjoint(T) →
+            ip(eigenvector(T, n), eigenvector(T, n)) = complex(1, 0)
+
+    // Eigenvalues decrease in magnitude (for compact operators → 0)
+    axiom spectral_eigenvalues_decrease:
+        ∀(T : Operator, n : ℕ).
+            is_compact(T) ∧ is_self_adjoint(T) →
+            abs(eigenvalue(T, n + 1)) ≤ abs(eigenvalue(T, n))
+}
+
+// ============================================
+// TRACE-CLASS OPERATORS
+// ============================================
+
+structure TraceClass {
+    operation is_trace_class : Operator → Bool
+
+    // Trace: Tr(T) = Σ ⟨eₙ, Teₙ⟩ (basis-independent)
+    operation op_trace : Operator → ℂ
+
+    // Trace class ⟹ compact
+    axiom trace_class_compact:
+        ∀(T : Operator). is_trace_class(T) → is_compact(T)
+
+    // Trace is cyclic: Tr(AB) = Tr(BA)
+    axiom trace_cyclic:
+        ∀(A B : Operator).
+            is_trace_class(op_compose(A, B)) →
+            op_trace(op_compose(A, B)) = op_trace(op_compose(B, A))
+
+    // Trace is linear
+    axiom trace_linear_add:
+        ∀(A B : Operator).
+            is_trace_class(A) ∧ is_trace_class(B) →
+            op_trace(A) = op_trace(A)  // placeholder for h_add on operators
+
+    // Identity is NOT trace-class (in infinite dimensions)
+    axiom trace_id_not_trace_class:
+        ¬is_trace_class(op_id)
+}
+
+// ============================================
+// END OF SPECTRAL THEORY
+// ============================================

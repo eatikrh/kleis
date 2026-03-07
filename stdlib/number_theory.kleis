@@ -1,0 +1,225 @@
+// ============================================
+// Kleis Standard Library - Number Theory
+// ============================================
+// Dirichlet series, Euler products, Riemann zeta,
+// L-functions, and their fundamental properties.
+//
+// Self-contained: imports only prelude.kleis.
+// Declares meromorphic/residue/gamma locally to
+// avoid bulk-loading the analysis chain.
+//
+// Everything here is textbook mathematics.
+// Research-level conjectures (Hilbert-Pólya, etc.)
+// belong in examples/ontology/.
+// ============================================
+
+import "stdlib/prelude.kleis"
+
+// ============================================
+// LOCAL DECLARATIONS (from analysis.kleis)
+// ============================================
+// Declared locally to keep the import chain light.
+// Full definitions live in stdlib/analysis.kleis.
+
+data ComplexFn = CF(ℤ)
+data Region = Reg(ℤ)
+
+operation cf_apply : ComplexFn × ℂ → ℂ
+operation meromorphic : ComplexFn × Region → Bool
+operation has_pole : ComplexFn × ℂ × ℕ → Bool
+operation residue : ComplexFn × ℂ → ℂ
+operation gamma : ℂ → ℂ
+
+// ============================================
+// ARITHMETIC FUNCTIONS
+// ============================================
+
+structure ArithmeticFunctions {
+    operation is_prime : ℕ → Bool
+    operation gcd : ℕ × ℕ → ℕ
+    operation mobius : ℕ → ℤ
+    operation euler_totient : ℕ → ℕ
+    operation von_mangoldt : ℕ → ℝ
+
+    axiom mobius_one : mobius(1) = 1
+
+    axiom mobius_prime:
+        ∀(p : ℕ). is_prime(p) → mobius(p) = 0 - 1
+
+    axiom mobius_square_free:
+        ∀(p : ℕ). is_prime(p) → mobius(p * p) = 0
+
+    axiom prime_2 : is_prime(2)
+    axiom prime_3 : is_prime(3)
+    axiom prime_5 : is_prime(5)
+    axiom prime_7 : is_prime(7)
+    axiom prime_11 : is_prime(11)
+    axiom prime_13 : is_prime(13)
+
+    axiom not_prime_1 : ¬is_prime(1)
+    axiom not_prime_4 : ¬is_prime(4)
+    axiom not_prime_6 : ¬is_prime(6)
+
+    axiom totient_one : euler_totient(1) = 1
+
+    axiom totient_prime:
+        ∀(p : ℕ). is_prime(p) → euler_totient(p) = p - 1
+}
+
+// ============================================
+// DIRICHLET SERIES
+// ============================================
+
+data DirichletSeries = DS(ℤ)
+
+structure DirichletSeriesOps {
+    operation ds_coeff : DirichletSeries × ℕ → ℂ
+    operation ds_eval : DirichletSeries × ℂ → ℂ
+    operation ds_abscissa : DirichletSeries → ℝ
+    operation ds_mul : DirichletSeries × DirichletSeries → DirichletSeries
+
+    axiom ds_convergent:
+        ∀(F : DirichletSeries, s : ℂ).
+            re(s) > ds_abscissa(F) →
+            ds_eval(F, s) = ds_eval(F, s)
+}
+
+// ============================================
+// RIEMANN ZETA FUNCTION
+// ============================================
+
+structure RiemannZeta {
+    operation zeta : ℂ → ℂ
+
+    element zeta_fn : ComplexFn
+    axiom zeta_is_fn:
+        ∀(s : ℂ). zeta(s) = cf_apply(zeta_fn, s)
+
+    element zeta_series : DirichletSeries
+
+    axiom zeta_coefficients:
+        ∀(n : ℕ). n ≥ 1 → ds_coeff(zeta_series, n) = complex(1, 0)
+
+    axiom zeta_abscissa : ds_abscissa(zeta_series) = 1
+
+    axiom zeta_is_ds:
+        ∀(s : ℂ). re(s) > 1 → zeta(s) = ds_eval(zeta_series, s)
+
+    // Euler product
+    operation euler_factor : ℕ × ℂ → ℂ
+
+    axiom euler_factor_def:
+        ∀(p : ℕ, s : ℂ).
+            is_prime(p) →
+            complex_mul(euler_factor(p, s),
+                complex_sub(complex(1, 0), complex(1 / (p ^ re(s)), 0)))
+            = complex(1, 0)
+
+    // Special values (ground instances)
+    axiom zeta_2 : zeta(complex(2, 0)) = complex(pi * pi / 6, 0)
+    axiom zeta_4 : zeta(complex(4, 0)) = complex(pi * pi * pi * pi / 90, 0)
+    axiom zeta_neg1 : zeta(complex(0 - 1, 0)) = complex(0 - 1 / 12, 0)
+    axiom zeta_0 : zeta(complex(0, 0)) = complex(0 - 1 / 2, 0)
+
+    // Meromorphic structure
+    element whole_plane : Region
+    axiom zeta_meromorphic : meromorphic(zeta_fn, whole_plane)
+    axiom zeta_pole : has_pole(zeta_fn, complex(1, 0), 1)
+    axiom zeta_residue : residue(zeta_fn, complex(1, 0)) = complex(1, 0)
+
+    // Functional equation (symmetric form)
+    operation xi : ℂ → ℂ
+
+    axiom xi_def:
+        ∀(s : ℂ).
+            xi(s) = complex_mul(
+                complex_mul(
+                    complex_div(complex_mul(s, complex_sub(s, complex(1, 0))),
+                                complex(2, 0)),
+                    gamma(complex_div(s, complex(2, 0)))
+                ),
+                zeta(s)
+            )
+
+    axiom functional_equation:
+        ∀(s : ℂ). xi(s) = xi(complex_sub(complex(1, 0), s))
+
+    // Trivial zeros
+    axiom trivial_zero_neg2 : zeta(complex(0 - 2, 0)) = complex(0, 0)
+    axiom trivial_zero_neg4 : zeta(complex(0 - 4, 0)) = complex(0, 0)
+    axiom trivial_zero_neg6 : zeta(complex(0 - 6, 0)) = complex(0, 0)
+}
+
+// ============================================
+// NON-TRIVIAL ZEROS
+// ============================================
+
+structure ZetaZeros {
+    operation is_nontrivial_zero : ℂ → Bool
+
+    axiom nontrivial_zero_def:
+        ∀(rho : ℂ).
+            is_nontrivial_zero(rho) →
+            zeta(rho) = complex(0, 0) ∧ re(rho) > 0 ∧ re(rho) < 1
+
+    axiom zeros_conjugate:
+        ∀(rho : ℂ).
+            is_nontrivial_zero(rho) → is_nontrivial_zero(conj(rho))
+
+    axiom zeros_symmetric:
+        ∀(rho : ℂ).
+            is_nontrivial_zero(rho) →
+            is_nontrivial_zero(complex_sub(complex(1, 0), rho))
+
+    axiom zero_1 : is_nontrivial_zero(complex(1 / 2, 14.135))
+    axiom zero_2 : is_nontrivial_zero(complex(1 / 2, 21.022))
+    axiom zero_3 : is_nontrivial_zero(complex(1 / 2, 25.011))
+    axiom zero_4 : is_nontrivial_zero(complex(1 / 2, 30.425))
+    axiom zero_5 : is_nontrivial_zero(complex(1 / 2, 32.935))
+
+    operation riemann_hypothesis : Bool
+
+    axiom rh_statement:
+        riemann_hypothesis →
+        ∀(rho : ℂ). is_nontrivial_zero(rho) → re(rho) = 1 / 2
+}
+
+// ============================================
+// GENERAL L-FUNCTIONS (Selberg class)
+// ============================================
+
+structure LFunction {
+    operation L_eval : DirichletSeries × ℂ → ℂ
+    operation L_degree : DirichletSeries → ℕ
+    operation L_conductor : DirichletSeries → ℕ
+
+    operation has_euler_product : DirichletSeries → Bool
+    operation has_continuation : DirichletSeries → Bool
+    operation has_functional_eq : DirichletSeries → Bool
+
+    axiom selberg_class:
+        ∀(F : DirichletSeries).
+            has_euler_product(F) ∧ has_continuation(F) ∧ has_functional_eq(F) →
+            L_degree(F) ≥ 0
+
+    axiom zeta_is_L:
+        ∀(s : ℂ). L_eval(zeta_series, s) = zeta(s)
+
+    axiom zeta_degree : L_degree(zeta_series) = 1
+    axiom zeta_conductor : L_conductor(zeta_series) = 1
+    axiom zeta_has_euler : has_euler_product(zeta_series)
+    axiom zeta_has_continuation : has_continuation(zeta_series)
+    axiom zeta_has_functional : has_functional_eq(zeta_series)
+
+    operation grh_holds : DirichletSeries → Bool
+
+    axiom grh_statement:
+        ∀(F : DirichletSeries, rho : ℂ).
+            grh_holds(F) ∧ L_eval(F, rho) = complex(0, 0) ∧
+            re(rho) > 0 ∧ re(rho) < 1 →
+            re(rho) = 1 / 2
+}
+
+// ============================================
+// END OF NUMBER THEORY
+// ============================================

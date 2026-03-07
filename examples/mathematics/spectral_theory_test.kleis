@@ -1,0 +1,36 @@
+// ============================================================================
+// Spectral Theory Test — verifies stdlib/spectral.kleis axioms via Z3
+// ============================================================================
+
+import "stdlib/spectral.kleis"
+
+example "self-adjoint eigenvalues are real" {
+    assert(∀(T : Operator, v : HVector, lam : ℂ).
+        is_self_adjoint(T) ∧ v ≠ h_zero ∧
+        op_apply(T, v) = h_smul(lam, v) →
+        im(lam) = 0)
+}
+
+example "inner product conjugate symmetry" {
+    assert(∀(u v : HVector). ip(u, v) = conj(ip(v, u)))
+}
+
+example "compact self-adjoint has orthonormal eigenvectors" {
+    assert(∀(T : Operator, m n : ℕ).
+        is_compact(T) ∧ is_self_adjoint(T) ∧ m ≠ n →
+        ip(eigenvector(T, m), eigenvector(T, n)) = complex(0, 0))
+}
+
+example "trace is cyclic" {
+    assert(∀(A B : Operator).
+        is_trace_class(op_compose(A, B)) →
+        op_trace(op_compose(A, B)) = op_trace(op_compose(B, A)))
+}
+
+example "compact implies bounded" {
+    assert(∀(T : Operator). is_compact(T) → is_bounded(T))
+}
+
+example "adjoint is involutive" {
+    assert(∀(T : Operator). is_bounded(T) → adjoint(adjoint(T)) = T)
+}
