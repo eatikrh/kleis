@@ -1,6 +1,24 @@
 # Next Session Notes
 
-**Last Updated:** March 6, 2026 (session 18 — Skolemization of POT entanglement axioms)
+**Last Updated:** March 7, 2026
+
+---
+
+## Future: L-function Theory in Kleis
+
+Content path for formalizing L-functions and spectral theory, building toward
+Riemann Hypothesis exploration:
+
+| File | Contents | Depends On |
+|------|----------|------------|
+| `stdlib/prelude.kleis` | Semigroup, Monoid, Group, Ring, Field | *(already exists)* |
+| `stdlib/analysis.kleis` | Complex analysis axioms (holomorphic, contour integration, analytic continuation) | prelude |
+| `stdlib/number_theory.kleis` | L-functions, Euler products, Riemann zeta, Dirichlet characters | prelude, analysis |
+| `stdlib/spectral.kleis` | Hilbert spaces, self-adjoint operators, spectral theorem, trace-class operators | prelude, analysis |
+
+The approach: load known theorems as axioms, attempt conjectures, and let the
+E-matching wall reveal where new mathematical insights (Skolem witnesses) are
+needed — the same methodology proven in the chess and entanglement papers.
 
 ---
 
