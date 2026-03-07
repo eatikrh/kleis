@@ -53,6 +53,7 @@ jobs:
           cp CNAME _site/ 2>/dev/null || true
           cp index.html _site/
           cp favicon.svg _site/
+          cp favicon.ico _site/ 2>/dev/null || true
           cp favicon-48.png _site/ 2>/dev/null || true
           cp favicon-96.png _site/ 2>/dev/null || true
           cp apple-touch-icon.png _site/ 2>/dev/null || true
