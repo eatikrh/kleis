@@ -1,0 +1,58 @@
+// =============================================================================
+// Chess Board Typst Helpers
+// =============================================================================
+//
+// Generates board-n-pieces Typst code from Kleis.
+// Local to examples/chess/ — not part of stdlib.
+//
+// Usage:
+//   import "chess_board_helpers.kleis"
+//   define fig = ArxivFigure("label", "caption", chess_board(...))
+//
+// Requires: #import "@preview/board-n-pieces:0.9.0": *
+// in the Typst preamble (handled by the paper's compile_paper example).
+//
+// =============================================================================
+
+import "../../stdlib/prelude.kleis"
+
+// =============================================================================
+// Core board rendering
+// =============================================================================
+
+define chess_board(fen_str) =
+    concat("board(fen(\"", concat(fen_str, "\"), display-numbers: true, square-size: 0.9cm)"))
+
+define chess_board_arrows(fen_str, arrows_typst) =
+    concat("board(\n    fen(\"", concat(fen_str,
+    concat("\"),\n    display-numbers: true,\n    square-size: 0.9cm,\n    arrows: (",
+    concat(arrows_typst, ",),\n  )"))))
+
+define chess_board_full(fen_str, arrows_typst, marks_typst) =
+    concat("board(\n    fen(\"", concat(fen_str,
+    concat("\"),\n    display-numbers: true,\n    square-size: 0.9cm,\n    arrows: (",
+    concat(arrows_typst, concat(",),\n    marked-squares: (",
+    concat(marks_typst, ",),\n  )"))))))
+
+// =============================================================================
+// Arrow and mark formatting
+// =============================================================================
+
+define arrow(from_to) =
+    concat("\"", concat(from_to, "\""))
+
+define arrows2(a, b) =
+    concat(arrow(a), concat(", ", arrow(b)))
+
+define arrows3(a, b, c) =
+    concat(arrow(a), concat(", ", concat(arrow(b), concat(", ", arrow(c)))))
+
+define mark_cross(squares, color) =
+    concat("\"", concat(squares, concat("\": marks.cross(paint: rgb(\"",
+    concat(color, "\"))"))))
+
+// =============================================================================
+// Typst preamble for board-n-pieces
+// =============================================================================
+
+define board_n_pieces_import = "#import \"@preview/board-n-pieces:0.9.0\": *\n"
