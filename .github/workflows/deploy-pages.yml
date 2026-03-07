@@ -52,6 +52,10 @@ jobs:
           cp .nojekyll _site/
           cp CNAME _site/ 2>/dev/null || true
           cp index.html _site/
+          cp favicon.svg _site/
+          cp favicon-48.png _site/ 2>/dev/null || true
+          cp favicon-96.png _site/ 2>/dev/null || true
+          cp apple-touch-icon.png _site/ 2>/dev/null || true
           cp sitemap.xml _site/
           cp robots.txt _site/ 2>/dev/null || true
           cp -r static _site/static
