@@ -44,7 +44,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5b537a0d.js";
+            window.path_to_searchindex_js = "searchindex-944f02c9.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-3f3d019b.js"></script>
@@ -9739,6 +9739,164 @@ access, and you return home to interpret the answer in your own context.
 The oracle never becomes part of your city. Your city never becomes part
 of the oracle. But the exchange produces knowledge that neither side had
 alone.</p>
+<h2 id="calculemus"><a class="header" href="#calculemus">Calculemus</a></h2>
+<p>Leibniz imagined two things. The first was a <em>characteristica universalis</em> —
+a universal symbolic language capable of expressing all reasoning. The second
+was a <em>calculus ratiocinator</em> — a mechanical engine that would operate on
+that language and determine whether statements were valid. Together they
+formed a vision: when disagreements arise, we should say <em>“Calculemus”</em> —
+let us calculate.</p>
+<p>The Kleis architecture is a direct realization of that vision.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Leibniz</th><th>Kleis</th></tr>
+</thead>
+<tbody>
+<tr><td>Characteristica universalis</td><td>Kleis language</td></tr>
+<tr><td>Calculus ratiocinator</td><td>Z3 solver</td></tr>
+<tr><td>Symbolic knowledge</td><td>Kleis expressions</td></tr>
+<tr><td>Mechanical reasoning</td><td>Automated verification</td></tr>
+<tr><td><em>Calculemus</em></td><td><code>assert(∀(x : ℝ). x + 0 = x)</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>The reasoning loop is the same one Leibniz described three centuries ago:</p>
+<pre><code>proposition → formal expression → calculation → result
+</code></pre>
+<p>Leibniz lacked the machinery. The pieces arrived over centuries: symbolic
+logic from Frege, formal systems from Hilbert, computability from Turing,
+automated theorem proving from the 20th century logic tradition, and SMT
+solvers from the last two decades. Bourbaki operationalized the structural
+half — mathematics as structures defined by sets, operations, and axioms —
+but could not execute them. Kleis closes the loop: Bourbaki structures that
+a solver can verify.</p>
+<pre><code>Leibniz (1679) — dream of symbolic reasoning
+    ↓
+Bourbaki (1939) — structural formalism for mathematics
+    ↓
+Automated reasoning (1960s–2000s) — decision procedures
+    ↓
+Kleis — executable Bourbaki-style structures
+</code></pre>
+<p>The connection runs deeper than analogy. Leibniz believed that concepts
+could be decomposed into primitive components, somewhat like numbers factor
+into primes. Bourbaki turned that intuition into a program: mathematics
+built from structures composed of other structures, all the way down. Kleis
+makes those structures executable — and adds the ratiocinator that Leibniz
+imagined but could not build.</p>
+<h2 id="everything-is-an-expression"><a class="header" href="#everything-is-an-expression">Everything Is an Expression</a></h2>
+<p>Kleis does not privilege any foundational ontology. It does not assert that
+mathematics is fundamentally about sets (ZFC), categories (category theory),
+or types (type theory). Instead, the system adopts a uniform primitive:</p>
+<blockquote>
+<p><em>Everything is an Expression.</em></p>
+</blockquote>
+<p>Structures, axioms, theorems, operations, values — all are expressions
+inside the same system. The language does not require a meta-language.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>System</th><th>Foundational object</th></tr>
+</thead>
+<tbody>
+<tr><td>ZFC</td><td>Sets</td></tr>
+<tr><td>Category theory</td><td>Objects and morphisms</td></tr>
+<tr><td>Type theory</td><td>Types</td></tr>
+<tr><td><strong>Kleis</strong></td><td><strong>Expressions</strong></td></tr>
+</tbody>
+</table>
+</div>
+<p>This is not a metaphysical claim about the nature of reality. It is a
+syntactic commitment: formal reasoning artifacts are represented as
+expressions. Whether the universe itself is symbolic is a different question
+entirely.</p>
+<p>The consequence is that any of those foundational frameworks can be
+<em>constructed</em> inside Kleis without the language taking sides. Set theory,
+category theory, and type theory all become structures defined by axioms —
+inhabitants of the expression system, not assumptions baked into the
+grammar.</p>
+<p>There is a type-oriented organization: in Kleis, <code>structure ≈ type</code>. The
+Hindley-Milner engine infers types, unifies them, and ensures consistency.
+But the type system was enriched without being changed. Axioms attach to
+structures as semantic constraints; the HM unification mechanism is
+unaffected. Types remain structural scaffolding, not philosophical doctrine.</p>
+<pre><code>Layer 1 — Type System (HM):  type correctness, polymorphism, unification
+Layer 2 — Logical Constraints: axioms, theorems, solver verification
+</code></pre>
+<p>The two layers do not interfere. That separation is what allows Kleis to
+have the engineering advantages of a type system (inference, polymorphism,
+error detection) without the philosophical commitment that everything <em>must
+be</em> a type.</p>
+<p>This design has a practical consequence for AI agents. Because Kleis reads
+like mathematical notation, LLMs adapt to it immediately — their training
+data already contains vast amounts of LaTeX, symbolic logic, and functional
+languages. An AI agent writing <code>∀(x : ℝ). x + 0 = x</code> is producing a
+short, unambiguous token sequence that a solver can verify. No translation
+layer. No hedging language. No hallucination pathway. The proposition is
+either satisfiable or it is not.</p>
+<p>Forcing humans to communicate in formal notation would be impractical. But
+for machine agents, Kleis is no harder than English — and considerably less
+ambiguous. That asymmetry is why the architecture works: AI agents propose
+in mathematics, and Kleis decides what is admissible.</p>
+<h2 id="the-constraint-layer"><a class="header" href="#the-constraint-layer">The Constraint Layer</a></h2>
+<p>The three Kleis MCP servers — policy, review, and theory — follow a single
+architectural pattern:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>MCP server</th><th>What the AI sends</th><th>What Kleis checks</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Kleis-policy</strong></td><td>Action proposal</td><td>Policy axioms</td></tr>
+<tr><td><strong>Kleis-review</strong></td><td>Source code</td><td>Engineering standards</td></tr>
+<tr><td><strong>Kleis-theory</strong></td><td>Logical proposition</td><td>Mathematical axioms</td></tr>
+</tbody>
+</table>
+</div>
+<p>The mechanism is identical in all three cases:</p>
+<pre><code>AI proposes → Kleis formalizes → solver verifies → allow or deny
+</code></pre>
+<p>This makes Kleis a <em>constraint enforcement layer</em> between AI cognition and
+system execution. The AI agent is a proposal generator, not an authority.
+The authority is the axiom system.</p>
+<p>The pattern is not novel. The F-16 fly-by-wire system interposes a flight
+control computer between pilot input and control surfaces. The pilot
+requests a maneuver; the computer enforces stability constraints, g-force
+limits, and structural boundaries. The pilot is creative but bounded.
+Nuclear reactor protection systems, operating system kernels, and
+transaction engines all follow the same principle: the proposer does not
+touch the actuators directly.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>System</th><th>Proposer</th><th>Constraint layer</th></tr>
+</thead>
+<tbody>
+<tr><td>F-16 fly-by-wire</td><td>Pilot</td><td>Flight control computer</td></tr>
+<tr><td>Operating system</td><td>User process</td><td>Kernel</td></tr>
+<tr><td>UNIVAC EXEC 8</td><td>Job program</td><td>Executive (ER dispatcher)</td></tr>
+<tr><td><strong>Kleis AI architecture</strong></td><td><strong>AI agent</strong></td><td><strong>Kleis + solver</strong></td></tr>
+</tbody>
+</table>
+</div>
+<p>What is unusual is not the architecture but what the constraints are written
+in. Instead of control laws, rule engines, or heuristics, Kleis uses formal
+axioms verified by an SMT solver. The constraint is not “this looks
+acceptable” but “this is logically consistent with the policy system.”</p>
+<p>The result is that AI agents become unprivileged processes. They submit
+executive requests; Kleis decides whether the system may execute them.
+And because the responses — witnesses, counterexamples, verdicts — are
+expressed in the same mathematical notation as the requests, the
+interaction forms a closed formal loop. No natural language required
+anywhere in the reasoning cycle. No hallucination surface. No hedging.</p>
+<blockquote>
+<p><em>Instead of trying to make AI smarter, the architecture makes AI bounded.</em></p>
+</blockquote>
+<p>That is an engineering approach to AI safety: not eliminating instability in
+the controller, but adding a constraint layer that keeps the system inside
+the admissible region. Classic robust control thinking, applied to
+cognition.</p>
 <h2 id="why-not-a-dsl"><a class="header" href="#why-not-a-dsl">Why Not a DSL</a></h2>
 <p>A natural question: why not build a domain-specific language for verified
 reasoning in an existing host language?</p>
