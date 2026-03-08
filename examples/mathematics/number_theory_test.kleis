@@ -1,0 +1,115 @@
+// ============================================================================
+// Number Theory Test — verifies stdlib/number_theory.kleis axioms via Z3
+// ============================================================================
+//
+// These are known theorems stated as assertions. Z3 derives them from
+// the axioms in number_theory.kleis. Same workflow as the chess experiment:
+// assert a claim, see if Z3 can prove it from the structures.
+// ============================================================================
+
+import "stdlib/number_theory.kleis"
+
+// ============================================
+// ZETA SPECIAL VALUES
+// ============================================
+
+example "zeta at s=0 is -1/2" {
+    assert(zeta(complex(0, 0)) = complex(0 - 1 / 2, 0))
+}
+
+example "trivial zero at s=-2" {
+    assert(zeta(complex(0 - 2, 0)) = complex(0, 0))
+}
+
+example "trivial zero at s=-4" {
+    assert(zeta(complex(0 - 4, 0)) = complex(0, 0))
+}
+
+example "zeta(-1) = -1/12 (Ramanujan)" {
+    assert(zeta(complex(0 - 1, 0)) = complex(0 - 1 / 12, 0))
+}
+
+// ============================================
+// MEROMORPHIC STRUCTURE
+// ============================================
+
+example "zeta has a pole at s=1" {
+    assert(has_pole(zeta_fn, complex(1, 0), 1))
+}
+
+example "zeta residue at s=1 is 1" {
+    assert(residue(zeta_fn, complex(1, 0)) = complex(1, 0))
+}
+
+// ============================================
+// KNOWN ZEROS ON CRITICAL LINE
+// ============================================
+
+example "first zero at 1/2 + 14.135i" {
+    assert(is_nontrivial_zero(complex(1 / 2, 14.135)))
+}
+
+example "second zero at 1/2 + 21.022i" {
+    assert(is_nontrivial_zero(complex(1 / 2, 21.022)))
+}
+
+// ============================================
+// SYMMETRY PROPERTIES (algebraic consequences)
+// ============================================
+
+example "zeros come in conjugate pairs" {
+    assert(∀(rho : ℂ).
+        is_nontrivial_zero(rho) → is_nontrivial_zero(conj(rho)))
+}
+
+example "functional equation symmetry" {
+    assert(∀(s : ℂ). xi(s) = xi(complex_sub(complex(1, 0), s)))
+}
+
+example "zeros are symmetric about Re(s) = 1/2" {
+    assert(∀(rho : ℂ).
+        is_nontrivial_zero(rho) →
+        is_nontrivial_zero(complex_sub(complex(1, 0), rho)))
+}
+
+// ============================================
+// SELBERG CLASS
+// ============================================
+
+example "zeta is in the Selberg class" {
+    assert(has_euler_product(zeta_series) ∧
+           has_continuation(zeta_series) ∧
+           has_functional_eq(zeta_series))
+}
+
+example "zeta is degree 1" {
+    assert(L_degree(zeta_series) = 1)
+}
+
+example "zeta is conductor 1" {
+    assert(L_conductor(zeta_series) = 1)
+}
+
+// ============================================
+// ARITHMETIC FUNCTIONS
+// ============================================
+
+example "2 is prime" {
+    assert(is_prime(2))
+}
+
+example "1 is not prime" {
+    assert(¬is_prime(1))
+}
+
+example "mobius(1) = 1" {
+    assert(mobius(1) = 1)
+}
+
+example "mobius(p) = -1 for prime p" {
+    assert(∀(p : ℕ). is_prime(p) → mobius(p) = 0 - 1)
+}
+
+example "totient(p) = p - 1 for prime p" {
+    assert(∀(p : ℕ). is_prime(p) → euler_totient(p) = p - 1)
+}

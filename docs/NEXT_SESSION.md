@@ -1,24 +1,69 @@
 # Next Session Notes
 
-**Last Updated:** March 7, 2026
+**Last Updated:** March 7, 2026 (session 19 — L-function theory stdlib)
 
 ---
 
-## Future: L-function Theory in Kleis
+## Session 19 (Mar 7, 2026): L-function Theory stdlib + Favicon Fix
 
-Content path for formalizing L-functions and spectral theory, building toward
-Riemann Hypothesis exploration:
+### What Was Done
 
-| File | Contents | Depends On |
-|------|----------|------------|
-| `stdlib/prelude.kleis` | Semigroup, Monoid, Group, Ring, Field | *(already exists)* |
-| `stdlib/analysis.kleis` | Complex analysis axioms (holomorphic, contour integration, analytic continuation) | prelude |
-| `stdlib/number_theory.kleis` | L-functions, Euler products, Riemann zeta, Dirichlet characters | prelude, analysis |
-| `stdlib/spectral.kleis` | Hilbert spaces, self-adjoint operators, spectral theorem, trace-class operators | prelude, analysis |
+**Favicon .ico fix** — Google Search wasn't showing the kleis.io favicon because `/favicon.ico` returned 404. Generated multi-size ICO (16/32/48) from `favicon.svg`, added to `index.html` and `deploy-pages.yml`. PR #158, merged.
 
-The approach: load known theorems as axioms, attempt conjectures, and let the
-E-matching wall reveal where new mathematical insights (Skolem witnesses) are
-needed — the same methodology proven in the chess and entanglement papers.
+**L-function theory stdlib** — three new stdlib files:
+
+| File | Contents | Depends On | Status |
+|------|----------|------------|--------|
+| `stdlib/analysis.kleis` | Holomorphic functions, contour integration, residues, Cauchy theorem, gamma function, analytic continuation | prelude | Parses ✅, examples need selective loading |
+| `stdlib/number_theory.kleis` | Dirichlet series, Euler products, Riemann zeta, functional equation, Selberg class, GRH | prelude (self-contained) | Parses ✅, Z3 diverges on universal quantifiers |
+| `stdlib/spectral.kleis` | Hilbert spaces, operators, self-adjoint, compact, spectral theorem, trace class | prelude, complex | **6/6 verified** ✅ |
+
+**Key results:**
+- `spectral.kleis` verified 6 theorems: self-adjoint eigenvalues real, conjugate symmetry, orthonormal eigenvectors, trace cyclicity, compact → bounded, adjoint involution
+- `number_theory.kleis` made self-contained (no analysis.kleis import) to avoid bulk-loading inconsistency
+- `lambda` is a reserved keyword in Kleis parser — use `lam` instead
+- Z3 diverges (memory explosion, not timeout) on universal quantifiers with complex arithmetic in number theory axioms (xi_def, functional_equation, euler_factor_def)
+
+**New directory:** `examples/mathematics/` for pure math investigations (separate from `ontology/` which is POT physics).
+
+### Files Changed
+- `stdlib/analysis.kleis` — NEW
+- `stdlib/number_theory.kleis` — NEW
+- `stdlib/spectral.kleis` — NEW
+- `examples/mathematics/spectral_theory_test.kleis` — NEW, 6/6 pass
+- `examples/mathematics/number_theory_test.kleis` — NEW, 19 assertions (awaiting Z3 fix)
+- `favicon.ico` — NEW (PR #158)
+- `index.html` — favicon.ico link tag
+- `.github/workflows/deploy-pages.yml` — deploy favicon.ico
+- `docs/NEXT_SESSION.md` — updated
+
+### Branch / PR
+`feature/l-function-theory` — PR #159
+
+### Open: Z3 Memory Limit
+
+Z3's memory usage is **unbounded**. The time limit watchdog (`ContextHandle::interrupt()`) doesn't help when the heap explodes. The number theory axioms (`xi_def`, `functional_equation`, `euler_factor_def`) caused Z3 to consume **13.6 GB and growing** before being killed. Each E-matching instantiation creates new terms that trigger further instantiations — exponential growth with no ceiling.
+
+**Investigation needed:**
+1. `memory_max_size` in Z3 global params — same risk as `timeout` (session 6: internal timeout caused `ASSERTION VIOLATION` crash). Need to test if memory limit corrupts Z3 state.
+2. Process-level `setrlimit(RLIMIT_AS)` / `setrlimit(RLIMIT_DATA)` — OS kills cleanly, Z3 doesn't try to handle it. Safer but coarser.
+3. `KLEIS_Z3_MEMORY_MB` env var, same pattern as `KLEIS_Z3_TIMEOUT_MS`.
+4. Monitor: could poll `/proc/self/status` (Linux) or `mach_task_info` (macOS) periodically and interrupt Z3 via `ContextHandle` when memory exceeds threshold.
+
+**The safest approach is probably option 4** — poll memory usage in a watchdog thread and call `ctx.interrupt()` when it exceeds the limit. This reuses the existing interrupt mechanism that's proven safe.
+
+**Default limit: 2 GB** (`KLEIS_Z3_MEMORY_MB=2048`). Target machine has 32 GB RAM. Any legitimate proof completes well under 100 MB; 2 GB gives headroom for complex theories while killing divergence early.
+
+---
+
+## Future: L-function Theory Next Steps
+
+The stdlib is in place. Next steps:
+
+1. **Skolemize number_theory axioms** — same technique as entanglement paper (session 18). Replace `∀(s : ℂ). xi(s) = ...` with ground instances at specific s values.
+2. **Test number_theory_test.kleis** once Skolemized — 19 theorems ready.
+3. **Hilbert-Pólya operator** — research file in `examples/mathematics/` or `theories/`, importing `spectral.kleis` + `number_theory.kleis`. Assert eigenvalue-zero correspondence, see where Z3 hits the wall.
+4. **Z3 memory limit** — implement before running heavy number theory tests again.
 
 ---
 
