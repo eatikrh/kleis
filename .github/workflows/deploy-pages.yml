@@ -46,6 +46,9 @@ jobs:
         run: cargo doc --no-deps --document-private-items
         continue-on-error: true
 
+      - name: SEO post-build (canonical URLs, per-page meta descriptions)
+        run: ./scripts/postbuild-manual.sh docs/manual/book
+
       - name: Assemble site
         run: |
           mkdir -p _site
