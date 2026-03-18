@@ -1,0 +1,91 @@
+#!/bin/bash
+# Kleis wrapper script
+#
+# This script finds and runs the kleis binary with proper Z3 environment setup.
+# Place this in your PATH for convenient access.
+#
+# Usage:
+#   kleis server          # Start unified LSP + DAP server
+#   kleis eval "1 + 2"    # Evaluate expression
+#   kleis eval -f file    # Evaluate file
+#   kleis check file      # Check file for errors
+#   kleis repl            # Interactive REPL
+#   kleis --help          # Show help
+
+# Find script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Detect Z3 header location and export
+detect_and_export_z3() {
+    # Already set?
+    if [ -n "$Z3_SYS_Z3_HEADER" ] && [ -f "$Z3_SYS_Z3_HEADER" ]; then
+        return 0
+    fi
+    
+    # macOS ARM (Homebrew)
+    if [ -f "/opt/homebrew/opt/z3/include/z3.h" ]; then
+        export Z3_SYS_Z3_HEADER="/opt/homebrew/opt/z3/include/z3.h"
+        return 0
+    fi
+    
+    # macOS Intel (Homebrew)
+    if [ -f "/usr/local/opt/z3/include/z3.h" ]; then
+        export Z3_SYS_Z3_HEADER="/usr/local/opt/z3/include/z3.h"
+        return 0
+    fi
+    
+    # Linux
+    if [ -f "/usr/include/z3.h" ]; then
+        export Z3_SYS_Z3_HEADER="/usr/include/z3.h"
+        return 0
+    fi
+    
+    return 1
+}
+
+# Find kleis binary
+find_kleis_binary() {
+    # 1. Check release build
+    if [ -x "$PROJECT_ROOT/target/release/kleis" ]; then
+        echo "$PROJECT_ROOT/target/release/kleis"
+        return 0
+    fi
+    
+    # 2. Check debug build
+    if [ -x "$PROJECT_ROOT/target/debug/kleis" ]; then
+        echo "$PROJECT_ROOT/target/debug/kleis"
+        return 0
+    fi
+    
+    # 3. Check if kleis is in PATH
+    if command -v kleis &> /dev/null; then
+        # Make sure it's not this script
+        FOUND=$(command -v kleis)
+        if [ "$FOUND" != "$0" ] && [ "$FOUND" != "${BASH_SOURCE[0]}" ]; then
+            echo "$FOUND"
+            return 0
+        fi
+    fi
+    
+    return 1
+}
+
+# Set up Z3 environment
+detect_and_export_z3
+
+# Find binary
+KLEIS_BIN=$(find_kleis_binary)
+
+if [ -z "$KLEIS_BIN" ]; then
+    echo "Error: kleis binary not found."
+    echo ""
+    echo "Build it first:"
+    echo "  cd $PROJECT_ROOT"
+    echo "  ./scripts/build-kleis.sh"
+    exit 1
+fi
+
+# Run kleis with all arguments
+exec "$KLEIS_BIN" "$@"
+

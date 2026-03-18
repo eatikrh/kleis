@@ -1,0 +1,71 @@
+// render_to_typst_demo.kleis
+// Demonstrates rendering EditorNode AST to Typst code
+
+// Import the EditorNode types and builders
+import "../documents/kleisdoc_types.kleis"
+import "../documents/kleisdoc_builders.kleis"
+
+// Example 1: Simple symbol
+example "render symbol" {
+    let ast = sym("x")
+    let typst = render_to_typst(ast)
+    out("Symbol x →")
+    out(typst)
+}
+
+// Example 2: Einstein's equation E = mc²
+example "render einstein" {
+    let ast = binop("equals",
+        sym("E"),
+        binop("times", sym("m"), sup(sym("c"), num("2"))))
+    let typst = render_to_typst(ast)
+    out("E = mc² →")
+    out(typst)
+}
+
+// Example 3: Fraction
+example "render fraction" {
+    let ast = frac(sym("a"), sym("b"))
+    let typst = render_to_typst(ast)
+    out("a/b →")
+    out(typst)
+}
+
+// Example 4: Christoffel symbol (tensor with indices)
+example "render christoffel" {
+    let ast = EOp("gamma", 
+        Cons(sym("λ"), Cons(sym("μ"), Cons(sym("ν"), Nil))),
+        "tensor",
+        NoMeta)
+    let typst = render_to_typst(ast)
+    out("Γ^λ_μν →")
+    out(typst)
+}
+
+// Example 5: Render to different formats
+example "render to latex" {
+    let ast = binop("plus", sym("a"), sym("b"))
+    let typst = render_to_typst(ast, "typst")
+    let latex = render_to_typst(ast, "latex")
+    let unicode = render_to_typst(ast, "unicode")
+    out("Typst:")
+    out(typst)
+    out("LaTeX:")
+    out(latex)
+    out("Unicode:")
+    out(unicode)
+}
+
+// Example 6: Sum with subscript/superscript
+example "render sum" {
+    let ast = EOp("sum",
+        Cons(sym("i"), Cons(num("1"), Cons(sym("n"), Cons(
+            binop("times", sym("a"), sup(sym("i"), num("2"))),
+        Nil)))),
+        "bigop",
+        NoMeta)
+    let typst = render_to_typst(ast)
+    out("Sum →")
+    out(typst)
+}
+

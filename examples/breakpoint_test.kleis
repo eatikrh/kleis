@@ -1,0 +1,29 @@
+// Breakpoint Test File
+// Try setting a breakpoint on the inner functions and stepping through
+
+// Inner function: computes square
+// TRY: Set breakpoint on line 7 below
+define square(x) = x * x
+
+// Middle function: calls square twice
+define sum_of_squares(a, b) =
+  let a2 = square(a) in
+  let b2 = square(b) in
+  a2 + b2
+
+// Outer function: calls sum_of_squares
+define distance_squared(x1, y1, x2, y2) =
+  let dx = x2 - x1 in
+  let dy = y2 - y1 in
+  sum_of_squares(dx, dy)
+
+// Another chain: factorial (recursive)
+define factorial(n) =
+  if n <= 1 then 1
+  else n * factorial(n - 1)
+
+// Test calls - when you debug, execution starts here
+define test1 = square(5)
+define test2 = sum_of_squares(3, 4)
+define test3 = distance_squared(0, 0, 3, 4)
+define test4 = factorial(5)

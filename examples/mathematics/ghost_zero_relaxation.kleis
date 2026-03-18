@@ -1,0 +1,100 @@
+// ============================================================================
+// Ghost Zero Relaxation: What Happens Without Zero Uniqueness?
+// ============================================================================
+//
+// The critical line derivation depends on the zero uniqueness axiom:
+//   complex(1 - s_re, -λ) = complex(s_re, -λ)
+//
+// This file removes those axioms and tests whether s_re = 1/2 still holds.
+//
+// HYPOTHESIS: Without zero uniqueness, s_re is FREE. The functional equation
+// and spectral symmetry alone cannot constrain the real part, because the
+// reflected zero complex(1 - s_re, -λ) could be a DIFFERENT zero from
+// complex(s_re, -λ). No identification is forced, so no constraint on s_re.
+//
+// EXPECTED RESULTS:
+//   "axioms are consistent"  → PROVEN (the axioms without uniqueness are SAT)
+//   "s_re = 1/2"             → should be DISPROVED or UNKNOWN (s_re is free)
+//   "s_re = 0.6"             → should be PROVEN or SAT (ghost zero is possible!)
+//   "s_re ≠ 1/2"             → should be PROVEN (there exist models with s_re ≠ 1/2)
+//
+// If this is the outcome, it confirms that zero uniqueness is the
+// LOAD-BEARING axiom of the Hilbert-Pólya strategy. Without it, the
+// Riemann Hypothesis does not follow from spectral theory alone.
+//
+// Self-contained: no imports. Same as critical_line_derivation.kleis
+// but with zero_unique_1 and zero_unique_2 REMOVED.
+// ============================================================================
+
+data HVector = HV(ℤ)
+data Operator = Op(ℤ)
+
+operation is_self_adjoint : Operator → Bool
+operation is_densely_defined : Operator → Bool
+operation eigenvalue_of : Operator × ℤ → ℝ
+operation xi : ℂ → ℂ
+
+structure RelaxedDerivation {
+    element T : Operator
+    element s_re : ℝ
+
+    // --- The Operator ---
+    axiom T_sa : is_self_adjoint(T)
+    axiom T_dd : is_densely_defined(T)
+    axiom ev1 : eigenvalue_of(T, 1) = 14.135
+    axiom ev2 : eigenvalue_of(T, 2) = 21.022
+
+    // --- Spectral-Zero Bridge ---
+    axiom xi_zero1 : xi(complex(s_re, 14.135)) = complex(0, 0)
+    axiom xi_zero2 : xi(complex(s_re, 21.022)) = complex(0, 0)
+
+    // --- Functional Equation ---
+    axiom func_eq_1 : xi(complex(s_re, 14.135)) = xi(complex(1 - s_re, 0 - 14.135))
+    axiom func_eq_2 : xi(complex(s_re, 21.022)) = xi(complex(1 - s_re, 0 - 21.022))
+
+    // --- Reflected Zeros ---
+    axiom xi_refl1 : xi(complex(1 - s_re, 0 - 14.135)) = complex(0, 0)
+    axiom xi_refl2 : xi(complex(1 - s_re, 0 - 21.022)) = complex(0, 0)
+
+    // --- Spectral Symmetry ---
+    axiom neg_ev1 : eigenvalue_of(T, 0 - 1) = 0 - eigenvalue_of(T, 1)
+    axiom neg_ev2 : eigenvalue_of(T, 0 - 2) = 0 - eigenvalue_of(T, 2)
+
+    axiom xi_neg1 : xi(complex(s_re, 0 - 14.135)) = complex(0, 0)
+    axiom xi_neg2 : xi(complex(s_re, 0 - 21.022)) = complex(0, 0)
+
+    // *** ZERO UNIQUENESS REMOVED ***
+    // axiom zero_unique_1 : complex(1 - s_re, 0 - 14.135) = complex(s_re, 0 - 14.135)
+    // axiom zero_unique_2 : complex(1 - s_re, 0 - 21.022) = complex(s_re, 0 - 21.022)
+}
+
+// ============================================
+// TESTS — What can Z3 derive without uniqueness?
+// ============================================
+
+example "relaxed axioms are consistent" {
+    assert(is_self_adjoint(T) ∧ is_densely_defined(T))
+}
+
+// Without uniqueness, can Z3 still force s_re = 1/2?
+example "s_re = 1/2 WITHOUT uniqueness (expect failure)" {
+    assert(s_re = 1/2)
+}
+
+example "1 - s_re = s_re WITHOUT uniqueness (expect failure)" {
+    assert(1 - s_re = s_re)
+}
+
+// Can ghost zeros now exist?
+example "ghost at s_re = 0.6 WITHOUT uniqueness (expect success)" {
+    assert(s_re = 0.6)
+}
+
+example "ghost at s_re = 0.3 WITHOUT uniqueness (expect success)" {
+    assert(s_re = 0.3)
+}
+
+// Can s_re be anything other than 1/2?
+example "s_re ≠ 1/2 WITHOUT uniqueness (expect success)" {
+    assert(s_re ≠ 1/2)
+}

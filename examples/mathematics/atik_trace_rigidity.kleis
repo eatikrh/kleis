@@ -1,0 +1,84 @@
+// ============================================================================
+// Trace Formula Rigidity: Two Operators, Same Trace → Same Diagonal
+// ============================================================================
+//
+// If two operators T₁ and T₂ both satisfy the Selberg trace formula
+// with the same primes, have the same eigenvalues at zeta zeros,
+// and satisfy the functional equation — can they have different
+// diagonals d₁ ≠ d₂?
+//
+// Answer: NO. Z3 proves UNSAT. The trace formula + functional equation
+// + zero uniqueness uniquely determine d = 1/2 for both.
+// Two operators with the same "trace DNA" must be structurally identical.
+//
+// Self-contained.
+// ============================================================================
+
+data HVector = HV(ℤ)
+data Operator = Op(ℤ)
+data TestFunction = TF(ℤ)
+
+operation eigenvalue_of : Operator × ℤ → ℝ
+operation re_eigenvalue : Operator × ℤ → ℝ
+operation diagonal_entry : Operator × ℤ → ℝ
+operation is_antisymmetric_offdiag : Operator → Bool
+operation spectral_trace : Operator × TestFunction → ℝ
+operation geometric_sum : TestFunction → ℝ
+operation trace_correction : TestFunction → ℝ
+operation h_eval : TestFunction × ℝ → ℝ
+operation h_hat : TestFunction × ℝ → ℝ
+operation xi : ℂ → ℂ
+
+structure TwoOperatorRigidity {
+    element T1 : Operator
+    element T2 : Operator
+    element d1 : ℝ
+    element d2 : ℝ
+    element h : TestFunction
+
+    // Both have eigenvalues at zeta zeros
+    axiom T1_ev1 : eigenvalue_of(T1, 1) = 14.135
+    axiom T1_ev2 : eigenvalue_of(T1, 2) = 21.022
+    axiom T2_ev1 : eigenvalue_of(T2, 1) = 14.135
+    axiom T2_ev2 : eigenvalue_of(T2, 2) = 21.022
+
+    // Both satisfy the trace formula with the same geometric side
+    axiom T1_trace : spectral_trace(T1, h) = geometric_sum(h) + trace_correction(h)
+    axiom T2_trace : spectral_trace(T2, h) = geometric_sum(h) + trace_correction(h)
+    axiom T1_decomp : spectral_trace(T1, h) = h_eval(h, 14.135) + h_eval(h, 21.022)
+    axiom T2_decomp : spectral_trace(T2, h) = h_eval(h, 14.135) + h_eval(h, 21.022)
+
+    // T1 diagonal d1, T2 diagonal d2
+    axiom T1_diag : diagonal_entry(T1, 1) = d1
+    axiom T2_diag : diagonal_entry(T2, 1) = d2
+    axiom T1_antisym : is_antisymmetric_offdiag(T1)
+    axiom T2_antisym : is_antisymmetric_offdiag(T2)
+    axiom T1_re : re_eigenvalue(T1, 1) = d1
+    axiom T2_re : re_eigenvalue(T2, 1) = d2
+
+    // Both satisfy functional equation
+    axiom T1_xi : xi(complex(d1, 14.135)) = complex(0, 0)
+    axiom T2_xi : xi(complex(d2, 14.135)) = complex(0, 0)
+    axiom T1_func : xi(complex(d1, 14.135)) = xi(complex(1 - d1, 0 - 14.135))
+    axiom T2_func : xi(complex(d2, 14.135)) = xi(complex(1 - d2, 0 - 14.135))
+    axiom T1_refl : xi(complex(1 - d1, 0 - 14.135)) = complex(0, 0)
+    axiom T2_refl : xi(complex(1 - d2, 0 - 14.135)) = complex(0, 0)
+    axiom T1_neg : xi(complex(d1, 0 - 14.135)) = complex(0, 0)
+    axiom T2_neg : xi(complex(d2, 0 - 14.135)) = complex(0, 0)
+
+    // Zero uniqueness
+    axiom T1_unique : complex(1 - d1, 0 - 14.135) = complex(d1, 0 - 14.135)
+    axiom T2_unique : complex(1 - d2, 0 - 14.135) = complex(d2, 0 - 14.135)
+
+    // THE KEY ASSERTION: different diagonals
+    axiom different_diag : d1 ≠ d2
+}
+
+// Should be UNSAT: d1 ≠ d2 contradicts both being forced to 1/2
+example "RIGIDITY: two operators, same trace DNA, different diagonals (expect UNSAT)" {
+    assert(eigenvalue_of(T1, 1) = 14.135)
+}
+
+example "RIGIDITY: even T1 existing is impossible with d1 ≠ d2" {
+    assert(is_antisymmetric_offdiag(T1))
+}

@@ -1,0 +1,196 @@
+// ============================================================================
+// Does the Atik Conjecture Prove the Riemann Hypothesis?
+// ============================================================================
+//
+// We encode everything proved in this paper as Z3 axioms and ask:
+// does σ_k = 1/2 for all nontrivial zeros?
+//
+// The axioms are organized by their source and certainty level.
+//
+// ============================================================================
+
+// The zeta zeros: ρ_k = σ_k + iγ_k
+operation sigma : ℤ → ℝ           // Real part (RH claims this = 1/2)
+operation gamma_zeta : ℤ → ℝ      // Imaginary part (known numerically)
+
+// The spectral comb eigenvalues at the fixed point
+operation re_comb : ℤ → ℝ         // Re of k-th comb eigenvalue
+operation gamma_star : ℤ → ℝ      // Im of k-th comb eigenvalue
+
+// ============================================================================
+// LAYER 1: Number theory (established theorems, not controversial)
+// ============================================================================
+//
+// - Critical strip: 0 < σ < 1
+// - Functional equation: ξ(s) = ξ(1-s), so zeros pair σ ↔ 1-σ
+// - Zero uniqueness: for each γ_k, the number of zeros with that
+//   imaginary part determines whether σ = 1/2 (single) or σ ≠ 1/2 (pair)
+//
+// ============================================================================
+// LAYER 2: Structure theorem (Lean 4, formally proved, zero sorry)
+// ============================================================================
+//
+// For any skew-symmetric A, eigenvalues of (1/2)I + A have Re = 1/2.
+//
+// ============================================================================
+// LAYER 3: Convergence (Lean 4 + Z3, formally proved)
+// ============================================================================
+//
+// The spectral comb's fixed point satisfies γ*_k → γ_k.
+// In the limit: γ*_k = γ_k.
+//
+// ============================================================================
+// LAYER 4: Trace formula connection (numerically verified)
+// ============================================================================
+//
+// The spectral comb eigenvalues satisfy the Weil explicit formula.
+// Combined with uniqueness, comb eigenvalues = zeta zeros.
+//
+// ============================================================================
+
+structure AtikComplete {
+    element k : ℤ
+
+    // ── Layer 1: Number theory ──
+    axiom critical_strip : sigma(k) > 0 ∧ sigma(k) < 1
+    axiom functional_equation : sigma(k) + sigma(k) = 1
+        // ^ Simplified: if zeros are simple (one per γ_k), then
+        //   the functional equation σ ↔ 1-σ forces σ = 1-σ.
+
+    // ── Layer 2: Structure theorem (Lean) ──
+    axiom structure_theorem : re_comb(k) = 1 / 2
+
+    // ── Layer 3: Convergence (Lean + Z3) ──
+    axiom convergence : gamma_star(k) = gamma_zeta(k)
+
+    // ── Layer 4: Trace formula identification ──
+    // The comb eigenvalue IS the zeta zero (comb satisfies Weil formula)
+    axiom spectral_identity : re_comb(k) = sigma(k)
+}
+
+// ============================================================================
+// Question 1: Does RH follow from ALL axioms?
+// ============================================================================
+
+example "Q1: RH from full Atik argument" {
+    assert(sigma(k) = 1 / 2)
+}
+
+// ============================================================================
+// Question 2: Which axioms are ACTUALLY needed?
+// Let's test minimal subsets.
+// ============================================================================
+
+// Path A: Functional equation alone (σ = 1-σ → σ = 1/2)
+structure PathA_FunctionalEquation {
+    element k : ℤ
+    axiom functional_equation : sigma(k) + sigma(k) = 1
+}
+
+example "Q2a: RH from functional equation + zero uniqueness alone" {
+    assert(sigma(k) = 1 / 2)
+}
+
+// Path B: Structure theorem + spectral identity (Re_comb = 1/2 = σ)
+structure PathB_StructureIdentity {
+    element k : ℤ
+    axiom structure_theorem : re_comb(k) = 1 / 2
+    axiom spectral_identity : re_comb(k) = sigma(k)
+}
+
+example "Q2b: RH from structure theorem + spectral identity" {
+    assert(sigma(k) = 1 / 2)
+}
+
+// ============================================================================
+// Question 3: What does each layer prove WITHOUT the others?
+// ============================================================================
+
+// Without Layer 4 (no trace formula identification):
+// We know comb has Re = 1/2, and γ* = γ_zeta, but NOT that comb = zeros.
+structure WithoutLayer4 {
+    element k : ℤ
+    axiom critical_strip : sigma(k) > 0 ∧ sigma(k) < 1
+    axiom structure_theorem : re_comb(k) = 1 / 2
+    axiom convergence : gamma_star(k) = gamma_zeta(k)
+    // NO spectral_identity, NO functional_equation
+}
+
+example "Q3a: Can we prove RH without trace formula?" {
+    assert(sigma(k) = 1 / 2)
+}
+
+// Without Layer 2 (no structure theorem):
+structure WithoutLayer2 {
+    element k : ℤ
+    axiom critical_strip : sigma(k) > 0 ∧ sigma(k) < 1
+    axiom convergence : gamma_star(k) = gamma_zeta(k)
+    axiom spectral_identity : re_comb(k) = sigma(k)
+    // NO structure_theorem
+}
+
+example "Q3b: Can we prove RH without structure theorem?" {
+    assert(sigma(k) = 1 / 2)
+}
+
+// ============================================================================
+// Question 4: The honest version — what does the functional equation
+// REALLY say without assuming zero simplicity?
+// ============================================================================
+
+// The functional equation says: if σ+iγ is a zero, then (1-σ)+iγ is too.
+// This does NOT say σ = 1-σ. It says BOTH are zeros.
+// σ = 1-σ requires zero UNIQUENESS: each γ has exactly one σ.
+
+operation sigma_paired : ℤ → ℝ  // the paired zero's real part
+
+structure HonestFunctionalEq {
+    element k : ℤ
+    axiom critical_strip : sigma(k) > 0 ∧ sigma(k) < 1
+    axiom func_eq : sigma_paired(k) = 1 - sigma(k)
+    axiom paired_strip : sigma_paired(k) > 0 ∧ sigma_paired(k) < 1
+    // Without uniqueness, σ_k and 1-σ_k can be different
+}
+
+example "Q4a: RH from functional eq WITHOUT uniqueness?" {
+    assert(sigma(k) = 1 / 2)
+}
+
+// Now ADD zero uniqueness: σ_k = σ_paired_k (same zero)
+structure HonestWithUniqueness {
+    element k : ℤ
+    axiom critical_strip : sigma(k) > 0 ∧ sigma(k) < 1
+    axiom func_eq : sigma_paired(k) = 1 - sigma(k)
+    axiom zero_uniqueness : sigma(k) = sigma_paired(k)
+}
+
+example "Q4b: RH from functional eq WITH uniqueness?" {
+    assert(sigma(k) = 1 / 2)
+}
+
+// ============================================================================
+// Question 5: The complete honest chain
+// ============================================================================
+
+structure CompleteHonestChain {
+    element k : ℤ
+
+    // Number theory
+    axiom critical_strip : sigma(k) > 0 ∧ sigma(k) < 1
+    axiom func_eq : sigma_paired(k) = 1 - sigma(k)
+
+    // Lean proofs
+    axiom structure_theorem : re_comb(k) = 1 / 2
+    axiom convergence : gamma_star(k) = gamma_zeta(k)
+
+    // Trace formula: comb satisfies Weil → comb eigenvalues = zeta zeros
+    axiom spectral_identity : re_comb(k) = sigma(k)
+    // ^ THIS is the key axiom. It requires:
+    //   (a) comb satisfies the explicit formula (numerically verified)
+    //   (b) the explicit formula uniquely determines zeros (theorem)
+    //   Together: the comb eigenvalue at 1/2 + iγ_k IS the zero σ_k + iγ_k
+}
+
+example "Q5: RH from the complete honest chain" {
+    assert(sigma(k) = 1 / 2)
+}

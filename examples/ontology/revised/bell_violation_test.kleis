@@ -1,0 +1,89 @@
+// =============================================================================
+// Bell Violation Test — CHSH witness angles
+// =============================================================================
+//
+// Tests whether Z3 can verify the Bell inequality violation using the
+// ground cos values at the CHSH angles (0, π/4, π/2).
+//
+// The derivation chain:
+//   cos(0) = 1, cos(π/2) = 0, cos(π/4)² = 1/2  (ground trig instances)
+//   + spin_half_overlap: spinor_inner(proj_a, proj_b) = cos(θ)
+//   + correlation_def: E(a,b) = -spinor_inner(proj_a, proj_b)
+//   → E(a,b) = -cos(θ)
+//   → Bell LHS = |E(a,b) - E(a,c)| = |cos(π/2) - cos(π/4)| = cos(π/4)
+//   → Bell RHS = 1 + E(b,c) = 1 - cos(π/4)
+//   → cos(π/4) > 1 - cos(π/4) ⟺ cos(π/4) > 1/2
+//   → cos(π/4)² > 1/4, but cos(π/4)² = 1/2 > 1/4 ✓
+// =============================================================================
+
+import "../../../theories/pot_entanglement_v2.kleis"
+
+// =============================================================================
+// Basic tests: cos values at CHSH angles
+// =============================================================================
+
+example "cos at zero" {
+    assert(cos(0) = 1)
+    out("cos(0) = 1 — from axiom")
+}
+
+example "cos at pi/2" {
+    assert(cos(pi_bound / 2) = 0)
+    out("cos(π/2) = 0 — from ground instance")
+}
+
+example "cos at pi" {
+    assert(cos(pi_bound) = 0 - 1)
+    out("cos(π) = -1 — from axiom")
+}
+
+example "cos pi/4 squared" {
+    assert(cos(pi_bound / 4) * cos(pi_bound / 4) = 1 / 2)
+    out("cos²(π/4) = 1/2 — from ground instance")
+}
+
+// =============================================================================
+// Correlation at specific angles
+// =============================================================================
+
+example "anticorrelation at same angle" {
+    assert(∀(G : GreenKernel, a : DetectorAngle).
+        is_admissible(G) ⟹
+            correlation(G, psi_AB, a, a) = 0 - 1)
+    out("E(a,a) = -cos(0) = -1 — perfect anticorrelation")
+}
+
+example "correlation at pi/2" {
+    assert(∀(G : GreenKernel).
+        is_admissible(G) ⟹
+            correlation(G, psi_AB, angle_0, angle_pi2) = 0 - cos(pi_bound / 2))
+    out("E(0, π/2) = -cos(π/2) = 0 — uncorrelated at right angles")
+}
+
+example "correlation at pi/2 is zero" {
+    assert(∀(G : GreenKernel).
+        is_admissible(G) ⟹
+            correlation(G, psi_AB, angle_0, angle_pi2) = 0)
+    out("E(0, π/2) = 0 — verified")
+}
+
+// =============================================================================
+// Bell inequality violation at CHSH angles
+// =============================================================================
+
+example "bell lhs at witness angles" {
+    assert(∀(G : GreenKernel).
+        is_admissible(G) ⟹
+            bell_lhs(G, psi_AB, angle_0, angle_pi4, angle_pi2) =
+                abs(correlation(G, psi_AB, angle_0, angle_pi4)
+                    - correlation(G, psi_AB, angle_0, angle_pi2)))
+    out("Bell LHS at CHSH angles = |E(0,π/4) - E(0,π/2)|")
+}
+
+example "bell rhs at witness angles" {
+    assert(∀(G : GreenKernel).
+        is_admissible(G) ⟹
+            bell_rhs(G, psi_AB, angle_0, angle_pi4, angle_pi2) =
+                1 + correlation(G, psi_AB, angle_pi4, angle_pi2))
+    out("Bell RHS at CHSH angles = 1 + E(π/4, π/2)")
+}

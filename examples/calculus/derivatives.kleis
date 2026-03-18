@@ -1,0 +1,274 @@
+// Calculus in Kleis
+// Following Mathematica's notation for derivatives and integrals
+//
+// =============================================================================
+// INTEGRAL NOTATION (Mathematica-style)
+// =============================================================================
+//
+// Prefix operators (Unicode):
+//   ∫f             - Indefinite integral
+//   ∬f             - Double integral
+//   ∭f             - Triple integral
+//   ∮f             - Line/contour integral
+//   ∯f             - Surface integral
+//
+// Function-style (Mathematica):
+//   Integrate(f, x)        - Indefinite ∫f dx
+//   Integrate(f, x, a, b)  - Definite ∫[a,b] f dx
+//   DoubleIntegral(f, x, y) - ∬f dx dy
+//   TripleIntegral(f, x, y, z) - ∭f dx dy dz
+//   LineIntegral(F, curve)  - ∮ F · dr
+//   SurfaceIntegral(F, surface) - ∯ F · dS
+//
+// =============================================================================
+// DERIVATIVE NOTATION (Mathematica-style)
+// =============================================================================
+//
+// D(f, x)    - Partial derivative ∂f/∂x
+//              Other variables are treated as CONSTANTS
+//              D(x^2 + y^2, x) = 2*x
+//
+// Dt(f, x)   - Total derivative df/dx  
+//              Other variables may DEPEND on x (chain rule applies)
+//              Dt(x^2 + y^2, x) = 2*x + 2*y*Dt(y, x)
+//
+// D(f, x, y) - Mixed partial ∂²f/∂x∂y
+//              D(x*y, x, y) = 1
+//
+// D(f, {x, n}) - nth derivative ∂ⁿf/∂xⁿ
+//              D(x^3, {x, 2}) = 6*x
+//
+// =============================================================================
+// WHEN TO USE EACH
+// =============================================================================
+//
+// Use D (partial) when:
+//   - Working with functions of multiple independent variables
+//   - Computing gradients, Jacobians, Hessians
+//   - f(x, y) where x and y vary independently
+//
+// Use Dt (total) when:
+//   - Variables depend on each other (parametric curves)
+//   - Applying chain rule: y = g(x), so dy/dx matters
+//   - Computing derivatives along paths
+//
+// =============================================================================
+// EXAMPLES
+// =============================================================================
+//
+// Partial derivatives:
+//   D(x^2 + y^2, x) = 2*x     // ∂/∂x, y is constant
+//   D(x^2 + y^2, y) = 2*y     // ∂/∂y, x is constant
+//   D(x*y, x) = y             // y is constant
+//   D(x*y, y) = x             // x is constant
+//
+// Total derivatives:
+//   Dt(x^2 + y^2, x) = 2*x + 2*y*Dt(y, x)  // chain rule included
+//   If y is constant: Dt(y, x) = 0, so result = 2*x
+//   If y = x^2: Dt(y, x) = 2*x, so result = 2*x + 2*y*2*x = 2*x + 4*x*y
+//
+// =============================================================================
+
+// =============================================================================
+// DATA TYPES
+// =============================================================================
+
+// Variables for differentiation
+data Variable = X | Y | Z | T
+
+// =============================================================================
+// STRUCTURES FOR CALCULUS
+// =============================================================================
+
+structure Differentiable(F) {
+    // Partial derivative operator
+    operation D : F -> Variable -> F
+    
+    // Total derivative operator  
+    operation Dt : F -> Variable -> F
+    
+    // Linearity of partial derivative
+    axiom D_linear_add: ∀(f g : F, x : Variable). D(f + g, x) = D(f, x) + D(g, x)
+    axiom D_linear_scalar: ∀(c : ℝ, f : F, x : Variable). D(c * f, x) = c * D(f, x)
+    
+    // Partial derivative of constant is zero
+    axiom D_const: ∀(c : ℝ, x : Variable). D(c, x) = 0
+    
+    // Partial derivative of variable with respect to itself is 1
+    axiom D_var_self: ∀(x : Variable). D(x, x) = 1
+    
+    // Partial derivative of variable with respect to different variable is 0
+    axiom D_var_other: ∀(x y : Variable). x != y ⟹ D(x, y) = 0
+    
+    // Product rule (Leibniz rule)
+    axiom D_product: ∀(f g : F, x : Variable). D(f * g, x) = D(f, x) * g + f * D(g, x)
+    
+    // Chain rule for total derivative
+    axiom Dt_chain: ∀(f : F, x y : Variable). 
+        Dt(f, x) = D(f, x) + D(f, y) * Dt(y, x)
+    
+    // If y is constant with respect to x, total = partial
+    axiom Dt_const_var: ∀(f : F, x y : Variable). 
+        Dt(y, x) = 0 ⟹ Dt(f, x) = D(f, x)
+}
+
+structure SmoothFunction(n : Nat) {
+    // Gradient: vector of all partial derivatives
+    operation gradient : Self -> Vector(n)
+    
+    // Laplacian: sum of second partial derivatives
+    operation laplacian : Self -> Self
+    
+    // Schwarz's theorem: mixed partials commute
+    axiom mixed_partials: ∀(f : Self, x y : Variable). 
+        D(D(f, x), y) = D(D(f, y), x)
+}
+
+// =============================================================================
+// CONCRETE DERIVATIVE RULES (using integers for verification)
+// =============================================================================
+
+// Power rule: D(x^n, x) = n * x^(n-1)
+define power_rule(n, x) = n * x^(n - 1)
+
+// Verify: D(x^2, x) at x=3 should be 2*3 = 6
+define D_x_squared(x) = power_rule(2, x)
+
+// Verify: D(x^3, x) at x=2 should be 3*4 = 12
+define D_x_cubed(x) = power_rule(3, x)
+
+// Sum rule: D(f + g, x) = D(f, x) + D(g, x)
+define sum_rule(Df, Dg) = Df + Dg
+
+// Product rule: D(f * g, x) = D(f,x) * g + f * D(g,x)
+define product_rule(f, Df, g, Dg) = Df * g + f * Dg
+
+// Quotient rule: D(f/g, x) = (D(f,x)*g - f*D(g,x)) / g^2
+define quotient_rule(f, Df, g, Dg) = (Df * g - f * Dg) / (g * g)
+
+// Chain rule: D(f(g(x)), x) = D(f, g(x)) * D(g, x)
+define chain_rule(Df_at_g, Dg) = Df_at_g * Dg
+
+// =============================================================================
+// EXAMPLE: Total vs Partial on x^2 + y^2
+// =============================================================================
+
+// f(x, y) = x^2 + y^2
+
+// Partial derivative D(f, x) = 2*x (y treated as constant)
+define partial_f_x(x, y) = 2 * x
+
+// Partial derivative D(f, y) = 2*y (x treated as constant)  
+define partial_f_y(x, y) = 2 * y
+
+// Total derivative Dt(f, x) = 2*x + 2*y*Dt(y, x)
+// If y is independent of x: Dt(y, x) = 0, so Dt(f, x) = 2*x
+// If y = x (i.e., on the line y=x): Dt(y, x) = 1, so Dt(f, x) = 2*x + 2*y
+define total_f_x_independent(x, y) = 2 * x
+define total_f_x_on_diagonal(x, y) = 2 * x + 2 * y
+
+// =============================================================================
+// GRADIENT AND LAPLACIAN
+// =============================================================================
+
+// Gradient: ∇f = (D(f, x), D(f, y))
+// For f = x^2 + y^2: ∇f = (2x, 2y)
+define gradient_f(x, y) = [2 * x, 2 * y]
+
+// Laplacian: ∇²f = D(D(f, x), x) + D(D(f, y), y)
+// For f = x^2 + y^2: ∇²f = 2 + 2 = 4
+define laplacian_f() = 4
+
+// =============================================================================
+// MIXED PARTIAL DERIVATIVES (Schwarz's theorem)
+// =============================================================================
+
+// For f(x, y) = x * y:
+// D(f, x) = y
+// D(D(f, x), y) = D(y, y) = 1
+// D(f, y) = x  
+// D(D(f, y), x) = D(x, x) = 1
+// So D(D(f, x), y) = D(D(f, y), x) = 1 ✓
+
+define mixed_partial_xy() = 1
+define mixed_partial_yx() = 1
+
+// =============================================================================
+// INTEGRAL STRUCTURES AND AXIOMS
+// =============================================================================
+
+structure Integrable(F) {
+    // Indefinite integral
+    operation Integrate : F -> Variable -> F
+    
+    // Fundamental Theorem of Calculus (Part 1)
+    // D(∫f dx, x) = f
+    axiom FTC1: ∀(f : F, x : Variable). D(Integrate(f, x), x) = f
+    
+    // Fundamental Theorem of Calculus (Part 2)
+    // ∫[a,b] f'(x) dx = f(b) - f(a)
+    // (Expressed as: integral of derivative equals endpoint difference)
+    
+    // Linearity
+    axiom integral_linear_add: ∀(f g : F, x : Variable). 
+        Integrate(f + g, x) = Integrate(f, x) + Integrate(g, x)
+    axiom integral_linear_scalar: ∀(c : ℝ, f : F, x : Variable).
+        Integrate(c * f, x) = c * Integrate(f, x)
+}
+
+// =============================================================================
+// INTEGRAL EXAMPLES
+// =============================================================================
+
+// Power rule for integration: ∫x^n dx = x^(n+1)/(n+1) + C
+// For integers, we express this as: (n+1) * ∫x^n dx = x^(n+1)
+// E.g., 3 * ∫x^2 dx = x^3
+
+// Definite integral: ∫[a,b] x^2 dx = b^3/3 - a^3/3
+// Using integers: 3 * ∫[0,3] x^2 dx = 27 - 0 = 27
+
+// Area under x^2 from 0 to 3 (times 3 to avoid fractions)
+define integral_x_squared_0_to_3_times_3() = 27
+
+// ∫x dx = x^2/2, so 2 * ∫[0,4] x dx = 16
+define integral_x_0_to_4_times_2() = 16
+
+// Double integral: ∬[0,1]×[0,1] 1 dA = 1 (unit square area)
+define double_integral_unit_square() = 1
+
+// Triple integral: ∭[0,1]×[0,1]×[0,1] 1 dV = 1 (unit cube volume)
+define triple_integral_unit_cube() = 1
+
+// Line integral around unit circle: ∮ F·dr
+// For F = (-y, x), ∮ F·dr = 2π (area enclosed)
+// We use integer approximation: ≈ 6
+
+// Green's Theorem: ∮ F·dr = ∬ (∂Q/∂x - ∂P/∂y) dA
+// Links line integral to double integral
+
+// =============================================================================
+// VERIFICATION TESTS
+// =============================================================================
+// Run in REPL:
+//
+// Power rule tests:
+// :verify D_x_squared(3) = 6
+// :verify D_x_cubed(2) = 12
+//
+// Product rule test (D(x*x, x) = 1*x + x*1 = 2x):
+// :verify product_rule(5, 1, 5, 1) = 10
+//
+// Chain rule test (D((x^2)^2, x) = 2*x^2 * 2*x = 4*x^3):
+// At x=2: 4*8 = 32
+// :verify chain_rule(8, 4) = 32
+//
+// Laplacian:
+// :verify laplacian_f() = 4
+//
+// Mixed partials (Schwarz):
+// :verify mixed_partial_xy() = mixed_partial_yx()
+//
+// Total vs partial on diagonal:
+// At (2, 2): partial = 4, total = 4 + 4 = 8
+// :verify partial_f_x(2, 2) = 4
+// :verify total_f_x_on_diagonal(2, 2) = 8

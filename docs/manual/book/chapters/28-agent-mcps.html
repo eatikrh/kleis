@@ -1,0 +1,866 @@
+<!DOCTYPE HTML>
+<html lang="en" class="navy sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <link rel="canonical" href="https://kleis.io/docs/manual/book/chapters/28-agent-mcps.html">
+        <title>Agent MCP Servers - The Kleis Manual</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Google tag (gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-4MJCXLSP8V"></script>
+        <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-4MJCXLSP8V');
+        </script>
+        
+
+        <meta name="description" content="Agent MCP Servers — Kleis language guide: formal verification, type inference, and Z3 theorem proving.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-71ffb63a.svg">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-2459343d.css">
+        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "navy";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex-abba8839.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-3f3d019b.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('navy')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Kleis Manual</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/eatikrh/kleis" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/eatikrh/kleis/edit/main/docs/manual/src/chapters/28-agent-mcps.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="agent-mcp-servers"><a class="header" href="#agent-mcp-servers">Agent MCP Servers</a></h1>
+<p>Kleis ships four Model Context Protocol (MCP) servers that turn Kleis policies
+and structures into live tools for AI agents. The previous chapter covered
+<strong>kleis-theory</strong> — the interactive theory-building server. This chapter covers
+the other three: <strong>kleis-policy</strong> for agent action gating, and
+<strong>kleis-review-rust</strong> / <strong>kleis-review-python</strong> for code review against formal
+coding standards.</p>
+<p>All four share the same architecture: a Kleis <code>.kleis</code> file defines the rules,
+the Kleis evaluator loads them into memory, and the MCP server exposes them as
+JSON-RPC tools over stdio. The rules are declarative, version-controlled, and
+readable by both humans and machines.</p>
+<h2 id="kleis-policy-agent-action-gating"><a class="header" href="#kleis-policy-agent-action-gating">kleis-policy: Agent Action Gating</a></h2>
+<h3 id="the-problem"><a class="header" href="#the-problem">The Problem</a></h3>
+<p>An AI agent in an IDE can run shell commands, edit files, commit code, and push
+to remote repositories. Without guardrails, a single hallucinated command —
+<code>rm -rf /</code>, <code>git push --force main</code>, <code>chmod 777</code> — can cause real damage.</p>
+<p>Static tool-call filters are too coarse. “Never allow shell commands” is
+impractical. “Allow shell commands but deny dangerous patterns” requires
+nuance that belongs in a policy, not hardcoded in the agent runtime.</p>
+<h3 id="the-solution"><a class="header" href="#the-solution">The Solution</a></h3>
+<p>The kleis-policy MCP loads a policy file and exposes five tools:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tool</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>check_action</code></td><td>Check whether an action is allowed, get preconditions</td></tr>
+<tr><td><code>list_rules</code></td><td>Show all loaded policy rules</td></tr>
+<tr><td><code>explain_rule</code></td><td>Explain a specific rule in detail</td></tr>
+<tr><td><code>describe_schema</code></td><td>Show the full policy vocabulary</td></tr>
+<tr><td><code>evaluate</code></td><td>Evaluate any Kleis expression or verify a proposition via Z3</td></tr>
+</tbody>
+</table>
+</div>
+<p>The agent calls <code>check_action</code> before performing file edits, deletions,
+commands, git operations, and commits. The policy returns “allow” or “deny”
+plus any preconditions that must be satisfied first.</p>
+<h3 id="the-policy-file"><a class="header" href="#the-policy-file">The Policy File</a></h3>
+<p>The policy is a standard <code>.kleis</code> file using <code>define</code>, <code>if/then/else</code>,
+and built-in string functions (<code>contains</code>, <code>hasPrefix</code>, <code>hasSuffix</code>, <code>isAscii</code>):</p>
+<pre><code class="language-kleis">define check_file_delete(path) =
+    if hasPrefix(path, "src/") then "deny"
+    else if hasPrefix(path, "tests/") then "deny"
+    else if path = "Cargo.toml" then "deny"
+    else "allow"
+
+define check_run_command(cmd) =
+    if contains(cmd, "rm -rf") then "deny"
+    else if contains(cmd, "chmod 777") then "deny"
+    else if contains(cmd, "pkill") then "deny"
+    else "allow"
+
+define check_git_push(branch, force) =
+    if force = 1 then "deny"
+    else if branch = "production" then "deny"
+    else "allow"
+
+define check_git_commit(description) =
+    if isAscii(description) then "allow"
+    else "deny"
+</code></pre>
+<p>These rules are not aspirational documentation — they are enforced at runtime.
+When the agent calls <code>check_action("run_command", "rm -rf ./build")</code>, the
+server evaluates <code>check_run_command("rm -rf ./build")</code> and returns <code>"deny"</code>.</p>
+<h3 id="preconditions"><a class="header" href="#preconditions">Preconditions</a></h3>
+<p>Beyond allow/deny, the policy defines preconditions — commands or checks
+that must run before an action is permitted:</p>
+<pre><code class="language-kleis">define before_git_push(branch, force) =
+    "cargo fmt --all &amp;&amp; cargo clippy --all-targets --all-features &amp;&amp; cargo test"
+
+define before_file_edit(path) =
+    if hasPrefix(path, "src/kleis_parser") then
+        "cargo test parser &amp;&amp; cat docs/grammar/kleis_grammar_v99.ebnf"
+    else if hasPrefix(path, "src/evaluator") then "cargo test evaluator"
+    else "none"
+</code></pre>
+<p>When the agent asks to edit <code>src/kleis_parser.rs</code>, the MCP responds: “allowed,
+but first run parser tests and read the grammar.” The agent executes the
+preconditions, then proceeds with the edit.</p>
+<h3 id="z3-verification-of-the-policy-itself"><a class="header" href="#z3-verification-of-the-policy-itself">Z3 Verification of the Policy Itself</a></h3>
+<p>Because the policy is a Kleis program, its properties can be verified via Z3.
+The <code>evaluate</code> tool accepts universal quantifiers:</p>
+<pre><code>evaluate: check_git_commit("fix: resolve parsing bug")
+-&gt; "allow"
+
+evaluate: check_git_commit("initial commit")
+-&gt; "deny"
+
+evaluate: forall(d : String). implies(check_git_commit(d) = "allow", isAscii(d))
+-&gt; VERIFIED
+</code></pre>
+<p>The third query proves that <strong>every</strong> commit message the policy allows is
+ASCII. This is not a test case — it is a machine-checked proof over all
+possible inputs. If someone modifies the policy in a way that breaks this
+property, Z3 will catch it.</p>
+<h3 id="starting-the-server"><a class="header" href="#starting-the-server">Starting the Server</a></h3>
+<pre><code class="language-bash">kleis mcp --policy examples/policies/agent_policy.kleis --verbose
+</code></pre>
+<p>In Cursor, add to <code>.cursor/mcp.json</code>:</p>
+<pre><code class="language-json">"kleis-policy": {
+    "command": "/Users/you/bin/kleis",
+    "args": ["mcp", "--verbose", "--policy",
+             "/path/to/examples/policies/agent_policy.kleis"]
+}
+</code></pre>
+<hr>
+<h2 id="kleis-review-code-review-via-formal-standards"><a class="header" href="#kleis-review-code-review-via-formal-standards">kleis-review: Code Review via Formal Standards</a></h2>
+<blockquote>
+<p><strong>Note:</strong> Review MCPs are now specialized as <code>kleis-review-rust</code> and
+<code>kleis-review-python</code>. There may be more specialized review tools in the
+future, or we may combine them into one that is able to review multiple
+languages.</p>
+</blockquote>
+<h3 id="the-problem-1"><a class="header" href="#the-problem-1">The Problem</a></h3>
+<p>Code reviews catch two categories of issues:</p>
+<ol>
+<li>
+<p><strong>Mechanical</strong> — <code>.unwrap()</code> in production code, wildcard imports, emoji
+in source files, <code>Result&lt;_, String&gt;</code> instead of typed errors. These are
+team conventions that reviewers enforce inconsistently depending on who
+reviews the MR and how tired they are.</p>
+</li>
+<li>
+<p><strong>Architectural</strong> — “should this be a middleware or a per-handler check?”
+These require understanding and judgment.</p>
+</li>
+</ol>
+<p>Linters handle syntax. AI agents handle architecture. But the mechanical
+layer — team conventions, hard-won lessons, project-specific standards —
+falls through the cracks. It lives in people’s heads, gets enforced
+inconsistently, and slows down every review.</p>
+<h3 id="the-solution-1"><a class="header" href="#the-solution-1">The Solution</a></h3>
+<p>The kleis-review MCP loads a coding standards file and exposes seven tools:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tool</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>check_code</code></td><td>Check a source code snippet against all standards</td></tr>
+<tr><td><code>check_file</code></td><td>Check a file on disk against all standards</td></tr>
+<tr><td><code>diff_check_file</code></td><td>Check a file against diff-based rules by comparing with a base branch</td></tr>
+<tr><td><code>list_rules</code></td><td>List all loaded coding standard rules</td></tr>
+<tr><td><code>explain_rule</code></td><td>Explain a specific rule in detail</td></tr>
+<tr><td><code>describe_standards</code></td><td>Show the full schema of loaded standards</td></tr>
+<tr><td><code>evaluate</code></td><td>Evaluate a Kleis expression or verify a proposition via Z3</td></tr>
+</tbody>
+</table>
+</div>
+<p>Each <code>check_*</code> function in the policy receives source code as a string and
+returns <code>"pass"</code> or <code>"fail: &lt;reason&gt;"</code>. The engine runs all rules against
+the input and returns a per-rule verdict.</p>
+<h3 id="three-tiers-of-analysis"><a class="header" href="#three-tiers-of-analysis">Three Tiers of Analysis</a></h3>
+<p>The review engine operates at three distinct levels of sophistication:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tier</th><th>Mechanism</th><th>What it catches</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>1. String checks</strong></td><td><code>check_*</code> with <code>contains</code>/<code>hasPrefix</code></td><td>Clippy patterns, emoji, <code>Result&lt;_, String&gt;</code>, <code>#[allow(unused)]</code></td></tr>
+<tr><td><strong>2. Structural checks</strong></td><td><code>check_*_structural</code> via <code>rust_parser.kleis</code> AST</td><td><code>.unwrap()</code> in production (not test) code, missing docs on pub fns, naming conventions, wildcard imports, function parameter counts</td></tr>
+<tr><td><strong>3. Z3 axioms</strong></td><td><code>structure</code> with <code>axiom</code>, verified by Z3</td><td>Formal properties over all possible inputs (e.g., SafeCode, SqlSafe)</td></tr>
+</tbody>
+</table>
+</div>
+<p>Tier 1 runs simple pattern matching — fast but context-blind.
+Tier 2 parses the source into a <code>Crate</code> AST and queries it for functions,
+structs, use declarations, and comments. This enables context-aware analysis:
+<code>.unwrap()</code> in a <code>#[test]</code> function is fine; <code>.unwrap()</code> in production code
+is flagged. The structural parser was originally written in pure Kleis
+(<code>rust_parser.kleis</code>) — a Rust parser written in Kleis itself. For performance,
+<code>scan()</code> now delegates to a native Rust tokenizer and recursive descent parser
+(<code>scan_rust</code> builtin), while all query helpers and data types remain in Kleis.
+Tier 3 uses Z3 to prove properties hold universally.</p>
+<h3 id="the-standards-file"><a class="header" href="#the-standards-file">The Standards File</a></h3>
+<p>The standards file is a <code>.kleis</code> file. It imports the structural parser and
+defines rules at each tier. Here is a representative sample:</p>
+<p><strong>Tier 1 — String checks</strong> for clippy patterns and style:</p>
+<pre><code class="language-kleis">define check_clippy_len_zero(source) =
+    if contains(source, ".len() == 0") then
+        "fail: clippy::len_zero — use .is_empty() instead"
+    else if contains(source, ".len() &gt; 0") then
+        "fail: clippy::len_zero — use !.is_empty() instead"
+    else "pass"
+
+define check_no_result_string(source) =
+    if contains(source, "Result&lt;(), String&gt;") then
+        "fail: Result&lt;(), String&gt; — use thiserror for typed errors"
+    else "pass"
+</code></pre>
+<p><strong>Tier 2 — Structural checks</strong> using the Rust parser:</p>
+<pre><code class="language-kleis">import "../meta-programming/rust_parser.kleis"
+
+define check_safe_structural(source) =
+    let prod = production_code(source) in
+    let c = scan(source) in
+    let fns = crate_functions(c) in
+    let unwrap_fns = non_test_fns_containing(source, fns, ".unwrap()") in
+    let panic_fns  = non_test_fns_containing(source, fns, "panic!(") in
+    let unsafe_hits = if contains(prod, "unsafe {")
+                      then "unsafe block in production code" else "" in
+    let all = append_failure(
+        if eq(unwrap_fns, "") then "" else concat(".unwrap() in production fn: ", unwrap_fns),
+        append_failure(
+            if eq(panic_fns, "") then "" else concat("panic!() in production fn: ", panic_fns),
+            unsafe_hits)) in
+    if eq(all, "") then "pass"
+    else concat("fail: ", all)
+</code></pre>
+<p>The <code>scan()</code> function parses source code into a <code>Crate</code> AST containing
+<code>Function</code>, <code>UseDeclaration</code>, <code>Comment</code>, and <code>Struct</code> items. The
+<code>production_code()</code> function filters out <code>#[test]</code> functions and
+<code>#[cfg(test)]</code> modules using a single <code>foldLines</code> pass, so patterns are
+only checked against production code.</p>
+<p>Structural verdicts include line numbers for precise reporting:</p>
+<pre><code>fail: .unwrap() in production fn: process_request (line 42), handle_error (line 87)
+</code></pre>
+<p>The master <code>check_structural</code> check parses once and runs multiple sub-rules:</p>
+<pre><code class="language-kleis">define check_structural(source) =
+    let c = scan(source) in
+    let f1 = rule_wildcard_imports(c) in
+    let f2 = rule_narrating_line_comments(c) in
+    let f3 = rule_pub_fn_docs(c) in
+    let f4 = rule_param_count(c) in
+    let f5 = rule_function_count(c) in
+    let f6 = rule_test_presence(c) in
+    let f7 = rule_fn_naming(c) in
+    let f8 = rule_struct_naming(c) in
+    ...
+</code></pre>
+<p>Sub-rules are named <code>rule_*</code> (not <code>check_*</code>) so the engine does not
+auto-discover them as top-level checks. They are invoked only through
+<code>check_structural</code>.</p>
+<p><strong>Tier 3 — Z3 axioms</strong> for formal verification:</p>
+<pre><code class="language-kleis">structure SafeCode {
+    operation is_safe : String -&gt; Bool
+
+    axiom safe_no_unwrap : forall(s : String).
+        implies(is_safe(s), not(contains(s, ".unwrap()")))
+
+    axiom safe_no_panic : forall(s : String).
+        implies(is_safe(s), not(contains(s, "panic!(")))
+}
+</code></pre>
+<p>The <code>evaluate</code> tool can verify these axioms via Z3:</p>
+<pre><code>evaluate: forall(s : String). implies(is_safe(s), not(contains(s, ".unwrap()")))
+-&gt; VERIFIED
+</code></pre>
+<p>This is not a test case — it is a machine-checked proof over all possible
+inputs.</p>
+<h3 id="the-five-structural-checks"><a class="header" href="#the-five-structural-checks">The Five Structural Checks</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Check</th><th>What it detects (in production code only)</th></tr>
+</thead>
+<tbody>
+<tr><td><code>check_structural</code></td><td>Wildcard imports, narrating comments, missing pub fn docs, too many params (&gt;5), function/struct naming, function count (&gt;50), missing tests</td></tr>
+<tr><td><code>check_safe_structural</code></td><td><code>.unwrap()</code>, <code>panic!()</code>, <code>unsafe {}</code> — skips test functions</td></tr>
+<tr><td><code>check_clean_structural</code></td><td><code>println!()</code>, <code>todo!()</code>, <code>dbg!()</code> — skips test functions</td></tr>
+<tr><td><code>check_secure_structural</code></td><td>Hardcoded credential string literals (<code>password = "..."</code>, <code>secret = "..."</code>) — skips test code</td></tr>
+<tr><td><code>check_sql_safe_structural</code></td><td><code>format!</code> with SQL keywords, <code>.push_str</code> with <code>WHERE</code> — skips test code</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="running-a-review"><a class="header" href="#running-a-review">Running a Review</a></h3>
+<p>The agent calls <code>check_file</code> with a path:</p>
+<pre><code>check_file: { "path": "src/server.rs" }
+
+-&gt; Code Review: src/server.rs — 14 passed, 4 failed (out of 18 checks)
+
+   FAIL  check_safe_structural — .unwrap() in production fn: handle_request (line 42)
+   FAIL  check_structural — pub fn missing doc comment: process (line 15), serve (line 80)
+   FAIL  check_no_result_string — Result&lt;(), String&gt; — use thiserror
+   FAIL  check_clippy_ptr_arg — use &amp;str instead of &amp;String
+   PASS  (14 other rules)
+</code></pre>
+<p>Or <code>check_code</code> with a snippet for in-flight review during development:</p>
+<pre><code>check_code: { "source": "fn greet(name: &amp;String) {\n    println!(\"hi\");\n}" }
+
+-&gt; 2 failures:
+   check_clippy_ptr_arg: use &amp;str instead of &amp;String
+   check_clean_structural: println! in production fn: greet (line 1)
+</code></pre>
+<h3 id="adding-new-rules"><a class="header" href="#adding-new-rules">Adding New Rules</a></h3>
+<p>When a pattern bites you in production, add a rule:</p>
+<pre><code class="language-kleis">define check_no_expect_fun_call(source) =
+    if contains(source, ".expect(&amp;format!(") then
+        "fail: clippy::expect_fun_call — use .unwrap_or_else or build msg lazily"
+    else "pass"
+</code></pre>
+<p>No Rust recompilation needed. The engine discovers all <code>check_*</code> functions
+automatically on startup. Update the <code>.kleis</code> file, restart the MCP, and
+the new rule is live.</p>
+<h3 id="starting-the-server-1"><a class="header" href="#starting-the-server-1">Starting the Server</a></h3>
+<pre><code class="language-bash">kleis review-mcp --policy examples/policies/rust_review_policy.kleis --verbose
+</code></pre>
+<p>In Cursor, add to <code>.cursor/mcp.json</code> (one instance per language):</p>
+<pre><code class="language-json">"kleis-review-rust": {
+    "command": "/Users/you/bin/kleis",
+    "args": ["review-mcp", "--verbose", "--policy",
+             "/path/to/examples/policies/rust_review_policy.kleis"],
+    "env": { "KLEIS_ROOT": "/path/to/kleis" }
+},
+"kleis-review-python": {
+    "command": "/Users/you/bin/kleis",
+    "args": ["review-mcp", "--verbose", "--policy",
+             "/path/to/examples/policies/python_review_policy.kleis"],
+    "env": { "KLEIS_ROOT": "/path/to/kleis" }
+}
+</code></pre>
+<p>The server name is derived from the policy filename (e.g. <code>python_review_policy.kleis</code> → <code>kleis-review-python</code>). Each instance loads its own rules, advisory prompts, and structural parser.</p>
+<hr>
+<h2 id="the-mcps-together"><a class="header" href="#the-mcps-together">The MCPs Together</a></h2>
+<p>The servers cover different stages of the development workflow:</p>
+<pre><code>kleis-policy      kleis-review-rust     kleis-review-python    kleis-theory
+     |                  |                     |                     |
+     v                  v                     v                     v
+"Can I do this?"  "Is this Rust good?"  "Is this Python good?"  "Is this math correct?"
+     |                  |                     |                     |
+  Action gating     Rust standards       Python standards       Theory building
+  before editing     during editing       during editing        during research
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Server</th><th>Policy file</th><th>Convention</th><th>Tools</th></tr>
+</thead>
+<tbody>
+<tr><td>kleis-policy</td><td><code>agent_policy.kleis</code></td><td><code>check_*</code> returns “allow”/“deny”</td><td>5</td></tr>
+<tr><td>kleis-review-rust</td><td><code>rust_review_policy.kleis</code></td><td><code>check_*</code> returns “pass”/“fail: reason” (3 tiers: string, structural, Z3)</td><td>7</td></tr>
+<tr><td>kleis-review-python</td><td><code>python_review_policy.kleis</code></td><td><code>check_*</code> returns “pass”/“fail: reason” (string + structural via <code>scan_python</code>)</td><td>7</td></tr>
+<tr><td>kleis-theory</td><td>(none — builds interactively)</td><td><code>submit_*</code>, <code>evaluate</code>, <code>save_theory</code></td><td>9</td></tr>
+</tbody>
+</table>
+</div>
+<p>Each review MCP is a separate process with its own policy, advisory prompt context, and structural parser. The server name is derived from the policy filename. Adding a new language is: write <code>&lt;lang&gt;_review_policy.kleis</code>, add an MCP entry.</p>
+<p>All servers are subcommands of the same <code>kleis</code> binary. One build, one install,
+four servers:</p>
+<pre><code class="language-bash">./scripts/build-kleis.sh
+# Installs to ~/bin/kleis and ~/.cargo/bin/kleis
+# All four MCPs are ready
+</code></pre>
+<h3 id="shared-architecture"><a class="header" href="#shared-architecture">Shared Architecture</a></h3>
+<p>Each MCP server follows the same pattern:</p>
+<ol>
+<li><strong>Load</strong> — Parse the <code>.kleis</code> file, build an evaluator with all definitions</li>
+<li><strong>Serve</strong> — Listen on stdin for JSON-RPC 2.0 messages</li>
+<li><strong>Evaluate</strong> — For each tool call, evaluate the corresponding Kleis function</li>
+<li><strong>Respond</strong> — Return structured JSON results to the agent</li>
+</ol>
+<p>The evaluator is built once at startup. Each tool call is a function evaluation
+against the loaded definitions. No compilation, no network calls, no disk I/O
+per check. This is why reviews of large files complete in milliseconds.</p>
+<h3 id="cli-review-mode-cicd"><a class="header" href="#cli-review-mode-cicd">CLI Review Mode (CI/CD)</a></h3>
+<p>The review engine is also available as a standalone CLI command, without the MCP
+protocol overhead. This is suitable for GitLab CI/CD pipelines, GitHub Actions,
+or pre-commit hooks:</p>
+<pre><code class="language-bash">kleis review src/**/*.rs --policy examples/policies/rust_review_policy.kleis
+</code></pre>
+<p>Use <code>--failures-only</code> to suppress passing rules (cleaner CI output):</p>
+<pre><code class="language-bash">kleis review src/**/*.rs -p policy.kleis --failures-only
+</code></pre>
+<p>The command exits with code 1 if any file fails, making it a drop-in for CI
+pipelines. The kleis binary and the policy file must be available in the CI
+environment — either pre-installed in the builder image or downloaded as a
+release artifact.</p>
+<h4 id="gitlab-cicd"><a class="header" href="#gitlab-cicd">GitLab CI/CD</a></h4>
+<p>Add a <code>kleis_review</code> job to your existing pipeline. It uses the same builder
+image and resource configuration as your other Rust jobs:</p>
+<pre><code class="language-yaml">kleis_review:
+  stage: mr_build
+  image: $YOUR_RUST_BUILDER_IMAGE
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - "src/**/*.rs"
+  script:
+    - |
+      FAILED=0
+      for f in $(find src -name '*.rs'); do
+        kleis review "$f" -p policy.kleis --failures-only || FAILED=1
+      done
+      exit $FAILED
+</code></pre>
+<h4 id="github-actions"><a class="header" href="#github-actions">GitHub Actions</a></h4>
+<pre><code class="language-yaml">name: kleis-review
+on:
+  pull_request:
+    paths: ['src/**/*.rs']
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download kleis
+        run: |
+          curl -L -o kleis https://your-artifact-store/kleis-linux
+          chmod +x kleis
+      - name: Run kleis review
+        run: |
+          FAILED=0
+          for f in $(find src -name '*.rs'); do
+            ./kleis review "$f" -p policy.kleis --failures-only || FAILED=1
+          done
+          exit $FAILED
+</code></pre>
+<h3 id="diff-aware-rules---base-branch"><a class="header" href="#diff-aware-rules---base-branch">Diff-Aware Rules (<code>--base-branch</code>)</a></h3>
+<p>Some rules need to compare a file on the current branch against the same file
+on a base branch. Version bump enforcement, changelog entry checks, and API
+compatibility validation all follow this pattern.</p>
+<pre><code class="language-bash">kleis review builders/runner/config -p policy.kleis --base-branch main
+</code></pre>
+<p>The <code>--base-branch</code> flag accepts any git ref: branch name, remote ref (<code>origin/main</code>),
+tag, or SHA. When provided, the CLI runs <code>diff_check_*</code> functions in addition to the
+standard <code>check_*</code> rules.</p>
+<h4 id="convention"><a class="header" href="#convention">Convention</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Prefix</th><th>Arguments</th><th>When it runs</th></tr>
+</thead>
+<tbody>
+<tr><td><code>check_*</code></td><td><code>(source)</code></td><td>Always</td></tr>
+<tr><td><code>diff_check_*</code></td><td><code>(current, base, path)</code></td><td>Only with <code>--base-branch</code></td></tr>
+<tr><td><code>diff_file_filter</code></td><td><code>(path)</code></td><td>Controls which files trigger <code>git show</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>The <code>diff_file_filter</code> function prevents unnecessary <code>git show</code> calls. Only files
+where the filter returns <code>true</code> trigger a base branch fetch:</p>
+<pre><code class="language-kleis">define diff_file_filter(path) =
+    if contains(path, "config") then true
+    else if hasSuffix(path, "Cargo.toml") then true
+    else false
+</code></pre>
+<p>If <code>diff_file_filter</code> is not defined, diff rules run for all files.
+If <code>--base-branch</code> is absent, <code>diff_check_*</code> functions are silently skipped.
+If the ref is invalid or the file is new (not on the base branch), diff rules
+are skipped with a warning — the pipeline is never blocked by missing refs.</p>
+<h4 id="example-version-bump-enforcement"><a class="header" href="#example-version-bump-enforcement">Example: version bump enforcement</a></h4>
+<p>For CI builder config files (<code>IMAGE_TAG=3.0.99</code>):</p>
+<pre><code class="language-kleis">define pick_image_tag(line, acc) =
+    if hasPrefix(line, "IMAGE_TAG=") then substring(line, 10, 100)
+    else acc
+
+define diff_check_version_bump(current, base, path) =
+    if not(contains(path, "config")) then "pass"
+    else
+        let cur_ver = foldLines(pick_image_tag, "", current) in
+        let base_ver = foldLines(pick_image_tag, "", base) in
+        if eq(cur_ver, base_ver) then
+            concat("fail: IMAGE_TAG not bumped (still ", concat(cur_ver, ")"))
+        else "pass"
+</code></pre>
+<p>For Rust projects (<code>Cargo.toml</code> with <code>version = "0.0.42"</code>):</p>
+<pre><code class="language-kleis">define pick_cargo_version_line(line, acc) =
+    if hasPrefix(trim(line), "version = ") then trim(line) else acc
+
+define diff_check_cargo_version(current, base, path) =
+    if not(hasSuffix(path, "Cargo.toml")) then "pass"
+    else
+        let cur = foldLines(pick_cargo_version_line, "", current) in
+        let base_line = foldLines(pick_cargo_version_line, "", base) in
+        if eq(cur, base_line) then
+            concat("fail: Cargo.toml version not bumped (", concat(cur, ")"))
+        else "pass"
+</code></pre>
+<h4 id="cicd-with-diff-rules"><a class="header" href="#cicd-with-diff-rules">CI/CD with diff rules</a></h4>
+<p>In GitLab, the target branch is available as <code>$CI_MERGE_REQUEST_TARGET_BRANCH_NAME</code>:</p>
+<pre><code class="language-yaml">kleis_review:
+  stage: mr_build
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  script:
+    - kleis review builders/runner/config
+        -p policy.kleis
+        --base-branch origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+        --failures-only
+</code></pre>
+<p>In GitHub Actions, use <code>origin/${{ github.base_ref }}</code>.</p>
+<p>For local development, run <code>--base-branch main</code> to get early warnings before
+creating a merge request.</p>
+<h4 id="mcp-compatibility"><a class="header" href="#mcp-compatibility">MCP compatibility</a></h4>
+<p>Diff rules are available via the <code>diff_check_file</code> MCP tool. The agent calls
+<code>diff_check_file</code> with a <code>path</code> and an optional <code>base</code> (defaults to <code>main</code>).
+The server reads the current file from disk, retrieves the base version via
+<code>git show</code>, and runs all <code>diff_check_*</code> and <code>diff_advise_*</code> rules against both
+versions. If the file is new (not in the base branch), an empty base is used.</p>
+<p>The <code>list_rules</code> and <code>describe_standards</code> tools show diff rules in a separate
+section with explicit guidance to use <code>diff_check_file</code>. Standard <code>check_file</code>
+calls do <strong>not</strong> trigger diff rules — the agent must use <code>diff_check_file</code>.</p>
+<h3 id="extra-review-files-review_extra_files"><a class="header" href="#extra-review-files-review_extra_files">Extra Review Files (<code>review_extra_files</code>)</a></h3>
+<p>Code reviews often need to inspect non-source files: <code>Cargo.toml</code> for version
+bumps, <code>requirements.txt</code> for pinned dependencies, <code>builders/runner/config</code> for
+image tags. These files don’t match the usual <code>*.rs</code> or <code>*.py</code> globs, so they
+get silently excluded.</p>
+<p>The <code>review_extra_files()</code> convention solves this. The policy declares which
+non-source files should be included:</p>
+<pre><code class="language-kleis">// Rust: version and lock files
+define review_extra_files() =
+    "Cargo.toml\nCargo.lock"
+
+// Python: deps, config, CI builder
+define review_extra_files() =
+    "requirements.txt\nrequirements-dev.txt\nbuilders/runner/config"
+</code></pre>
+<p>The function returns a newline-separated string of file patterns, resolved
+relative to the git repo root of the target files.</p>
+<h4 id="discovery-via-mcp"><a class="header" href="#discovery-via-mcp">Discovery via MCP</a></h4>
+<p>When an AI agent calls <code>describe_standards</code>, the response includes the extra
+files list:</p>
+<pre><code>## Extra Review Files
+
+These non-source files should also be included in reviews:
+
+  - Cargo.toml
+  - Cargo.lock
+</code></pre>
+<p>The <code>"extra_review_files"</code> key also appears in the JSON schema, so agents can
+programmatically discover which files to feed alongside source code.</p>
+<h4 id="cli-usage"><a class="header" href="#cli-usage">CLI usage</a></h4>
+<p>The CLI auto-discovers extra files from the policy by default. When you run:</p>
+<pre><code class="language-bash">kleis review src/**/*.rs -p rust_review_policy.kleis --failures-only
+</code></pre>
+<p>the engine evaluates <code>review_extra_files()</code>, resolves each pattern relative to
+the git repo root, and appends any existing files to the review list. No extra
+flags needed.</p>
+<p>To add files manually (overriding or supplementing the policy):</p>
+<pre><code class="language-bash">kleis review src/**/*.rs --include Cargo.toml --include README.md -p policy.kleis
+</code></pre>
+<p>To disable auto-discovery:</p>
+<pre><code class="language-bash">kleis review src/**/*.rs -p policy.kleis --include-from-policy false
+</code></pre>
+<h4 id="convention-1"><a class="header" href="#convention-1">Convention</a></h4>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Arguments</th><th>Returns</th><th>When it runs</th></tr>
+</thead>
+<tbody>
+<tr><td>review_extra_files</td><td>(none)</td><td>Newline-separated file patterns</td><td>Auto on CLI; via <code>describe_standards</code> on MCP</td></tr>
+</tbody>
+</table>
+</div>
+<p>If <code>review_extra_files</code> is not defined, no extra files are added. The engine
+checks for its presence the same way it checks for <code>diff_file_filter</code> — by
+scanning the policy’s function list at startup.</p>
+<h3 id="advisory-mode-llm-assisted-review"><a class="header" href="#advisory-mode-llm-assisted-review">Advisory Mode (LLM-Assisted Review)</a></h3>
+<p>Formal checks are deterministic and machine-checked — they <strong>block</strong> the pipeline
+on failure. But some code quality concerns are inherently ambiguous: naming
+quality, architectural smell, “this function does two things.” For these, Kleis
+can optionally call an LLM after formal checks complete.</p>
+<pre><code class="language-bash">kleis review src/**/*.rs -p policy.kleis --advise
+</code></pre>
+<p>Advisory findings are printed as warnings but <strong>never affect the exit code</strong>.
+The two-tier model:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tier</th><th>Engine</th><th>Verdict</th><th>Blocks CI?</th></tr>
+</thead>
+<tbody>
+<tr><td>Formal</td><td>Kleis rules (Z3-backed)</td><td>pass/fail</td><td>Yes</td></tr>
+<tr><td>Advisory</td><td>LLM (OpenAI-compatible)</td><td>warning/info</td><td>No</td></tr>
+</tbody>
+</table>
+</div>
+<h4 id="configuration"><a class="header" href="#configuration">Configuration</a></h4>
+<p>Endpoint and model are configured in <code>config.toml</code> (or via env overrides).
+The API key is always an environment variable — never stored in files:</p>
+<pre><code class="language-toml"># ~/.config/kleis/config.toml
+[llm]
+endpoint = "https://api.openai.com/v1/chat/completions"
+model = "gpt-4o-mini"
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Setting</th><th>config.toml</th><th>Env override</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td>API key</td><td>—</td><td><code>KLEIS_LLM_API_KEY</code> (required)</td><td>—</td></tr>
+<tr><td>Endpoint</td><td><code>[llm] endpoint</code></td><td><code>KLEIS_LLM_ENDPOINT</code></td><td>OpenAI</td></tr>
+<tr><td>Model</td><td><code>[llm] model</code></td><td><code>KLEIS_LLM_MODEL</code></td><td>gpt-4o-mini</td></tr>
+</tbody>
+</table>
+</div>
+<p>Any OpenAI-compatible endpoint works: OpenAI, Azure OpenAI, Ollama
+(<code>http://localhost:11434/v1/chat/completions</code>), vLLM, etc.</p>
+<p>Example output (<code>kleis review src/config.rs -p policy.kleis --failures-only --advise</code>):</p>
+<pre><code>❌ src/config.rs
+  ❌ check_structural — fail: 6 functions but no tests — consider adding test coverage
+  ❌ check_no_hardcoded_urls — fail: hardcoded HTTPS URL — use configuration or constants
+  ❌ check_no_unbounded_read — fail: STRIDE/DoS — unbounded read_to_string, use take() to limit input size
+  ℹ️  [advisory] unnecessary-clone — Using `to_string()` can be avoided with string literals directly assigned
+  ⚠️  [advisory] error-handling — Better error handling instead of silently ignoring invalid env variables
+  ℹ️  [advisory] redundant-methods — Consolidating environment variable parsing methods could reduce redundancy
+</code></pre>
+<p>Formal verdicts (❌/✅) block the pipeline. Advisory findings (⚠️/ℹ️) inform but
+never affect the exit code.</p>
+<h4 id="cicd-with-advisory"><a class="header" href="#cicd-with-advisory">CI/CD with Advisory</a></h4>
+<p>In CI, use <code>--advise</code> alongside <code>--failures-only</code> so formal failures block the
+pipeline while advisory findings appear as informational annotations:</p>
+<pre><code class="language-yaml">kleis_review:
+  script:
+    - kleis review src/**/*.rs -p policy.kleis --failures-only --advise
+  variables:
+    KLEIS_LLM_API_KEY: $OPENAI_API_KEY
+</code></pre>
+<p>The <code>--advise</code> flag is compiled behind the <code>llm-advisory</code> feature (enabled by
+default). To build without LLM support: <code>cargo build --no-default-features --features axiom-verification</code>.</p>
+<hr>
+<p>-&gt; <a href="./27-theory-building.html">Previous: Interactive Theory Building</a></p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../chapters/27-theory-building.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+                            <a rel="next prefetch" href="../chapters/29-structuralism.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../chapters/27-theory-building.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+                    <a rel="next prefetch" href="../chapters/29-structuralism.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
+                    </a>
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-c2a407aa.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

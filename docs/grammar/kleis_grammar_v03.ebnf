@@ -1,0 +1,375 @@
+(* ============================================ *)
+(* Kleis Grammar v0.3 - EBNF Specification   *)
+(* Date: 2024-12-05                           *)
+(* Includes: Type System, Structures, Axioms *)
+(* ============================================ *)
+
+(* Top-Level Program *)
+program ::= { declaration } ;
+
+declaration
+    ::= libraryAnnotation
+      | versionAnnotation
+      | structureDef
+      | implementsDef
+      | functionDef
+      | operationDecl
+      | objectDecl
+      | typeAlias
+      ;
+
+(* ============================================ *)
+(* ANNOTATIONS                                  *)
+(* ============================================ *)
+
+libraryAnnotation ::= "@library" "(" string ")" ;
+versionAnnotation ::= "@version" "(" string ")" ;
+
+(* ============================================ *)
+(* STRUCTURE DEFINITIONS                        *)
+(* ============================================ *)
+
+structureDef
+    ::= "structure" identifier "(" typeParams ")"
+        [ extendsClause ]
+        [ overClause ]
+        "{" { structureMember } "}"
+    ;
+
+typeParams ::= typeParam { "," typeParam } ;
+typeParam ::= identifier [ ":" kind ] ;
+
+kind
+    ::= "Type"
+      | "ℕ" | "Nat"
+      | "Field"
+      | "*"
+      | kind "→" kind
+      ;
+
+extendsClause ::= "extends" identifier [ "(" typeArgs ")" ] ;
+overClause ::= "over" "Field" "(" type ")" ;
+
+structureMember
+    ::= operationDecl
+      | elementDecl
+      | axiomDecl
+      | nestedStructure
+      | supportsBlock
+      | notationDecl
+      ;
+
+operationDecl ::= "operation" operatorSymbol ":" typeSignature ;
+elementDecl ::= "element" identifier ":" type ;
+axiomDecl ::= "axiom" identifier ":" proposition ;
+
+nestedStructure
+    ::= "structure" identifier ":" identifier "(" type ")"
+        "{" { structureMember } "}"
+    ;
+
+supportsBlock ::= "supports" "{" { operationDecl } "}" ;
+notationDecl ::= "notation" identifier "(" params ")" "=" expression ;
+
+(* ============================================ *)
+(* IMPLEMENTATIONS                              *)
+(* ============================================ *)
+
+implementsDef
+    ::= "implements" identifier "(" typeArgs ")"
+        [ overClause ]
+        [ "{" { implMember } "}" ]
+    ;
+
+implMember
+    ::= elementImpl
+      | operationImpl
+      | verifyStmt
+      ;
+
+elementImpl ::= "element" identifier "=" expression ;
+
+operationImpl
+    ::= "operation" operatorSymbol "=" implementation
+      | "operation" operatorSymbol "(" params ")" "=" expression
+      ;
+
+implementation
+    ::= identifier        (* Function name like builtin_add *)
+      | expression        (* Inline expression *)
+      ;
+
+verifyStmt ::= "verify" identifier ;
+
+(* ============================================ *)
+(* FUNCTION DEFINITIONS                         *)
+(* ============================================ *)
+
+functionDef
+    ::= "define" identifier [ typeAnnotation ] "=" expression
+      | "define" identifier "(" params ")" [ ":" type ] "=" expression
+      ;
+
+params ::= param { "," param } ;
+
+param
+    ::= identifier [ ":" type ]
+      | "(" identifier { identifier } ":" type ")"
+      ;
+
+(* ============================================ *)
+(* TYPE SYSTEM                                  *)
+(* ============================================ *)
+
+typeSignature
+    ::= polymorphicType
+      | type
+      ;
+
+polymorphicType
+    ::= forAllQuantifier typeVarList "." [ constraints ] type
+    ;
+
+forAllQuantifier ::= "∀" | "forall" ;
+
+typeVarList
+    ::= typeVarDecl { typeVarDecl }
+      | "(" typeVarDecl { "," typeVarDecl } ")"
+      ;
+
+typeVarDecl ::= identifier [ ":" kind ] ;
+
+constraints ::= constraint { "," constraint } implication ;
+implication ::= "⇒" | "=>" ;
+
+constraint
+    ::= identifier "(" type ")"         (* Monoid(T) *)
+      | type "=" type                   (* m = n *)
+      | expression                      (* x ≠ 0 *)
+      ;
+
+type
+    ::= primitiveType
+      | parametricType
+      | functionType
+      | typeVariable
+      | "(" type ")"
+      ;
+
+primitiveType
+    ::= "ℝ" | "ℂ" | "ℤ" | "ℕ" | "ℚ"
+      | "Real" | "Complex" | "Integer" | "Nat" | "Rational"
+      | "Bool" | "String"
+      ;
+
+parametricType ::= identifier "(" typeArgs ")" ;
+typeArgs ::= type { "," type } ;
+
+functionType
+    ::= type "→" type
+      | type "->" type
+      ;
+
+typeVariable
+    ::= greekLower      (* α, β, γ *)
+      | identifier       (* a, b, T, M *)
+      ;
+
+typeAnnotation ::= ":" type ;
+
+typeAlias ::= "type" identifier "=" type ;
+
+(* ============================================ *)
+(* PROPOSITIONS (for axioms)                   *)
+(* ============================================ *)
+
+proposition
+    ::= forAllProp
+      | existsProp
+      | expression
+      ;
+
+forAllProp
+    ::= forAllQuantifier variables [ whereClause ] "." proposition
+    ;
+
+existsProp
+    ::= existsQuantifier variables [ whereClause ] "." proposition
+    ;
+
+existsQuantifier ::= "∃" | "exists" ;
+
+variables
+    ::= varDecl { varDecl }
+      | "(" varDecl { varDecl } ")"
+      ;
+
+varDecl
+    ::= identifier [ ":" type ]
+      | "(" identifier { identifier } ":" type ")"
+      | identifier "∈" type
+      | identifier "∈" expression
+      ;
+
+whereClause ::= "where" expression ;
+
+(* ============================================ *)
+(* EXPRESSIONS                                  *)
+(* ============================================ *)
+
+expression
+    ::= primary
+      | prefixOp expression
+      | expression postfixOp
+      | expression infixOp expression
+      | expression "(" [ arguments ] ")"    (* Function application *)
+      | "[" [ expressions ] "]"             (* Vector/list literal *)
+      | "{" [ expressions ] "}"             (* Set literal *)
+      | lambda
+      | letBinding
+      | conditional
+      | summation
+      | product
+      | integral
+      | derivative
+      ;
+
+primary
+    ::= identifier
+      | number
+      | string
+      | symbolicConstant
+      | "(" expression ")"
+      | placeholder
+      ;
+
+symbolicConstant
+    ::= "π" | "e" | "i" | "ℏ" | "c" | "φ" | "∞" | "∅"
+      ;
+
+placeholder ::= "□" ;
+
+(* Operators *)
+
+prefixOp
+    ::= "-" | "¬" | "∇" | "√" | "∂"
+      ;
+
+postfixOp
+    ::= "!" | "†" | "*" | "ᵀ" | "^T" | "^†"
+      ;
+
+infixOp
+    ::= arithmeticOp
+      | relationOp
+      | logicOp
+      ;
+
+arithmeticOp
+    ::= "+" | "-" | "×" | "/" | "·" | "*" | "^"
+      | "⊗" | "∘" | "∗"
+      ;
+
+relationOp
+    ::= "=" | "==" | "≠" | "<" | ">" | "≤" | "≥"
+      | "≈" | "≡" | "~" | "∈" | "∉" | "⊂" | "⊆"
+      ;
+
+logicOp
+    ::= "∧" | "∨" | "⟹" | "⟺" | "→" | "⇒"
+      ;
+
+operatorSymbol
+    ::= "(" infixOp ")"          (* Infix as function: (+) *)
+      | infixOp
+      | prefixOp
+      | postfixOp
+      | identifier                 (* Named operations *)
+      ;
+
+arguments ::= expression { "," expression } ;
+expressions ::= expression { "," expression } ;
+
+(* Lambda *)
+
+lambda
+    ::= "λ" params "." expression
+      | "lambda" params "." expression
+      ;
+
+(* Let binding *)
+
+letBinding
+    ::= "let" identifier [ typeAnnotation ] "=" expression "in" expression
+      ;
+
+(* Conditional *)
+
+conditional
+    ::= "if" expression "then" expression "else" expression
+      ;
+
+(* Mathematical notation *)
+
+summation
+    ::= "Σ" [ subscript ] [ superscript ] expression
+      ;
+
+product
+    ::= "Π" [ subscript ] [ superscript ] expression
+      ;
+
+integral
+    ::= "∫" [ subscript ] [ superscript ] expression [ "d" identifier ]
+      ;
+
+derivative
+    ::= "d" expression "/" "d" identifier
+      | "∂" expression "/" "∂" identifier
+      ;
+
+subscript ::= "_" ( identifier | "{" expression "}" ) ;
+superscript ::= "^" ( identifier | "{" expression "}" ) ;
+
+(* ============================================ *)
+(* EQUALITY TYPES (from v0.2)                  *)
+(* ============================================ *)
+
+defineStmt ::= "define" identifier "=" expression ;
+assertStmt ::= "assert" expression "==" expression ;
+equivStmt ::= "equiv" expression "~" expression ;
+approxStmt ::= "approx" expression "≈" expression ;
+
+(* ============================================ *)
+(* LEXICAL ELEMENTS                            *)
+(* ============================================ *)
+
+identifier ::= letter { letter | digit | "_" } ;
+
+greekLower
+    ::= "α" | "β" | "γ" | "δ" | "ε" | "ζ" | "η" | "θ"
+      | "ι" | "κ" | "λ" | "μ" | "ν" | "ξ" | "ο" | "π"
+      | "ρ" | "σ" | "τ" | "υ" | "φ" | "χ" | "ψ" | "ω"
+      ;
+
+number
+    ::= integer
+      | decimal
+      | scientific
+      ;
+
+integer ::= digit { digit } ;
+decimal ::= digit { digit } "." { digit } ;
+scientific ::= decimal [eE] [+-]? digit { digit } ;
+
+string ::= '"' { character } '"' ;
+character ::= (* any character except " and \ *) ;
+
+letter ::= "a".."z" | "A".."Z" ;
+digit ::= "0".."9" ;
+
+(* Whitespace and comments *)
+whitespace ::= " " | "\t" | "\r" | "\n" ;
+lineComment ::= "//" { (* any character except newline *) } "\n" ;
+blockComment ::= "/*" { (* any character *) } "*/" ;
+

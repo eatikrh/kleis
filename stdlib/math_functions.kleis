@@ -1,0 +1,144 @@
+structure Trigonometric(T) {
+    operation sin : T → T
+    operation cos : T → T
+    operation tan : T → T
+    operation sec : T → T
+    operation csc : T → T
+    operation cot : T → T
+}
+
+implements Trigonometric(ℝ) {
+    operation sin = builtin_sin
+    operation cos = builtin_cos
+    operation tan = builtin_tan
+    operation sec = builtin_sec
+    operation csc = builtin_csc
+    operation cot = builtin_cot
+}
+
+structure InverseTrig(T) {
+    operation arcsin : T → T
+    operation arccos : T → T
+    operation arctan : T → T
+    operation arctan2 : T → T → T
+}
+
+implements InverseTrig(ℝ) {
+    operation arcsin = builtin_arcsin
+    operation arccos = builtin_arccos
+    operation arctan = builtin_arctan
+    operation arctan2 = builtin_arctan2
+}
+
+structure Hyperbolic(T) {
+    operation sinh : T → T
+    operation cosh : T → T
+    operation tanh : T → T
+    operation asinh : T → T
+    operation acosh : T → T
+    operation atanh : T → T
+}
+
+implements Hyperbolic(ℝ) {
+    operation sinh = builtin_sinh
+    operation cosh = builtin_cosh
+    operation tanh = builtin_tanh
+    operation asinh = builtin_asinh
+    operation acosh = builtin_acosh
+    operation atanh = builtin_atanh
+}
+
+structure Combinatorics(T) {
+    operation factorial : T → T
+    operation binomial : T → T → T
+    operation permutation : T → T → T
+}
+
+implements Combinatorics(ℕ) {
+    operation factorial = builtin_factorial
+    operation binomial = builtin_binomial
+    operation permutation = builtin_permutation
+}
+
+/* Factorial Axioms (for symbolic reasoning)
+ * 
+ * These axioms define factorial semantics for Z3 verification:
+ * 
+ *   factorial_zero     : factorial(0) = 1
+ *   factorial_succ     : ∀(n : ℕ). factorial(n + 1) = (n + 1) · factorial(n)
+ *   factorial_positive : ∀(n : ℕ). factorial(n) > 0
+ * 
+ * Binomial coefficient axioms:
+ * 
+ *   binomial_zero      : ∀(n : ℕ). binomial(n, 0) = 1
+ *   binomial_self      : ∀(n : ℕ). binomial(n, n) = 1
+ *   binomial_pascal    : ∀(n k : ℕ). binomial(n + 1, k + 1) = binomial(n, k) + binomial(n, k + 1)
+ *   binomial_factorial : ∀(n k : ℕ). binomial(n, k) = factorial(n) / (factorial(k) · factorial(n - k))
+ * 
+ * Note: These are loaded into Z3 via capabilities.toml, not parsed as stdlib.
+ */
+
+structure SpecialFunctions(T) {
+    operation gamma_func : T → T
+    operation digamma : T → T
+    operation beta : T → T → T
+    operation erf : T → T
+    operation erfc : T → T
+}
+
+implements SpecialFunctions(ℝ) {
+    operation gamma_func = builtin_gamma
+    operation digamma = builtin_digamma
+    operation beta = builtin_beta
+    operation erf = builtin_erf
+    operation erfc = builtin_erfc
+}
+
+structure Exponential(T) {
+    operation exp : T → T
+    operation ln : T → T
+    operation log : T → T
+}
+
+implements Exponential(ℝ) {
+    operation exp = builtin_exp
+    operation ln = builtin_ln
+    operation log = builtin_log
+}
+
+structure RootFunctions(T) {
+    operation cbrt : T → T
+    operation nth_root : T → T → T
+}
+
+implements RootFunctions(ℝ) {
+    operation cbrt = builtin_cbrt
+    operation nth_root = builtin_nth_root
+}
+
+structure LogarithmExtended(T) {
+    operation log10 : T → T
+    operation log2 : T → T
+    operation exp2 : T → T
+    operation expm1 : T → T
+    operation log1p : T → T
+}
+
+implements LogarithmExtended(ℝ) {
+    operation log10 = builtin_log10
+    operation log2 = builtin_log2
+    operation exp2 = builtin_exp2
+    operation expm1 = builtin_expm1
+    operation log1p = builtin_log1p
+}
+
+structure RoundingExtended(T) {
+    operation round : T → T
+    operation trunc : T → T
+}
+
+implements RoundingExtended(ℝ) {
+    operation round = builtin_round
+    operation trunc = builtin_trunc
+}
+

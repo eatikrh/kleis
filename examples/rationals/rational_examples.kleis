@@ -1,0 +1,128 @@
+// ============================================================================
+// Rational Number Examples - Verified with Z3
+// ============================================================================
+//
+// These examples verify properties of rational numbers using the field axioms.
+// Z3's Real sort is actually ℚ, so these proofs are sound for rationals.
+//
+// Each example block contains assertions that should follow from the axioms.
+// ============================================================================
+
+import "rational_field_axioms.kleis"
+
+// ============================================================================
+// ADDITIVE GROUP EXAMPLES
+// ============================================================================
+
+example "zero is unique identity" {
+    // If zero' is also an additive identity, then zero' = zero
+    // Proof: zero' = zero' + zero = zero + zero' = zero
+    assert(∀(z : ℚ). (∀(a : ℚ). rat_add(a, z) = a) → z = zero)
+}
+
+example "additive inverse is unique" {
+    // Each element has exactly one additive inverse
+    assert(∀(a b c : ℚ).
+        rat_add(a, b) = zero ∧ rat_add(a, c) = zero → b = c)
+}
+
+example "negation of zero is zero" {
+    // -0 = 0
+    assert(rat_neg(zero) = zero)
+}
+
+example "subtraction from self is zero" {
+    // a - a = 0
+    assert(∀(a : ℚ). rat_sub(a, a) = zero)
+}
+
+// ============================================================================
+// MULTIPLICATIVE GROUP EXAMPLES
+// ============================================================================
+
+example "one is unique identity" {
+    // If one' is also a multiplicative identity, then one' = one
+    assert(∀(u : ℚ). (∀(a : ℚ). rat_mul(a, u) = a) → u = one)
+}
+
+example "multiplication by zero annihilates" {
+    // 0 × a = 0 (follows from distributivity)
+    assert(∀(a : ℚ). rat_mul(zero, a) = zero)
+}
+
+example "square of negative is positive form" {
+    // (-a) × (-a) = a × a
+    // Proof: (-a)(-a) = (-1)(a)(-1)(a) = (-1)(-1)(a)(a) = 1 × a² = a²
+    assert(∀(a : ℚ). rat_mul(rat_neg(a), rat_neg(a)) = rat_mul(a, a))
+}
+
+// ============================================================================
+// FIELD PROPERTY EXAMPLES
+// ============================================================================
+
+example "zero has no multiplicative inverse" {
+    // There is no x such that 0 × x = 1
+    assert(¬∃(x : ℚ). rat_mul(zero, x) = one)
+}
+
+example "product of non-zero is non-zero" {
+    // If a ≠ 0 and b ≠ 0, then a × b ≠ 0
+    assert(∀(a b : ℚ). a ≠ zero ∧ b ≠ zero → rat_mul(a, b) ≠ zero)
+}
+
+example "division by one is identity" {
+    // a / 1 = a
+    assert(∀(a : ℚ). rat_div(a, one) = a)
+}
+
+example "inverse of inverse is original" {
+    // For a ≠ 0: 1/(1/a) = a
+    assert(∀(a : ℚ). a ≠ zero → rat_inv(rat_inv(a)) = a)
+}
+
+// ============================================================================
+// ORDER EXAMPLES
+// ============================================================================
+
+example "less than is irreflexive" {
+    // ¬(a < a)
+    assert(∀(a : ℚ). ¬rat_lt(a, a))
+}
+
+example "less than or equal is reflexive" {
+    // a ≤ a
+    assert(∀(a : ℚ). rat_le(a, a))
+}
+
+example "antisymmetry of order" {
+    // a ≤ b ∧ b ≤ a → a = b
+    assert(∀(a b : ℚ). rat_le(a, b) ∧ rat_le(b, a) → a = b)
+}
+
+example "positive times positive is positive" {
+    // 0 < a ∧ 0 < b → 0 < a × b
+    assert(∀(a b : ℚ). rat_lt(zero, a) ∧ rat_lt(zero, b) → rat_lt(zero, rat_mul(a, b)))
+}
+
+// ============================================================================
+// DERIVED PROPERTY EXAMPLES
+// ============================================================================
+
+example "cancellation law" {
+    // If c ≠ 0 and a × c = b × c, then a = b
+    assert(∀(a b c : ℚ). c ≠ zero ∧ rat_mul(a, c) = rat_mul(b, c) → a = b)
+}
+
+example "distributivity of negation over addition" {
+    // -(a + b) = (-a) + (-b)
+    assert(∀(a b : ℚ). rat_neg(rat_add(a, b)) = rat_add(rat_neg(a), rat_neg(b)))
+}
+
+example "FOIL pattern" {
+    // (a + b)(c + d) = ac + ad + bc + bd
+    assert(∀(a b c d : ℚ).
+        rat_mul(rat_add(a, b), rat_add(c, d)) =
+        rat_add(rat_add(rat_add(rat_mul(a, c), rat_mul(a, d)),
+                        rat_mul(b, c)), rat_mul(b, d)))
+}
+

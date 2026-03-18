@@ -1,0 +1,290 @@
+// ============================================
+// Kleis Standard Library - Cartan Computation
+// ============================================
+//
+// Computes curvature tensors via differential forms using
+// the Expression AST and diff(e, x) from symbolic_diff.kleis.
+//
+// Representation:
+//   1-form: List of 4 Expression coefficients [ω_0, ω_1, ω_2, ω_3]
+//   2-form: 4x4 matrix of Expression coefficients
+//
+// Grammar: v0.98
+// Version: 1.0.0
+// ============================================
+
+import "stdlib/symbolic_diff.kleis"
+
+// ============================================
+// Coordinate System
+// ============================================
+
+define coords = ["t", "r", "theta", "phi"]
+define coord(i) = nth(coords, i)
+define dim = 4
+
+// ============================================
+// Basis 1-forms
+// ============================================
+
+define dt = [num(1), num(0), num(0), num(0)]
+define dr = [num(0), num(1), num(0), num(0)]
+define dtheta = [num(0), num(0), num(1), num(0)]
+define dphi = [num(0), num(0), num(0), num(1)]
+
+define zero1 = [num(0), num(0), num(0), num(0)]
+define zero2 = [
+    [num(0), num(0), num(0), num(0)],
+    [num(0), num(0), num(0), num(0)],
+    [num(0), num(0), num(0), num(0)],
+    [num(0), num(0), num(0), num(0)]
+]
+
+// ============================================
+// Form Arithmetic
+// ============================================
+
+define scale1(f, omega) = [
+    simplify(e_mul(f, nth(omega, 0))),
+    simplify(e_mul(f, nth(omega, 1))),
+    simplify(e_mul(f, nth(omega, 2))),
+    simplify(e_mul(f, nth(omega, 3)))
+]
+
+define add1(a, b) = [
+    simplify(e_add(nth(a, 0), nth(b, 0))),
+    simplify(e_add(nth(a, 1), nth(b, 1))),
+    simplify(e_add(nth(a, 2), nth(b, 2))),
+    simplify(e_add(nth(a, 3), nth(b, 3)))
+]
+
+define add2(a, b) = [
+    [simplify(e_add(nth(nth(a, 0), 0), nth(nth(b, 0), 0))),
+     simplify(e_add(nth(nth(a, 0), 1), nth(nth(b, 0), 1))),
+     simplify(e_add(nth(nth(a, 0), 2), nth(nth(b, 0), 2))),
+     simplify(e_add(nth(nth(a, 0), 3), nth(nth(b, 0), 3)))],
+    [simplify(e_add(nth(nth(a, 1), 0), nth(nth(b, 1), 0))),
+     simplify(e_add(nth(nth(a, 1), 1), nth(nth(b, 1), 1))),
+     simplify(e_add(nth(nth(a, 1), 2), nth(nth(b, 1), 2))),
+     simplify(e_add(nth(nth(a, 1), 3), nth(nth(b, 1), 3)))],
+    [simplify(e_add(nth(nth(a, 2), 0), nth(nth(b, 2), 0))),
+     simplify(e_add(nth(nth(a, 2), 1), nth(nth(b, 2), 1))),
+     simplify(e_add(nth(nth(a, 2), 2), nth(nth(b, 2), 2))),
+     simplify(e_add(nth(nth(a, 2), 3), nth(nth(b, 2), 3)))],
+    [simplify(e_add(nth(nth(a, 3), 0), nth(nth(b, 3), 0))),
+     simplify(e_add(nth(nth(a, 3), 1), nth(nth(b, 3), 1))),
+     simplify(e_add(nth(nth(a, 3), 2), nth(nth(b, 3), 2))),
+     simplify(e_add(nth(nth(a, 3), 3), nth(nth(b, 3), 3)))]
+]
+
+// ============================================
+// Exterior Derivative d
+// ============================================
+
+// d0: scalar → 1-form
+// d(f) = [∂f/∂t, ∂f/∂r, ∂f/∂θ, ∂f/∂φ]
+define d0(f) = [
+    simplify(diff_t(f)),
+    simplify(diff_r(f)),
+    simplify(diff_theta(f)),
+    simplify(diff_phi(f))
+]
+
+// d1: 1-form → 2-form
+// (dω)_μν = ∂ω_ν/∂x^μ - ∂ω_μ/∂x^ν
+define d1(omega) = 
+    let w0 = nth(omega, 0) in
+    let w1 = nth(omega, 1) in
+    let w2 = nth(omega, 2) in
+    let w3 = nth(omega, 3) in
+    [
+        [num(0),
+         simplify(e_sub(diff_t(w1), diff_r(w0))),
+         simplify(e_sub(diff_t(w2), diff_theta(w0))),
+         simplify(e_sub(diff_t(w3), diff_phi(w0)))],
+        [simplify(e_sub(diff_r(w0), diff_t(w1))),
+         num(0),
+         simplify(e_sub(diff_r(w2), diff_theta(w1))),
+         simplify(e_sub(diff_r(w3), diff_phi(w1)))],
+        [simplify(e_sub(diff_theta(w0), diff_t(w2))),
+         simplify(e_sub(diff_theta(w1), diff_r(w2))),
+         num(0),
+         simplify(e_sub(diff_theta(w3), diff_phi(w2)))],
+        [simplify(e_sub(diff_phi(w0), diff_t(w3))),
+         simplify(e_sub(diff_phi(w1), diff_r(w3))),
+         simplify(e_sub(diff_phi(w2), diff_theta(w3))),
+         num(0)]
+    ]
+
+// ============================================
+// Wedge Product
+// ============================================
+
+// (α ∧ β)_μν = α_μ β_ν - α_ν β_μ
+define wedge(a, b) =
+    let a0 = nth(a, 0) in let a1 = nth(a, 1) in
+    let a2 = nth(a, 2) in let a3 = nth(a, 3) in
+    let b0 = nth(b, 0) in let b1 = nth(b, 1) in
+    let b2 = nth(b, 2) in let b3 = nth(b, 3) in
+    [
+        [num(0),
+         simplify(e_sub(e_mul(a0, b1), e_mul(a1, b0))),
+         simplify(e_sub(e_mul(a0, b2), e_mul(a2, b0))),
+         simplify(e_sub(e_mul(a0, b3), e_mul(a3, b0)))],
+        [simplify(e_sub(e_mul(a1, b0), e_mul(a0, b1))),
+         num(0),
+         simplify(e_sub(e_mul(a1, b2), e_mul(a2, b1))),
+         simplify(e_sub(e_mul(a1, b3), e_mul(a3, b1)))],
+        [simplify(e_sub(e_mul(a2, b0), e_mul(a0, b2))),
+         simplify(e_sub(e_mul(a2, b1), e_mul(a1, b2))),
+         num(0),
+         simplify(e_sub(e_mul(a2, b3), e_mul(a3, b2)))],
+        [simplify(e_sub(e_mul(a3, b0), e_mul(a0, b3))),
+         simplify(e_sub(e_mul(a3, b1), e_mul(a1, b3))),
+         simplify(e_sub(e_mul(a3, b2), e_mul(a2, b3))),
+         num(0)]
+    ]
+
+// ============================================
+// Tetrads
+// ============================================
+
+// Minkowski (flat space)
+define minkowski_tetrad = [
+    dt,
+    dr,
+    scale1(var("r"), dtheta),
+    scale1(e_mul(var("r"), e_sin(var("theta"))), dphi)
+]
+
+// Schwarzschild: ds² = -(1-2M/r)dt² + dr²/(1-2M/r) + r²dΩ²
+define schwarzschild_tetrad(M) =
+    let f = e_sub(num(1), e_div(e_mul(num(2), M), var("r"))) in
+    let sqrt_f = e_sqrt(f) in
+    [
+        scale1(sqrt_f, dt),
+        scale1(e_div(num(1), sqrt_f), dr),
+        scale1(var("r"), dtheta),
+        scale1(e_mul(var("r"), e_sin(var("theta"))), dphi)
+    ]
+
+// ============================================
+// Compute de^a
+// ============================================
+
+define d_tetrad(tetrad) = [
+    d1(nth(tetrad, 0)),
+    d1(nth(tetrad, 1)),
+    d1(nth(tetrad, 2)),
+    d1(nth(tetrad, 3))
+]
+
+// ============================================
+// Connection Solver
+// ============================================
+
+// Anholonomy coefficient C^a_bc from de^a
+define get_C(de, a, b, c) = nth(nth(nth(de, a), b), c)
+
+// Connection component ω^a_b = Σ_c ½(C^a_bc - C^b_ac + C^c_ab) e^c
+define connection_ab(de, tetrad, a, b) =
+    let c0_coeff = simplify(e_mul(e_div(num(1), num(2)), 
+        e_add(get_C(de, a, b, 0), e_sub(get_C(de, 0, a, b), get_C(de, b, a, 0))))) in
+    let c1_coeff = simplify(e_mul(e_div(num(1), num(2)),
+        e_add(get_C(de, a, b, 1), e_sub(get_C(de, 1, a, b), get_C(de, b, a, 1))))) in
+    let c2_coeff = simplify(e_mul(e_div(num(1), num(2)),
+        e_add(get_C(de, a, b, 2), e_sub(get_C(de, 2, a, b), get_C(de, b, a, 2))))) in
+    let c3_coeff = simplify(e_mul(e_div(num(1), num(2)),
+        e_add(get_C(de, a, b, 3), e_sub(get_C(de, 3, a, b), get_C(de, b, a, 3))))) in
+    add1(add1(
+        scale1(c0_coeff, nth(tetrad, 0)),
+        scale1(c1_coeff, nth(tetrad, 1))),
+        add1(
+        scale1(c2_coeff, nth(tetrad, 2)),
+        scale1(c3_coeff, nth(tetrad, 3))))
+
+define solve_connection(tetrad) =
+    let de = d_tetrad(tetrad) in
+    [
+        [connection_ab(de, tetrad, 0, 0), connection_ab(de, tetrad, 0, 1),
+         connection_ab(de, tetrad, 0, 2), connection_ab(de, tetrad, 0, 3)],
+        [connection_ab(de, tetrad, 1, 0), connection_ab(de, tetrad, 1, 1),
+         connection_ab(de, tetrad, 1, 2), connection_ab(de, tetrad, 1, 3)],
+        [connection_ab(de, tetrad, 2, 0), connection_ab(de, tetrad, 2, 1),
+         connection_ab(de, tetrad, 2, 2), connection_ab(de, tetrad, 2, 3)],
+        [connection_ab(de, tetrad, 3, 0), connection_ab(de, tetrad, 3, 1),
+         connection_ab(de, tetrad, 3, 2), connection_ab(de, tetrad, 3, 3)]
+    ]
+
+// ============================================
+// Curvature: R = dω + ω∧ω
+// ============================================
+
+define curvature_ab(omega, a, b) =
+    let omega_ab = nth(nth(omega, a), b) in
+    let d_omega = d1(omega_ab) in
+    let w0 = wedge(nth(nth(omega, a), 0), nth(nth(omega, 0), b)) in
+    let w1 = wedge(nth(nth(omega, a), 1), nth(nth(omega, 1), b)) in
+    let w2 = wedge(nth(nth(omega, a), 2), nth(nth(omega, 2), b)) in
+    let w3 = wedge(nth(nth(omega, a), 3), nth(nth(omega, 3), b)) in
+    add2(d_omega, add2(add2(w0, w1), add2(w2, w3)))
+
+define compute_curvature(omega) = [
+    [curvature_ab(omega, 0, 0), curvature_ab(omega, 0, 1),
+     curvature_ab(omega, 0, 2), curvature_ab(omega, 0, 3)],
+    [curvature_ab(omega, 1, 0), curvature_ab(omega, 1, 1),
+     curvature_ab(omega, 1, 2), curvature_ab(omega, 1, 3)],
+    [curvature_ab(omega, 2, 0), curvature_ab(omega, 2, 1),
+     curvature_ab(omega, 2, 2), curvature_ab(omega, 2, 3)],
+    [curvature_ab(omega, 3, 0), curvature_ab(omega, 3, 1),
+     curvature_ab(omega, 3, 2), curvature_ab(omega, 3, 3)]
+]
+
+// ============================================
+// Complete Pipeline
+// ============================================
+
+define compute_riemann(tetrad) =
+    let omega = solve_connection(tetrad) in
+    compute_curvature(omega)
+
+define minkowski_curvature = compute_riemann(minkowski_tetrad)
+define schwarzschild_curvature(M) = compute_riemann(schwarzschild_tetrad(M))
+
+// ============================================
+// Ricci Tensor
+// ============================================
+
+define ricci_component(R, a, b) =
+    simplify(e_add(e_add(
+        nth(nth(nth(nth(R, 0), 0), a), b),
+        nth(nth(nth(nth(R, 1), 1), a), b)),
+        e_add(
+        nth(nth(nth(nth(R, 2), 2), a), b),
+        nth(nth(nth(nth(R, 3), 3), a), b))))
+
+// Ricci scalar R = η^ab Ric_ab
+define ricci_scalar(ric) =
+    simplify(e_add(e_add(
+        e_neg(nth(nth(ric, 0), 0)),
+        nth(nth(ric, 1), 1)),
+        e_add(
+        nth(nth(ric, 2), 2),
+        nth(nth(ric, 3), 3))))
+
+// ============================================
+// Summary
+// ============================================
+//
+// This module computes:
+//   d0(f)          - exterior derivative of scalar
+//   d1(ω)          - exterior derivative of 1-form
+//   wedge(α, β)    - wedge product
+//   solve_connection(tetrad) - Levi-Civita connection
+//   compute_curvature(ω)     - Riemann curvature 2-form
+//   compute_riemann(tetrad)  - full pipeline
+//
+// All using diff(e, x) from symbolic_diff.kleis
+// operating on Expression values.
+//
+// ============================================

@@ -1,0 +1,18 @@
+// ============================================================================
+// Functional equation WITH zero uniqueness → RH?
+// (σ = 1-σ → σ = 1/2. This should work.)
+// ============================================================================
+
+operation sigma : ℤ → ℝ
+operation sigma_paired : ℤ → ℝ
+
+structure FuncEqWithUniqueness {
+    element k : ℤ
+    axiom critical_strip : sigma(k) > 0 ∧ sigma(k) < 1
+    axiom func_eq : sigma_paired(k) = 1 - sigma(k)
+    axiom zero_uniqueness : sigma(k) = sigma_paired(k)
+}
+
+example "Functional eq WITH uniqueness → RH?" {
+    assert(sigma(k) = 1 / 2)
+}

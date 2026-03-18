@@ -1,0 +1,159 @@
+// ============================================
+// Bourbaki Volume VII: Commutative Algebra
+// Éléments de mathématique
+// ============================================
+//
+// This file formalizes commutative algebra from
+// Bourbaki's seventh volume.
+
+// --------------------------------------------
+// Chapter 1: Flat Modules
+// --------------------------------------------
+
+structure FlatModule(M, R) {
+    axiom flat: ∀(N1 N2 : Type, f : N1 → N2). 
+        is_injective(f) → is_injective(tensor_map(id_M, f))
+}
+
+// --------------------------------------------
+// Chapter 2: Localization
+// --------------------------------------------
+
+structure Localization(R, S) {
+    element localized : Type
+    operation localize : R → localized
+    
+    axiom multiplicative: ∀(s t : S). in_set(mul(s, t), S)
+    axiom contains_one: in_set(one, S)
+    
+    axiom universal: ∀(A : Type, f : R → A). 
+        (∀(s : S). is_unit(f(s))) → 
+        (∃(g : localized → A). compose(g, localize) = f)
+}
+
+structure LocalRing(R) {
+    operation add : R × R → R
+    operation mul : R × R → R
+    element maximal_ideal : Set(R)
+    
+    axiom unique_maximal: ∀(I : Set(R)). 
+        is_maximal(I) → I = maximal_ideal
+    
+    axiom non_units: ∀(r : R). 
+        ¬is_unit(r) ↔ in_set(r, maximal_ideal)
+}
+
+// --------------------------------------------
+// Chapter 3: Graduations, Filtrations, Completions
+// --------------------------------------------
+
+structure GradedRing(R) {
+    operation grade : ℤ → Type
+    
+    axiom direct_sum: R = direct_sum(grade)
+    axiom graded_product: ∀(m n : ℤ, x : grade(m), y : grade(n)). 
+        in_set(mul(x, y), grade(add(m, n)))
+}
+
+structure FilteredRing(R) {
+    operation filtration : ℤ → Set(R)
+    
+    axiom decreasing: ∀(n : ℤ). subset(filtration(succ(n)), filtration(n))
+}
+
+structure Completion(R, I) {
+    element completed : Type
+    operation complete : R → completed
+    
+    axiom complete_metric: ∀(seq : ℕ → R). 
+        is_cauchy_I(seq) → (∃(L : completed). converges_I(seq, L))
+}
+
+// --------------------------------------------
+// Chapter 4: Associated Prime Ideals
+// --------------------------------------------
+
+structure PrimeIdeal(R) {
+    element P : Set(R)
+    
+    axiom prime: ∀(a b : R). in_set(mul(a, b), P) → (in_set(a, P) ∨ in_set(b, P))
+    axiom proper: P ≠ R
+}
+
+structure AssociatedPrimes(M, R) {
+    element Ass : Set(PrimeIdeal)
+    
+    axiom associated_def: ∀(P : PrimeIdeal). 
+        in_set(P, Ass) ↔ (∃(m : M). ann(m) = P)
+}
+
+// --------------------------------------------
+// Chapter 5: Integers
+// --------------------------------------------
+
+structure IntegralExtension(A, B) {
+    axiom subring: subset(A, B)
+    
+    axiom integral: ∀(b : B). 
+        (∃(n : ℕ). is_monic_polynomial_root(b, A, n))
+}
+
+structure IntegralClosure(A, B) {
+    element closure : Type
+    
+    axiom integral_closure: ∀(b : B). 
+        in_set(b, closure) ↔ is_integral_over(b, A)
+}
+
+structure DedekindDomain(R) {
+    operation add : R × R → R
+    operation mul : R × R → R
+    element zero : R
+    element one : R
+    
+    axiom noetherian: is_noetherian(R)
+    axiom integrally_closed: integral_closure(R, fraction_field(R)) = R
+    axiom dimension_one: ∀(P : PrimeIdeal). P ≠ zero_ideal → is_maximal(P)
+}
+
+// --------------------------------------------
+// Chapter 6: Valuations
+// --------------------------------------------
+
+structure Valuation(K, Gamma) {
+    operation v : K → ExtendedGamma
+    
+    axiom zero_infinity: v(zero) = infinity
+    axiom multiplicative: ∀(x y : K). v(mul(x, y)) = add(v(x), v(y))
+    axiom triangle: ∀(x y : K). v(add(x, y)) >= min(v(x), v(y))
+}
+
+structure DiscreteValuation(K) {
+    operation v : K → ExtendedInt
+    
+    axiom discrete: image(v) = extended_integers
+    
+    element valuation_ring : Set(K)
+    axiom valuation_ring_def: ∀(x : K). 
+        in_set(x, valuation_ring) ↔ v(x) >= 0
+}
+
+// --------------------------------------------
+// Chapter 7: Divisors
+// --------------------------------------------
+
+structure DivisorGroup(R) {
+    element Div : Type
+    
+    axiom free_abelian: is_free_abelian(Div)
+    
+    operation div_of : R → Div
+}
+
+structure ClassGroup(R) {
+    element Cl : Type
+    
+    axiom class_group: Cl = quotient(Div, principal_divisors)
+    
+    axiom trivial_iff_ufd: is_trivial(Cl) ↔ is_ufd(R)
+}

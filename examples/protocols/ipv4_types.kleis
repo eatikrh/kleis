@@ -1,0 +1,33 @@
+// IPv4 Packet as an Algebraic Data Type
+
+// Protocol enum
+data Protocol = ICMP | TCP | UDP | Other(code : ℕ)
+
+// IP Address as 4 octets
+data IPv4Address = Address(o1 : ℕ, o2 : ℕ, o3 : ℕ, o4 : ℕ)
+
+// IPv4 Packet structure
+data IPv4Packet = Packet(
+    version : ℕ,
+    ihl : ℕ,
+    total_length : ℕ,
+    ttl : ℕ,
+    protocol : Protocol,
+    src : IPv4Address,
+    dst : IPv4Address
+)
+
+// Validation functions using pattern matching
+define is_valid_version(pkt) = match pkt {
+    Packet(v, _, _, _, _, _, _) => if v = 4 then 1 else 0
+}
+
+define get_ttl(pkt) = match pkt {
+    Packet(_, _, _, ttl, _, _, _) => ttl
+}
+
+define is_tcp_packet(pkt) = match pkt {
+    Packet(_, _, _, _, TCP, _, _) => 1
+  | Packet(_, _, _, _, _, _, _) => 0
+}
+

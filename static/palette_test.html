@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kleis Palette Template Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .test-section {
+            padding: 30px;
+        }
+        
+        .category {
+            margin-bottom: 40px;
+        }
+        
+        .category-title {
+            font-size: 1.5em;
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .test-card {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+        
+        .test-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+        
+        .test-card.success {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+        
+        .test-card.error {
+            border-color: #dc3545;
+            background: #fff5f5;
+        }
+        
+        .template-name {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+        
+        .template-latex {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: #6c757d;
+            margin-bottom: 12px;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            word-break: break-all;
+        }
+        
+        .template-preview {
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            background: white;
+            font-size: 1.2em;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-indicator.success {
+            background: #28a745;
+        }
+        
+        .status-indicator.error {
+            background: #dc3545;
+        }
+        
+        .summary {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .summary-stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 15px;
+        }
+        
+        .stat {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        
+        .stat.success {
+            color: #28a745;
+        }
+        
+        .stat.error {
+            color: #dc3545;
+        }
+        
+        .stat-label {
+            font-size: 0.8em;
+            color: #6c757d;
+            display: block;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧪 Kleis Palette Template Test</h1>
+            <p class="subtitle">Testing all templates from the equation editor palette</p>
+        </header>
+        
+        <div class="test-section">
+            <div class="summary" id="summary">
+                <h2>Test Summary</h2>
+                <div class="summary-stats">
+                    <div>
+                        <span class="stat success" id="successCount">0</span>
+                        <span class="stat-label">Rendered Successfully</span>
+                    </div>
+                    <div>
+                        <span class="stat error" id="errorCount">0</span>
+                        <span class="stat-label">Failed to Render</span>
+                    </div>
+                    <div>
+                        <span class="stat" id="totalCount">0</span>
+                        <span class="stat-label">Total Templates</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Basic Operations -->
+            <div class="category">
+                <h2 class="category-title">📐 Basic Operations</h2>
+                <div class="test-grid" id="basic-operations"></div>
+            </div>
+            
+            <!-- Calculus -->
+            <div class="category">
+                <h2 class="category-title">∫ Calculus</h2>
+                <div class="test-grid" id="calculus"></div>
+            </div>
+            
+            <!-- Matrices -->
+            <div class="category">
+                <h2 class="category-title">🔢 Matrices</h2>
+                <div class="test-grid" id="matrices"></div>
+            </div>
+            
+            <!-- Physics/Quantum -->
+            <div class="category">
+                <h2 class="category-title">⚛️ Physics & Quantum</h2>
+                <div class="test-grid" id="physics"></div>
+            </div>
+            
+            <!-- Vectors -->
+            <div class="category">
+                <h2 class="category-title">➡️ Vectors</h2>
+                <div class="test-grid" id="vectors"></div>
+            </div>
+            
+            <!-- Trigonometry -->
+            <div class="category">
+                <h2 class="category-title">📊 Trigonometry</h2>
+                <div class="test-grid" id="trigonometry"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+        
+        // Define all templates from the palette
+        const templates = {
+            'basic-operations': [
+                { name: 'Fraction', latex: '\\frac{a}{b}', template: '\\frac{□}{□}' },
+                { name: 'Square Root', latex: '\\sqrt{x}', template: '\\sqrt{□}' },
+                { name: 'Power', latex: 'x^{n}', template: 'x^{□}' },
+                { name: 'Subscript', latex: 'x_{i}', template: 'x_{□}' },
+                { name: 'Mixed Index', latex: 'T^{i}_{j}', template: 'x^{□}_{□}' },
+            ],
+            'calculus': [
+                { name: 'Integral', latex: '\\int_{a}^{b} f(x) \\, dx', template: '\\int_{□}^{□} □ \\, dx' },
+                { name: 'Sum', latex: '\\sum_{i=1}^{n} a_i', template: '\\sum_{□}^{□} □' },
+                { name: 'Product', latex: '\\prod_{i=1}^{n} a_i', template: '\\prod_{□}^{□} □' },
+                { name: 'Limit', latex: '\\lim_{x \\to 0} f(x)', template: '\\lim_{□ \\to □} □' },
+                { name: 'Partial Derivative', latex: '\\frac{\\partial f}{\\partial x}', template: '\\partial_{□} □' },
+                { name: 'Derivative', latex: '\\frac{d f}{d x}', template: '\\frac{d □}{d □}' },
+                { name: 'Gradient', latex: '\\nabla f', template: '\\nabla □' },
+            ],
+            'matrices': [
+                { name: 'Matrix 2×2 (brackets)', latex: '\\begin{bmatrix}a&b\\\\c&d\\end{bmatrix}', template: '\\begin{bmatrix}□&□\\\\□&□\\end{bmatrix}' },
+                { name: 'Matrix 3×3 (brackets)', latex: '\\begin{bmatrix}a&b&c\\\\d&e&f\\\\g&h&i\\end{bmatrix}', template: '\\begin{bmatrix}3x3\\end{bmatrix}' },
+            ],
+            'physics': [
+                { name: 'Ket', latex: '|\\psi\\rangle', template: '|□\\rangle' },
+                { name: 'Bra', latex: '\\langle\\phi|', template: '\\langle□|' },
+                { name: 'Inner Product', latex: '\\langle\\phi|\\psi\\rangle', template: '\\langle□|□\\rangle' },
+                { name: 'Outer Product', latex: '|\\psi\\rangle\\langle\\phi|', template: '|□\\rangle\\langle□|' },
+                { name: 'Commutator', latex: '[A, B]', template: '[□, □]' },
+                { name: 'Expectation', latex: '\\langle A \\rangle', template: '\\langle □ \\rangle' },
+            ],
+            'vectors': [
+                { name: 'Bold Vector', latex: '\\mathbf{v}', template: '\\mathbf{v}' },
+                { name: 'Vector Arrow', latex: '\\vec{v}', template: '\\vec{v}' },
+                { name: 'Dot Product', latex: 'a \\cdot b', template: 'a \\cdot b' },
+                { name: 'Cross Product', latex: 'a \\times b', template: 'a \\times b' },
+                { name: 'Norm', latex: '\\|v\\|', template: '\\|v\\|' },
+                { name: 'Absolute Value', latex: '|x|', template: '|x|' },
+            ],
+            'trigonometry': [
+                { name: 'Sine', latex: '\\sin(x)', template: '\\sin(□)' },
+                { name: 'Cosine', latex: '\\cos(x)', template: '\\cos(□)' },
+                { name: 'Tangent', latex: '\\tan(x)', template: '\\tan(□)' },
+            ],
+        };
+        
+        let successCount = 0;
+        let errorCount = 0;
+        let totalCount = 0;
+        
+        async function testTemplate(category, template) {
+            totalCount++;
+            
+            const card = document.createElement('div');
+            card.className = 'test-card';
+            
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'template-name';
+            nameDiv.textContent = template.name;
+            
+            const latexDiv = document.createElement('div');
+            latexDiv.className = 'template-latex';
+            latexDiv.textContent = template.latex;
+            
+            const previewDiv = document.createElement('div');
+            previewDiv.className = 'template-preview';
+            previewDiv.innerHTML = `\\[${template.latex}\\]`;
+            
+            card.appendChild(nameDiv);
+            card.appendChild(latexDiv);
+            card.appendChild(previewDiv);
+            
+            document.getElementById(category).appendChild(card);
+            
+            try {
+                // Try to render with MathJax
+                if (window.MathJax) {
+                    await MathJax.typesetPromise([previewDiv]);
+                }
+                
+                // Check if rendering succeeded (simple heuristic)
+                if (previewDiv.querySelector('.MJX-TEX') || previewDiv.textContent.length > template.latex.length) {
+                    card.classList.add('success');
+                    const indicator = document.createElement('span');
+                    indicator.className = 'status-indicator success';
+                    nameDiv.prepend(indicator);
+                    successCount++;
+                } else {
+                    throw new Error('Rendering failed');
+                }
+            } catch (error) {
+                card.classList.add('error');
+                const indicator = document.createElement('span');
+                indicator.className = 'status-indicator error';
+                nameDiv.prepend(indicator);
+                errorCount++;
+                console.error(`Failed to render ${template.name}:`, error);
+            }
+            
+            updateSummary();
+        }
+        
+        function updateSummary() {
+            document.getElementById('successCount').textContent = successCount;
+            document.getElementById('errorCount').textContent = errorCount;
+            document.getElementById('totalCount').textContent = totalCount;
+        }
+        
+        async function runAllTests() {
+            for (const [category, categoryTemplates] of Object.entries(templates)) {
+                for (const template of categoryTemplates) {
+                    await testTemplate(category, template);
+                }
+            }
+            
+            console.log(`Test complete: ${successCount}/${totalCount} templates rendered successfully`);
+        }
+        
+        // Run tests when page loads
+        window.onload = () => {
+            runAllTests();
+        };
+    </script>
+</body>
+</html>
+

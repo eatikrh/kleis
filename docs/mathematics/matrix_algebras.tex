@@ -1,0 +1,212 @@
+\section{Matrix Algebras}
+
+Matrices provide concrete realizations of linear operators and furnish
+one of the most fundamental examples of associative algebras.  This
+section introduces matrices over a field, their algebraic structure,
+and their connection to linear maps.  Throughout, $F$ denotes a field.
+
+\subsection{Matrices Over a Field}
+
+\begin{definition}[Matrix]
+    Let $m,n\in\mathbb{N}$.
+    An \emph{$m\times n$ matrix over $F$} is a function
+    \[
+        A : \{1,\dots,m\} \times \{1,\dots,n\} \to F,
+    \]
+    written $A = (a_{ij})$ where $a_{ij} = A(i,j)$.
+    The set of all such matrices is denoted $M_{m,n}(F)$.
+\end{definition}
+
+\begin{definition}[Matrix addition and scalar multiplication]
+    For $A,B\in M_{m,n}(F)$ and $\lambda\in F$, define
+    \[
+        (A+B)_{ij} = a_{ij} + b_{ij},
+        \qquad
+        (\lambda A)_{ij} = \lambda a_{ij}.
+    \]
+    Then $M_{m,n}(F)$ is a vector space over $F$.
+\end{definition}
+
+\subsection{Matrix Multiplication}
+
+\begin{definition}[Matrix product]
+    Let $A\in M_{m,n}(F)$ and $B\in M_{n,p}(F)$.
+    The \emph{matrix product} $AB\in M_{m,p}(F)$ is defined by
+    \[
+        (AB)_{ik} = \sum_{j=1}^n a_{ij} b_{jk}.
+    \]
+\end{definition}
+
+\begin{proposition}
+    Matrix multiplication is associative:
+    \[
+        (AB)C = A(BC).
+    \]
+\end{proposition}
+
+\begin{definition}[Identity matrix]
+    For each $n$, the \emph{identity matrix} $I_n\in M_n(F)$ is given by
+    \[
+        (I_n)_{ij} = \begin{cases}
+                         1, & i=j,\\
+                         0, & i\neq j.
+        \end{cases}
+    \]
+\end{definition}
+
+\begin{remark}
+    Under matrix multiplication, $M_n(F)$ is a unital associative algebra.
+\end{remark}
+
+\subsection{Linear Maps and Matrices}
+
+\begin{definition}[Linear operator]
+    Let $V$ be an $n$-dimensional vector space over $F$ with basis
+    $(e_1,\dots,e_n)$.
+    A linear map $T:V\to V$ is represented by a unique matrix
+    $[T]\in M_n(F)$ satisfying
+    \[
+        T(e_j) = \sum_{i=1}^n a_{ij} e_i.
+    \]
+\end{definition}
+
+\begin{proposition}
+    Composition of linear maps corresponds to matrix multiplication:
+    \[
+        [T\circ S] = [T]\,[S].
+    \]
+\end{proposition}
+
+\subsection{Matrix Units and Structure Constants}
+
+\begin{definition}[Matrix units]
+    For $1\le i,j\le n$, the \emph{matrix unit} $E_{ij}$ is the matrix with
+    \[
+        (E_{ij})_{kl} = \delta_{ik}\delta_{jl}.
+    \]
+    These form a basis of $M_n(F)$ as a vector space.
+\end{definition}
+
+\begin{proposition}
+    The multiplication of matrix units is given by
+    \[
+        E_{ij} E_{kl} = \delta_{jk} E_{il}.
+    \]
+\end{proposition}
+
+Thus the algebra $M_n(F)$ is completely described by these structure
+constants.
+
+\subsection{Determinant and Trace}
+
+\begin{definition}[Determinant]
+    For an $n\times n$ matrix $A=(a_{ij})$, the \emph{determinant} is
+    \[
+        \det(A) =
+        \sum_{\sigma\in S_n}
+        \mathrm{sgn}(\sigma)
+        \prod_{i=1}^n a_{i,\sigma(i)}.
+    \]
+\end{definition}
+
+\begin{definition}[Trace]
+    The \emph{trace} of $A\in M_n(F)$ is
+    \[
+        \mathrm{tr}(A) = \sum_{i=1}^n a_{ii}.
+    \]
+\end{definition}
+
+\begin{proposition}
+    For all $A,B\in M_n(F)$:
+    \[
+        \mathrm{tr}(AB) = \mathrm{tr}(BA).
+    \]
+\end{proposition}
+
+\subsection{Invertible Matrices and Linear Groups}
+
+\begin{definition}[General linear group]
+    A matrix $A\in M_n(F)$ is \emph{invertible} if there exists $B$ such
+    that $AB = BA = I_n$.  The set of all invertible matrices is the group
+    \[
+        GL(n,F).
+    \]
+\end{definition}
+
+\begin{definition}[Special linear group]
+    The subgroup
+    \[
+        SL(n,F) = \{\, A\in GL(n,F) : \det(A)=1 \,\}
+    \]
+    is the \emph{special linear group}.
+\end{definition}
+
+\subsection{Block Matrices}
+
+\begin{definition}[Block matrix]
+    Let $A_{ij}$ be matrices of appropriate sizes.
+    A \emph{block matrix} is written
+    \[
+        A = \begin{pmatrix}
+                A_{11} & A_{12} \\
+                A_{21} & A_{22}
+        \end{pmatrix}.
+    \]
+    Block addition and multiplication follow the usual rules of matrix
+    algebra.
+\end{definition}
+
+\begin{remark}
+    Block matrices allow the direct representation of tensor-product
+    structures, direct sums of representations, and nested linear systems.
+\end{remark}
+
+\subsection{Matrix Algebras as Lie Algebras}
+
+\begin{definition}[Commutator]
+    The commutator bracket on $M_n(F)$ is
+    \[
+        [A,B] = AB - BA.
+    \]
+\end{definition}
+
+\begin{proposition}
+    $(M_n(F),[\cdot,\cdot])$ is a Lie algebra.
+\end{proposition}
+
+\begin{example}
+    The subspace of trace-zero matrices
+    \[
+        \mathfrak{sl}_n(F)
+        = \{\, A\in M_n(F) : \mathrm{tr}(A)=0 \,\}
+    \]
+    is a Lie subalgebra.
+\end{example}
+
+\subsection{Interpretation in Kleis}
+
+Matrix structures are expressed in Kleis by parametric algebraic
+interfaces such as:
+
+\begin{verbatim}
+structure Matrix(m: Nat, n: Nat, T) {
+  operation transpose : Matrix(m,n,T) → Matrix(n,m,T)
+}
+\end{verbatim}
+
+\begin{verbatim}
+structure MatrixMultipliable(m: Nat, n: Nat, p: Nat, T) {
+  operation multiply :
+    Matrix(m,n,T) → Matrix(n,p,T) → Matrix(m,p,T)
+}
+\end{verbatim}
+
+\begin{verbatim}
+structure SquareMatrix(n: Nat, T) {
+  operation det   : Matrix(n,n,T) → T
+  operation trace : Matrix(n,n,T) → T
+}
+\end{verbatim}
+
+These correspond directly to the linear, associative, and Lie-algebraic
+properties of matrix spaces over a field.

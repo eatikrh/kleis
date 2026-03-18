@@ -1,0 +1,48 @@
+// Kleis Standard Library - Quantum Mechanics (Minimal)
+// Basic quantum operations for the Physics palette
+//
+// This is a minimal version compatible with the current parser.
+// Full version (quantum.kleis) will be loaded when parser is extended.
+
+/* Quantum State Notation - Display Operations
+ * 
+ * These operations create Dirac notation for display.
+ * Used by the Physics palette buttons.
+ * 
+ * Examples:
+ *   - ket(ψ) → displays as |ψ⟩
+ *   - bra(φ) → displays as ⟨φ|
+ *   - inner(φ, ψ) → displays as ⟨φ|ψ⟩
+ *   - outer(ψ, φ) → displays as |ψ⟩⟨φ|
+ */
+structure QuantumNotation(T) {
+    operation ket : T → T
+    operation bra : T → T
+    operation inner : T → T → T
+    operation outer : T → T → T
+    operation commutator : T → T → T
+    operation expectation : T → T
+}
+
+implements QuantumNotation(ℂ) {
+    operation ket = builtin_ket_notation
+    operation bra = builtin_bra_notation
+    operation inner = builtin_inner_notation
+    operation outer = builtin_outer_notation
+    operation commutator = builtin_commutator_notation
+    operation expectation = builtin_expectation_notation
+}
+
+/* Note: These are NOTATION operations for display only.
+ * They create the visual representation |ψ⟩, ⟨φ|, etc.
+ * 
+ * For actual quantum computation (future):
+ *   - Load quantum.kleis with full Hilbert space operations
+ *   - Ket(dim, ℂ) type for state vectors
+ *   - Operator(dim, ℂ) type for observables
+ *   - Inner product returns ℂ (probability amplitude)
+ *   - Commutator returns Operator
+ * 
+ * See quantum.kleis for full computational quantum mechanics.
+ */
+

@@ -1,0 +1,223 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Kleis",
+  "scopeName": "source.kleis",
+  "version": "0.98.0",
+  "fileTypes": ["kleis"],
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#booleans" },
+    { "include": "#symbolic-constants" },
+    { "include": "#named-arguments" },
+    { "include": "#constructors" },
+    { "include": "#types" },
+    { "include": "#quantifiers" },
+    { "include": "#keywords" },
+    { "include": "#annotations" },
+    { "include": "#operators" },
+    { "include": "#greek-types" },
+    { "include": "#variables" },
+    { "include": "#identifiers" }
+  ],
+  "repository": {
+
+    "named-arguments": {
+      "comment": "Named arguments in function calls: name = value (v0.96)",
+      "patterns": [
+        {
+          "match": "\\b([a-z_][A-Za-z0-9_]*)\\s*(=)(?!=)",
+          "captures": {
+            "1": { "name": "variable.parameter.named.kleis" },
+            "2": { "name": "keyword.operator.assignment.named-arg.kleis" }
+          }
+        }
+      ]
+    },
+
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.kleis",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.kleis",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    },
+
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.kleis",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.kleis",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.kleis",
+          "match": "\\b[0-9]+(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\\b"
+        }
+      ]
+    },
+
+    "booleans": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.kleis",
+          "match": "\\b(True|False)\\b"
+        }
+      ]
+    },
+
+    "symbolic-constants": {
+      "patterns": [
+        {
+          "name": "constant.language.symbolic.kleis",
+          "match": "\\b(e|i|c)\\b"
+        },
+        {
+          "name": "constant.language.placeholder.kleis",
+          "match": "□"
+        },
+        {
+          "name": "constant.language.symbolic.kleis",
+          "match": "[πℏφ∞∅]"
+        }
+      ]
+    },
+
+    "types": {
+      "patterns": [
+        {
+          "name": "storage.type.primitive.kleis",
+          "match": "ℝ|ℂ|ℤ|ℕ|ℚ|𝔹|\\b(Real|Complex|Integer|Nat|Rational|Bool|String|Unit|Scalar)\\b"
+        },
+        {
+          "name": "entity.name.type.constructor.kleis",
+          "match": "\\b(Matrix|Vector|Tensor|List|Set|Option|Result|Field|Type|BitVec)\\b"
+        }
+      ]
+    },
+
+    "quantifiers": {
+      "patterns": [
+        {
+          "name": "keyword.operator.quantifier.kleis",
+          "match": "[∀∃λ]|\\b(forall|exists|lambda)\\b"
+        },
+        {
+          "name": "keyword.operator.bigop.kleis",
+          "match": "[ΣΠ∫∬∭∮∯]|\\b(lim|sum|prod|integral)\\b"
+        },
+        {
+          "comment": "v0.97: ASCII logical operators",
+          "name": "keyword.operator.logical.kleis",
+          "match": "\\b(and|or|not)\\b"
+        }
+      ]
+    },
+
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.kleis",
+          "match": "\\b(data|structure|implements|operation|element|axiom|supports|notation|define|let|in|if|then|else|match|type|object|const|narrow|over|extends|verify|where|import|example|assert)\\b"
+        },
+        {
+          "name": "keyword.other.math.kleis",
+          "match": "\\b(Sum|Product|Integrate|Limit|D|Dt|sum_bounds|prod_bounds|int_bounds|sum_set|prod_set|sum_where|integral_measure|contour_integral|limit_inf|limit_neg_inf|sup|inf|ess_sup|argmax|argmin|oint|E|Var|fourier_coeff)\\b"
+        },
+        {
+          "name": "support.function.dimension.kleis",
+          "match": "\\b(min|max|gcd|lcm)\\b"
+        },
+        {
+          "name": "support.function.builtin.kleis",
+          "match": "\\b(builtin_[a-z_]+)\\b"
+        }
+      ]
+    },
+
+    "annotations": {
+      "patterns": [
+        {
+          "name": "storage.type.annotation.kleis",
+          "match": "@[A-Za-z_][A-Za-z0-9_]*"
+        },
+        {
+          "name": "punctuation.definition.annotation.block.kleis",
+          "begin": "@\\{",
+          "end": "\\}",
+          "patterns": [
+            { "include": "$self" }
+          ]
+        }
+      ]
+    },
+
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.kleis",
+          "match": "(==|!=|<=|>=|->|=>|→|⇒|⟹|⊗|∘|∗|×|·|\\+|-|\\*|/|\\^|=|≠|<|>|≤|≥|≈|≡|~|∈|∉|⊂|⊆|∧|∨|¬|∇|∫|√|!|†|ᵀ|\\^T)"
+        }
+        ,
+        {
+          "name": "keyword.operator.unicode.kleis",
+          "match": "(⊕|⊙|⊛|⨂|⨁|⋆|•|∪|∩|⊖|⊘|⨀|⨄|⊚|⊝|⊞|⊟|⊠|⊡|⊻|⊼|⊽|⊓|⊔|⩒|⩓|⨂|⋅|◦)"
+        }
+      ]
+    },
+
+    "constructors": {
+      "patterns": [
+        {
+          "name": "entity.name.type.constructor.kleis",
+          "match": "\\b[A-Z][A-Za-z0-9_]*\\b"
+        }
+      ]
+    },
+
+    "greek-types": {
+      "patterns": [
+        {
+          "name": "variable.type.greek.kleis",
+          "match": "\\b[α-ωΑ-Ω]\\b"
+        }
+      ]
+    },
+
+    "variables": {
+      "patterns": [
+        {
+          "name": "variable.other.kleis",
+          "match": "\\b[a-z_][A-Za-z0-9_]*\\b"
+        }
+      ]
+    },
+
+    "identifiers": {
+      "patterns": [
+        {
+          "name": "identifier.other.kleis",
+          "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
+        }
+      ]
+    }
+  }
+}

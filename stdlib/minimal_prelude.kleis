@@ -1,0 +1,126 @@
+// Minimal Kleis Standard Library - For Testing
+// Only includes syntax that the current parser supports
+
+// Basic arithmetic operations
+structure Arithmetic(T) {
+  operation plus : T → T → T
+  operation minus : T → T → T
+  operation times : T → T → T
+  operation divide : T → T → T
+  operation scalar_divide : T → T → T
+  operation scalar_multiply : T → T → T
+  operation frac : T → T → T
+  operation parens : T → T
+  operation brackets : T → T
+  operation braces : T → T
+  operation angle_brackets : T → T
+}
+
+structure Piecewise(n: Nat, T) {
+  operation Piecewise : Nat → List(T) → List(Bool) → T
+}
+
+// Equality operations (work for any type)
+structure Equatable(T) {
+  operation equals : T → T → Bool
+  operation not_equals : T → T → Bool
+}
+
+// Ordering operations (only for types with order)
+structure Ordered(T) {
+  operation less_than : T → T → Bool
+  operation greater_than : T → T → Bool
+  operation less_equal : T → T → Bool
+  operation greater_equal : T → T → Bool
+  operation leq : T → T → Bool
+  operation geq : T → T → Bool
+  operation neq : T → T → Bool
+  operation approx : T → T → Bool
+}
+
+structure LogicalOps(T) {
+  operation logical_and : T → T → T
+  operation logical_or : T → T → T
+  operation logical_not : T → T
+}
+
+// Arithmetic for scalars
+implements Arithmetic(ℝ) {
+  operation plus = builtin_add
+  operation minus = builtin_sub
+  operation times = builtin_mul
+  operation divide = builtin_div
+  operation scalar_divide = builtin_div
+  operation scalar_multiply = builtin_mul
+  operation frac = builtin_div
+  operation parens = builtin_identity
+  operation brackets = builtin_identity
+  operation braces = builtin_identity
+  operation angle_brackets = builtin_identity
+}
+
+implements Piecewise(n, ℝ) {
+  operation Piecewise = builtin_piecewise
+}
+
+// Equality for scalars
+implements Equatable(ℝ) {
+  operation equals = builtin_eq
+  operation not_equals = builtin_neq
+}
+
+// Equality for matrices (component-wise)
+implements Equatable(Matrix(m, n, ℝ)) {
+  operation equals = builtin_matrix_eq
+  operation not_equals = builtin_matrix_neq
+}
+
+// Ordering only for scalars (not matrices!)
+implements Ordered(ℝ) {
+  operation less_than = builtin_lt
+  operation greater_than = builtin_gt
+  operation less_equal = builtin_le
+  operation greater_equal = builtin_ge
+  operation leq = builtin_le
+  operation geq = builtin_ge
+  operation neq = builtin_neq
+  operation approx = builtin_approx
+}
+
+implements LogicalOps(Bool) {
+  operation logical_and = builtin_and
+  operation logical_or = builtin_or
+  operation logical_not = builtin_not
+}
+
+// Numeric operations (beyond arithmetic)
+structure Numeric(N) {
+  operation abs : N → N
+  operation floor : N → N
+  operation sqrt : N → N
+  operation power : N → N → N
+  operation sup : N → N → N
+  operation sub : N → N → N
+}
+
+// Implementation for reals
+implements Numeric(ℝ) {
+  operation abs = builtin_abs
+  operation floor = builtin_floor
+  operation sqrt = builtin_sqrt
+  operation power = builtin_pow
+  operation sup = builtin_superscript
+  operation sub = builtin_subscript
+}
+
+// Calculus operations
+structure Differentiable(F) {
+  operation derivative : F → F
+  operation d_dx : F → F
+  operation partial : F → F
+}
+
+structure Integrable(F) {
+  operation integral : F → ℝ
+  operation int_bounds : F → ℝ → ℝ → F → ℝ
+}

@@ -1,0 +1,157 @@
+# Microsoft Pragmatic Rust Guidelines — Condensed for LLM Review
+#
+# Source: https://microsoft.github.io/rust-guidelines/agents/all.txt
+# Each entry: GUIDELINE-ID: one-line rule. Check-for note where non-obvious.
+
+## AI Guidelines
+
+M-DESIGN-FOR-AI: Design APIs to be idiomatic, well-documented, strongly typed, testable, and with good test coverage.
+  Check: primitive obsession, missing docs, untestable APIs, poor examples.
+
+## Application Guidelines
+
+M-APP-ERROR: Applications may use anyhow/eyre for error handling; libraries must use canonical error structs.
+  Check: anyhow in library crates, mixed error frameworks in one app.
+
+M-MIMALLOC-APPS: Applications should use mimalloc as global allocator for performance.
+  Check: missing global allocator in performance-sensitive apps.
+
+## Documentation
+
+M-CANONICAL-DOCS: Public items must have summary + Examples + Errors + Panics + Safety sections where applicable.
+  Check: missing doc sections, parameter tables instead of prose.
+
+M-DOC-INLINE: Mark `pub use` re-exports with `#[doc(inline)]` (except std/3rd-party types).
+
+M-FIRST-DOC-SENTENCE: First doc sentence must be one line, ~15 words max.
+  Check: multi-line summary sentences, overly verbose first lines.
+
+M-MODULE-DOCS: Every public module must have `//!` module documentation.
+
+## FFI Guidelines
+
+M-ISOLATE-DLL-STATE: When loading multiple Rust DLLs, only share portable (#[repr(C)]) state. No statics, TypeId, or #[repr(Rust)] types across DLL boundaries.
+
+## Performance Guidelines
+
+M-HOTPATH: Identify hot paths early, create benchmarks, profile regularly.
+  Check: missing benchmarks for performance-critical code, no profiling evidence.
+
+M-THROUGHPUT: Optimize for items-per-CPU-cycle. Batch operations, avoid hot spins, exploit cache locality.
+  Check: single-item processing where batching is possible, hot-spinning loops.
+
+M-YIELD-POINTS: Long-running async tasks must have yield_now().await points every 10-100us of CPU work.
+  Check: CPU-bound async loops without yield points.
+
+## Safety Guidelines
+
+M-UNSAFE-IMPLIES-UB: `unsafe` may only mark functions where misuse risks undefined behavior, not merely "dangerous" functions.
+
+M-UNSAFE: Unsafe must have a valid reason (novel abstraction, performance, FFI). Must include safety comments, pass Miri.
+  Check: ad-hoc unsafe to bypass Send/lifetimes, missing safety documentation.
+
+M-UNSOUND: No unsound code ever. Safe functions must not cause UB regardless of calling pattern.
+  Check: transmute in safe functions, blanket `unsafe impl Send`, unchecked casts.
+
+## Universal Guidelines
+
+M-CONCISE-NAMES: Names must be free of weasel words (Service, Manager, Factory).
+  Check: types named XxxService, XxxManager, XxxFactory without specific meaning.
+
+M-DOCUMENTED-MAGIC: Hardcoded magic values must have comments explaining why, side effects, and external dependencies. Prefer named constants.
+
+M-LINT-OVERRIDE-EXPECT: Use `#[expect]` not `#[allow]` for lint overrides; include a `reason`.
+
+M-LOG-STRUCTURED: Use structured logging with named events, message templates, and OTel semantic conventions. Redact sensitive data.
+  Check: format!() in log macros, unnamed events, PII in logs.
+
+M-PANIC-IS-STOP: Panics mean "stop the program." Never use panics for error communication or control flow.
+  Check: panic used for recoverable errors, expect() on user input.
+
+M-PANIC-ON-BUG: Detected programming bugs (contract violations, invariant breaks) should panic, not return errors.
+  Check: Result<> returned for impossible states, error types for bugs.
+
+M-PUBLIC-DEBUG: All public types must implement Debug. Sensitive types need custom Debug that redacts secrets.
+  Check: missing #[derive(Debug)], Debug that leaks API keys or passwords.
+
+M-PUBLIC-DISPLAY: Public types meant to be read (errors, string wrappers) must implement Display.
+
+M-REGULAR-FN: Prefer regular functions over associated functions for non-instance logic.
+  Check: static methods on a struct that don't create or use Self.
+
+M-SMALLER-CRATES: Split crates aggressively. If a submodule can be used independently, extract it.
+  Check: monolithic crates with unrelated modules, cyclic module dependencies.
+
+M-STATIC-VERIFICATION: Use compiler lints, clippy (all categories + restriction subset), rustfmt, cargo-audit, cargo-hack, miri.
+  Check: missing lint configuration in Cargo.toml, no CI verification.
+
+M-UPSTREAM-GUIDELINES: Follow Rust API Guidelines checklist. Key items: C-CONV (as_/to_/into_), C-GETTER, C-COMMON-TRAITS, C-CTOR (Foo::new), C-FEATURE.
+  Check: non-standard conversion names, missing common trait impls, no new() constructor.
+
+## Libraries / Building
+
+M-FEATURES-ADDITIVE: All features must be additive. No `no-std` feature (use `std` instead). Adding a feature must not break or remove items.
+
+M-OOBE: Libraries must build on all Tier 1 platforms with only cargo+rust. No external tool dependencies.
+  Check: build.rs requiring external tools, platform-specific code without feature gates.
+
+M-SYS-CRATES: Native -sys crates must compile without external dependencies. Embed sources, pre-generate bindgen glue.
+
+## Libraries / Interoperability
+
+M-DONT-LEAK-TYPES: Prefer std types in public APIs. Minimize leaking 3rd-party types; use feature gates for optional interop.
+  Check: external crate types in public function signatures without feature gates.
+
+M-ESCAPE-HATCHES: Types wrapping native handles must provide unsafe from_native/into_native escape hatches.
+
+M-TYPES-SEND: Public types and all futures must be Send. Assert Send with compile-time checks.
+  Check: Rc held across .await, !Send types in public APIs, missing Send assertions.
+
+## Libraries / Resilience
+
+M-AVOID-STATICS: Libraries must avoid statics/thread-locals where secret duplication would cause correctness issues.
+  Check: global mutable state in libraries, static counters, static registries.
+
+M-MOCKABLE-SYSCALLS: User-facing types doing I/O or syscalls must be mockable. No ad-hoc I/O; accept I/O cores or provide mocking.
+  Check: direct file/network access without abstraction, untestable I/O paths.
+
+M-NO-GLOB-REEXPORTS: Don't `pub use foo::*`. Re-export items individually. Exception: platform-specific HAL modules.
+
+M-STRONG-TYPES: Use the strongest std type available (PathBuf not String for paths, Duration not u64 for time).
+  Check: String used for paths/URLs/durations, bare integers for typed quantities.
+
+M-TEST-UTIL: Testing/mocking functionality must be behind a `test-util` feature flag.
+  Check: mock constructors or safety bypasses available in production builds.
+
+## Libraries / UX
+
+M-AVOID-WRAPPERS: Avoid Arc<Mutex<T>>, Rc<RefCell<T>> etc. in public APIs. Hide wrappers behind clean &T/&mut T/T interfaces.
+  Check: smart pointers in public function signatures, user-visible Arc/Mutex.
+
+M-DI-HIERARCHY: Prefer concrete types > generics > dyn Trait for dependency injection. Use enum dispatch for mocking.
+  Check: dyn Trait where a concrete type or generic would suffice, OO-style interfaces.
+
+M-ERRORS-CANONICAL-STRUCTS: Errors must be situation-specific structs with Backtrace, upstream cause, and is_xxx() helpers. No global error enums.
+  Check: anyhow in libraries, enum-based catch-all errors, missing Backtrace, exposed ErrorKind.
+
+M-ESSENTIAL-FN-INHERENT: Core type functionality must be inherent methods. Trait impls should forward to inherent methods.
+  Check: essential logic only available through trait import.
+
+M-IMPL-ASREF: Functions should accept `impl AsRef<str/Path/[u8]>` instead of concrete &str/&Path/&[u8] where ownership isn't needed.
+
+M-IMPL-IO: Functions needing one-shot I/O should accept `impl Read/Write` (sans-io pattern) instead of File/TcpStream.
+  Check: functions that only accept File when they could accept impl Read.
+
+M-IMPL-RANGEBOUNDS: Functions accepting ranges must use Range types or `impl RangeBounds<T>`, not (low, high) pairs.
+
+M-INIT-BUILDER: Types with 3+ optional construction parameters must provide a builder (FooBuilder with chainable methods + build()).
+  Check: constructors with 4+ parameters, missing builder for complex types.
+
+M-INIT-CASCADED: Types with 4+ parameters should cascade initialization via semantic helper types (Account + Currency, not 4 bare strings).
+  Check: long parameter lists with same-typed args that are easy to confuse.
+
+M-SERVICES-CLONE: Heavyweight service types must implement shared-ownership Clone via Arc<Inner> pattern.
+  Check: services that can't be shared between handlers, fat Clone implementations.
+
+M-SIMPLE-ABSTRACTIONS: Primary API types must not visibly nest generics beyond 1 level (no Foo<Bar<Baz>>).
+  Check: deeply nested type parameters in public APIs, complex generic bounds on service types.

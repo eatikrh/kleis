@@ -1,0 +1,182 @@
+// Navier-Stokes Equations and Fluid Dynamics
+//
+// The fundamental equations of fluid motion:
+// 1. Continuity (mass conservation): ∂ρ/∂t + ∇·(ρv) = 0
+// 2. Momentum: ρ(∂v/∂t + v·∇v) = -∇p + μ∇²v + ρf
+//
+// In tensor form (i = 1,2,3 for spatial components):
+//   ∂(ρu_i)/∂t + ∂(ρu_i u_j)/∂x_j = -∂p/∂x_i + ∂τ_ij/∂x_j + ρf_i
+
+structure ViscousStressTensor {
+    // Viscous stress tensor τ_ij
+    operation tau : Nat → Nat → ℝ
+    
+    // Symmetry: τ_ij = τ_ji (angular momentum conservation)
+    axiom tau_symmetric : ∀ i : Nat . ∀ j : Nat .
+        tau(i, j) = tau(j, i)
+}
+
+structure NewtonianViscosity {
+    // Viscous stress tensor
+    operation tau : Nat → Nat → ℝ
+    
+    // Divergence of stress tensor
+    operation div_tau : Nat → ℝ
+    
+    // Laplacian of velocity
+    operation laplacian_u : Nat → ℝ
+    
+    // Dynamic viscosity
+    element mu : ℝ
+    
+    // For Newtonian fluid (incompressible):
+    // div(τ)_i = μ ∇²u_i
+    axiom newtonian_viscosity : ∀ i : Nat .
+        div_tau(i) = times(mu, laplacian_u(i))
+}
+
+structure ContinuityEquation {
+    // Time derivative of density
+    element drho_dt : ℝ
+    
+    // Divergence of momentum density
+    element div_rho_u : ℝ
+    
+    // Continuity equation: ∂ρ/∂t + ∇·(ρv) = 0
+    axiom continuity : plus(drho_dt, div_rho_u) = 0
+}
+
+structure MomentumEquation {
+    // Density
+    element rho : ℝ
+    
+    // Time derivative of velocity
+    operation du_dt : Nat → ℝ
+    
+    // Convective term ∂(ρu_i u_j)/∂x_j
+    operation div_momentum : Nat → ℝ
+    
+    // Pressure gradient
+    operation grad_p : Nat → ℝ
+    
+    // Divergence of viscous stress
+    operation div_tau : Nat → ℝ
+    
+    // Body force per unit mass
+    operation f : Nat → ℝ
+    
+    // Navier-Stokes momentum equation:
+    // ρ ∂u_i/∂t + ∂(ρu_i u_j)/∂x_j = -∂p/∂x_i + ∂τ_ij/∂x_j + ρf_i
+    axiom momentum : ∀ i : Nat .
+        plus(times(rho, du_dt(i)), div_momentum(i)) = 
+        plus(plus(negate(grad_p(i)), div_tau(i)), times(rho, f(i)))
+}
+
+structure IncompressibleFlow {
+    // Divergence of velocity
+    element div_u : ℝ
+    
+    // Incompressibility constraint: ∇·v = 0
+    axiom incompressible : div_u = 0
+}
+
+// Stokes flow (creeping flow, Re << 1)
+// Inertia negligible: 0 = -∇p + μ∇²v
+structure StokesFlow {
+    // Pressure gradient
+    operation grad_p : Nat → ℝ
+    
+    // Laplacian of velocity
+    operation laplacian_u : Nat → ℝ
+    
+    // Dynamic viscosity
+    element mu : ℝ
+    
+    // Stokes equation: ∇p = μ∇²v
+    axiom stokes : ∀ i : Nat .
+        grad_p(i) = times(mu, laplacian_u(i))
+}
+
+// Euler equations (inviscid flow, μ = 0)
+structure EulerEquations {
+    // Density
+    element rho : ℝ
+    
+    // Time derivative of velocity
+    operation du_dt : Nat → ℝ
+    
+    // Convective term (v·∇)v_i
+    operation convective : Nat → ℝ
+    
+    // Pressure gradient
+    operation grad_p : Nat → ℝ
+    
+    // Euler equation: ∂v/∂t + (v·∇)v = -(1/ρ)∇p
+    // Scaled by ρ: ρ∂v/∂t + ρ(v·∇)v = -∇p
+    axiom euler : ∀ i : Nat .
+        plus(times(rho, du_dt(i)), times(rho, convective(i))) = negate(grad_p(i))
+}
+
+// Bernoulli's equation (steady, inviscid, incompressible along streamline)
+// Scaled form: 2p + ρv² + 2ρgh = const (multiply by 2 to avoid 1/2)
+structure BernoulliEquation {
+    element rho : ℝ
+    element g : ℝ  // Gravitational acceleration
+    
+    // Values at two points on streamline
+    element p1 : ℝ
+    element p2 : ℝ
+    element v1 : ℝ
+    element v2 : ℝ
+    element h1 : ℝ
+    element h2 : ℝ
+    
+    // Scaled Bernoulli sums
+    element B1_scaled : ℝ
+    element B2_scaled : ℝ
+    
+    // B = 2p + ρv² + 2ρgh
+    axiom B1_def : B1_scaled = plus(plus(times(2, p1), 
+        times(rho, times(v1, v1))),
+        times(times(2, rho), times(g, h1)))
+    
+    axiom B2_def : B2_scaled = plus(plus(times(2, p2), 
+        times(rho, times(v2, v2))),
+        times(times(2, rho), times(g, h2)))
+    
+    // Bernoulli's principle: constant along streamline
+    axiom bernoulli_conservation : B1_scaled = B2_scaled
+}
+
+// Compressible flow with energy equation
+structure CompressibleEnergy {
+    // Total energy per unit volume
+    element E : ℝ
+    
+    // Time derivative of energy
+    element dE_dt : ℝ
+    
+    // Energy flux divergence
+    element div_E_flux : ℝ
+    
+    // Heat conduction ∇·(k∇T)
+    element heat_conduction : ℝ
+    
+    // Viscous dissipation τ:∇v
+    element viscous_dissipation : ℝ
+    
+    // Energy equation: ∂E/∂t + ∇·[(E+p)v] = ∇·(k∇T) + τ:∇v
+    axiom energy : plus(dE_dt, div_E_flux) = plus(heat_conduction, viscous_dissipation)
+}
+
+// Ideal gas equation of state
+structure IdealGasEOS {
+    element rho : ℝ      // Density
+    element p : ℝ        // Pressure
+    element T : ℝ        // Temperature
+    element R_gas : ℝ    // Specific gas constant
+    
+    // Ideal gas: p = ρRT
+    axiom ideal_gas : p = times(times(rho, R_gas), T)
+}
+

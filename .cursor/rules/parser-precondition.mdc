@@ -1,0 +1,7 @@
+---
+globs: src/parser*.rs,src/kleis_parser*.rs
+---
+# Parser precondition
+
+Before editing parser files, run `cargo test parser` to establish a baseline.
+After editing, run `cargo test parser` again to verify nothing broke.

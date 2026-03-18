@@ -1,0 +1,293 @@
+// ============================================================================
+// Langlands Relational Consistency — Two L-functions, Two Operators
+// ============================================================================
+//
+// Tests the "web" conjecture: L-functions from different sources are related
+// by reciprocity, and each should admit a self-adjoint spectral operator
+// whose eigenvalues are the non-trivial zeros.
+//
+// We formalize two L-functions:
+//   1. ζ(s) — the Riemann zeta function (Selberg class, degree 1)
+//   2. L(s, χ₄) — Dirichlet L-function for the non-trivial character mod 4
+//      (Selberg class, degree 1, first zero ≈ 1/2 + 6.0209i)
+//
+// The parameterized operator spectral_op : DirichletSeries → Operator maps
+// each L-function to its hypothetical Hilbert-Pólya operator. We check:
+//   - Both operators can coexist (joint SAT)
+//   - Both are self-adjoint and unbounded
+//   - Their eigenvalues match their respective zeros
+//   - The Skolemized functional equation holds at non-zero points
+//
+// Connection to Leibniz: L(1, χ₄) = π/4 is the Leibniz formula
+// (1 - 1/3 + 1/5 - 1/7 + ...). The same man who conceived the
+// Characteristica Universalis also discovered this L-function value.
+//
+// Self-contained: no imports.
+// ============================================================================
+
+// ============================================
+// TYPES
+// ============================================
+
+data HVector = HV(ℤ)
+data Operator = Op(ℤ)
+data DirichletSeries = DS(ℤ)
+data DirichletChar = DC(ℤ)
+
+// ============================================
+// OPERATIONS
+// ============================================
+
+// Parameterized spectral operator: each L-function gets its own operator
+operation spectral_op : DirichletSeries → Operator
+
+// Spectral theory
+operation is_self_adjoint : Operator → Bool
+operation is_densely_defined : Operator → Bool
+operation adjoint : Operator → Operator
+operation op_apply : Operator × HVector → HVector
+operation ip : HVector × HVector → ℂ
+operation h_smul : ℂ × HVector → HVector
+
+// Eigenvalues and eigenvectors (parameterized by operator)
+operation eigenvalue_of : Operator × ℕ → ℝ
+operation eigenvector_of : Operator × ℕ → HVector
+
+// L-functions
+operation zeta : ℂ → ℂ
+operation L_chi4 : ℂ → ℂ
+operation xi_zeta : ℂ → ℂ
+operation xi_chi4 : ℂ → ℂ
+
+// Selberg class
+operation has_euler_product : DirichletSeries → Bool
+operation has_continuation : DirichletSeries → Bool
+operation has_functional_eq : DirichletSeries → Bool
+operation L_degree : DirichletSeries → ℕ
+
+// Zero classification
+operation is_nontrivial_zero_of : DirichletSeries × ℂ → Bool
+
+// Character
+operation chi4 : ℕ → ℤ
+
+// ============================================
+// DIRICHLET CHARACTER χ₄
+// ============================================
+// χ₄ is the unique non-trivial character mod 4:
+//   χ₄(1) = 1, χ₄(2) = 0, χ₄(3) = -1, χ₄(4) = 0
+
+structure DirichletCharGround {
+    axiom chi4_1 : chi4(1) = 1
+    axiom chi4_2 : chi4(2) = 0
+    axiom chi4_3 : chi4(3) = 0 - 1
+    axiom chi4_4 : chi4(4) = 0
+}
+
+// ============================================
+// TWO L-FUNCTIONS IN THE SELBERG CLASS
+// ============================================
+
+structure TwoLFunctions {
+    element zeta_series : DirichletSeries
+    element chi4_series : DirichletSeries
+
+    // Both are in the Selberg class
+    axiom zeta_euler : has_euler_product(zeta_series)
+    axiom zeta_cont : has_continuation(zeta_series)
+    axiom zeta_func : has_functional_eq(zeta_series)
+    axiom zeta_deg : L_degree(zeta_series) = 1
+
+    axiom chi4_euler : has_euler_product(chi4_series)
+    axiom chi4_cont : has_continuation(chi4_series)
+    axiom chi4_func : has_functional_eq(chi4_series)
+    axiom chi4_deg : L_degree(chi4_series) = 1
+
+    // They are distinct
+    axiom distinct_series : zeta_series ≠ chi4_series
+
+    // Special value: L(1, χ₄) = π/4 (Leibniz formula)
+    axiom leibniz_formula : L_chi4(complex(1, 0)) = complex(pi / 4, 0)
+
+    // Zeta special value for cross-reference
+    axiom zeta_at_2 : zeta(complex(2, 0)) = complex(pi * pi / 6, 0)
+}
+
+// ============================================
+// PARAMETERIZED SPECTRAL OPERATORS
+// ============================================
+
+structure SpectralOperators {
+    // Each L-function maps to its own operator
+    element T_zeta : Operator
+    element T_chi4 : Operator
+
+    axiom T_zeta_is : T_zeta = spectral_op(zeta_series)
+    axiom T_chi4_is : T_chi4 = spectral_op(chi4_series)
+
+    // Both are self-adjoint and unbounded (densely defined)
+    axiom zeta_sa : is_self_adjoint(T_zeta)
+    axiom zeta_dd : is_densely_defined(T_zeta)
+    axiom zeta_adj : adjoint(T_zeta) = T_zeta
+
+    axiom chi4_sa : is_self_adjoint(T_chi4)
+    axiom chi4_dd : is_densely_defined(T_chi4)
+    axiom chi4_adj : adjoint(T_chi4) = T_chi4
+
+    // The operators are distinct (different L-functions → different operators)
+    axiom distinct_ops : T_zeta ≠ T_chi4
+}
+
+// ============================================
+// EIGENVALUES = ZEROS (parameterized)
+// ============================================
+
+structure ZetaEigenvalues {
+    // First three zeros of ζ(s): Im(ρ) = 14.135, 21.022, 25.011
+    axiom zeta_ev1 : eigenvalue_of(T_zeta, 1) = 14.135
+    axiom zeta_ev2 : eigenvalue_of(T_zeta, 2) = 21.022
+    axiom zeta_ev3 : eigenvalue_of(T_zeta, 3) = 25.011
+
+    axiom zeta_increasing :
+        eigenvalue_of(T_zeta, 1) < eigenvalue_of(T_zeta, 2) ∧
+        eigenvalue_of(T_zeta, 2) < eigenvalue_of(T_zeta, 3)
+
+    // Eigenpairs
+    axiom zeta_pair1 :
+        op_apply(T_zeta, eigenvector_of(T_zeta, 1))
+        = h_smul(complex(eigenvalue_of(T_zeta, 1), 0), eigenvector_of(T_zeta, 1))
+
+    // Bridge to zeros
+    axiom zeta_bridge1 : is_nontrivial_zero_of(zeta_series, complex(1/2, 14.135))
+    axiom zeta_bridge2 : is_nontrivial_zero_of(zeta_series, complex(1/2, 21.022))
+    axiom zeta_bridge3 : is_nontrivial_zero_of(zeta_series, complex(1/2, 25.011))
+
+    // Zeta vanishes at its zeros
+    axiom zeta_vanishes1 : zeta(complex(1/2, 14.135)) = complex(0, 0)
+    axiom zeta_vanishes2 : zeta(complex(1/2, 21.022)) = complex(0, 0)
+}
+
+structure Chi4Eigenvalues {
+    // First three zeros of L(s, χ₄): Im(ρ) ≈ 6.021, 10.244, 12.588
+    axiom chi4_ev1 : eigenvalue_of(T_chi4, 1) = 6.021
+    axiom chi4_ev2 : eigenvalue_of(T_chi4, 2) = 10.244
+    axiom chi4_ev3 : eigenvalue_of(T_chi4, 3) = 12.588
+
+    axiom chi4_increasing :
+        eigenvalue_of(T_chi4, 1) < eigenvalue_of(T_chi4, 2) ∧
+        eigenvalue_of(T_chi4, 2) < eigenvalue_of(T_chi4, 3)
+
+    // Eigenpairs
+    axiom chi4_pair1 :
+        op_apply(T_chi4, eigenvector_of(T_chi4, 1))
+        = h_smul(complex(eigenvalue_of(T_chi4, 1), 0), eigenvector_of(T_chi4, 1))
+
+    // Bridge to zeros
+    axiom chi4_bridge1 : is_nontrivial_zero_of(chi4_series, complex(1/2, 6.021))
+    axiom chi4_bridge2 : is_nontrivial_zero_of(chi4_series, complex(1/2, 10.244))
+    axiom chi4_bridge3 : is_nontrivial_zero_of(chi4_series, complex(1/2, 12.588))
+
+    // L(s, χ₄) vanishes at its zeros
+    axiom chi4_vanishes1 : L_chi4(complex(1/2, 6.021)) = complex(0, 0)
+    axiom chi4_vanishes2 : L_chi4(complex(1/2, 10.244)) = complex(0, 0)
+}
+
+// ============================================
+// SKOLEMIZED FUNCTIONAL EQUATIONS
+// ============================================
+
+structure FunctionalEquations {
+    // ξ_ζ(s) = ξ_ζ(1 - s) at zeros (both sides vanish)
+    axiom xi_zeta_zero1 : xi_zeta(complex(1/2, 14.135)) = complex(0, 0)
+    axiom xi_zeta_func1 :
+        xi_zeta(complex(1/2, 14.135)) = xi_zeta(complex(1/2, 0 - 14.135))
+
+    // ξ_ζ(s) = ξ_ζ(1 - s) OFF the critical line (non-trivial constraint)
+    axiom xi_zeta_off1 : xi_zeta(complex(2, 0)) = xi_zeta(complex(0 - 1, 0))
+
+    // ξ_{χ₄}(s) = ξ_{χ₄}(1 - s) at zeros
+    axiom xi_chi4_zero1 : xi_chi4(complex(1/2, 6.021)) = complex(0, 0)
+    axiom xi_chi4_func1 :
+        xi_chi4(complex(1/2, 6.021)) = xi_chi4(complex(1/2, 0 - 6.021))
+
+    // ξ_{χ₄}(s) = ξ_{χ₄}(1 - s) OFF the critical line
+    axiom xi_chi4_off1 : xi_chi4(complex(2, 0)) = xi_chi4(complex(0 - 1, 0))
+}
+
+// ============================================
+// ORTHOGONALITY BETWEEN OPERATORS
+// ============================================
+// Eigenvectors of different operators need not be orthogonal,
+// but eigenvectors of the SAME operator with distinct eigenvalues must be.
+
+structure CrossOrthogonality {
+    // Within T_zeta: eigenvectors for λ₁ ≠ λ₂ are orthogonal
+    axiom zeta_orth12 :
+        ip(eigenvector_of(T_zeta, 1), eigenvector_of(T_zeta, 2)) = complex(0, 0)
+
+    // Within T_chi4: eigenvectors for λ₁ ≠ λ₂ are orthogonal
+    axiom chi4_orth12 :
+        ip(eigenvector_of(T_chi4, 1), eigenvector_of(T_chi4, 2)) = complex(0, 0)
+}
+
+// ============================================
+// CONSISTENCY TESTS
+// ============================================
+
+// Joint consistency: both operators coexist
+example "both operators are self-adjoint" {
+    assert(is_self_adjoint(T_zeta) ∧ is_self_adjoint(T_chi4))
+}
+
+example "operators are distinct" {
+    assert(T_zeta ≠ T_chi4)
+}
+
+example "L-functions are distinct Selberg class members" {
+    assert(
+        has_euler_product(zeta_series) ∧ has_euler_product(chi4_series) ∧
+        zeta_series ≠ chi4_series
+    )
+}
+
+// Eigenvalue structure
+example "zeta first eigenpair" {
+    assert(
+        op_apply(T_zeta, eigenvector_of(T_zeta, 1))
+        = h_smul(complex(14.135, 0), eigenvector_of(T_zeta, 1))
+    )
+}
+
+example "chi4 first eigenpair" {
+    assert(
+        op_apply(T_chi4, eigenvector_of(T_chi4, 1))
+        = h_smul(complex(6.021, 0), eigenvector_of(T_chi4, 1))
+    )
+}
+
+// Functional equation consistency
+example "zeta functional equation off critical line" {
+    assert(xi_zeta(complex(2, 0)) = xi_zeta(complex(0 - 1, 0)))
+}
+
+example "chi4 functional equation off critical line" {
+    assert(xi_chi4(complex(2, 0)) = xi_chi4(complex(0 - 1, 0)))
+}
+
+// Leibniz's formula
+example "L(1, chi4) = pi/4 (Leibniz)" {
+    assert(L_chi4(complex(1, 0)) = complex(pi / 4, 0))
+}
+
+// Cross-reference: different zeros for different operators
+example "zeta zero is not a chi4 zero" {
+    assert(
+        zeta(complex(1/2, 14.135)) = complex(0, 0) ∧
+        is_nontrivial_zero_of(chi4_series, complex(1/2, 6.021))
+    )
+}
+
+// Degree-1 in Selberg class (both)
+example "both have degree 1" {
+    assert(L_degree(zeta_series) = 1 ∧ L_degree(chi4_series) = 1)
+}

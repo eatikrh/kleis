@@ -1,0 +1,287 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{mathpartir}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\begin{document}
+
+\section*{Operational Semantics of Kleis (Core Fragment)}
+
+In this appendix we present a big--step operational semantics for a core
+fragment of Kleis expressions.
+The judgment
+\[
+  \rho \vdash e \Downarrow v
+\]
+is read: \emph{in environment $\rho$, expression $e$ evaluates to value $v$}.
+
+\subsection*{Syntax (Core Fragment)}
+
+We consider the following informal grammar for expressions:
+\[
+\begin{array}{rcl}
+e &::=& x \mid v \mid \lambda x . e \mid e_1\,e_2 \mid
+        \texttt{let } x = e_1 \texttt{ in } e_2 \\
+  && \mid \texttt{if } e_0 \texttt{ then } e_1 \texttt{ else } e_2 \\
+  && \mid \texttt{match } e \{ p_1 \Rightarrow e_1 \;\mid\; \cdots \;\mid\; p_n \Rightarrow e_n \}
+\end{array}
+\]
+
+Values:
+\[
+\begin{array}{rcl}
+v &::=& c \mid \lambda x . e \mid C(v_1,\dots,v_k)
+\end{array}
+\]
+where $c$ is a primitive literal (number, boolean, string, etc.) and
+$C$ ranges over data constructors of algebraic data types.
+
+Patterns:
+\[
+\begin{array}{rcl}
+p &::=& \_ \mid x \mid C(p_1,\dots,p_k) \mid c
+\end{array}
+\]
+
+We assume a fixed set of primitive operations (\texttt{+}, \texttt{-}, etc.)
+given by a meta--level function
+\(\llbracket \text{op} \rrbracket(v_1,\dots,v_n)\).
+
+\subsection*{Environments}
+
+An \emph{environment} $\rho$ is a finite mapping from variables to values.
+We write $\rho[x \mapsto v]$ for the environment that maps $x$ to $v$ and
+agrees with $\rho$ on all other variables.
+
+The lookup of a variable is written $\rho(x)$.
+
+\subsection*{Values and Literals}
+
+Literals evaluate to themselves:
+
+\[
+\inference[\textsc{E-Const}]{}{
+  \rho \vdash c \Downarrow c
+}
+\]
+
+Lambda abstractions are values:
+
+\[
+\inference[\textsc{E-Lam}]{}{
+  \rho \vdash \lambda x . e \Downarrow \lambda x . e
+}
+\]
+
+Data constructors applied to values evaluate directly to a constructor value:
+
+\[
+\inference[\textsc{E-Constr}]{}{
+  \rho \vdash C(v_1,\dots,v_k) \Downarrow C(v_1,\dots,v_k)
+}
+\]
+
+\subsection*{Variables}
+
+Variables are looked up in the environment:
+
+\[
+\inference[\textsc{E-Var}]{}{
+  \rho(x) = v
+}{
+  \rho \vdash x \Downarrow v
+}
+\]
+
+\subsection*{Function Application}
+
+We use call--by--value semantics.
+To evaluate $e_1\,e_2$ we first evaluate $e_1$ to a function value,
+then $e_2$ to an argument value, then evaluate the body in an extended environment.
+
+\[
+\inference[\textsc{E-App}]{
+  \rho \vdash e_1 \Downarrow \lambda x . e \\
+  \rho \vdash e_2 \Downarrow v_2 \\
+  \rho[x \mapsto v_2] \vdash e \Downarrow v
+}{
+  \rho \vdash e_1\,e_2 \Downarrow v
+}
+\]
+
+If $e_1$ evaluates to a non-lambda value, the semantics is undefined
+(statically ruled out by typing).
+
+\subsection*{\texttt{let}-Bindings}
+
+A \texttt{let}--binding evaluates its right-hand side and then evaluates
+the body under an extended environment:
+
+\[
+\inference[\textsc{E-Let}]{
+  \rho \vdash e_1 \Downarrow v_1 \\
+  \rho[x \mapsto v_1] \vdash e_2 \Downarrow v
+}{
+  \rho \vdash \texttt{let } x = e_1 \texttt{ in } e_2 \Downarrow v
+}
+\]
+
+\subsection*{Conditionals}
+
+Booleans are assumed to be primitive values \texttt{True}, \texttt{False}.
+
+\[
+\inference[\textsc{E-IfTrue}]{
+  \rho \vdash e_0 \Downarrow \texttt{True} \\
+  \rho \vdash e_1 \Downarrow v
+}{
+  \rho \vdash \texttt{if } e_0 \texttt{ then } e_1 \texttt{ else } e_2 \Downarrow v
+}
+\]
+
+\[
+\inference[\textsc{E-IfFalse}]{
+  \rho \vdash e_0 \Downarrow \texttt{False} \\
+  \rho \vdash e_2 \Downarrow v
+}{
+  \rho \vdash \texttt{if } e_0 \texttt{ then } e_1 \texttt{ else } e_2 \Downarrow v
+}
+\]
+
+If $e_0$ evaluates to a non-boolean, the semantics is undefined (again,
+ruled out statically).
+
+\subsection*{Primitive Operations}
+
+For a primitive $n$-ary operator $\text{op}(e_1,\dots,e_n)$:
+
+\[
+\inference[\textsc{E-Prim}]{
+  \rho \vdash e_1 \Downarrow v_1 \quad \cdots \quad \rho \vdash e_n \Downarrow v_n \\
+  \llbracket \text{op} \rrbracket(v_1,\dots,v_n) = v
+}{
+  \rho \vdash \text{op}(e_1,\dots,e_n) \Downarrow v
+}
+\]
+
+Here $\llbracket \text{op} \rrbracket$ is a meta--level interpretation
+of Kleis’s built-in arithmetic, logical, or matrix operations.
+
+\subsection*{Pattern Matching}
+
+We give the semantics of:
+
+\[
+\texttt{match } e \{ p_1 \Rightarrow e_1 \;|\; \dots \;|\; p_n \Rightarrow e_n \}.
+\]
+
+First, $e$ is evaluated to a value $v$; then the patterns are tried in order
+until one matches. Pattern matching produces a \emph{binding environment}
+$\theta$ (from pattern variables to subvalues), which is combined with
+$\rho$ to evaluate the chosen branch.
+
+We write:
+\[
+  \textsf{match}(p, v) = \theta
+\]
+to mean: pattern $p$ matches value $v$ and returns bindings $\theta$, or
+is undefined if $p$ does not match $v$.
+
+\paragraph{Pattern Matching Auxiliary Rules}
+
+We define $\textsf{match}(p,v)$ by cases:
+
+\[
+\inference[\textsc{M-Wild}]{}{
+  \textsf{match}(\_, v) = \emptyset
+}
+\]
+
+\[
+\inference[\textsc{M-Var}]{}{
+  \textsf{match}(x, v) = [x \mapsto v]
+}
+\]
+
+\[
+\inference[\textsc{M-Const}]{}{
+  c = v
+}{
+  \textsf{match}(c, v) = \emptyset
+}
+\]
+
+\[
+\inference[\textsc{M-Constr}]{
+  v = C(v_1,\dots,v_k) \\
+  \textsf{match}(p_1, v_1) = \theta_1 \quad \cdots \quad
+  \textsf{match}(p_k, v_k) = \theta_k \\
+  \text{dom}(\theta_i) \cap \text{dom}(\theta_j) = \emptyset \text{ for } i \neq j
+}{
+  \textsf{match}(C(p_1,\dots,p_k), C(v_1,\dots,v_k)) =
+    \theta_1 \cup \cdots \cup \theta_k
+}
+\]
+
+If no rule applies, $\textsf{match}(p,v)$ is undefined.
+
+\paragraph{Evaluation of \texttt{match}}
+
+We write the branches as a list:
+
+\[
+\mathcal{B} = (p_1 \Rightarrow e_1, \dots, p_n \Rightarrow e_n).
+\]
+
+We define:
+
+\[
+\inference[\textsc{E-Match}]{
+  \rho \vdash e \Downarrow v \\
+  \textsf{firstMatch}(\rho, v, \mathcal{B}) = (\theta, e_k) \\
+  (\rho \cup \theta) \vdash e_k \Downarrow v'
+}{
+  \rho \vdash \texttt{match } e \{ \mathcal{B} \} \Downarrow v'
+}
+\]
+
+where $\textsf{firstMatch}$ is a meta--level function that searches
+the branch list from left to right:
+
+\[
+\textsf{firstMatch}(\rho, v, p_i \Rightarrow e_i, \dots) =
+  \begin{cases}
+    (\theta, e_i) & \text{if } \textsf{match}(p_i, v) = \theta, \\
+    \textsf{firstMatch}(\rho, v, \text{rest}) & \text{otherwise}.
+  \end{cases}
+\]
+
+If no branch matches, the semantics is undefined (a static exhaustiveness
+check in Kleis prevents this in well-typed programs).
+
+\subsection*{Determinism}
+
+For this core fragment the semantics is deterministic:
+
+\[
+  \text{If } \rho \vdash e \Downarrow v_1 \text{ and } \rho \vdash e \Downarrow v_2,
+  \text{ then } v_1 = v_2.
+\]
+
+A proof proceeds by induction on derivations of $\rho \vdash e \Downarrow v$.
+
+\subsection*{Extensions}
+
+Additional Kleis constructs (summations, integrals, derivatives, structure
+operations, etc.) may be given semantics by extending:
+
+\begin{itemize}
+  \item the space of values (e.g.\ functionals, tensors, matrices),
+  \item the primitive interpretation function $\llbracket \text{op} \rrbracket$,
+  \item the environment to include structure instances and built-in operators.
+\end{itemize}
+
+These extensions are conservative over the rules given above.
+
+\end{document}

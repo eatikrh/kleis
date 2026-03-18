@@ -1,0 +1,175 @@
+// ============================================================================
+// DEUTSCH-JOZSA ALGORITHM
+// ============================================================================
+//
+// The first quantum algorithm to demonstrate exponential speedup.
+// 
+// Problem: Given a function f: {0,1}^n → {0,1}, determine if f is:
+//   - Constant: f(x) = 0 for all x, OR f(x) = 1 for all x
+//   - Balanced: f(x) = 0 for exactly half, 1 for the other half
+//
+// Classical: Worst case requires 2^(n-1) + 1 queries
+// Quantum:   Exactly 1 query!
+//
+// Reference: D. Deutsch & R. Jozsa, 1992
+//
+// ============================================================================
+
+import "stdlib/prelude.kleis"
+
+// =============================================================================
+// Part 1: Problem Definition
+// =============================================================================
+
+structure DeutschJozsaProblem {
+    // The function f: {0,1}^n → {0,1}
+    // Represented by an oracle unitary
+    operation oracle : List(List(ℂ))
+    operation is_constant : Bool
+}
+
+// =============================================================================
+// Part 2: Quantum Oracle
+// =============================================================================
+
+structure DJOracle {
+    // Oracle implements: |x⟩|y⟩ → |x⟩|y ⊕ f(x)⟩
+    // Using phase kickback with |−⟩ ancilla
+    operation U_f : List(List(ℂ))
+    
+    // Oracle is unitary
+    axiom unitary : ∀ O : DJOracle .
+        multiply(dagger(U_f(O)), U_f(O)) = identity(4)
+}
+
+// =============================================================================
+// Part 3: The Algorithm Structure
+// =============================================================================
+
+structure DeutschJozsaAlgorithm {
+    // Circuit structure:
+    // 1. Prepare |0⟩^n|1⟩
+    // 2. Apply H⊗(n+1)
+    // 3. Apply U_f (oracle)
+    // 4. Apply H⊗n to input qubits
+    // 5. Measure input qubits
+    
+    operation num_qubits : ℕ
+    operation oracle : DJOracle
+    
+    // Correctness: measure all zeros iff f is constant
+    axiom correctness : ∀ DJ : DeutschJozsaAlgorithm .
+        measure_all_zeros(apply_circuit(DJ)) = is_constant(oracle(DJ))
+    
+    // Query complexity: exactly 1 oracle call
+    axiom single_query : ∀ DJ : DeutschJozsaAlgorithm .
+        oracle_queries(DJ) = 1
+}
+
+// =============================================================================
+// Part 4: Deutsch's Algorithm (n=1, simplest case)
+// =============================================================================
+
+structure DeutschAlgorithm {
+    // Simplest case: f: {0,1} → {0,1}
+    // 
+    // Four possible functions:
+    //   f₀: f(x) = 0         (constant)
+    //   f₁: f(x) = 1         (constant)
+    //   f₂: f(x) = x         (balanced, identity)
+    //   f₃: f(x) = NOT(x)    (balanced, NOT)
+    
+    // Hadamard gate
+    define H = [[0.7071, 0.7071], [0.7071, negate(0.7071)]]
+    
+    // Oracles for each function (2-qubit)
+    define U_f0 = [[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]]  // identity
+    
+    // CNOT for f(x) = x
+    define U_f2 = [[1,0,0,0], [0,1,0,0], [0,0,0,1], [0,0,1,0]]
+}
+
+// =============================================================================
+// Part 5: Correctness Properties
+// =============================================================================
+
+structure DJCorrectness {
+    // If f is constant: amplitude of |0⟩^n is ±1
+    axiom constant_case : ∀ DJ : DeutschJozsaAlgorithm .
+        is_constant(oracle(DJ)) → probability_all_zeros(DJ) = 1
+    
+    // If f is balanced: amplitude of |0⟩^n is 0
+    axiom balanced_case : ∀ DJ : DeutschJozsaAlgorithm .
+        ¬is_constant(oracle(DJ)) → probability_all_zeros(DJ) = 0
+}
+
+// =============================================================================
+// Part 6: Examples
+// =============================================================================
+
+example "Deutsch algorithm (n=1)" {
+    out("Deutsch's Algorithm")
+    out("===================")
+    out("")
+    out("Determine if f: {0,1} → {0,1} is constant or balanced")
+    out("")
+    out("Initial state: |01⟩ (input=0, ancilla=1)")
+    out("")
+    out("Step 1: Apply H ⊗ H")
+    out("  |01⟩ → |+⟩|−⟩")
+    out("")
+    out("Step 2: Apply oracle U_f (phase kickback)")
+    out("  |x⟩|−⟩ → (-1)^f(x)|x⟩|−⟩")
+    out("")
+    out("Step 3: Apply H to input qubit")
+    out("  Constant f: |+⟩ → |0⟩")
+    out("  Balanced f: |−⟩ → |1⟩")
+    out("")
+    out("Measurement determines constant vs balanced!")
+}
+
+example "exponential speedup" {
+    out("Exponential Speedup")
+    out("===================")
+    out("")
+    out("| n | Classical worst | Quantum |")
+    out("|---|-----------------|---------|")
+    out("| 1 |       2         |    1    |")
+    out("| 2 |       3         |    1    |")
+    out("| 3 |       5         |    1    |")
+    out("|10 |      513        |    1    |")
+    out("|20 |    ~500000      |    1    |")
+    out("")
+    out("Quantum uses exactly 1 query regardless of n!")
+}
+
+example "phase kickback" {
+    out("Phase Kickback Trick")
+    out("====================")
+    out("")
+    out("Key insight: ancilla in |−⟩ state")
+    out("")
+    out("Oracle: |x⟩|y⟩ → |x⟩|y ⊕ f(x)⟩")
+    out("")
+    out("With |−⟩ = (|0⟩ − |1⟩)/√2:")
+    out("  |x⟩|−⟩ → (-1)^f(x) |x⟩|−⟩")
+    out("")
+    out("Function value becomes a PHASE!")
+    out("This trick is used in many quantum algorithms.")
+}
+
+example "mathematical analysis" {
+    out("Why Deutsch-Jozsa Works")
+    out("=======================")
+    out("")
+    out("After oracle + Hadamards, amplitude of |0...0⟩:")
+    out("  α₀ = (1/2^n) Σ_x (-1)^f(x)")
+    out("")
+    out("Constant f: all terms same sign")
+    out("  α₀ = ±1, P(0...0) = 1")
+    out("")
+    out("Balanced f: half +1, half -1")
+    out("  α₀ = 0, P(0...0) = 0")
+    out("")
+    out("One measurement perfectly distinguishes!")
+}

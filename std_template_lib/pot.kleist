@@ -1,0 +1,86 @@
+// ============================================================================
+// POT Templates - Projected Ontology Theory Operations
+// ============================================================================
+// Part of Kleis Standard Template Library
+// File: std_template_lib/pot.kleist
+
+@template projection {
+    pattern: "projection(arg, right)"
+    unicode: "Π[{arg}]({right})"
+    latex: "\\Pi[{arg}]({right})"
+    html: "<span class=\"math-op\">Π</span>[{arg}]({right})"
+    typst: "Pi[{arg}]({right})"
+    kleis: "Projection({arg}, {right})"
+    category: "pot"
+}
+
+@template modal_integral {
+    pattern: "modal_integral(arg, right, idx2)"
+    unicode: "∫_{right} {arg} dμ({idx2})"
+    latex: "\\int_{{{right}}} {arg} \\, \\mathrm{d}\\mu({idx2})"
+    html: "∫<sub>{right}</sub> {arg} dμ({idx2})"
+    typst: "integral _({right}) {arg} dif mu({idx2})"
+    kleis: "ModalIntegral({arg}, {right}, {idx2})"
+    category: "pot"
+}
+
+@template projection_kernel {
+    pattern: "projection_kernel(arg, right)"
+    unicode: "K({arg}, {right})"
+    latex: "K({arg}, {right})"
+    html: "<span class=\"math-func\">K</span>({arg}, {right})"
+    typst: "K({arg}, {right})"
+    kleis: "ProjectionKernel({arg}, {right})"
+    category: "pot"
+}
+
+@template causal_bound {
+    pattern: "causal_bound(arg)"
+    unicode: "c({arg})"
+    latex: "c({arg})"
+    html: "<span class=\"math-func\">c</span>({arg})"
+    typst: "c({arg})"
+    kleis: "CausalBound({arg})"
+    category: "pot"
+}
+
+@template projection_residue {
+    pattern: "projection_residue(arg, right)"
+    unicode: "Residue[{arg}, {right}]"
+    latex: "\\mathrm{Residue}[{arg}, {right}]"
+    html: "<span class=\"math-func\">Residue</span>[{arg}, {right}]"
+    typst: "op(\"Residue\")[{arg}, {right}]"
+    kleis: "ProjectionResidue({arg}, {right})"
+    category: "pot"
+}
+
+@template modal_space {
+    pattern: "modal_space(arg)"
+    unicode: "𝓜_{arg}"
+    latex: "\\mathcal{M}_{{{arg}}}"
+    html: "<span class=\"math-script\">𝓜</span><sub>{arg}</sub>"
+    typst: "cal(M)_({arg})"
+    kleis: "ModalSpace({arg})"
+    category: "pot"
+}
+
+@template spacetime {
+    pattern: "spacetime()"
+    unicode: "ℝ⁴"
+    latex: "\\mathbb{R}^4"
+    html: "ℝ<sup>4</sup>"
+    typst: "bb(R)^4"
+    kleis: "Spacetime"
+    category: "pot"
+}
+
+@template hont {
+    pattern: "hont(arg)"
+    unicode: "𝓗_{arg}"
+    latex: "\\mathcal{H}_{{{arg}}}"
+    html: "<span class=\"math-script\">𝓗</span><sub>{arg}</sub>"
+    typst: "cal(H)_({arg})"
+    kleis: "HONT({arg})"
+    category: "pot"
+}
+

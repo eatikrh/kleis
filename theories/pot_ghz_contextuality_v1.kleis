@@ -1,0 +1,41 @@
+import "pot_entanglement_v2.kleis"
+
+data MeasBasis = MB(ℤ)
+
+data MeasContext = MC(ℤ)
+
+structure GHZState {
+    operation psi_GHZ : Flow
+
+    operation basis_X : MeasBasis
+    operation basis_Y : MeasBasis
+    axiom bases_distinct : not(basis_X = basis_Y)
+
+    operation ctx_XXX : MeasContext
+    operation ctx_XYY : MeasContext
+    operation ctx_YXY : MeasContext
+    operation ctx_YYX : MeasContext
+
+    operation outcome_A : MeasContext -> ℤ
+    operation outcome_B : MeasContext -> ℤ
+    operation outcome_C : MeasContext -> ℤ
+
+    axiom outcome_A_pm1 : ∀(ctx : MeasContext). outcome_A(ctx) * outcome_A(ctx) = 1
+    axiom outcome_B_pm1 : ∀(ctx : MeasContext). outcome_B(ctx) * outcome_B(ctx) = 1
+    axiom outcome_C_pm1 : ∀(ctx : MeasContext). outcome_C(ctx) * outcome_C(ctx) = 1
+
+    axiom ghz_parity_XXX : outcome_A(ctx_XXX) * outcome_B(ctx_XXX) * outcome_C(ctx_XXX) = 1
+    axiom ghz_parity_XYY : outcome_A(ctx_XYY) * outcome_B(ctx_XYY) * outcome_C(ctx_XYY) = 0 - 1
+    axiom ghz_parity_YXY : outcome_A(ctx_YXY) * outcome_B(ctx_YXY) * outcome_C(ctx_YXY) = 0 - 1
+    axiom ghz_parity_YYX : outcome_A(ctx_YYX) * outcome_B(ctx_YYX) * outcome_C(ctx_YYX) = 0 - 1
+
+    axiom ghz_non_separable : ∀(G : GreenKernel). is_admissible(G) ⟹ not(is_product_state(psi_GHZ))
+}
+
+// NOTE: GHZNoncontextuality was removed.
+// The noncontextual hidden-variable assumption is INTENTIONALLY contradictory
+// with the GHZ parity axioms (Mermin's algebraic proof: product of four parity
+// equations under context-independence yields 1 = -1).
+// Theorem 5 in the paper proves this self-containedly using existential
+// variables, without loading a globally-inconsistent structure.
+// Keeping it as a loaded structure would poison the entire solver context.

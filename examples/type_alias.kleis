@@ -1,0 +1,21 @@
+// Type alias usage example (v0.7 grammar)
+// Demonstrates functions and axioms referring to aliases.
+
+@library("kleis-examples")
+@version("0.7.0")
+
+// Alias base scalars and a parametric alias
+type Real = ℝ
+type Point = Vector(2, Real)
+
+// A structure that uses the alias in operation signatures and axioms
+structure Endo {
+    operation f : Point → Point
+
+    axiom idempotent:
+        ∀(p : Point). f(f(p)) = f(p)
+}
+
+// Function using the alias in its signature
+define identity(p: Point) : Point = p
+

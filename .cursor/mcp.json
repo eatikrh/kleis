@@ -1,0 +1,44 @@
+{
+  "mcpServers": {
+    "kleis-policy": {
+      "command": "/Users/eatik_1/bin/kleis",
+      "args": [
+        "mcp",
+        "--verbose",
+        "--policy",
+        "/Users/eatik_1/git/cee/kleis/examples/policies/agent_policy.kleis"
+      ]
+    },
+    "kleis-theory": {
+      "command": "/Users/eatik_1/bin/kleis",
+      "args": [
+        "theory-mcp",
+        "--verbose"
+      ]
+    },
+    "kleis-review-rust": {
+      "command": "/Users/eatik_1/bin/kleis",
+      "args": [
+        "review-mcp",
+        "--verbose",
+        "--policy",
+        "/Users/eatik_1/git/cee/kleis/examples/policies/rust_review_policy.kleis"
+      ],
+      "env": {
+        "KLEIS_ROOT": "/Users/eatik_1/git/cee/kleis"
+      }
+    },
+    "kleis-review-python": {
+      "command": "/Users/eatik_1/bin/kleis",
+      "args": [
+        "review-mcp",
+        "--verbose",
+        "--policy",
+        "/Users/eatik_1/git/cee/kleis/examples/policies/python_review_policy.kleis"
+      ],
+      "env": {
+        "KLEIS_ROOT": "/Users/eatik_1/git/cee/kleis"
+      }
+    }
+  }
+}

@@ -1,0 +1,49 @@
+// ============================================================================
+// Lean Theorems + Trace Formula Match → RH
+// ============================================================================
+//
+// This file adds the ONE unproved claim to the proved theorems:
+//   The spectral comb satisfies the Weil explicit formula.
+//   Concretely: Σ σ_k = Σ Re(λ_k)  AND  Σ σ_k² = Σ Re(λ_k)²
+//
+// With this, the Lean theorem spectral_identity_implies_rh fires,
+// and Z3 derives σ = 1/2.
+// ============================================================================
+
+operation sigma : ℤ → ℝ
+operation re_comb : ℤ → ℝ
+operation gamma_star : ℤ → ℝ
+operation gamma_zeta : ℤ → ℝ
+operation sum_sigma : ℤ → ℝ
+operation sum_sigma2 : ℤ → ℝ
+operation sum_re : ℤ → ℝ
+operation sum_re2 : ℤ → ℝ
+
+structure LeanPlusTraceFormula {
+    element k : ℤ
+    element N : ℤ
+
+    axiom N_pos : N > 0
+
+    // ── PROVED (number theory) ──
+    axiom critical_strip : sigma(k) > 0 ∧ sigma(k) < 1
+    axiom functional_eq : sum_sigma(N) = N / 2
+
+    // ── PROVED (Lean 4) ──
+    axiom structure_theorem : re_comb(k) = 1 / 2
+    axiom convergence_im : gamma_star(k) = gamma_zeta(k)
+    axiom comb_moment1 : sum_re(N) = N / 2
+    axiom comb_moment2 : sum_re2(N) = N / 4
+    axiom lean_theorem :
+        (sum_sigma(N) = sum_re(N) ∧ sum_sigma2(N) = sum_re2(N)) → sigma(k) = 1 / 2
+
+    // ══════════════════════════════════════════════
+    // UNPROVED: trace formula match (comb = Weil)
+    // ══════════════════════════════════════════════
+    axiom trace_match_1 : sum_sigma(N) = sum_re(N)
+    axiom trace_match_2 : sum_sigma2(N) = sum_re2(N)
+}
+
+example "Q2: Lean + trace formula → RH?" {
+    assert(sigma(k) = 1 / 2)
+}

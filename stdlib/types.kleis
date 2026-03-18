@@ -1,0 +1,274 @@
+// Kleis Type System - Self-Hosting Type Definitions
+// 
+// **ADR-021: Algebraic Data Types**
+// This file defines the Kleis type system IN KLEIS ITSELF!
+//
+// This is loaded FIRST, before any other stdlib files, because
+// structures and operations reference these types.
+//
+// This is META-CIRCULARITY: The type system that types Kleis
+// is defined in Kleis!
+
+// ============================================
+// Core Type System
+// ============================================
+
+// The main Type data type
+// This replaces the hardcoded Type enum in Rust!
+//
+// Note: This is a data type that defines what types exist.
+// It's used by the type checker itself.
+//
+// Matrix and Vector as FIXED-arity data constructors using List!
+// 
+// NEW FORMAT (with List literal):
+//   - Matrix(2, 2, [a, b, c, d]): 3 args (fixed!)
+//   - Vector(3, [x, y, z]): 2 args (fixed!)
+//
+// This makes them REGULAR data constructors with fixed arity.
+// The variable-arity aspect is moved into the List type.
+//
+// Matrix variants for different delimiters:
+//   - Matrix: square brackets [a b; c d] (bmatrix)
+//   - PMatrix: parentheses (a b; c d) (pmatrix)
+//   - VMatrix: vertical bars |a b; c d| (vmatrix, for determinants)
+//   - BMatrix: braces {a b; c d} (Bmatrix)
+//
+// OLD FORMAT (variable arity - being phased out):
+//   - Matrix(2, 2, a, b, c, d): 6 args (variable)
+//
+// Both formats are supported during transition.
+data Type =
+  Scalar
+  | Vector(n: Nat, T)
+  | Matrix(m: Nat, n: Nat, T)
+  | PMatrix(m: Nat, n: Nat, T)
+  | VMatrix(m: Nat, n: Nat, T)
+  | BMatrix(m: Nat, n: Nat, T)
+  | Complex
+  | Set(T: Type)
+  | List(T: Type)
+  | Tensor(dims: List(Nat))
+
+// ============================================
+// Tensor Index Types (xAct/xTensor-style)
+// ============================================
+//
+// xAct-style tensor notation:
+//   T(μ, -ν) where positive = contravariant, negative = covariant
+//
+// These data types track the index structure of tensors.
+
+// Index variance: up (contravariant) or down (covariant)
+data IndexVariance = Contravariant | Covariant
+
+// A single tensor index with its name and variance
+// Example: TIdx("μ", Contravariant) for upper index μ
+data TensorIdx = TIdx(name: String, variance: IndexVariance)
+
+// Tensor rank as (contravariant count, covariant count)
+// Example: Rank(1, 2) for a (1,2)-tensor like Γ^μ_νρ
+data TensorRank = Rank(upper: Nat, lower: Nat)
+
+// xAct-style tensor type with explicit index structure
+// Example: T^μ_ν has indices [TIdx("μ", Contravariant), TIdx("ν", Covariant)]
+data TensorType = TensorT(name: String, indices: List(TensorIdx))
+
+// ============================================
+// Bootstrap Types
+// ============================================
+
+// Boolean type
+data Bool = True | False
+
+// Optional type (Maybe in Haskell)
+data Option(T) =
+  None
+  | Some(value: T)
+
+// Result type (Either in Haskell)
+data Result(T, E) =
+  Ok(value: T)
+  | Err(error: E)
+
+// List type (recursive!)
+data List(T) =
+  Nil
+  | Cons(head: T, tail: List(T))
+
+// ============================================
+// Domain-Specific Types
+// ============================================
+
+// Ordering relation results
+data Ordering = LT | EQ | GT
+
+// Unit type (for functions with no meaningful return value)
+data Unit = Unit
+
+// ============================================
+// Future Extensions (Commented Out)
+// ============================================
+
+// Tuple types (not yet supported)
+// data Pair(A, B) = Pair(first: A, second: B)
+// data Triple(A, B, C) = Triple(A, B, C)
+
+// Tree structures (requires recursive types)
+// data Tree(T) =
+//   | Leaf(value: T)
+//   | Node(left: Tree(T), right: Tree(T))
+
+// Physics types (domain-specific)
+// data Particle = Electron | Proton | Neutron | Photon
+// data Spin = SpinUp | SpinDown
+
+// Currency types (business domain)
+// data Currency = USD | EUR | GBP | JPY | CHF | CAD
+
+// ============================================
+// Pattern Matching Functions (NEW v0.5)
+// ============================================
+//
+// NOTE: These function definitions use pattern matching syntax.
+// The kleis_parser doesn't support 'define' statements yet (ADR-015 POC),
+// but these examples show what's possible with pattern matching!
+//
+// Once the full parser is implemented, these will be uncommented and loaded.
+
+// Boolean operations using pattern matching
+define not(b) = match b {
+  True => False
+  | False => True
+}
+
+define and(b1, b2) = match b1 {
+  False => False
+  | True => b2
+}
+
+define or(b1, b2) = match b1 {
+  True => True
+  | False => b2
+}
+
+// Option operations
+define isSome(opt) = match opt {
+  None => False
+  | Some(_) => True
+}
+
+define isNone(opt) = match opt {
+  None => True
+  | Some(_) => False
+}
+
+define getOrDefault(opt, default) = match opt {
+  None => default
+  | Some(x) => x
+}
+
+// Map function for Option
+// define mapOption : (T → U) × Option(T) → Option(U)
+// define mapOption(f, opt) = match opt {
+//   None => None
+//   Some(x) => Some(f(x))
+// }
+
+// Result operations
+// define isOk : Result(T, E) → Bool
+// define isOk(result) = match result {
+//   Ok(_) => True
+//   Err(_) => False
+// }
+//
+// define isErr : Result(T, E) → Bool
+// define isErr(result) = match result {
+//   Ok(_) => False
+//   Err(_) => True
+// }
+//
+// define unwrapOr : Result(T, E) × T → T
+// define unwrapOr(result, default) = match result {
+//   Ok(x) => x
+//   Err(_) => default
+// }
+
+// List operations
+define isEmpty(list) = match list {
+  Nil => True
+  | Cons(_, _) => False
+}
+
+define head(list) = match list {
+  Nil => None
+  | Cons(h, _) => Some(h)
+}
+
+define tail(list) = match list {
+  Nil => None
+  | Cons(_, t) => Some(t)
+}
+
+// Ordering operations
+// define compare : Ordering → Ordering → Bool
+// define compare(ord1, ord2) = match ord1 {
+//   LT => match ord2 { LT => True | _ => False }
+//   EQ => match ord2 { EQ => True | _ => False }
+//   GT => match ord2 { GT => True | _ => False }
+// }
+
+// ============================================
+// Self-Hosting: Type System in Kleis!
+// ============================================
+//
+// This is meta-circular: using Kleis to define Kleis's type system!
+// These functions would be used by the type checker itself.
+
+// Check if a type is a scalar type
+// define isScalarType : Type → Bool
+// define isScalarType(t) = match t {
+//   Scalar => True
+//   Complex => True
+//   _ => False
+// }
+//
+// define isVectorType : Type → Bool
+// define isVectorType(t) = match t {
+//   Vector(_) => True
+//   _ => False
+// }
+//
+// define vectorDimension : Type → Option(Nat)
+// define vectorDimension(t) = match t {
+//   Vector(n) => Some(n)
+//   _ => None
+// }
+
+// ============================================
+// Implementation Notes
+// ============================================
+
+// **Why This File Exists:**
+// Before ADR-021, types were hardcoded in src/type_inference.rs.
+// Now they're defined here in Kleis, making the system self-hosting!
+//
+// **Loading Order:**
+// 1. This file (types.kleis) - Defines what types exist
+// 2. minimal_prelude.kleis - Defines structures (Arithmetic, Numeric, etc.)
+// 3. matrices.kleis - Defines matrix-specific operations
+//
+// **Self-Hosting Levels:**
+// - Level 1: Parser written in Rust, reads Kleis
+// - Level 2: Types defined in Kleis (THIS FILE!) ← We are here!
+// - Level 3: Type checker written in Kleis
+//
+// **User Extensibility:**
+// Users can now add their own data types without recompiling:
+//
+// ```kleis
+// data MyType = Constructor1 | Constructor2(field: ℝ)
+// ```
+//
+// This is the foundation of a truly extensible type system!
+

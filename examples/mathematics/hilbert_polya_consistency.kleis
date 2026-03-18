@@ -1,0 +1,211 @@
+// ============================================================================
+// Hilbert-Pólya Consistency Check
+// ============================================================================
+//
+// Can a self-adjoint operator logically map to the Selberg class?
+//
+// The Hilbert-Pólya conjecture: the non-trivial zeros of the Riemann
+// zeta function are eigenvalues of a self-adjoint operator T_hp.
+// If such an operator exists, RH follows automatically:
+//     self-adjoint ⟹ real eigenvalues ⟹ zeros on Re(s) = 1/2
+//
+// KEY INSIGHT (caught by Z3 on first attempt):
+//     T_hp is UNBOUNDED. The zeta zeros' imaginary parts grow without
+//     bound (14.135, 21.022, 25.011, ...). A compact operator would
+//     require eigenvalues → 0, contradicting this. Z3 correctly
+//     detected this as an axiom inconsistency when we asserted
+//     is_compact(T_hp). The Hilbert-Pólya operator lives in the
+//     unbounded self-adjoint regime.
+//
+// T_hp is modeled as an UNBOUNDED densely defined self-adjoint
+// operator (not bounded, not compact — Z3 caught this on first attempt).
+//
+// Self-contained: imports only prelude.kleis to avoid Z3 memory
+// explosion from bulk-loading spectral + number theory quantifiers.
+// All operations declared locally. Only ground instances — no ∀.
+// ============================================================================
+
+// No imports — fully self-contained to avoid Z3 memory explosion
+// from prelude quantifiers. All operations declared locally.
+
+// ============================================
+// LOCAL TYPE DECLARATIONS
+// ============================================
+
+data HVector = HV(ℤ)
+data Operator = Op(ℤ)
+data DirichletSeries = DS(ℤ)
+
+// ============================================
+// LOCAL OPERATION DECLARATIONS
+// ============================================
+// From spectral theory (unbounded self-adjoint operators)
+operation is_self_adjoint : Operator → Bool
+operation is_densely_defined : Operator → Bool
+operation adjoint : Operator → Operator
+operation op_apply : Operator × HVector → HVector
+operation ip : HVector × HVector → ℂ
+operation h_smul : ℂ × HVector → HVector
+
+// From number theory (zeta zeros, Selberg class)
+operation is_nontrivial_zero : ℂ → Bool
+operation has_euler_product : DirichletSeries → Bool
+operation has_continuation : DirichletSeries → Bool
+operation has_functional_eq : DirichletSeries → Bool
+operation L_degree : DirichletSeries → ℕ
+
+// ============================================
+// GROUND AXIOMS (no universal quantifiers)
+// ============================================
+
+structure SelfAdjointGround {
+    // Unbounded self-adjoint operator (ground): T* = T, densely defined
+    element T_hp : Operator
+    axiom sa_def : adjoint(T_hp) = T_hp
+    axiom sa_flag : is_self_adjoint(T_hp)
+    axiom sa_dense : is_densely_defined(T_hp)
+}
+
+// ============================================
+// THE HILBERT-PÓLYA OPERATOR
+// ============================================
+
+structure HilbertPolyaOperator {
+    // Eigenvalue and eigenvector operations (unbounded regime)
+    operation hp_eigenvalue : ℕ → ℝ
+    operation hp_eigenvector : ℕ → HVector
+
+    // Ground eigenpairs: T_hp · v_n = λ_n · v_n
+    axiom eigenpair_1:
+        op_apply(T_hp, hp_eigenvector(1))
+        = h_smul(complex(hp_eigenvalue(1), 0), hp_eigenvector(1))
+
+    axiom eigenpair_2:
+        op_apply(T_hp, hp_eigenvector(2))
+        = h_smul(complex(hp_eigenvalue(2), 0), hp_eigenvector(2))
+
+    axiom eigenpair_3:
+        op_apply(T_hp, hp_eigenvector(3))
+        = h_smul(complex(hp_eigenvalue(3), 0), hp_eigenvector(3))
+
+    // Ground eigenvalues = imaginary parts of known zeta zeros
+    axiom hp_eigen_1 : hp_eigenvalue(1) = 14.135
+    axiom hp_eigen_2 : hp_eigenvalue(2) = 21.022
+    axiom hp_eigen_3 : hp_eigenvalue(3) = 25.011
+    axiom hp_eigen_4 : hp_eigenvalue(4) = 30.425
+    axiom hp_eigen_5 : hp_eigenvalue(5) = 32.935
+
+    // Eigenvalues INCREASE (unbounded operator, NOT compact)
+    axiom eigenvalues_increase:
+        hp_eigenvalue(1) < hp_eigenvalue(2) ∧
+        hp_eigenvalue(2) < hp_eigenvalue(3) ∧
+        hp_eigenvalue(3) < hp_eigenvalue(4) ∧
+        hp_eigenvalue(4) < hp_eigenvalue(5)
+
+    // Each eigenvalue maps to a known non-trivial zero
+    axiom bridge_1 : is_nontrivial_zero(complex(1 / 2, hp_eigenvalue(1)))
+    axiom bridge_2 : is_nontrivial_zero(complex(1 / 2, hp_eigenvalue(2)))
+    axiom bridge_3 : is_nontrivial_zero(complex(1 / 2, hp_eigenvalue(3)))
+    axiom bridge_4 : is_nontrivial_zero(complex(1 / 2, hp_eigenvalue(4)))
+    axiom bridge_5 : is_nontrivial_zero(complex(1 / 2, hp_eigenvalue(5)))
+
+    // Orthogonality of eigenvectors (self-adjoint, distinct eigenvalues)
+    axiom hp_orthogonal_12 : ip(hp_eigenvector(1), hp_eigenvector(2)) = complex(0, 0)
+    axiom hp_orthogonal_13 : ip(hp_eigenvector(1), hp_eigenvector(3)) = complex(0, 0)
+    axiom hp_orthogonal_23 : ip(hp_eigenvector(2), hp_eigenvector(3)) = complex(0, 0)
+}
+
+// ============================================
+// SELBERG CLASS (ground facts about ζ)
+// ============================================
+
+structure SelbergClassGround {
+    element zeta_series : DirichletSeries
+
+    axiom zeta_euler : has_euler_product(zeta_series)
+    axiom zeta_continuation : has_continuation(zeta_series)
+    axiom zeta_functional : has_functional_eq(zeta_series)
+    axiom zeta_degree : L_degree(zeta_series) = 1
+
+    // The known zeros ARE non-trivial zeros of ζ
+    axiom zero_1 : is_nontrivial_zero(complex(1 / 2, 14.135))
+    axiom zero_2 : is_nontrivial_zero(complex(1 / 2, 21.022))
+    axiom zero_3 : is_nontrivial_zero(complex(1 / 2, 25.011))
+    axiom zero_4 : is_nontrivial_zero(complex(1 / 2, 30.425))
+    axiom zero_5 : is_nontrivial_zero(complex(1 / 2, 32.935))
+}
+
+// ============================================
+// CONSISTENCY TESTS
+// ============================================
+
+example "T_hp is self-adjoint" {
+    assert(is_self_adjoint(T_hp))
+}
+
+example "self-adjoint: adjoint equals self" {
+    assert(adjoint(T_hp) = T_hp)
+}
+
+example "T_hp is densely defined" {
+    assert(is_densely_defined(T_hp))
+}
+
+example "first eigenvalue is 14.135" {
+    assert(hp_eigenvalue(1) = 14.135)
+}
+
+example "eigenvalues are strictly increasing" {
+    assert(hp_eigenvalue(1) < hp_eigenvalue(2))
+}
+
+// ============================================
+// THE BRIDGE: eigenvalues ↔ zeta zeros
+// ============================================
+
+example "first eigenvalue maps to first zeta zero" {
+    assert(is_nontrivial_zero(complex(1 / 2, hp_eigenvalue(1))))
+}
+
+example "second eigenvalue maps to second zeta zero" {
+    assert(is_nontrivial_zero(complex(1 / 2, hp_eigenvalue(2))))
+}
+
+example "third eigenvalue maps to third zeta zero" {
+    assert(is_nontrivial_zero(complex(1 / 2, hp_eigenvalue(3))))
+}
+
+// ============================================
+// EIGENVECTOR ORTHOGONALITY
+// ============================================
+
+example "eigenvectors 1 and 2 are orthogonal" {
+    assert(ip(hp_eigenvector(1), hp_eigenvector(2)) = complex(0, 0))
+}
+
+// ============================================
+// THE KEY DEDUCTION: T_hp · v₁ = 14.135 · v₁
+// ============================================
+
+example "eigenpair at first zeta zero" {
+    assert(
+        op_apply(T_hp, hp_eigenvector(1))
+        = h_smul(complex(14.135, 0), hp_eigenvector(1))
+    )
+}
+
+// ============================================
+// SELBERG CLASS CONNECTION
+// ============================================
+
+example "zeta is a Selberg class L-function" {
+    assert(
+        has_euler_product(zeta_series) ∧
+        has_continuation(zeta_series) ∧
+        has_functional_eq(zeta_series)
+    )
+}
+
+example "zeta has degree 1" {
+    assert(L_degree(zeta_series) = 1)
+}

@@ -1,0 +1,309 @@
+// =============================================================================
+// General Relativity — Consistency Analysis v2: Schwarzschild & Energy Conditions
+// =============================================================================
+//
+// Extends v1 with:
+//   (A) Schwarzschild vacuum solution — spherically symmetric, equatorial plane
+//   (B) Energy conditions — weak, strong, dominant
+//   (C) Cross-consistency — dust, radiation, dark energy matter types
+//
+// Z3 METHODOLOGY:
+//   Same as v1: each test checks joint satisfiability (SAT) of axioms + claim.
+//   SAT = consistent (no contradiction). NOT a proof/derivation.
+//
+// DECLARED ASSUMPTIONS:
+//   (A1) 4-dimensional spacetime with indices i0..i3.
+//   (A2) Covariant divergence is uninterpreted (same as v1).
+//   (A3) Ricci scalar uses diagonal metric terms only (exact for diagonal
+//        metrics like Schwarzschild).
+//   (A4) Inverse metric verified at single component only (same as v1).
+//   (A5) Schwarzschild metric is evaluated at the EQUATORIAL PLANE (θ = π/2),
+//        so g_φφ = r² rather than the general r² sin²θ. The full
+//        Schwarzschild metric has g_φφ = r² sin²θ, but at θ = π/2,
+//        sin²(π/2) = 1, giving g_φφ = r².
+//   (A6) We are outside the event horizon: r > 2M, so f(r) = 1 - 2M/r > 0.
+//   (A7) Energy conditions are tested as ALGEBRAIC constraints on ρ and p,
+//        disconnected from any specific spacetime geometry. They check whether
+//        the constraint formulas are satisfiable for given equations of state,
+//        NOT that specific spacetime solutions with those matter types exist.
+//   (A8) Division is avoided on symbolic expressions. Named inverse constants
+//        (one_third, f_inv) with defining axioms (3·one_third = 1, etc.)
+//        are used instead.
+//
+// Self-contained: no imports.
+// =============================================================================
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+data Index = Idx(ℤ)
+data Tensor2 = T2(ℤ)
+data Tensor4 = T4(ℤ)
+data Curve = Cv(ℤ)
+
+// =============================================================================
+// OPERATIONS
+// =============================================================================
+
+operation g : Index × Index → ℝ
+operation g_inv : Index × Index → ℝ
+operation gamma_conn : Index × Index × Index → ℝ
+operation R4 : Index × Index × Index × Index → ℝ
+operation Ric : Index × Index → ℝ
+operation G_ein : Index × Index → ℝ
+operation T_em : Index × Index → ℝ
+operation div_t2 : Tensor2 × Index → ℝ
+
+operation rho_energy : ℝ → ℝ
+operation pressure : ℝ → ℝ
+operation schwarz_f : ℝ → ℝ
+
+// =============================================================================
+// SPACETIME INDICES (Assumption A1)
+// =============================================================================
+
+structure Spacetime {
+    element i0 : Index
+    element i1 : Index
+    element i2 : Index
+    element i3 : Index
+
+    axiom distinct_01 : i0 ≠ i1
+    axiom distinct_02 : i0 ≠ i2
+    axiom distinct_03 : i0 ≠ i3
+    axiom distinct_12 : i1 ≠ i2
+    axiom distinct_13 : i1 ≠ i3
+    axiom distinct_23 : i2 ≠ i3
+}
+
+// =============================================================================
+// CONSTANTS (Assumption A8: inverse constants to avoid symbolic division)
+// =============================================================================
+
+structure Constants {
+    element cosmo_lambda : ℝ
+    element G_newton : ℝ
+    element pi_val : ℝ
+    element det_g : ℝ
+    element R_scalar : ℝ
+    element schwarzschild_mass : ℝ
+    element r_coord : ℝ
+    element t_now : ℝ
+
+    element one_third : ℝ
+    element eight_pi_G_over_3 : ℝ
+    element four_pi_G_over_3 : ℝ
+    element two_M : ℝ
+    element two_M_over_r : ℝ
+    element f_inv : ℝ
+
+    element einstein_t : Tensor2
+    element stress_energy_t : Tensor2
+
+    axiom G_positive : G_newton > 0
+    axiom pi_positive : pi_val > 0
+    axiom mass_positive : schwarzschild_mass > 0
+
+    axiom one_third_def : 3 * one_third = 1
+    axiom eight_pi_G_3_def : eight_pi_G_over_3 = 8 * pi_val * G_newton * one_third
+    axiom four_pi_G_3_def : four_pi_G_over_3 = 4 * pi_val * G_newton * one_third
+    axiom two_M_def : two_M = 2 * schwarzschild_mass
+    axiom r_positive : r_coord > 0
+    axiom outside_horizon : r_coord > two_M
+    axiom two_M_over_r_def : two_M_over_r * r_coord = two_M
+    axiom f_def : schwarz_f(r_coord) = 1 - two_M_over_r
+    axiom f_positive : schwarz_f(r_coord) > 0
+    axiom f_inv_def : f_inv * schwarz_f(r_coord) = 1
+}
+
+// =============================================================================
+// CORE GR AXIOMS (same as v1)
+// =============================================================================
+
+structure MetricAxioms {
+    axiom metric_symmetry : ∀(mu nu : Index). g(mu, nu) = g(nu, mu)
+    axiom metric_nondegenerate : det_g ≠ 0
+    axiom metric_lorentzian : det_g < 0
+    axiom inverse_symmetry : ∀(mu nu : Index). g_inv(mu, nu) = g_inv(nu, mu)
+}
+
+structure LeviCivitaAxioms {
+    axiom torsion_free : ∀(lam mu nu : Index).
+        gamma_conn(lam, mu, nu) = gamma_conn(lam, nu, mu)
+}
+
+structure RiemannSymmetries {
+    axiom riemann_antisym : ∀(rho sigma mu nu : Index).
+        R4(rho, sigma, mu, nu) = 0 - R4(rho, sigma, nu, mu)
+
+    axiom first_bianchi : ∀(rho sigma mu nu : Index).
+        R4(rho, sigma, mu, nu) + R4(rho, mu, nu, sigma) + R4(rho, nu, sigma, mu) = 0
+
+    axiom ricci_from_riemann : ∀(mu nu : Index).
+        Ric(mu, nu) = R4(i0, mu, i0, nu) + R4(i1, mu, i1, nu) +
+                       R4(i2, mu, i2, nu) + R4(i3, mu, i3, nu)
+
+    axiom ricci_symmetry : ∀(mu nu : Index). Ric(mu, nu) = Ric(nu, mu)
+
+    // Assumption A3: diagonal-only (exact for Schwarzschild)
+    axiom ricci_scalar_diagonal :
+        R_scalar = g_inv(i0, i0) * Ric(i0, i0) + g_inv(i1, i1) * Ric(i1, i1) +
+                   g_inv(i2, i2) * Ric(i2, i2) + g_inv(i3, i3) * Ric(i3, i3)
+}
+
+structure EinsteinTensor {
+    axiom einstein_def : ∀(mu nu : Index).
+        G_ein(mu, nu) = Ric(mu, nu) - (1/2) * R_scalar * g(mu, nu)
+
+    axiom einstein_symmetry : ∀(mu nu : Index). G_ein(mu, nu) = G_ein(nu, mu)
+
+    axiom bianchi_contracted : ∀(nu : Index). div_t2(einstein_t, nu) = 0
+}
+
+structure FieldEquations {
+    axiom einstein_eq : ∀(mu nu : Index).
+        G_ein(mu, nu) + cosmo_lambda * g(mu, nu) = 8 * pi_val * G_newton * T_em(mu, nu)
+
+    axiom stress_energy_symmetry : ∀(mu nu : Index). T_em(mu, nu) = T_em(nu, mu)
+}
+
+// =============================================================================
+// (A) SCHWARZSCHILD SOLUTION (Assumptions A5, A6)
+//
+// Metric at equatorial plane (θ = π/2):
+//   ds² = -f(r) dt² + f(r)⁻¹ dr² + r² dθ² + r² dφ²
+// where f(r) = 1 - 2M/r, with r > 2M.
+//
+// The general Schwarzschild metric has g_φφ = r² sin²θ.
+// At θ = π/2: sin²(π/2) = 1, so g_φφ = r².
+// =============================================================================
+
+structure Schwarzschild {
+    axiom g_tt : g(i0, i0) = 0 - schwarz_f(r_coord)
+    axiom g_rr : g(i1, i1) = f_inv
+    axiom g_thth : g(i2, i2) = r_coord * r_coord
+    // Assumption A5: g_φφ = r² (equatorial plane, sin²θ = 1)
+    axiom g_phph : g(i3, i3) = r_coord * r_coord
+
+    axiom g_off_01 : g(i0, i1) = 0
+    axiom g_off_02 : g(i0, i2) = 0
+    axiom g_off_03 : g(i0, i3) = 0
+    axiom g_off_12 : g(i1, i2) = 0
+    axiom g_off_13 : g(i1, i3) = 0
+    axiom g_off_23 : g(i2, i3) = 0
+
+    axiom vacuum : ∀(mu nu : Index). T_em(mu, nu) = 0
+    axiom ricci_flat : ∀(mu nu : Index). Ric(mu, nu) = 0
+    axiom scalar_flat : R_scalar = 0
+    axiom lambda_zero : cosmo_lambda = 0
+}
+
+// =============================================================================
+// (B) ENERGY CONDITIONS (Assumption A7: algebraic, not geometric)
+// =============================================================================
+
+structure WeakEnergyCondition {
+    axiom wec_density : ∀(t : ℝ). rho_energy(t) >= 0
+    axiom wec_rho_plus_p : ∀(t : ℝ). rho_energy(t) + pressure(t) >= 0
+}
+
+structure StrongEnergyCondition {
+    axiom sec_rho_plus_p : ∀(t : ℝ). rho_energy(t) + pressure(t) >= 0
+    axiom sec_rho_plus_3p : ∀(t : ℝ). rho_energy(t) + 3 * pressure(t) >= 0
+}
+
+structure DominantEnergyCondition {
+    axiom dec_density : ∀(t : ℝ). rho_energy(t) >= 0
+    axiom dec_bound_pos : ∀(t : ℝ). pressure(t) <= rho_energy(t)
+    axiom dec_bound_neg : ∀(t : ℝ). 0 - pressure(t) <= rho_energy(t)
+}
+
+// =============================================================================
+// SCHWARZSCHILD CONSISTENCY TESTS
+// =============================================================================
+
+example "1. Schwarzschild: diagonal metric is satisfiable" {
+    assert(g(i0, i1) = 0 ∧ g(i0, i2) = 0 ∧ g(i1, i2) = 0)
+}
+
+example "2. Schwarzschild: f(r) > 0 outside horizon (satisfiable)" {
+    assert(schwarz_f(r_coord) > 0)
+}
+
+example "3. Schwarzschild: vacuum implies Ricci flat (satisfiable)" {
+    assert(Ric(i0, i0) = 0 ∧ Ric(i1, i1) = 0)
+}
+
+example "4. Schwarzschild: vacuum field equations (satisfiable)" {
+    assert(
+        G_ein(i0, i0) = 8 * pi_val * G_newton * T_em(i0, i0) ∧
+        T_em(i0, i0) = 0
+    )
+}
+
+example "5. Schwarzschild: (-,+,+,+) signature at equatorial plane (satisfiable)" {
+    assert(g(i0, i0) < 0 ∧ g(i1, i1) > 0 ∧ g(i2, i2) > 0 ∧ g(i3, i3) > 0)
+}
+
+example "6. Schwarzschild: Einstein tensor vanishes in vacuum (satisfiable)" {
+    assert(
+        Ric(i0, i0) = 0 ∧ R_scalar = 0 →
+        G_ein(i0, i0) = Ric(i0, i0) - (1/2) * R_scalar * g(i0, i0)
+    )
+}
+
+// =============================================================================
+// ENERGY CONDITION CONSISTENCY TESTS (Assumption A7)
+// =============================================================================
+
+example "7. WEC: ρ ≥ 0 and ρ + p ≥ 0 (satisfiable)" {
+    assert(rho_energy(t_now) >= 0 ∧ rho_energy(t_now) + pressure(t_now) >= 0)
+}
+
+example "8. SEC: ρ + 3p ≥ 0 (satisfiable)" {
+    assert(rho_energy(t_now) + 3 * pressure(t_now) >= 0)
+}
+
+example "9. DEC: |p| ≤ ρ (satisfiable)" {
+    assert(
+        pressure(t_now) <= rho_energy(t_now) ∧
+        0 - pressure(t_now) <= rho_energy(t_now)
+    )
+}
+
+// =============================================================================
+// (C) CROSS-CONSISTENCY: MATTER TYPES (Assumption A7)
+// These are PURE ARITHMETIC satisfiability checks:
+// Z3 finds witness values (ρ, p) satisfying the given constraints.
+// This shows the energy condition formulas are compatible with specific
+// equations of state. It does NOT verify geometric solutions.
+// =============================================================================
+
+example "10. Dust (p=0): satisfies WEC, SEC, DEC (arithmetic check)" {
+    assert(∃(rho p : ℝ).
+        rho > 0 ∧
+        p = 0 ∧
+        rho + p >= 0 ∧
+        rho + 3 * p >= 0 ∧
+        p <= rho
+    )
+}
+
+example "11. Radiation (3p=ρ): satisfies WEC, SEC (arithmetic check)" {
+    assert(∃(rho p : ℝ).
+        rho > 0 ∧
+        3 * p = rho ∧
+        rho + p >= 0 ∧
+        rho + 3 * p >= 0
+    )
+}
+
+example "12. Dark energy (p=-ρ): violates SEC (arithmetic check)" {
+    assert(∃(rho p : ℝ).
+        rho > 0 ∧
+        p = 0 - rho ∧
+        rho + p = 0 ∧
+        rho + 3 * p < 0
+    )
+}

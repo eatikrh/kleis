@@ -1,0 +1,257 @@
+// =============================================================================
+// General Relativity — Cartan Geometry Derivation v1
+// =============================================================================
+//
+// This file DERIVES General Relativity's curvature tensors from the metric
+// using the Cartan formalism implemented in stdlib/cartan_compute.kleis.
+//
+// DECLARED ASSUMPTIONS (complete list):
+//
+//   (A1) Spacetime dimension = 4.
+//        Justification: Standard GR; hardcoded in stdlib/cartan_compute.kleis
+//        as dim = 4 with coordinates (t, r, θ, φ).
+//
+//   (A2) Lorentzian signature η_ab = diag(-1, +1, +1, +1).
+//        Justification: Required for causal structure; used in ricci_scalar()
+//        which contracts with η^ab = diag(-1, +1, +1, +1).
+//
+//   (A3) Torsion-free connection.
+//        Justification: Standard GR postulate. The connection is determined
+//        by solving de^a + ω^a_b ∧ e^b = 0 in solve_connection().
+//        This selects the unique Levi-Civita connection.
+//
+//   (A4) Metric-compatible connection (ω_ab = -ω_ba).
+//        Justification: Standard GR postulate. Together with (A3), this
+//        uniquely determines the connection from the metric. Enforced in
+//        the connection solver via the antisymmetric combination formula
+//        ω^a_b = ½(C^a_bc - C^b_ac + C^c_ab) e^c.
+//
+// COMPUTATIONAL SCOPE:
+//   The simplify() function in stdlib/symbolic_diff.kleis applies algebraic
+//   identities (0*x=0, 1*x=x, x-x=0, constant folding, etc.). When it
+//   produces ENumber(0), the result IS algebraically zero — this is a
+//   computation, not an assumption. The scope limitation is that more complex
+//   expressions may not reduce to their simplest form (false negatives),
+//   but for the Minkowski and Schwarzschild metrics tested here, the
+//   simplifier is sufficient.
+//
+// DERIVATION PIPELINE:
+//   Metric → Tetrad → Connection → Curvature → Ricci → Einstein
+//
+//   Every result below is produced by the Kleis evaluator applying
+//   symbolic differentiation (diff), exterior derivatives (d0, d1),
+//   wedge products, and algebraic simplification to Expression AST values.
+//   No Z3 is used. No axiom is assumed that could instead be derived.
+//
+// WHAT IS DERIVED (not axiomatized):
+//   - The Levi-Civita connection (from the tetrad via torsion-free condition)
+//   - The Riemann curvature tensor (from the connection via R = dω + ω∧ω)
+//   - The Ricci tensor (by contraction of Riemann)
+//   - The Ricci scalar (by contraction of Ricci with inverse metric)
+//   - That flat spacetime has zero curvature
+//   - That Schwarzschild satisfies the vacuum Einstein equations (Ric = 0)
+//
+// WHAT IS USED FROM THE STDLIB:
+//   - stdlib/symbolic_diff.kleis: Expression AST, diff(), simplify(), subst()
+//   - stdlib/cartan_compute.kleis: d0, d1, wedge, solve_connection,
+//     compute_curvature, compute_riemann, ricci_component, ricci_scalar
+//
+// REFERENCES:
+//   - Cartan, É. "Sur les variétés à connexion affine" (1923)
+//   - Misner, Thorne, Wheeler "Gravitation" (1973) Ch. 14
+//   - Carroll "Spacetime and Geometry" (2004) Ch. 3, 5
+//   - Nakahara "Geometry, Topology and Physics" Ch. 7
+//
+// =============================================================================
+
+import "stdlib/cartan_compute.kleis"
+
+// =============================================================================
+// PART A: SYMBOLIC DIFFERENTIATION VERIFICATION
+// =============================================================================
+// Before computing curvature, verify that the differentiation engine works.
+
+example "1. d/dr(r²) = 2r (symbolic differentiation)" {
+    let r_squared = e_pow(var("r"), num(2))
+    let dr_squared = diff(r_squared, "r")
+    let simplified = simplify(dr_squared)
+    out("d/dr(r²) = ")
+    out(simplified)
+}
+
+example "2. d/dr(1/r) (quotient rule)" {
+    let one_over_r = e_div(num(1), var("r"))
+    let result = simplify(diff(one_over_r, "r"))
+    out("d/dr(1/r) = ")
+    out(result)
+}
+
+example "3. d/dr(√(1 - 2M/r)) — Schwarzschild metric factor" {
+    let f = schw_f(var("M"))
+    let df = simplify(diff(f, "r"))
+    out("d/dr(√(1 - 2M/r)) = ")
+    out(df)
+}
+
+// =============================================================================
+// PART B: FLAT SPACETIME — MINKOWSKI
+// =============================================================================
+// Verify: flat space has zero curvature, zero Ricci, zero scalar.
+// This serves as a sanity check on the entire Cartan pipeline.
+
+example "4. Minkowski tetrad" {
+    out("Minkowski tetrad e^a:")
+    out("  e^0 = ") out(nth(minkowski_tetrad, 0))
+    out("  e^1 = ") out(nth(minkowski_tetrad, 1))
+    out("  e^2 = ") out(nth(minkowski_tetrad, 2))
+    out("  e^3 = ") out(nth(minkowski_tetrad, 3))
+}
+
+example "5. Minkowski curvature = 0 (computed)" {
+    let R = minkowski_curvature
+    out("R^0_1_01 = ") out(nth(nth(nth(nth(R, 0), 1), 0), 1))
+    out("R^0_2_02 = ") out(nth(nth(nth(nth(R, 0), 2), 0), 2))
+    out("R^1_2_12 = ") out(nth(nth(nth(nth(R, 1), 2), 1), 2))
+}
+
+example "6. Minkowski Ricci tensor = 0 (computed)" {
+    let R = minkowski_curvature
+    out("Ric_00 = ") out(ricci_component(R, 0, 0))
+    out("Ric_11 = ") out(ricci_component(R, 1, 1))
+    out("Ric_22 = ") out(ricci_component(R, 2, 2))
+    out("Ric_33 = ") out(ricci_component(R, 3, 3))
+}
+
+example "7. Minkowski Ricci scalar = 0 (computed)" {
+    let R = minkowski_curvature
+    let ric = [
+        [ricci_component(R, 0, 0), ricci_component(R, 0, 1),
+         ricci_component(R, 0, 2), ricci_component(R, 0, 3)],
+        [ricci_component(R, 1, 0), ricci_component(R, 1, 1),
+         ricci_component(R, 1, 2), ricci_component(R, 1, 3)],
+        [ricci_component(R, 2, 0), ricci_component(R, 2, 1),
+         ricci_component(R, 2, 2), ricci_component(R, 2, 3)],
+        [ricci_component(R, 3, 0), ricci_component(R, 3, 1),
+         ricci_component(R, 3, 2), ricci_component(R, 3, 3)]
+    ]
+    let R_scalar = ricci_scalar(ric)
+    out("Ricci scalar R (Minkowski) = ") out(R_scalar)
+}
+
+// =============================================================================
+// PART C: SCHWARZSCHILD BLACK HOLE
+// =============================================================================
+// DEFINITION: The Schwarzschild tetrad encodes the metric of a non-rotating,
+// uncharged, spherically symmetric mass M in Schwarzschild coordinates.
+//
+//   e^0 = √(1-2M/r) dt,  e^1 = dr/√(1-2M/r),  e^2 = r dθ,  e^3 = r sinθ dφ
+//
+// The metric is recovered as g = η_ab e^a ⊗ e^b (using assumption A2).
+// This definition is encoded in schwarzschild_tetrad(M) in cartan_compute.kleis.
+//
+// We COMPUTE the curvature from this metric definition and VERIFY:
+//   (a) The connection depends on M, r, and angular coordinates
+//   (b) The curvature components depend on M and r
+//   (c) The Ricci tensor vanishes: Ric_μν = 0 (vacuum solution)
+
+example "8. Schwarzschild tetrad (encoding the metric)" {
+    let e = schwarzschild_tetrad(var("M"))
+    out("e^0 coefficient (t-component):")
+    out(nth(nth(e, 0), 0))
+    out("e^1 coefficient (r-component):")
+    out(nth(nth(e, 1), 1))
+    out("e^2 coefficient (θ-component):")
+    out(nth(nth(e, 2), 2))
+    out("e^3 coefficient (φ-component):")
+    out(nth(nth(e, 3), 3))
+}
+
+example "9. Schwarzschild connection ω^0_1 (DERIVED from tetrad)" {
+    let omega = solve_connection(schwarzschild_tetrad(var("M")))
+    out("Connection ω^0_1 (time-radial component):")
+    out(nth(nth(omega, 0), 1))
+}
+
+example "10. Schwarzschild R^0_1_01 (COMPUTED curvature)" {
+    let R = schwarzschild_curvature(var("M"))
+    let R0101 = nth(nth(nth(nth(R, 0), 1), 0), 1)
+    out("R^0_1_01 (Schwarzschild) = ")
+    out(R0101)
+}
+
+example "11. Schwarzschild is VACUUM: Ric_μν = 0 (DERIVED)" {
+    let R = schwarzschild_curvature(var("M"))
+    let ric00 = ricci_component(R, 0, 0)
+    let ric11 = ricci_component(R, 1, 1)
+    let ric22 = ricci_component(R, 2, 2)
+    let ric33 = ricci_component(R, 3, 3)
+    out("Ric_00 = ") out(ric00)
+    out("Ric_11 = ") out(ric11)
+    out("Ric_22 = ") out(ric22)
+    out("Ric_33 = ") out(ric33)
+}
+
+example "12. Schwarzschild Ricci scalar = 0 (DERIVED)" {
+    let R = schwarzschild_curvature(var("M"))
+    let ric = [
+        [ricci_component(R, 0, 0), ricci_component(R, 0, 1),
+         ricci_component(R, 0, 2), ricci_component(R, 0, 3)],
+        [ricci_component(R, 1, 0), ricci_component(R, 1, 1),
+         ricci_component(R, 1, 2), ricci_component(R, 1, 3)],
+        [ricci_component(R, 2, 0), ricci_component(R, 2, 1),
+         ricci_component(R, 2, 2), ricci_component(R, 2, 3)],
+        [ricci_component(R, 3, 0), ricci_component(R, 3, 1),
+         ricci_component(R, 3, 2), ricci_component(R, 3, 3)]
+    ]
+    let R_scalar = ricci_scalar(ric)
+    out("Ricci scalar R (Schwarzschild) = ") out(R_scalar)
+}
+
+// =============================================================================
+// PART D: SUBSTITUTION — CONCRETE VALUES
+// =============================================================================
+// subst() replaces variables in the Expression AST, producing a new AST
+// with concrete numbers in place of named variables.
+
+example "13. Schwarzschild curvature at M=1 (symbolic substitution)" {
+    let R = schwarzschild_curvature(num(1))
+    let R0101 = nth(nth(nth(nth(R, 0), 1), 0), 1)
+    out("R^0_1_01 (M=1):")
+    out(R0101)
+}
+
+example "14. Metric factor at M=1, r=10 (symbolic substitution)" {
+    let f = schw_f(var("M"))
+    let f_M1 = subst(f, "M", num(1))
+    let f_M1_r10 = subst(f_M1, "r", num(10))
+    out("√(1 - 2M/r) at M=1, r=10:")
+    out(f_M1_r10)
+}
+
+// =============================================================================
+// SUMMARY
+// =============================================================================
+//
+// Declared assumptions: (A1) dim=4, (A2) Lorentzian signature, (A3) torsion-free,
+// (A4) metric-compatible. These four postulates define General Relativity.
+//
+// Results COMPUTED by Kleis from these assumptions + metric definition:
+//
+//   (1) Flat spacetime has zero curvature, zero Ricci, zero scalar
+//   (2) Schwarzschild connection depends on M, r, angular coordinates
+//   (3) Schwarzschild curvature components depend on M and r
+//   (4) Schwarzschild Ricci tensor = 0 (vacuum Einstein equations)
+//   (5) Schwarzschild Ricci scalar = 0
+//
+// The computational tools used:
+//   - Symbolic differentiation: diff(e, x) with chain/product/quotient rules
+//   - Exterior derivative: d0 (scalars), d1 (1-forms)
+//   - Wedge product: antisymmetric tensor product of forms
+//   - Connection solver: Levi-Civita from (A3) + (A4)
+//   - Curvature: R = dω + ω∧ω (Cartan's second structure equation)
+//   - Ricci contraction: Ric_ab = Σ_c R^c_acb
+//
+// No representational data. No external claims. Every expression shown
+// is a Kleis computation output.
+//
+// =============================================================================

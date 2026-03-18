@@ -1,0 +1,231 @@
+// ============================================================================
+// Skolemized Riemann Zeta Zeros — Ground Consistency Check
+// ============================================================================
+//
+// Skolemizes the universal quantifiers from stdlib/number_theory.kleis into
+// ground instances at the first five known non-trivial zeros of ζ(s).
+//
+// The functional equation ∀(s : ℂ). ξ(s) = ξ(1 - s) becomes five ground
+// instances: ξ(ρₖ) = ξ(1 - ρₖ) at each known zero.
+//
+// The zero definition ∀(ρ : ℂ). is_nontrivial_zero(ρ) → ζ(ρ) = 0 ∧ ...
+// becomes: ζ(ρₖ) = 0 ∧ 0 < Re(ρₖ) < 1 for each known zero.
+//
+// Self-contained: no imports. All operations declared locally.
+// This is the "first two Skolemized zeta coefficients" experiment from
+// the Langlands Phase 1 research plan.
+// ============================================================================
+
+// ============================================
+// LOCAL TYPE DECLARATIONS
+// ============================================
+
+data DirichletSeries = DS(ℤ)
+data ComplexFn = CF(ℤ)
+data Region = Reg(ℤ)
+
+// ============================================
+// LOCAL OPERATION DECLARATIONS
+// ============================================
+
+// Zeta function
+operation zeta : ℂ → ℂ
+
+// Completed zeta (xi function): ξ(s) = s(s-1)/2 · Γ(s/2) · ζ(s)
+operation xi : ℂ → ℂ
+
+// Gamma function
+operation gamma_fn : ℂ → ℂ
+
+// Complex arithmetic (local names to avoid any import chain)
+operation cmul : ℂ × ℂ → ℂ
+operation csub : ℂ × ℂ → ℂ
+operation cdiv : ℂ × ℂ → ℂ
+
+// Zero classification
+operation is_nontrivial_zero : ℂ → Bool
+
+// Dirichlet series
+operation ds_coeff : DirichletSeries × ℕ → ℂ
+operation ds_abscissa : DirichletSeries → ℝ
+
+// Selberg class
+operation has_euler_product : DirichletSeries → Bool
+operation has_continuation : DirichletSeries → Bool
+operation has_functional_eq : DirichletSeries → Bool
+operation L_degree : DirichletSeries → ℕ
+
+// Meromorphic structure
+operation meromorphic_on : ComplexFn × Region → Bool
+operation has_pole_at : ComplexFn × ℂ × ℕ → Bool
+operation residue_at : ComplexFn × ℂ → ℂ
+
+// ============================================
+// GROUND ZEROS: the five known non-trivial zeros
+// ============================================
+// ρₖ = 1/2 + iγₖ where γₖ are the Gram points
+
+structure ZetaZerosGround {
+    // The known zeros (on the critical line Re(s) = 1/2)
+    axiom zero_1 : is_nontrivial_zero(complex(1/2, 14.135))
+    axiom zero_2 : is_nontrivial_zero(complex(1/2, 21.022))
+    axiom zero_3 : is_nontrivial_zero(complex(1/2, 25.011))
+    axiom zero_4 : is_nontrivial_zero(complex(1/2, 30.425))
+    axiom zero_5 : is_nontrivial_zero(complex(1/2, 32.935))
+
+    // Skolemized zero definition: ζ(ρₖ) = 0
+    axiom zeta_vanishes_1 : zeta(complex(1/2, 14.135)) = complex(0, 0)
+    axiom zeta_vanishes_2 : zeta(complex(1/2, 21.022)) = complex(0, 0)
+    axiom zeta_vanishes_3 : zeta(complex(1/2, 25.011)) = complex(0, 0)
+    axiom zeta_vanishes_4 : zeta(complex(1/2, 30.425)) = complex(0, 0)
+    axiom zeta_vanishes_5 : zeta(complex(1/2, 32.935)) = complex(0, 0)
+
+    // Skolemized critical strip: 0 < Re(ρₖ) < 1
+    axiom strip_1 : re(complex(1/2, 14.135)) > 0 ∧ re(complex(1/2, 14.135)) < 1
+    axiom strip_2 : re(complex(1/2, 21.022)) > 0 ∧ re(complex(1/2, 21.022)) < 1
+    axiom strip_3 : re(complex(1/2, 25.011)) > 0 ∧ re(complex(1/2, 25.011)) < 1
+
+    // Skolemized critical line: Re(ρₖ) = 1/2
+    axiom critical_line_1 : re(complex(1/2, 14.135)) = 1/2
+    axiom critical_line_2 : re(complex(1/2, 21.022)) = 1/2
+    axiom critical_line_3 : re(complex(1/2, 25.011)) = 1/2
+    axiom critical_line_4 : re(complex(1/2, 30.425)) = 1/2
+    axiom critical_line_5 : re(complex(1/2, 32.935)) = 1/2
+
+    // Skolemized conjugate symmetry:
+    // if ρ is a zero, so is conj(ρ) = 1/2 - iγ
+    axiom conj_zero_1 : is_nontrivial_zero(complex(1/2, 0 - 14.135))
+    axiom conj_zero_2 : is_nontrivial_zero(complex(1/2, 0 - 21.022))
+    axiom conj_zero_3 : is_nontrivial_zero(complex(1/2, 0 - 25.011))
+}
+
+// ============================================
+// FUNCTIONAL EQUATION: ξ(s) = ξ(1 - s)
+// ============================================
+// For s = 1/2 + iγ on the critical line:
+//   1 - s = 1/2 - iγ = conj(s)
+// So the functional equation becomes ξ(s) = ξ(conj(s))
+
+structure FunctionalEquationGround {
+    // Skolemized ξ definition at each zero
+    // ξ(s) = s(s-1)/2 · Γ(s/2) · ζ(s)
+    // At a zero: ζ(ρ) = 0, so ξ(ρ) = 0
+    axiom xi_at_zero_1 : xi(complex(1/2, 14.135)) = complex(0, 0)
+    axiom xi_at_zero_2 : xi(complex(1/2, 21.022)) = complex(0, 0)
+    axiom xi_at_zero_3 : xi(complex(1/2, 25.011)) = complex(0, 0)
+
+    // Functional equation at conjugate points: ξ(ρ) = ξ(conj(ρ))
+    // Both sides are 0 at the zeros, so this is 0 = 0 — trivially true
+    axiom func_eq_1 :
+        xi(complex(1/2, 14.135)) = xi(complex(1/2, 0 - 14.135))
+    axiom func_eq_2 :
+        xi(complex(1/2, 21.022)) = xi(complex(1/2, 0 - 21.022))
+    axiom func_eq_3 :
+        xi(complex(1/2, 25.011)) = xi(complex(1/2, 0 - 25.011))
+
+    // Functional equation at NON-zero points (more interesting)
+    // ξ(2) = ξ(-1), ξ(3) = ξ(-2) — these are off the critical line
+    axiom func_eq_off_1 :
+        xi(complex(2, 0)) = xi(complex(0 - 1, 0))
+    axiom func_eq_off_2 :
+        xi(complex(3, 0)) = xi(complex(0 - 2, 0))
+}
+
+// ============================================
+// SPECIAL VALUES AND MEROMORPHIC STRUCTURE
+// ============================================
+
+structure ZetaSpecialValues {
+    // Known special values
+    axiom zeta_2 : zeta(complex(2, 0)) = complex(pi * pi / 6, 0)
+    axiom zeta_neg1 : zeta(complex(0 - 1, 0)) = complex(0 - 1/12, 0)
+    axiom zeta_0 : zeta(complex(0, 0)) = complex(0 - 1/2, 0)
+
+    // Trivial zeros at negative even integers
+    axiom trivial_neg2 : zeta(complex(0 - 2, 0)) = complex(0, 0)
+    axiom trivial_neg4 : zeta(complex(0 - 4, 0)) = complex(0, 0)
+
+    // Pole at s = 1 with residue 1
+    element zeta_as_fn : ComplexFn
+    element whole_plane : Region
+    axiom zeta_meromorphic : meromorphic_on(zeta_as_fn, whole_plane)
+    axiom zeta_pole : has_pole_at(zeta_as_fn, complex(1, 0), 1)
+    axiom zeta_residue : residue_at(zeta_as_fn, complex(1, 0)) = complex(1, 0)
+}
+
+// ============================================
+// SELBERG CLASS (ground facts)
+// ============================================
+
+structure SelbergGround {
+    element zeta_series : DirichletSeries
+
+    // Skolemized coefficients: a(n) = 1 for n = 1, 2, 3
+    axiom coeff_1 : ds_coeff(zeta_series, 1) = complex(1, 0)
+    axiom coeff_2 : ds_coeff(zeta_series, 2) = complex(1, 0)
+    axiom coeff_3 : ds_coeff(zeta_series, 3) = complex(1, 0)
+
+    axiom zeta_abscissa : ds_abscissa(zeta_series) = 1
+
+    // Selberg class membership
+    axiom zeta_euler : has_euler_product(zeta_series)
+    axiom zeta_continuation : has_continuation(zeta_series)
+    axiom zeta_functional : has_functional_eq(zeta_series)
+    axiom zeta_degree : L_degree(zeta_series) = 1
+}
+
+// ============================================
+// CONSISTENCY TESTS
+// ============================================
+
+example "zeros are classified" {
+    assert(is_nontrivial_zero(complex(1/2, 14.135)))
+}
+
+example "conjugate zeros are classified" {
+    assert(is_nontrivial_zero(complex(1/2, 0 - 14.135)))
+}
+
+example "zeta vanishes at first zero" {
+    assert(zeta(complex(1/2, 14.135)) = complex(0, 0))
+}
+
+example "xi vanishes at first zero" {
+    assert(xi(complex(1/2, 14.135)) = complex(0, 0))
+}
+
+example "functional equation at first zero" {
+    assert(xi(complex(1/2, 14.135)) = xi(complex(1/2, 0 - 14.135)))
+}
+
+example "functional equation off critical line" {
+    assert(xi(complex(2, 0)) = xi(complex(0 - 1, 0)))
+}
+
+example "zeta special value ζ(-1) = -1/12" {
+    assert(zeta(complex(0 - 1, 0)) = complex(0 - 1/12, 0))
+}
+
+example "trivial zero at s = -2" {
+    assert(zeta(complex(0 - 2, 0)) = complex(0, 0))
+}
+
+example "Selberg class membership" {
+    assert(
+        has_euler_product(zeta_series) ∧
+        has_continuation(zeta_series) ∧
+        has_functional_eq(zeta_series)
+    )
+}
+
+example "zeta has degree 1 in Selberg class" {
+    assert(L_degree(zeta_series) = 1)
+}
+
+example "zeta has simple pole at s = 1" {
+    assert(has_pole_at(zeta_as_fn, complex(1, 0), 1))
+}
+
+example "residue at pole is 1" {
+    assert(residue_at(zeta_as_fn, complex(1, 0)) = complex(1, 0))
+}

@@ -1,0 +1,195 @@
+// ============================================
+// Kleis Standard Library - Combinatorics
+// Permutations, factorials, and combinatorial functions
+// ============================================
+//
+// This module provides combinatorial operations needed for:
+// - Antisymmetrization of tensors
+// - Wedge products in exterior algebra
+// - Symmetric group operations
+//
+// ADR-026: Self-Hosted Differential Forms
+// All operations are pure Kleis - no Rust builtins.
+
+import "stdlib/func_core.kleis"
+
+// ============================================
+// Factorials and Binomials
+// ============================================
+
+// Factorial: n! = 1 × 2 × ... × n
+define factorial(n) = 
+    if n <= 0 then 1
+    else n * factorial(n - 1)
+
+// Binomial coefficient: C(n, k) = n! / (k! × (n-k)!)
+define binomial(n, k) = 
+    if k < 0 then 0
+    else if k > n then 0
+    else factorial(n) / (factorial(k) * factorial(n - k))
+
+// ============================================
+// Permutation Representation
+// ============================================
+//
+// A permutation of n elements is a list [σ(0), σ(1), ..., σ(n-1)]
+// where σ(i) is the image of i under the permutation.
+//
+// Examples:
+//   [0, 1, 2] = identity on 3 elements
+//   [1, 0, 2] = swap first two elements
+//   [2, 0, 1] = cyclic rotation
+
+// Identity permutation on n elements: [0, 1, 2, ..., n-1]
+define identity_perm(n) = range(n)
+
+// ============================================
+// Permutation Generation
+// ============================================
+
+// Generate all permutations of [0, 1, ..., n-1]
+// Uses recursive insertion: to get perms of n elements,
+// take each perm of (n-1) elements and insert (n-1) at each position
+define all_permutations(n) = 
+    if n <= 0 then Cons(Nil, Nil)
+    else if n = 1 then Cons(Cons(0, Nil), Nil)
+    else flat_map(λ p . insert_everywhere(n - 1, p), all_permutations(n - 1))
+
+// Insert element x at every position in list xs
+// Returns list of lists
+define insert_everywhere(x, xs) = 
+    insert_everywhere_helper(x, xs, 0, length(xs))
+
+define insert_everywhere_helper(x, xs, pos, len) =
+    if pos > len then Nil
+    else Cons(insert_at(x, pos, xs), insert_everywhere_helper(x, xs, pos + 1, len))
+
+// Insert element x at position pos in list xs
+define insert_at(x, pos, xs) =
+    if pos = 0 then Cons(x, xs)
+    else match xs {
+        Nil => Cons(x, Nil)
+        | Cons(h, t) => Cons(h, insert_at(x, pos - 1, t))
+    }
+
+// ============================================
+// Permutation Sign (Parity)
+// ============================================
+
+// Sign of a permutation: +1 for even, -1 for odd
+// Determined by the number of inversions (pairs where i < j but σ(i) > σ(j))
+define perm_sign(p) = 
+    if is_even(count_inversions(p)) then 1 else negate(1)
+
+// Count inversions in a permutation
+define count_inversions(p) = count_inversions_helper(p, 0, length(p))
+
+define count_inversions_helper(p, i, n) =
+    if i >= n then 0
+    else count_greater_after(p, i, n) + count_inversions_helper(p, i + 1, n)
+
+// Count elements after position i that are less than p[i]
+define count_greater_after(p, i, n) = 
+    count_greater_after_helper(p, i, i + 1, n, list_get(p, i))
+
+define count_greater_after_helper(p, i, j, n, val) =
+    if j >= n then 0
+    else (if list_get(p, j) < val then 1 else 0) + count_greater_after_helper(p, i, j + 1, n, val)
+
+// Check if a number is even
+define is_even(n) = (n / 2) * 2 = n
+
+// ============================================
+// Permutation Application
+// ============================================
+
+// Apply permutation to a list: perm_apply([2,0,1], [a,b,c]) = [c,a,b]
+// perm[i] tells us where element i goes in the result
+define perm_apply(perm, xs) = 
+    map(λ i . list_get(xs, list_get(perm, i)), range(length(perm)))
+
+// Inverse of perm_apply: where does each element come FROM
+define perm_apply_inverse(perm, xs) =
+    let inv = perm_inverse(perm) in
+    perm_apply(inv, xs)
+
+// Compute inverse permutation
+define perm_inverse(perm) = 
+    let n = length(perm) in
+    build_inverse(perm, n, 0, replicate(n, 0))
+
+define build_inverse(perm, n, i, result) =
+    if i >= n then result
+    else build_inverse(perm, n, i + 1, list_set(result, list_get(perm, i), i))
+
+// ============================================
+// Permutation Composition
+// ============================================
+
+// Compose permutations: (σ ∘ τ)(i) = σ(τ(i))
+define perm_compose(sigma, tau) =
+    map(λ i . list_get(sigma, list_get(tau, i)), range(length(sigma)))
+
+// ============================================
+// Special Permutations
+// ============================================
+
+// Transposition: swap positions i and j
+define transposition(n, i, j) =
+    map(λ k . if k = i then j else if k = j then i else k, range(n))
+
+// Cyclic permutation: (0 1 2 ... n-1) → (1 2 ... n-1 0)
+define cycle(n) = append(drop(1, range(n)), Cons(0, Nil))
+
+// ============================================
+// Examples / Tests
+// ============================================
+
+example "factorial 5" {
+    factorial(5) = 120
+}
+
+example "factorial 0" {
+    factorial(0) = 1
+}
+
+example "binomial 5 2" {
+    binomial(5, 2) = 10
+}
+
+example "identity perm" {
+    identity_perm(3) = Cons(0, Cons(1, Cons(2, Nil)))
+}
+
+example "all perms 2" {
+    all_permutations(2) = Cons(Cons(1, Cons(0, Nil)), Cons(Cons(0, Cons(1, Nil)), Nil))
+}
+
+example "perm sign identity" {
+    perm_sign(Cons(0, Cons(1, Cons(2, Nil)))) = 1
+}
+
+example "perm sign swap" {
+    perm_sign(Cons(1, Cons(0, Cons(2, Nil)))) = negate(1)
+}
+
+example "count inversions identity" {
+    count_inversions(Cons(0, Cons(1, Cons(2, Nil)))) = 0
+}
+
+example "count inversions one swap" {
+    count_inversions(Cons(1, Cons(0, Cons(2, Nil)))) = 1
+}
+
+example "perm apply" {
+    perm_apply(Cons(2, Cons(0, Cons(1, Nil))), Cons(10, Cons(20, Cons(30, Nil)))) = Cons(30, Cons(10, Cons(20, Nil)))
+}
+
+example "transposition" {
+    transposition(3, 0, 2) = Cons(2, Cons(1, Cons(0, Nil)))
+}
+
+example "n perms equals n factorial" {
+    length(all_permutations(3)) = factorial(3)
+}
+

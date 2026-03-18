@@ -1,0 +1,48 @@
+// ============================================================================
+// Projected Ontology Theory — Foundations (Kernel-mediated Projection; PARSEABLE)
+// ============================================================================
+//
+// This file imports the core kernel projection definitions.
+// It states the minimal POT postulates in a parser-friendly form.
+// ============================================================================
+
+import "spacetime_type_kernel_projection.kleis"
+import "pot_core_kernel_projection.kleis"
+
+// ---------------------------------------------------------------------------
+// 1. Core postulates (minimal)
+// ---------------------------------------------------------------------------
+//
+// OPTION A REFACTOR: All postulates are now kernel-parameterized.
+// This makes the multi-universe semantics explicit.
+
+structure POTPostulates {
+
+    // (P1) Irreversible / many-to-one projection (non-invertible)
+    // For any kernel, there exist distinct flows that project to the same field.
+    axiom projection_irreversible: ∀(G : GreenKernel).
+        ∃(a b : Flow). a ≠ b ∧ apply_kernel(G, a) = apply_kernel(G, b)
+
+    // (P2) Observational equivalence is exactly "same projection"
+    // This follows from equiv_intro + equiv_elim in ProjectiveEquivalence.
+    axiom observational_equiv: ∀(G : GreenKernel, a b : Flow).
+        apply_kernel(G, a) = apply_kernel(G, b) ↔ equiv(G, a, b)
+
+    // (P3) "Physics is what survives projection"
+    // Same projection → same observable residues
+    axiom survival_principle: ∀(G : GreenKernel, a b : Flow, e : Event, c : Channel).
+        apply_kernel(G, a) = apply_kernel(G, b) →
+            residue(apply_kernel(G, a), e, c) = residue(apply_kernel(G, b), e, c)
+}
+
+// ---------------------------------------------------------------------------
+// 2. Phase erasure (kept abstract until you model exp(iθ) in Flow space)
+// ---------------------------------------------------------------------------
+
+structure PhaseErasure {
+    operation phase_shift : Flow × ℝ → Flow
+
+    // Phase shifts don't change the projection (for any kernel)
+    axiom phase_erasure: ∀(G : GreenKernel, ψ : Flow, θ : ℝ).
+        apply_kernel(G, phase_shift(ψ, θ)) = apply_kernel(G, ψ)
+}

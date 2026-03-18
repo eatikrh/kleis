@@ -1,0 +1,134 @@
+// Formalization of Substrate Universality
+//
+// This file axiomatizes what it means for a substrate to be "universal" --
+// capable of expressing any formalizable domain. The thesis:
+//
+//   Any domain amenable to formalization follows the pattern
+//   Notation + Rules + Verification + Output.
+//
+//   A substrate is universal if it can host all four components
+//   for every such domain.
+//
+// The formalization is deliberately self-referential in scope but not
+// in proof: Kleis can STATE the definition of universality, but it
+// cannot PROVE that it itself satisfies it. That proof requires the
+// oracle — which is itself one of the axioms.
+
+// --- Ontology -------------------------------------------------------
+
+data Component = Notation | Rules | Verification | Output
+
+data Domain = Mathematics | Physics | Law | Accounting
+            | CodeReview | Medicine | CustomDomain(ℤ)
+
+data Substrate = Sub(ℤ)
+
+// --- Formalizability ------------------------------------------------
+//
+// A domain is formalizable iff it has all four components.
+
+operation formalizable    : Domain → Bool
+operation has_component   : Domain × Component → Bool
+
+structure Formalizability {
+    axiom pattern : ∀(d : Domain).
+        formalizable(d) ↔
+            (has_component(d, Notation) ∧ has_component(d, Rules) ∧
+             has_component(d, Verification) ∧ has_component(d, Output))
+}
+
+// --- Expressibility -------------------------------------------------
+//
+// A substrate expresses a domain iff it can host all four components.
+
+operation expressible           : Substrate × Domain → Bool
+operation represents_notation   : Substrate × Domain → Bool
+operation encodes_rules         : Substrate × Domain → Bool
+operation performs_verification : Substrate × Domain → Bool
+operation produces_output       : Substrate × Domain → Bool
+
+structure Expressibility {
+    axiom components : ∀(s : Substrate, d : Domain).
+        expressible(s, d) ↔
+            (represents_notation(s, d) ∧ encodes_rules(s, d) ∧
+             performs_verification(s, d) ∧ produces_output(s, d))
+}
+
+// --- Universality ---------------------------------------------------
+//
+// A substrate is universal iff every formalizable domain is expressible.
+
+operation universal : Substrate → Bool
+
+structure Universality {
+    axiom definition : ∀(s : Substrate).
+        universal(s) ↔
+            (∀(d : Domain). formalizable(d) → expressible(s, d))
+}
+
+// --- Mechanism ------------------------------------------------------
+//
+// Structure = Carriers + Operations + Axioms is the mechanism by which
+// a substrate achieves expressibility. Verification requires an
+// external oracle — the substrate cannot verify its own theories.
+
+operation has_carriers   : Substrate → Bool
+operation has_operations : Substrate → Bool
+operation has_axioms     : Substrate → Bool
+operation has_oracle     : Substrate → Bool
+operation self_verifying : Substrate → Bool
+
+structure Mechanism {
+    axiom structure_suffices : ∀(s : Substrate, d : Domain).
+        (has_carriers(s) ∧ has_operations(s) ∧ has_axioms(s)) →
+            (formalizable(d) →
+                (represents_notation(s, d) ∧ encodes_rules(s, d)))
+
+    axiom oracle_required : ∀(s : Substrate, d : Domain).
+        performs_verification(s, d) → has_oracle(s)
+
+    axiom oracle_external : ∀(s : Substrate).
+        has_oracle(s) → ¬self_verifying(s)
+}
+
+// --- Boundary -------------------------------------------------------
+//
+// The Gödel constraint: a universal substrate cannot verify its own
+// universality. It can host the definition. It cannot prove the claim.
+
+structure Boundary {
+    axiom goedel : ∀(s : Substrate).
+        universal(s) → ¬self_verifying(s)
+}
+
+// --- Fact Profile: a substrate with full mechanism ------------------
+
+structure SubstrateFacts {
+    element k : Substrate
+    axiom k_carriers   : has_carriers(k)
+    axiom k_operations : has_operations(k)
+    axiom k_axioms     : has_axioms(k)
+    axiom k_oracle     : has_oracle(k)
+}
+
+// --- Verification ---------------------------------------------------
+
+example "mechanism: structure suffices for notation and rules" {
+    assert(∀(d : Domain, s : Substrate). s = k ∧ formalizable(d) →
+        (represents_notation(s, d) ∧ encodes_rules(s, d)))
+}
+
+example "oracle is external" {
+    assert(∀(s : Substrate). s = k → ¬self_verifying(s))
+}
+
+example "expressibility from all four components" {
+    assert(∀(d : Domain, s : Substrate). s = k →
+        ((represents_notation(s, d) ∧ encodes_rules(s, d) ∧
+          performs_verification(s, d) ∧ produces_output(s, d)) →
+            expressible(s, d)))
+}
+
+example "boundary: universal implies not self-verifying" {
+    assert(∀(s : Substrate). universal(s) → ¬self_verifying(s))
+}

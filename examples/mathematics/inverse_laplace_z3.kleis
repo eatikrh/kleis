@@ -1,0 +1,75 @@
+// ============================================================================
+// Inverse Laplace Transform: Z3 Proofs for the Modal Form Equivalence
+// ============================================================================
+//
+// THE COMPUTATION:
+//
+//   For a transfer function G(s) with complex conjugate poles at
+//   sigma_k +/- i*gamma_k, the partial fraction expansion yields
+//   the MODAL FORM state-space realization with 2x2 blocks:
+//
+//     A_k = [[ sigma_k,  gamma_k ],  =  sigma_k * I_2  +  gamma_k * J_2
+//            [-gamma_k,  sigma_k ]]
+//
+//   where J_2 = [[0,1],[-1,0]] is antisymmetric.
+//
+//   Decomposing A_k = d*I + S_k, the requirement that S_k is
+//   antisymmetric forces the diagonal of S_k to vanish:
+//
+//     S_k[0,0] = sigma_k - d = 0   =>   sigma_k = d
+//
+//   Therefore:
+//     A_modal = (1/2)*I + antisymmetric   <==>   sigma_k = 1/2 for all k
+//
+//   This is the key equivalence: the antisymmetric structure of the
+//   spectral comb (proved in paper [6] from BK physics) is PRECISELY
+//   the statement that all poles have Re = 1/2.
+//
+// ============================================================================
+
+// ============================================================================
+// ILT-1: N=1 — one pole pair
+// ============================================================================
+//
+// Modal form block: A = [[sigma, gamma], [-gamma, sigma]]
+// Decompose: A = d*I + S.
+// S antisymmetric requires S[0,0] = sigma - d = 0.
+// Therefore: d = 1/2 iff sigma = 1/2.
+
+structure ModalFormN1 {
+    element sigma : ℝ
+    element d : ℝ
+
+    axiom antisym_diag : sigma - d = 0
+}
+
+example "ILT-1: modal form N=1 — d = 1/2 iff Re(pole) = 1/2" {
+    assert(d = 1/2 → sigma = 1/2)
+    assert(sigma = 1/2 → d = 1/2)
+}
+
+// ============================================================================
+// ILT-2: N=2 — two pole pairs
+// ============================================================================
+//
+// Block-diagonal modal form with two 2x2 blocks.
+// Each diagonal entry of S must vanish: sigma_k - d = 0 for each k.
+// Therefore: d = 1/2 iff both sigma_k = 1/2.
+
+structure ModalFormN2 {
+    element sigma1 : ℝ
+    element sigma2 : ℝ
+    element d : ℝ
+
+    axiom antisym_block1 : sigma1 - d = 0
+    axiom antisym_block2 : sigma2 - d = 0
+}
+
+example "ILT-2: modal form N=2 — d = 1/2 iff both Re(pole) = 1/2" {
+    assert(d = 1/2 → sigma1 = 1/2)
+    assert(d = 1/2 → sigma2 = 1/2)
+    assert(sigma1 = 1/2 → d = 1/2)
+}
+
+// ILT-3 (LAPACK verification) is in inverse_laplace_lapack.kleis
+// to avoid Z3/structure interference with numerical computation.

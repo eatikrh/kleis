@@ -1,0 +1,143 @@
+// Residue Theorem in Kleis
+// ========================
+// The Residue Theorem: ∮_C f(z) dz = 2πi × Σ Res(f, aₖ)
+//
+// Simplified formalization that works with current Z3 backend
+
+import "stdlib/prelude.kleis"
+
+// ============================================================
+// Mathematical Constants
+// ============================================================
+
+// π as a symbolic constant
+define pi : ℝ = 3.14159265358979
+
+// 2π
+define two_pi : ℝ = times(2, pi)
+
+// 2πi - the fundamental constant in the Residue Theorem  
+define two_pi_i : ℂ = complex(0, two_pi)
+
+// ============================================================
+// Core Operations (Uninterpreted Functions)
+// ============================================================
+
+// Contour integral ∮_C f dz for function id f and contour id C
+operation contour_integral : ℕ × ℕ → ℂ
+
+// Residue of function f at complex point z
+operation residue : ℕ × ℂ → ℂ
+
+// ============================================================
+// Specific Functions and Contours
+// ============================================================
+
+// f₀ = 1/z (identified by 0)
+define f_one_over_z : ℕ = 0
+
+// C₀ = unit circle (identified by 0)
+define unit_circle : ℕ = 0
+
+// Complex constants
+define origin : ℂ = complex(0, 0)
+define one_complex : ℂ = complex(1, 0)
+define zero_complex : ℂ = complex(0, 0)
+
+// ============================================================
+// Axioms for 1/z and Unit Circle
+// ============================================================
+
+structure ResidueTheoremAxioms {
+  // Res(1/z, 0) = 1
+  // The residue of 1/z at the origin is 1
+  axiom residue_one_over_z_at_origin:
+    residue(f_one_over_z, origin) = one_complex
+
+  // The Residue Theorem applied to 1/z around unit circle:
+  // ∮_{|z|=1} (1/z) dz = 2πi × Res(1/z, 0) = 2πi × 1 = 2πi
+  axiom integral_one_over_z:
+    contour_integral(f_one_over_z, unit_circle) = two_pi_i
+
+  // Consequence: integral = 2πi × residue
+  // This is what the Residue Theorem states!
+  axiom residue_theorem_applied:
+    contour_integral(f_one_over_z, unit_circle) = 
+      complex_mul(two_pi_i, residue(f_one_over_z, origin))
+}
+
+// ============================================================
+// Definitions for Verification
+// ============================================================
+
+// The contour integral
+define I : ℂ = contour_integral(f_one_over_z, unit_circle)
+
+// The residue
+define R : ℂ = residue(f_one_over_z, origin)
+
+// ============================================================
+// What We Want to Verify
+// ============================================================
+// Given the axioms above, Z3 should be able to verify:
+//
+// 1. R = 1                      (from residue_one_over_z_at_origin)
+// 2. I = 2πi                    (from integral_one_over_z)
+// 3. I = 2πi × R               (from residue_theorem_applied)
+// 4. 2πi × 1 = 2πi             (algebraic identity)
+//
+// These form a consistent system that embodies the Residue Theorem
+// for the specific case of f(z) = 1/z around the unit circle.
+
+// ============================================================
+// Extended Example: f(z) = 1/(z-a)
+// ============================================================
+// For f(z) = 1/(z-a), the pole is at z = a with residue 1
+// If a is inside C, then ∮_C 1/(z-a) dz = 2πi
+
+// f₁ = 1/(z-a) for some point a inside unit circle
+define f_one_over_z_minus_a : ℕ = 1
+
+// The pole location (inside unit circle)
+define pole_a : ℂ = complex(0.5, 0)
+
+structure GeneralResidueAxioms {
+  // Residue of 1/(z-a) at a is 1
+  axiom residue_simple_pole:
+    residue(f_one_over_z_minus_a, pole_a) = one_complex
+    
+  // Integral of 1/(z-a) around unit circle is 2πi (since a is inside)
+  axiom integral_simple_pole:
+    contour_integral(f_one_over_z_minus_a, unit_circle) = two_pi_i
+}
+
+// ============================================================
+// Cauchy's Integral Formula Connection
+// ============================================================
+// The Residue Theorem generalizes to Cauchy's Integral Formula:
+//
+//   f(a) = (1/2πi) ∮_C f(z)/(z-a) dz
+//
+// Rearranging: ∮_C f(z)/(z-a) dz = 2πi × f(a)
+//
+// This shows that the "residue" of f(z)/(z-a) at z=a is f(a)
+
+// Function evaluation at a point
+operation eval_at : ℕ × ℂ → ℂ
+
+// f₂ = g(z)/(z-a) for holomorphic g
+define f_g_over_z_minus_a : ℕ = 2
+
+// The function g
+define g_function : ℕ = 3
+
+structure CauchyFormula {
+  // Residue of g(z)/(z-a) at a equals g(a)
+  axiom residue_equals_function_value:
+    residue(f_g_over_z_minus_a, pole_a) = eval_at(g_function, pole_a)
+    
+  // Integral gives 2πi × g(a)
+  axiom cauchy_integral:
+    contour_integral(f_g_over_z_minus_a, unit_circle) = 
+      complex_mul(two_pi_i, eval_at(g_function, pole_a))
+}

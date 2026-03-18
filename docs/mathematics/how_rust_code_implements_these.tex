@@ -1,0 +1,421 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true
+}
+
+% Unicode character declarations
+\DeclareUnicodeCharacter{2200}{\ensuremath{\forall}}
+\DeclareUnicodeCharacter{2124}{\ensuremath{\mathbb{Z}}}
+
+\title{\textbf{How Rust Code Implements Kleis Formal Ideas}}
+\author{Kleis Language Project}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{How Rust Code Implements These Formal Ideas}
+
+In this section we show how the formal ideas expressed in Kleis
+(\texttt{structure}, \texttt{implements}, algebraic data types,
+pattern matching, parametric indices) can be realized concretely in
+Rust code.
+
+The goal is not to reproduce Kleis inside Rust, but to demonstrate
+implementation patterns that closely mirror the formal constructions.
+
+\subsection{Structures as Traits}
+
+A Kleis structure:
+
+\begin{verbatim}
+structure Monoid(M) {
+    operation (•) : M → M → M
+    element e : M
+
+    axiom associativity:
+      ∀(x y z : M). (x • y) • z = x • (y • z)
+}
+\end{verbatim}
+
+corresponds to a Rust trait:
+
+\begin{verbatim}
+// A Monoid trait in Rust
+pub trait Monoid: Sized + Clone {
+    fn op(self, other: Self) -> Self;
+    fn e() -> Self;
+}
+\end{verbatim}
+
+Here:
+\begin{itemize}
+  \item \texttt{op} encodes the binary operation $(\cdot)$.
+  \item \texttt{e()} encodes the identity element $e$.
+  \item Trait bounds like \texttt{Clone} model practical constraints
+        (copying for tests, etc.) not present in the pure formalism.
+\end{itemize}
+
+The axioms are not enforced by the Rust type system; they are captured
+as \emph{conventions} plus tests (see below).
+
+\subsection{implements as \texttt{impl} Blocks}
+
+The Kleis declaration:
+
+\begin{verbatim}
+implements Monoid(ℤ) {
+    operation (•) = builtin_add
+    element e = 0
+}
+\end{verbatim}
+
+is naturally implemented as:
+
+\begin{verbatim}
+impl Monoid for i64 {
+    fn op(self, other: Self) -> Self {
+        self + other
+    }
+
+    fn e() -> Self {
+        0
+    }
+}
+\end{verbatim}
+
+This is a direct correspondence:
+\begin{itemize}
+  \item \texttt{implements Monoid(T)} $\leftrightarrow$
+        \texttt{impl Monoid for T}.
+  \item \texttt{operation} assignments $\leftrightarrow$ method bodies.
+\end{itemize}
+
+\subsection{Extending Structures via Trait Inheritance}
+
+A Kleis extension:
+
+\begin{verbatim}
+structure Group(G) extends Monoid(G) {
+    operation inv : G → G
+}
+\end{verbatim}
+
+maps to a Rust trait that \emph{extends} another trait:
+
+\begin{verbatim}
+// Group extends Monoid
+pub trait Group: Monoid {
+    fn inv(self) -> Self;
+}
+\end{verbatim}
+
+The relationship:
+\[
+\texttt{extends Monoid(G)} \quad\longleftrightarrow\quad
+\texttt{trait Group: Monoid \{ ... \}}
+\]
+
+In this way:
+\begin{itemize}
+  \item Every \texttt{Group} is also a \texttt{Monoid}.
+  \item The Rust compiler enforces that any \texttt{impl Group for T}
+        must also satisfy \texttt{Monoid}’s method requirements.
+\end{itemize}
+
+\subsection{Algebraic Data Types as Enums}
+
+A Kleis algebraic data type:
+
+\begin{verbatim}
+data Option(T) = None | Some(T)
+\end{verbatim}
+
+is directly expressible as a Rust enum:
+
+\begin{verbatim}
+pub enum Option<T> {
+    None,
+    Some(T),
+}
+\end{verbatim}
+
+A more complex example:
+
+\begin{verbatim}
+data Result(E, T) = Err(E) | Ok(T)
+\end{verbatim}
+
+becomes:
+
+\begin{verbatim}
+pub enum Result<E, T> {
+    Err(E),
+    Ok(T),
+}
+\end{verbatim}
+
+Thus:
+\begin{itemize}
+  \item Kleis ADTs $\leftrightarrow$ Rust \texttt{enum}s.
+  \item Constructors $\leftrightarrow$ enum variants.
+  \item Type parameters preserved as generics.
+\end{itemize}
+
+\subsection{Pattern Matching as \texttt{match} Expressions}
+
+Kleis:
+
+\begin{verbatim}
+match x {
+    None    => 0
+  | Some(v) => v
+}
+\end{verbatim}
+
+Rust:
+
+\begin{verbatim}
+match x {
+    Option::None      => 0,
+    Option::Some(v)   => v,
+}
+\end{verbatim}
+
+Or with the standard prelude:
+
+\begin{verbatim}
+match x {
+    None      => 0,
+    Some(v)   => v,
+}
+\end{verbatim}
+
+Key points:
+\begin{itemize}
+  \item Rust \texttt{match} enforces \emph{exhaustiveness}, as in Kleis.
+  \item Nested constructor patterns are supported in the same way.
+  \item Non-exhaustive matches are compile-time errors.
+\end{itemize}
+
+\subsection{Parametric Types and Indexing via Generics and Const Generics}
+
+Kleis may define a matrix type:
+
+\begin{verbatim}
+data Matrix(m: Nat, n: Nat, T)
+\end{verbatim}
+
+Rust can approximate this with const generics:
+
+\begin{verbatim}
+// A dimension-indexed matrix in Rust
+pub struct Matrix<T, const M: usize, const N: usize> {
+    data: [[T; N]; M],
+}
+\end{verbatim}
+
+Matrix multiplication in Kleis:
+
+\begin{verbatim}
+operation multiply :
+  Matrix(m, n, T) → Matrix(n, p, T) → Matrix(m, p, T)
+\end{verbatim}
+
+can be encoded in Rust as:
+
+\begin{verbatim}
+impl<T, const M: usize, const N: usize, const P: usize>
+    Matrix<T, M, N>
+where
+    T: Copy + std::ops::Add<Output = T> + std::ops::Mul<Output = T> + Default,
+{
+    pub fn multiply(self, rhs: Matrix<T, N, P>) -> Matrix<T, M, P> {
+        let mut result = Matrix::<T, M, P>::zero();
+        for i in 0..M {
+            for j in 0..P {
+                let mut sum = T::default();
+                for k in 0..N {
+                    sum = sum + self.data[i][k] * rhs.data[k][j];
+                }
+                result.data[i][j] = sum;
+            }
+        }
+        result
+    }
+
+    pub fn zero() -> Self {
+        Matrix {
+            data: [[T::default(); N]; M],
+        }
+    }
+}
+\end{verbatim}
+
+This respects the same dimension constraints:
+\[
+  (m \times n) \cdot (n \times p) \to (m \times p).
+\]
+
+\subsection{Vector Spaces and \texttt{over Field(F)} via Trait Bounds}
+
+Kleis:
+
+\begin{verbatim}
+structure Field(F) { ... }
+
+structure VectorSpace(V) over Field(F) {
+    operation (+) : V → V → V
+    operation (·) : F → V → V
+}
+\end{verbatim}
+
+Rust:
+
+\begin{verbatim}
+pub trait Field:
+    Sized + Copy
+    + std::ops::Add<Output = Self>
+    + std::ops::Sub<Output = Self>
+    + std::ops::Mul<Output = Self>
+    + std::ops::Div<Output = Self>
+{
+    fn zero() -> Self;
+    fn one() -> Self;
+}
+
+pub trait VectorSpace<F: Field>: Sized + Copy {
+    fn add(self, other: Self) -> Self;
+    fn smul(scalar: F, v: Self) -> Self;
+}
+\end{verbatim}
+
+Here:
+\begin{itemize}
+  \item The \texttt{Field} trait encodes the base structure.
+  \item \texttt{VectorSpace<F>} is parametrized by a type \texttt{F} that
+        must satisfy \texttt{Field}.
+  \item This is a direct analogue of “\texttt{over Field(F)}” in Kleis.
+\end{itemize}
+
+\subsection{Nested Structures via Traits with Associated Types}
+
+Kleis:
+
+\begin{verbatim}
+structure Ring(R) {
+    structure additive : AbelianGroup(R) { ... }
+    structure multiplicative : Monoid(R) { ... }
+}
+\end{verbatim}
+
+Rust approximation using associated traits:
+
+\begin{verbatim}
+// Additive group structure
+pub trait AdditiveGroup {
+    type Carrier;
+    fn add(x: Self::Carrier, y: Self::Carrier) -> Self::Carrier;
+    fn zero() -> Self::Carrier;
+    fn neg(x: Self::Carrier) -> Self::Carrier;
+}
+
+// Multiplicative monoid structure
+pub trait MultiplicativeMonoid {
+    type Carrier;
+    fn mul(x: Self::Carrier, y: Self::Carrier) -> Self::Carrier;
+    fn one() -> Self::Carrier;
+}
+
+// Ring ties them together
+pub trait Ring:
+    AdditiveGroup<Carrier = <Self as Ring>::Carrier>
+    + MultiplicativeMonoid<Carrier = <Self as Ring>::Carrier>
+{
+    type Carrier;
+}
+\end{verbatim}
+
+Or more compactly:
+
+\begin{verbatim}
+pub trait Ring {
+    type Carrier;
+
+    fn add(x: Self::Carrier, y: Self::Carrier) -> Self::Carrier;
+    fn zero() -> Self::Carrier;
+    fn neg(x: Self::Carrier) -> Self::Carrier;
+
+    fn mul(x: Self::Carrier, y: Self::Carrier) -> Self::Carrier;
+    fn one() -> Self::Carrier;
+}
+\end{verbatim}
+
+This encodes the same idea: a ring structure consists of two compatible
+substructures on a single carrier set.
+
+\subsection{Laws (Axioms) as Test Suites}
+
+Kleis can write axioms:
+
+\begin{verbatim}
+axiom associativity:
+  ∀(x y z : M). (x • y) • z = x • (y • z)
+\end{verbatim}
+
+Rust cannot enforce this axiom in the type system, but can encode it as
+property tests, for example using \texttt{proptest}:
+
+\begin{verbatim}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn monoid_associativity(x in any::<i64>(),
+                                y in any::<i64>(),
+                                z in any::<i64>()) {
+            let lhs = Monoid::op(Monoid::op(x, y), z);
+            let rhs = Monoid::op(x, Monoid::op(y, z));
+            prop_assert_eq!(lhs, rhs);
+        }
+    }
+}
+\end{verbatim}
+
+Thus:
+\begin{itemize}
+  \item The Kleis axiom becomes a PBT property.
+  \item The implementation is “lawful” if all such tests pass.
+\end{itemize}
+
+\subsection{Summary}
+
+Rust provides:
+\begin{itemize}
+  \item \texttt{trait} $\approx$ Kleis \texttt{structure},
+  \item \texttt{impl} $\approx$ Kleis \texttt{implements},
+  \item \texttt{enum} $\approx$ Kleis \texttt{data} (ADT),
+  \item \texttt{match} $\approx$ Kleis \texttt{match},
+  \item generics + const generics $\approx$ Kleis type parameters and indices,
+  \item trait bounds $\approx$ Kleis constraints / \texttt{over} clauses.
+\end{itemize}
+
+The main difference is that Kleis can \emph{talk about} axioms and
+algebraic properties as first-class citizens in the language, whereas
+Rust implementations encode these properties through carefully structured
+traits and test suites.
+
+In practice, Rust code can serve as a \emph{back-end} implementation of
+formal Kleis specifications: Kleis describes the abstract algebraic object,
+and Rust provides the concrete, testable realization of that object as
+executable code.
+\end{document}

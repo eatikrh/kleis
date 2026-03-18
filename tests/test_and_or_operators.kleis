@@ -1,0 +1,77 @@
+// Grammar v0.97 Test: ASCII logical operators (and, or, not)
+// This file tests that 'and', 'or', 'not' work as general operators
+
+import "stdlib/prelude.kleis"
+
+// ============================================================
+// Test 1: 'and' in axioms - parse test
+// ============================================================
+structure TestAndInAxiom {
+    axiom and_commutative: forall P : Bool . forall Q : Bool .
+        (P and Q) = (Q and P)
+}
+
+// ============================================================
+// Test 2: 'or' in axioms - parse test
+// ============================================================
+structure TestOrInAxiom {
+    axiom or_commutative: forall P : Bool . forall Q : Bool .
+        (P or Q) = (Q or P)
+}
+
+// ============================================================
+// Test 3: 'not' in axioms - parse test
+// ============================================================
+structure TestNotInAxiom {
+    axiom double_negation: forall P : Bool .
+        not (not P) = P
+}
+
+// ============================================================
+// Test 4: Mixed 'and', 'or', 'not' in axioms - De Morgan's Laws
+// ============================================================
+structure DeMorganLaws {
+    // De Morgan's Law 1: not (P and Q) = (not P) or (not Q)
+    axiom de_morgan_1: forall P : Bool . forall Q : Bool .
+        not (P and Q) = (not P) or (not Q)
+    
+    // De Morgan's Law 2: not (P or Q) = (not P) and (not Q)
+    axiom de_morgan_2: forall P : Bool . forall Q : Bool .
+        not (P or Q) = (not P) and (not Q)
+}
+
+// ============================================================
+// Test 5: Unicode and ASCII equivalence - parse test
+// ============================================================
+structure UnicodeAsciiEquivalence {
+    // Unicode and ASCII should be semantically equivalent
+    axiom and_equiv: forall P : Bool . forall Q : Bool .
+        (P and Q) = (P ∧ Q)
+    
+    axiom or_equiv: forall P : Bool . forall Q : Bool .
+        (P or Q) = (P ∨ Q)
+    
+    axiom not_equiv: forall P : Bool .
+        (not P) = (¬ P)
+}
+
+// ============================================================
+// Test 6: Excluded middle with 'or' and 'not' - parse test
+// ============================================================
+structure ExcludedMiddle {
+    axiom excluded_middle: forall P : Bool .
+        P or (not P) = True
+}
+
+// ============================================================
+// Test 7: Define with and/or/not - parse test
+// ============================================================
+define test_and_val = True and False
+define test_or_val = True or False
+define test_not_val = not False
+
+// ============================================================
+// Test 8: Comparison with and/or - parse test
+// ============================================================
+define test_comparison(x: Int, y: Int) : Bool = (x > 0) and (y > 0)
+define test_comparison_or(x: Int, y: Int) : Bool = (x = 0) or (y = 0)

@@ -1,0 +1,140 @@
+// ============================================================================
+// Contract Bridge Auction in Kleis
+// ============================================================================
+//
+// A simplified formalization of Contract Bridge bidding rules.
+// Uses Z3 for constraint verification.
+//
+// ============================================================================
+
+// Basic types
+type Level = ℕ        // 1..7 (bid levels)
+type Strain = ℕ       // 1=♣, 2=♦, 3=♥, 4=♠, 5=NT
+type Seat = ℕ         // 1=North, 2=East, 3=South, 4=West
+type BidType = ℕ      // 0=Pass, 1=Suit bid, 2=Double, 3=Redouble
+
+// ============================================================================
+// Bridge Auction Structure
+// ============================================================================
+
+structure BridgeAuction {
+    // -------------------------------------------------------------------------
+    // Validity predicates
+    // -------------------------------------------------------------------------
+    
+    operation valid_level : Level → Bool
+    operation valid_strain : Strain → Bool
+    operation valid_seat : Seat → Bool
+    
+    axiom valid_level_def :
+        ∀(l : Level). valid_level(l) = (l ≥ 1 ∧ l ≤ 7)
+    
+    axiom valid_strain_def :
+        ∀(s : Strain). valid_strain(s) = (s ≥ 1 ∧ s ≤ 5)
+    
+    axiom valid_seat_def :
+        ∀(seat : Seat). valid_seat(seat) = (seat ≥ 1 ∧ seat ≤ 4)
+    
+    // -------------------------------------------------------------------------
+    // Bid ordering (for legal bid sequence)
+    // -------------------------------------------------------------------------
+    
+    // A bid (level, strain) is higher than another
+    operation bid_higher : Level × Strain × Level × Strain → Bool
+    
+    axiom bid_higher_def :
+        ∀(l1 : Level). ∀(s1 : Strain). ∀(l2 : Level). ∀(s2 : Strain).
+            bid_higher(l1, s1, l2, s2) = 
+                (l1 > l2 ∨ (l1 = l2 ∧ s1 > s2))
+    
+    // -------------------------------------------------------------------------
+    // Partnership (North-South vs East-West)
+    // -------------------------------------------------------------------------
+    
+    operation same_partnership : Seat × Seat → Bool
+    
+    axiom same_partnership_def :
+        ∀(s1 : Seat). ∀(s2 : Seat).
+            same_partnership(s1, s2) = 
+                ((s1 = 1 ∧ s2 = 3) ∨ (s1 = 3 ∧ s2 = 1) ∨  // N-S
+                 (s1 = 2 ∧ s2 = 4) ∨ (s1 = 4 ∧ s2 = 2) ∨  // E-W
+                 (s1 = s2))
+    
+}
+
+// ============================================================================
+// Computable Functions (for eval() - use define, not operation+axiom)
+// ============================================================================
+
+// Major suits: Hearts (3) and Spades (4) - return 1 for true, 0 for false
+define is_major_check(s) = if s = 3 then 1 else if s = 4 then 1 else 0
+
+// Minor suits: Clubs (1) and Diamonds (2)
+define is_minor_check(s) = if s = 1 then 1 else if s = 2 then 1 else 0
+
+// Notrump: 5
+define is_notrump_check(s) = if s = 5 then 1 else 0
+
+// Bid comparison (computable) - return 1 for true, 0 for false
+define bid_higher_check(l1, s1, l2, s2) = 
+    if l1 > l2 then 1 
+    else if l1 = l2 then if s1 > s2 then 1 else 0 
+    else 0
+
+// Partnership (computable)
+define same_partnership_check(s1, s2) =
+    if s1 = 1 then if s2 = 3 then 1 else if s2 = 1 then 1 else 0
+    else if s1 = 3 then if s2 = 1 then 1 else if s2 = 3 then 1 else 0
+    else if s1 = 2 then if s2 = 4 then 1 else if s2 = 2 then 1 else 0
+    else if s1 = 4 then if s2 = 2 then 1 else if s2 = 4 then 1 else 0
+    else 0
+
+// ============================================================================
+// Examples: Verify Bridge Auction Properties
+// ============================================================================
+
+example "bid ordering - higher level wins" {
+    // 2♠ is higher than 1NT
+    assert(∀(s1 : Strain). ∀(s2 : Strain).
+        bid_higher(2, s1, 1, s2))
+}
+
+example "eval: bid ordering - same level, strain matters" {
+    // At same level, Spades (4) beats Hearts (3)
+    assert(eval(bid_higher_check(3, 4, 3, 3)) = 1)  // 3♠ > 3♥
+    assert(eval(bid_higher_check(2, 5, 2, 4)) = 1)  // 2NT > 2♠
+}
+
+example "eval: partnership - North and South" {
+    assert(eval(same_partnership_check(1, 3)) = 1)
+    assert(eval(same_partnership_check(3, 1)) = 1)
+}
+
+example "eval: partnership - East and West" {
+    assert(eval(same_partnership_check(2, 4)) = 1)
+    assert(eval(same_partnership_check(4, 2)) = 1)
+}
+
+example "eval: opponents are not partners" {
+    // North (1) and East (2) are opponents
+    assert(eval(same_partnership_check(1, 2)) = 0)
+}
+
+example "eval: strain classification" {
+    // Major suits: Hearts (3) and Spades (4)
+    assert(eval(is_major_check(3)) = 1)  // Hearts
+    assert(eval(is_major_check(4)) = 1)  // Spades
+    // Minor suits: Clubs (1) and Diamonds (2)
+    assert(eval(is_minor_check(1)) = 1)  // Clubs
+    assert(eval(is_minor_check(2)) = 1)  // Diamonds
+    // Notrump: 5
+    assert(eval(is_notrump_check(5)) = 1)  // NT
+}
+
+example "valid level bounds" {
+    assert(∀(l : Level). valid_level(l) → (l ≥ 1 ∧ l ≤ 7))
+}
+
+example "valid strain bounds" {
+    assert(∀(s : Strain). valid_strain(s) → (s ≥ 1 ∧ s ≤ 5))
+}

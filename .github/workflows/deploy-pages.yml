@@ -1,0 +1,96 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup mdBook
+        uses: peaceiris/actions-mdbook@v2
+        with:
+          mdbook-version: 'latest'
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Z3
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libz3-dev
+
+      - name: Set Z3 header path
+        run: echo "Z3_SYS_Z3_HEADER=/usr/include/z3.h" >> $GITHUB_ENV
+
+      - name: Build mdBook
+        run: |
+          cd docs/manual
+          mdbook build
+
+      - name: Build rustdoc
+        run: cargo doc --no-deps --document-private-items
+        continue-on-error: true
+
+      - name: SEO post-build (canonical URLs, per-page meta descriptions)
+        run: ./scripts/postbuild-manual.sh docs/manual/book
+
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          cp .nojekyll _site/
+          cp CNAME _site/ 2>/dev/null || true
+          cp index.html _site/
+          cp favicon.svg _site/
+          cp favicon.ico _site/ 2>/dev/null || true
+          cp favicon-48.png _site/ 2>/dev/null || true
+          cp favicon-96.png _site/ 2>/dev/null || true
+          cp apple-touch-icon.png _site/ 2>/dev/null || true
+          cp sitemap.xml _site/
+          cp robots.txt _site/ 2>/dev/null || true
+          cp -r static _site/static
+
+          # Manual
+          mkdir -p _site/docs/manual
+          cp -r docs/manual/book _site/docs/manual/book
+
+          # Papers (PDFs, .kleis sources)
+          mkdir -p _site/docs/papers
+          cp -r docs/papers/* _site/docs/papers/
+
+          # Rustdoc API reference
+          mkdir -p _site/api
+          if [ -d "target/doc" ]; then
+            cp -r target/doc/* _site/api/
+            echo '<meta http-equiv="refresh" content="0; url=kleis/index.html">' > _site/api/index.html
+          fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

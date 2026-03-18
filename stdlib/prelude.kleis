@@ -1,0 +1,673 @@
+// ============================================
+// Kleis Standard Library - Prelude
+// ============================================
+// This file is always loaded in the editor
+// Defines fundamental algebraic structures
+// Version: 0.1.0
+// ============================================
+
+// Annotations (grammar supports them, not yet implemented in parser)
+// @library("std.prelude")
+// @version("0.1.0")
+
+// ============================================
+// ALGEBRAIC STRUCTURE HIERARCHY
+// ============================================
+
+// Foundation: Associativity only
+structure Semigroup(S) {
+  operation (•) : S × S → S
+  
+  axiom associativity:
+    ∀(x y z : S). (x • y) • z = x • (y • z)
+}
+
+// Add identity element
+structure Monoid(M) extends Semigroup(M) {
+  element e : M
+  
+  axiom left_identity:
+    ∀(x : M). e • x = x
+    
+  axiom right_identity:
+    ∀(x : M). x • e = x
+}
+
+// Add inverse
+structure Group(G) extends Monoid(G) {
+  operation inv : G → G
+  
+  axiom left_inverse:
+    ∀(x : G). inv(x) • x = e
+    
+  axiom right_inverse:
+    ∀(x : G). x • inv(x) = e
+}
+
+// Add commutativity
+structure AbelianGroup(A) extends Group(A) {
+  axiom commutativity:
+    ∀(x y : A). x • y = y • x
+}
+
+// Two operations with distributivity
+structure Ring(R) {
+  // Addition structure
+  structure additive : AbelianGroup(R) {
+    operation (+) : R × R → R
+    operation negate : R → R
+    element zero : R
+  }
+  
+  // Multiplication structure
+  structure multiplicative : Monoid(R) {
+    operation (×) : R × R → R
+    element one : R
+  }
+  
+  // Subtraction (derived)
+  operation (-) : R × R → R
+  define (-)(x, y) = x + negate(y)
+  
+  // Distributivity law
+  axiom left_distributivity:
+    ∀(x y z : R). x × (y + z) = (x × y) + (x × z)
+    
+  axiom right_distributivity:
+    ∀(x y z : R). (x + y) × z = (x × z) + (y × z)
+}
+
+// Add division
+structure Field(F) extends Ring(F) {
+  operation (/) : F × F → F
+  operation inverse : F → F
+  
+  axiom multiplicative_inverse:
+    ∀(x : F) where x ≠ zero. inverse(x) × x = one
+    
+  // Division defined
+  define (/)(x, y) = x × inverse(y)
+}
+
+// ============================================
+// VECTOR SPACE STRUCTURE
+// ============================================
+
+structure VectorSpace(V) over Field(F) {
+  // Vector addition
+  operation (+) : V × V → V
+  element zero_v : V
+  
+  // Scalar multiplication
+  operation (·) : F × V → V
+  
+  // Axioms
+  axiom vector_associativity:
+    ∀(u v w : V). (u + v) + w = u + (v + w)
+    
+  axiom vector_commutativity:
+    ∀(u v : V). u + v = v + u
+    
+  axiom vector_identity:
+    ∀(v : V). zero_v + v = v
+    
+  axiom scalar_identity:
+    ∀(v : V). 1 · v = v
+    
+  axiom scalar_distributivity_vector:
+    ∀(c : F, u v : V). c · (u + v) = c · u + c · v
+    
+  axiom scalar_distributivity_field:
+    ∀(c d : F, v : V). (c + d) · v = c · v + d · v
+}
+
+// ============================================
+// IMPLEMENTATIONS FOR BUILT-IN TYPES
+// ============================================
+
+// Real numbers form a field
+implements Field(ℝ) {
+  element zero = 0
+  element one = 1
+  operation (+) = builtin_add
+  operation (×) = builtin_mul
+  operation negate(x) = -x
+  operation inverse(x) = 1/x
+}
+
+// Complex numbers form a field
+implements Field(ℂ) {
+  element zero = 0
+  element one = 1
+  operation (+) = complex_add
+  operation (×) = complex_mul
+  operation negate(z) = -z
+  operation inverse(z) = complex_inverse
+}
+
+// Integers form a ring (not a field - no division)
+implements Ring(ℤ) {
+  element zero = 0
+  element one = 1
+  operation (+) = builtin_add
+  operation (×) = builtin_mul
+  operation negate(x) = -x
+}
+
+// Vectors form a vector space over reals
+implements VectorSpace(Vector(n)) over Field(ℝ) {
+  element zero_v = zero_vector(n)
+  operation (+) = vector_add
+  operation (·) = scalar_vector_mul
+}
+
+// Matrices form a vector space over reals
+implements VectorSpace(Matrix(m, n, ℝ)) over Field(ℝ) {
+  element zero_v = zero_matrix(m, n)
+  operation (+) = matrix_add
+  operation (·) = scalar_matrix_mul
+}
+
+// ============================================
+// VECTOR OPERATIONS
+// ============================================
+
+// Dot product (inner product): u · v = Σᵢ uᵢvᵢ
+operation dot : ∀(n : ℕ). Vector(n) × Vector(n) → ℝ
+
+// Cross product (3D only): u × v
+operation cross : Vector(3) × Vector(3) → Vector(3)
+
+// Norm (Euclidean): ||v|| = √(v · v)
+operation norm : ∀(n : ℕ). Vector(n) → ℝ
+
+// Square root function
+operation sqrt : ℝ → ℝ
+
+// ============================================
+// MATRIX OPERATIONS
+// ============================================
+
+// Matrix multiplication: A × B
+operation (×) : ∀(m n p : ℕ, T). Matrix(m, n, T) × Matrix(n, p, T) → Matrix(m, p, T)
+
+// Transpose: Aᵀ (notation: A^T or A')
+operation transpose : ∀(m n : ℕ, T). Matrix(m, n, T) → Matrix(n, m, T)
+
+// Determinant: det(A) for square matrices
+operation det : ∀(n : ℕ, T). Matrix(n, n, T) → T
+
+// Trace: tr(A) = Σᵢ Aᵢᵢ for square matrices
+operation trace : ∀(n : ℕ, T). Matrix(n, n, T) → T
+
+// ============================================
+// CALCULUS OPERATIONS
+// ============================================
+
+// Functional notation for derivatives (following Mathematica's approach)
+// 
+// **Design:** Separation of concerns
+//   - CODE uses valid identifiers: gradient, divergence, curl
+//   - RENDERING uses mathematical notation: ∇f, ∂f/∂x, ∇·F, ∇×F
+//
+// Just like Mathematica:
+//   - You write:  D[f, x]     or   gradient(f)
+//   - You see:    ∂f/∂x       or   ∇f
+//
+// This keeps the grammar simple while allowing beautiful mathematical output!
+
+// NOTE: Higher-order function types (functions returning functions) require
+// parentheses in type signatures, which parser doesn't support yet.
+// TODO: Add when parser supports parenthesized types: (ℝ → ℝ) → (ℝ → ℝ)
+
+// For now, calculus operations declared as builtins (implementation in Rust)
+// These would be used like: derivative(f, x), gradient(F), etc.
+
+// Gradient: ∇f in mathematical notation
+// Returns vector of all partial derivatives
+// RENDER AS: ∇f
+operation gradient : ScalarField(ℝⁿ) → VectorField(ℝⁿ)
+
+// Divergence: ∇ · F in mathematical notation
+// RENDER AS: ∇·F  
+operation divergence : VectorField(ℝⁿ) → ScalarField(ℝⁿ)
+
+// Curl: ∇ × F in mathematical notation (3D only)
+// RENDER AS: ∇×F
+operation curl : VectorField(ℝ³) → VectorField(ℝ³)
+
+// ============================================
+// MATHEMATICAL CONSTANTS  
+// ============================================
+
+// Use ASCII names for constants (Unicode symbols in identifiers not yet supported)
+define pi : ℝ = 3.14159265358979323846
+define e : ℝ = 2.71828182845904523536
+define phi : ℝ = 1.61803398874989484820  // Golden ratio (φ)
+define sqrt2 : ℝ = 1.41421356237309504880  // √2
+
+// Complex number constructor
+operation complex : ℝ × ℝ → ℂ    // complex(re, im) creates re + im*i
+
+// Imaginary unit: i² = -1
+// Note: 'i' is a built-in constant recognized by the Z3 backend
+// It cannot be defined via complex(0, 1) because that would create circularity
+// Instead, Z3 uses the axiom: i * i = -1
+
+// Complex accessors
+operation re : ℂ → ℝ    // Extract real part
+operation im : ℂ → ℝ    // Extract imaginary part
+
+// Complex conjugate
+operation conj : ℂ → ℂ
+
+// Complex arithmetic (explicit versions - Z3 uses axioms)
+operation complex_add : ℂ × ℂ → ℂ     // z1 + z2
+operation complex_sub : ℂ × ℂ → ℂ     // z1 - z2
+operation complex_mul : ℂ × ℂ → ℂ     // z1 × z2
+operation complex_div : ℂ × ℂ → ℂ     // z1 / z2
+operation complex_inverse : ℂ → ℂ     // 1/z
+operation neg_complex : ℂ → ℂ         // -z
+operation abs_squared : ℂ → ℝ         // |z|² = re² + im²
+
+// ============================================
+// BASIC OPERATIONS (for compatibility)
+// ============================================
+// These structures provide operations needed by equation editor and tests
+
+// Basic arithmetic operations
+structure Arithmetic(T) {
+  operation plus : T → T → T
+  operation minus : T → T → T
+  operation times : T → T → T
+  operation divide : T → T → T
+  operation scalar_divide : T → T → T
+  operation scalar_multiply : T → T → T
+  operation frac : T → T → T
+  operation parens : T → T
+  operation brackets : T → T
+  operation braces : T → T
+  operation angle_brackets : T → T
+}
+
+// ============================================
+// TYPE PROMOTION (ADR-016)
+// ============================================
+// Type hierarchy: ℕ → ℤ → ℚ → ℝ → ℂ
+// When mixing types in arithmetic, the "larger" type wins.
+// This structure defines how to lift a value from one type to another.
+
+structure Promotes(From, To) {
+  operation lift : From → To
+}
+
+// Natural → Integer
+implements Promotes(ℕ, ℤ) {
+  operation lift = nat_to_int
+}
+
+// Integer → Rational
+implements Promotes(ℤ, ℚ) {
+  operation lift = int_to_rational
+}
+
+// Rational → Real (Scalar)
+implements Promotes(ℚ, ℝ) {
+  operation lift = rational_to_real
+}
+
+// Real → Complex
+implements Promotes(ℝ, ℂ) {
+  operation lift = real_to_complex
+}
+
+// Direct promotions (transitive closure for convenience)
+implements Promotes(ℕ, ℚ) {
+  operation lift = nat_to_rational
+}
+
+implements Promotes(ℕ, ℝ) {
+  operation lift = nat_to_real
+}
+
+implements Promotes(ℕ, ℂ) {
+  operation lift = nat_to_complex
+}
+
+implements Promotes(ℤ, ℝ) {
+  operation lift = int_to_real
+}
+
+implements Promotes(ℤ, ℂ) {
+  operation lift = int_to_complex
+}
+
+implements Promotes(ℚ, ℂ) {
+  operation lift = rational_to_complex
+}
+
+// Piecewise functions: f(x) = { expr1 if cond1, expr2 if cond2, ... }
+structure Piecewise(n: Nat, T) {
+  operation Piecewise : Nat → List(T) → List(Bool) → T
+}
+
+// Equality operations (work for any type)
+structure Equatable(T) {
+  operation equals : T → T → Bool
+  operation not_equals : T → T → Bool
+}
+
+// Ordering operations (only for types with order)
+structure Ordered(T) {
+  // Long names
+  operation less_than : T → T → Bool
+  operation greater_than : T → T → Bool
+  operation less_equal : T → T → Bool
+  operation greater_equal : T → T → Bool
+  operation leq : T → T → Bool
+  operation geq : T → T → Bool
+  operation neq : T → T → Bool
+  operation approx : T → T → Bool
+  // Short aliases (for LISP interpreter and convenience)
+  operation lt : T → T → Bool
+  operation gt : T → T → Bool
+  operation le : T → T → Bool
+  operation ge : T → T → Bool
+  operation eq : T → T → Bool
+}
+
+// Logical operations
+structure LogicalOps(T) {
+  operation logical_and : T → T → T
+  operation logical_or : T → T → T
+  operation logical_not : T → T
+}
+
+// Let bindings (for equation editor definitions)
+// Note: let_simple binds a name to a value and returns the value
+// N = name type (usually ℝ for variables), T = value type
+// Result type is T (the value's type)
+structure LetBindings(N, T) {
+  operation let_simple : N → T → T  // let name = value (rendered as "let x = v")
+}
+
+// Variable name (typed as ℝ) binding to scalar
+implements LetBindings(ℝ, ℝ) {
+  operation let_simple = builtin_let
+}
+
+// Variable name binding to matrix
+implements LetBindings(ℝ, Matrix(m, n, ℝ)) {
+  operation let_simple = builtin_let
+}
+
+// Variable name binding to boolean
+implements LetBindings(ℝ, Bool) {
+  operation let_simple = builtin_let
+}
+
+// Numeric operations (beyond basic arithmetic)
+structure Numeric(N) {
+  operation abs : N → N
+  operation floor : N → N
+  operation sqrt : N → N
+  operation power : N → N → N
+  operation sup : N → N → N  // Superscript rendering
+  operation sub : N → N → N  // Subscript rendering
+}
+
+// Calculus operations (for equation editor)
+structure Differentiable(F) {
+  operation derivative : F → F
+  operation d_dx : F → F
+  operation partial : F → F
+}
+
+structure Integrable(F) {
+  operation integral : F → ℝ
+  operation int_bounds : F → ℝ → ℝ → F → ℝ
+}
+
+// Arithmetic for scalars (ℝ / Real)
+implements Arithmetic(ℝ) {
+  operation plus = builtin_add
+  operation minus = builtin_sub
+  operation times = builtin_mul
+  operation divide = builtin_div
+  operation scalar_divide = builtin_div
+  operation scalar_multiply = builtin_mul
+  operation frac = builtin_div
+  operation parens = builtin_identity
+  operation brackets = builtin_identity
+  operation braces = builtin_identity
+  operation angle_brackets = builtin_identity
+}
+
+// Arithmetic for naturals (ℕ)
+implements Arithmetic(ℕ) {
+  operation plus = builtin_nat_add
+  operation minus = builtin_nat_sub
+  operation times = builtin_nat_mul
+  operation divide = builtin_nat_div
+  operation scalar_divide = builtin_nat_div
+  operation scalar_multiply = builtin_nat_mul
+  operation frac = builtin_nat_div
+  operation parens = builtin_identity
+  operation brackets = builtin_identity
+  operation braces = builtin_identity
+  operation angle_brackets = builtin_identity
+}
+
+// Arithmetic for integers (ℤ)
+implements Arithmetic(ℤ) {
+  operation plus = builtin_int_add
+  operation minus = builtin_int_sub
+  operation times = builtin_int_mul
+  operation divide = builtin_int_div
+  operation scalar_divide = builtin_int_div
+  operation scalar_multiply = builtin_int_mul
+  operation frac = builtin_int_div
+  operation parens = builtin_identity
+  operation brackets = builtin_identity
+  operation braces = builtin_identity
+  operation angle_brackets = builtin_identity
+}
+
+// Arithmetic for rationals (ℚ)
+implements Arithmetic(ℚ) {
+  operation plus = builtin_rational_add
+  operation minus = builtin_rational_sub
+  operation times = builtin_rational_mul
+  operation divide = builtin_rational_div
+  operation scalar_divide = builtin_rational_div
+  operation scalar_multiply = builtin_rational_mul
+  operation frac = builtin_rational_div
+  operation parens = builtin_identity
+  operation brackets = builtin_identity
+  operation braces = builtin_identity
+  operation angle_brackets = builtin_identity
+}
+
+// Arithmetic for complex (ℂ)
+implements Arithmetic(ℂ) {
+  operation plus = builtin_complex_add
+  operation minus = builtin_complex_sub
+  operation times = builtin_complex_mul
+  operation divide = builtin_complex_div
+  operation scalar_divide = builtin_complex_div
+  operation scalar_multiply = builtin_complex_mul
+  operation frac = builtin_complex_div
+  operation parens = builtin_identity
+  operation brackets = builtin_identity
+  operation braces = builtin_identity
+  operation angle_brackets = builtin_identity
+}
+
+// Arithmetic for matrices (component-wise)
+implements Arithmetic(Matrix(m, n, ℝ)) {
+  operation plus = builtin_matrix_add
+  operation minus = builtin_matrix_sub
+  operation times = builtin_matrix_mul
+  operation divide = builtin_matrix_div
+  operation scalar_divide = builtin_matrix_div
+  operation scalar_multiply = builtin_matrix_scalar_mul
+  operation frac = builtin_matrix_div
+  operation parens = builtin_identity
+  operation brackets = builtin_identity
+  operation braces = builtin_identity
+  operation angle_brackets = builtin_identity
+}
+
+// Piecewise for reals
+implements Piecewise(n, ℝ) {
+  operation Piecewise = builtin_piecewise
+}
+
+// Equality for scalars
+implements Equatable(ℝ) {
+  operation equals = builtin_eq
+  operation not_equals = builtin_neq
+}
+
+// Equality for matrices (component-wise)
+implements Equatable(Matrix(m, n, ℝ)) {
+  operation equals = builtin_matrix_eq
+  operation not_equals = builtin_matrix_neq
+}
+
+// Ordering for scalars (not matrices!)
+implements Ordered(ℝ) {
+  operation less_than = builtin_lt
+  operation greater_than = builtin_gt
+  operation less_equal = builtin_le
+  operation greater_equal = builtin_ge
+  operation leq = builtin_le
+  operation geq = builtin_ge
+  operation neq = builtin_neq
+  operation approx = builtin_approx
+  // Short aliases
+  operation lt = builtin_lt
+  operation gt = builtin_gt
+  operation le = builtin_le
+  operation ge = builtin_ge
+  operation eq = builtin_eq
+}
+
+// Ordering for integers
+implements Ordered(ℤ) {
+  operation less_than = builtin_lt
+  operation greater_than = builtin_gt
+  operation less_equal = builtin_le
+  operation greater_equal = builtin_ge
+  operation leq = builtin_le
+  operation geq = builtin_ge
+  operation neq = builtin_neq
+  operation approx = builtin_eq
+  operation lt = builtin_lt
+  operation gt = builtin_gt
+  operation le = builtin_le
+  operation ge = builtin_ge
+  operation eq = builtin_eq
+}
+
+// Logical operations for booleans
+implements LogicalOps(Bool) {
+  operation logical_and = builtin_and
+  operation logical_or = builtin_or
+  operation logical_not = builtin_not
+}
+
+// Numeric operations for reals
+implements Numeric(ℝ) {
+  operation abs = builtin_abs
+  operation floor = builtin_floor
+  operation sqrt = builtin_sqrt
+  operation power = builtin_pow
+  operation sup = builtin_superscript
+  operation sub = builtin_subscript
+}
+
+// ============================================
+// COMMON FUNCTIONS
+// ============================================
+
+// Trigonometric
+operation sin : ℝ → ℝ
+operation cos : ℝ → ℝ
+operation tan : ℝ → ℝ
+
+// Exponential and logarithm
+operation exp : ℝ → ℝ
+operation ln : ℝ → ℝ
+operation log : ℝ → ℝ → ℝ  // log(base, x)
+
+// Power
+operation (^) : ℝ × ℝ → ℝ
+
+// Absolute value
+operation abs : ℝ → ℝ
+operation abs : ℂ → ℝ  // Overloaded for complex
+
+// ============================================
+// STRING OPERATIONS
+// ============================================
+// These correspond to Z3's string theory operations
+// Note: StringOps(S) uses S as a dummy parameter since structures require params
+
+structure StringOps(S) {
+  // Length of a string
+  operation strlen : String → ℤ
+  
+  // Concatenate two strings
+  operation concat : String → String → String
+  
+  // Get character at index (0-based)
+  operation charAt : String → ℤ → String
+  
+  // Substring from start index with length
+  operation substr : String → ℤ → ℤ → String
+  
+  // Index of first occurrence (-1 if not found)
+  operation indexOf : String → String → ℤ
+  
+  // Check if string contains substring
+  operation contains : String → String → Bool
+  
+  // Check if string starts with prefix
+  operation hasPrefix : String → String → Bool
+  
+  // Check if string ends with suffix
+  operation hasSuffix : String → String → Bool
+  
+  // Replace first occurrence
+  operation replace : String → String → String → String
+  
+  // Replace all occurrences
+  operation replaceAll : String → String → String → String
+  
+  // Convert integer to string
+  operation intToStr : ℤ → String
+  
+  // Convert string to integer (if valid)
+  operation strToInt : String → ℤ
+}
+
+implements StringOps(String) {
+  operation strlen = builtin_strlen
+  operation concat = builtin_concat
+  operation charAt = builtin_charAt
+  operation substr = builtin_substr
+  operation indexOf = builtin_indexOf
+  operation contains = builtin_contains
+  operation hasPrefix = builtin_hasPrefix
+  operation hasSuffix = builtin_hasSuffix
+  operation replace = builtin_replace
+  operation replaceAll = builtin_replaceAll
+  operation intToStr = builtin_intToStr
+  operation strToInt = builtin_strToInt
+}
+
+// ============================================
+// END OF PRELUDE
+// ============================================
+

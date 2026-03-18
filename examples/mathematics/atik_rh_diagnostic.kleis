@@ -1,0 +1,59 @@
+// ============================================================================
+// Diagnostic: What does the Atik argument prove, and what is missing?
+// ============================================================================
+//
+// Z3 audit of the proof. Run each test in isolation to avoid axiom bleed.
+//
+// RESULTS:
+//   T1  ❌  Proved axioms alone do NOT imply RH.
+//            Z3 counterexample: σ = 1/4, re_comb = 1/2.
+//   T2  ✅  Proved + spectral_identity (re_comb = σ) → RH.
+//   T3  ✅  Proved + moment2 (Σσ² = N/4)             → RH.
+//   T4  ❌  Cannot derive moment2 from proved axioms.
+//            Z3 counterexample: σ = 1/4, Σσ² = 1/2 > N/4.
+//
+// CONCLUSION: We need exactly ONE additional axiom, and every formulation
+//   of it is equivalent to RH:
+//     (a)  re_comb(k) = sigma(k)    "spectral identity"
+//     (b)  Σ σ_k² = N/4            "second moment condition"
+//     (c)  |λ_k - ρ_k| → 0 in ℂ    "complex convergence"
+//
+//   The Atik Conjecture reduces RH to this single claim.
+//   Everything else is machine-verified.
+//
+// ============================================================================
+//
+// This file contains Test 1 only.  Tests 2-4 are in separate files
+// (atik_rh_full_chain.kleis, atik_rh_skolem.kleis) to avoid accumulation.
+// ============================================================================
+
+operation sigma : ℤ → ℝ
+operation re_comb : ℤ → ℝ
+operation gamma_star : ℤ → ℝ
+operation gamma_zeta : ℤ → ℝ
+
+structure ProvedOnly {
+    element k : ℤ
+    element N : ℤ
+    element sum_s : ℝ
+
+    // Number theory: zeros in critical strip
+    axiom critical_strip : sigma(k) > 0 ∧ sigma(k) < 1
+
+    // Functional equation: Σσ = N/2  (unconditional theorem)
+    axiom N_pos : N > 0
+    axiom moment1 : sum_s = N / 2
+
+    // Structure theorem (Lean 4): comb eigenvalues have Re = 1/2
+    axiom structure_thm : re_comb(k) = 1 / 2
+
+    // Convergence (Lean 4): comb Im-parts → zeta Im-parts
+    axiom convergence : gamma_star(k) = gamma_zeta(k)
+
+    // Cauchy-Schwarz: Σσ² ≥ N/4  (unconditional)
+    // (Not enough — need equality, which is RH)
+}
+
+example "T1: Proved axioms only → RH?" {
+    assert(sigma(k) = 1 / 2)
+}

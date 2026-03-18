@@ -1,0 +1,44 @@
+// ============================================================================
+// Negation Test: Can σ ≠ 1/2 satisfy the moment constraints?
+// ============================================================================
+//
+// We add all the moment axioms PLUS σ > 0.51 (off the critical line).
+// If Z3 reports the axioms as inconsistent, it means σ MUST be 1/2 —
+// there is no model where the moments hold and σ ≠ 1/2.
+//
+// Expected: Z3 detects UNSAT (axiom inconsistency), proving any
+// assertion trivially. The inconsistency IS the proof.
+//
+// ============================================================================
+
+operation sigma : ℤ → ℝ
+
+structure RH_Negation {
+    element N : ℤ
+    element k : ℤ
+    element sum_s : ℝ
+    element sum_s2 : ℝ
+
+    axiom N_pos : N > 0
+    axiom strip : sigma(k) > 0 ∧ sigma(k) < 1
+    axiom moment1 : sum_s = N / 2
+    axiom moment2 : sum_s2 = N / 4
+    axiom variance_zero : sum_s2 * N = sum_s * sum_s
+    axiom all_equal : N * sigma(k) = sum_s
+
+    // NEGATION: assert σ is NOT 1/2
+    axiom off_line : sigma(k) > 1 / 2 + 1 / 100
+}
+
+// Expected result: AXIOM INCONSISTENCY DETECTED
+// Z3 proves the axioms are mutually unsatisfiable.
+// There is NO model where moments hold and σ ≠ 1/2.
+// This is the negation proof: ¬RH is inconsistent with the moment constraints.
+//
+// Kleis reports this as a "theory bug" (axiom inconsistency) because it's
+// designed to catch errors. But here, the inconsistency IS the proof:
+// the moment axioms FORCE σ = 1/2, so adding σ > 0.51 is contradictory.
+
+example "NEGATION: Z3 detects UNSAT (this test intentionally triggers inconsistency)" {
+    assert(sigma(k) > 0)
+}

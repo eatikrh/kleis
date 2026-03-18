@@ -1,0 +1,148 @@
+// Kleis Standard Library - Tensors (Minimal Version)
+// Basic tensor notation operations for the Physics palette
+//
+// This is a minimal version that works with the current parser.
+// Advanced operations (with arithmetic in type params) will be added
+// when the parser is extended.
+
+/* Tensor Index Notation - Display Operations
+ * 
+ * These operations create indexed tensor notation for display.
+ * Used by the Physics palette buttons.
+ * 
+ * The type signatures encode the index structure:
+ *   - gamma: Γ^λ_μν has 1 upper, 2 lower → Tensor(1, 2, 4, ℝ)
+ *   - riemann: R^ρ_σμν has 1 upper, 3 lower → Tensor(1, 3, 4, ℝ)
+ * 
+ * Dimension is fixed at 4 (spacetime) for GR applications.
+ * This enables type checking with proper index structure!
+ */
+structure ChristoffelNotation(T) {
+    operation gamma : T → T → T → T → Tensor(1, 2, 4, ℝ)
+}
+
+implements ChristoffelNotation(ℝ) {
+    operation gamma = builtin_gamma_notation
+}
+
+structure RiemannNotation(T) {
+    operation riemann : T → T → T → T → T → Tensor(1, 3, 4, ℝ)
+}
+
+implements RiemannNotation(ℝ) {
+    operation riemann = builtin_riemann_notation
+}
+
+/* Generic Tensor Type
+ * 
+ * A tensor with specified contravariant and covariant ranks.
+ * 
+ * Parameters:
+ *   - upper: number of contravariant (upper) indices
+ *   - lower: number of covariant (lower) indices  
+ *   - dim: spacetime dimension (typically 4)
+ *   - T: element type
+ */
+structure Tensor(upper: Nat, lower: Nat, dim: Nat, T) {
+    operation contract : Tensor(upper, lower, dim, T) → T
+}
+
+implements Tensor(upper, lower, dim, ℝ) {
+    operation contract = builtin_tensor_contract
+}
+
+/* Tensor Arithmetic - FUTURE (Parser Limitation)
+ * 
+ * DESIGN NOTE: Tensors SHOULD support polymorphic arithmetic!
+ * Just like multiply works for Matrix(m, n, T) with any T,
+ * plus/minus should work for ANY type T including Tensors.
+ * 
+ * The architecture is correct:
+ *   structure Arithmetic(T) {
+ *     operation plus : T → T → T
+ *   }
+ * 
+ * We just need: implements Arithmetic(Tensor(upper, lower, dim, ℝ))
+ * 
+ * PARSER LIMITATION: Current parser can't handle:
+ *   - implements blocks referencing structures from other files
+ *   - Complex parametric types in implements: Arithmetic(Tensor(...))
+ * 
+ * When parser is extended, uncomment:
+ */
+// implements Arithmetic(Tensor(upper, lower, dim, ℝ)) {
+//     operation plus = builtin_tensor_add
+//     operation minus = builtin_tensor_subtract
+// }
+//
+// Then Einstein equations will type-check as Tensor(0, 2, 4, ℝ) = Tensor(0, 2, 4, ℝ)!
+
+/* Einstein Tensor Operations
+ * 
+ * Core operations for General Relativity field equations.
+ * Fixed at dimension 4 (spacetime) for GR applications.
+ */
+structure EinsteinTensor(T) {
+    operation einstein : Tensor(0, 2, 4, ℝ) → ℝ → Tensor(0, 2, 4, ℝ) → Tensor(0, 2, 4, ℝ)
+}
+
+implements EinsteinTensor(ℝ) {
+    operation einstein = builtin_einstein_tensor
+}
+
+/* Ricci Operations
+ * 
+ * Ricci tensor and scalar for curvature calculations.
+ */
+structure RicciTensor(T) {
+    operation ricci : Tensor(1, 3, 4, ℝ) → Tensor(0, 2, 4, ℝ)
+}
+
+implements RicciTensor(ℝ) {
+    operation ricci = builtin_ricci_from_riemann
+}
+
+structure RicciScalar(T) {
+    operation ricci_scalar : Tensor(0, 2, 4, ℝ) → Tensor(2, 0, 4, ℝ) → ℝ
+}
+
+implements RicciScalar(ℝ) {
+    operation ricci_scalar = builtin_ricci_scalar
+}
+
+/* Christoffel Connection (Computation)
+ * 
+ * Computes connection coefficients from metric tensor.
+ */
+structure Connection(T) {
+    operation christoffel : Tensor(0, 2, 4, ℝ) → Tensor(1, 2, 4, ℝ)
+}
+
+implements Connection(ℝ) {
+    operation christoffel = builtin_christoffel_from_metric
+}
+
+/* Curvature Computation
+ * 
+ * Computes Riemann curvature from Christoffel symbols.
+ */
+structure Curvature(T) {
+    operation riemann : Tensor(1, 2, 4, ℝ) → Tensor(1, 3, 4, ℝ)
+}
+
+implements Curvature(ℝ) {
+    operation riemann = builtin_riemann_from_christoffel
+}
+
+/* More tensor operations to be added when parser supports:
+ * - Arithmetic in type parameters (p + q)
+ * - Tensor products (commented out due to parser limitation)
+ * 
+ * See full version (stdlib/tensors.kleis) for:
+ * - Tensor products with rank arithmetic
+ * - Wedge products for differential forms
+ * - Lie derivatives
+ * - Killing vectors
+ * - Standard metrics (Schwarzschild, Kerr, FLRW)
+ */
+

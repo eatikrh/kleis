@@ -1,0 +1,49 @@
+// Cross-file import test for rust_parser.kleis
+// This file exercises the parser through import boundaries — the exact
+// scenario that exposed the eval_internal / eval_concrete asymmetry.
+
+import "rust_parser.kleis"
+
+example "cross_file_scan_and_query" {
+    let source = "use std::collections::HashMap;\nuse std::io::*;\n\n/// A helper function\npub fn add(a: i32, b: i32) -> i32 {\n    a + b\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_add() {\n        assert_eq!(add(1, 2), 3);\n    }\n}" in
+    let result = scan(source) in
+    let fns = crate_functions(result) in
+    let uses = crate_uses(result) in
+    let comments = crate_comments(result) in
+    let mods = crate_modules(result) in
+    out(count_functions(result))
+    out(count_uses(result))
+    out(comments)
+    out(mods)
+}
+
+example "cross_file_wildcard_filter" {
+    let source = "use std::io::*;\nuse super::*;\nuse std::collections::HashMap;" in
+    let result = scan(source) in
+    let wildcards = non_test_wildcard_uses(result) in
+    out(wildcards)
+}
+
+example "cross_file_comment_classification" {
+    let c1 = classify_comment("/// doc comment", 1) in
+    let c2 = classify_comment("// regular comment", 2) in
+    let c3 = classify_comment("//! inner doc", 3) in
+    out(c1)
+    out(c2)
+    out(c3)
+    out(is_doc_comment(c1))
+    out(is_line_comment(c2))
+    out(is_doc_comment(c3))
+}
+
+example "cross_file_let_chain" {
+    let source = "pub fn foo() {}\nfn bar() {}" in
+    let result = scan(source) in
+    let fns = crate_functions(result) in
+    let first_fn = match fns {
+        Cons(f, rest) => f
+      | Nil => FnDecl(Private, false, false, false, "none", "", "", 0, 0, Nil, 0)
+    } in
+    let name = fn_name(first_fn) in
+    out(name)
+}

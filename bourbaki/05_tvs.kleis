@@ -1,0 +1,179 @@
+// ============================================
+// Bourbaki Volume V: Topological Vector Spaces
+// Éléments de mathématique
+// ============================================
+//
+// This file formalizes topological vector spaces from
+// Bourbaki's fifth volume.
+
+// --------------------------------------------
+// Chapter 1: Topological Vector Spaces
+// --------------------------------------------
+
+structure TopologicalVectorSpace(V, F) {
+    operation add : V × V → V
+    operation scalar : F × V → V
+    element zero : V
+    
+    // Vector space axioms
+    axiom add_assoc: ∀(u v w : V). add(add(u, v), w) = add(u, add(v, w))
+    axiom add_comm: ∀(u v : V). add(u, v) = add(v, u)
+    axiom add_identity: ∀(v : V). add(v, zero) = v
+    axiom scalar_assoc: ∀(a b : F, v : V). scalar(a, scalar(b, v)) = scalar(mul(a, b), v)
+    axiom scalar_identity: ∀(v : V). scalar(one, v) = v
+    axiom distributive_scalar: ∀(a : F, u v : V). scalar(a, add(u, v)) = add(scalar(a, u), scalar(a, v))
+    axiom distributive_field: ∀(a b : F, v : V). scalar(add(a, b), v) = add(scalar(a, v), scalar(b, v))
+    
+    // Topological axioms
+    axiom add_continuous: continuous(add)
+    axiom scalar_continuous: continuous(scalar)
+}
+
+// Locally Convex Space
+structure LocallyConvexSpace(V, F) {
+    axiom local_base_convex: ∀(U : Set(V)). 
+        is_neighborhood(U, zero) → (∃(C : Set(V)). is_convex(C) ∧ subset(C, U) ∧ is_neighborhood(C, zero))
+}
+
+// --------------------------------------------
+// Chapter 2: Seminorms and Norms
+// --------------------------------------------
+
+structure Seminorm(V) {
+    operation p : V → ℝ
+    
+    axiom non_negative: ∀(v : V). p(v) >= 0
+    axiom homogeneous: ∀(a : F, v : V). p(scalar(a, v)) = mul(abs(a), p(v))
+    axiom triangle: ∀(u v : V). p(add(u, v)) <= add(p(u), p(v))
+}
+
+structure NormedSpace(V) {
+    operation norm : V → ℝ
+    operation add : V × V → V
+    operation scalar : ℝ × V → V
+    element zero : V
+    
+    axiom non_negative: ∀(v : V). norm(v) >= 0
+    axiom zero_norm: ∀(v : V). norm(v) = 0 ↔ v = zero
+    axiom homogeneous: ∀(a : ℝ, v : V). norm(scalar(a, v)) = mul(abs(a), norm(v))
+    axiom triangle: ∀(u v : V). norm(add(u, v)) <= add(norm(u), norm(v))
+    
+    // Induced metric
+    axiom metric_from_norm: ∀(u v : V). d(u, v) = norm(sub(u, v))
+}
+
+// Banach Space (complete normed space)
+structure BanachSpace(V) {
+    operation norm : V → ℝ
+    
+    axiom complete: ∀(seq : ℕ → V). 
+        is_cauchy_norm(seq) → (∃(L : V). converges_to_norm(seq, L))
+}
+
+// --------------------------------------------
+// Chapter 3: Inner Product Spaces
+// --------------------------------------------
+
+structure InnerProductSpace(V) {
+    operation inner : V × V → ℂ
+    operation add : V × V → V
+    operation scalar : ℂ × V → V
+    element zero : V
+    
+    axiom linearity_first: ∀(u v w : V, a : ℂ). 
+        inner(add(scalar(a, u), v), w) = add(mul(a, inner(u, w)), inner(v, w))
+    axiom conjugate_symmetry: ∀(u v : V). inner(u, v) = conj(inner(v, u))
+    axiom positive_definite: ∀(v : V). re(inner(v, v)) >= 0
+    axiom zero_inner: ∀(v : V). inner(v, v) = 0 ↔ v = zero
+    
+    // Induced norm
+    axiom norm_from_inner: ∀(v : V). norm(v) = sqrt(re(inner(v, v)))
+}
+
+// Hilbert Space (complete inner product space)
+structure HilbertSpace(H) {
+    operation inner : H × H → ℂ
+    
+    axiom complete: ∀(seq : ℕ → H). 
+        is_cauchy_inner(seq) → (∃(L : H). converges_to_inner(seq, L))
+    
+    // Orthogonal projection
+    axiom projection: ∀(v : H, M : Set(H)). 
+        is_closed_subspace(M) → (∃(p : H). in_set(p, M) ∧ 
+            (∀(m : H). in_set(m, M) → inner(sub(v, p), m) = 0))
+    
+    // Riesz representation
+    axiom riesz: ∀(f : H → ℂ). 
+        is_bounded_linear(f) → (∃(y : H). ∀(x : H). f(x) = inner(x, y))
+}
+
+// --------------------------------------------
+// Chapter 4: Duality
+// --------------------------------------------
+
+structure DualSpace(V) {
+    element dual : Type
+    
+    axiom dual_def: dual = space_of_bounded_linear_functionals(V)
+    
+    // Canonical embedding
+    axiom canonical: ∀(v : V). 
+        eval_at(v) = λ f . f(v)
+}
+
+// Weak Topology
+structure WeakTopology(V) {
+    axiom weak_open: ∀(U : Set(V)). 
+        is_weakly_open(U) ↔ 
+        (∀(x : V). in_set(x, U) → 
+            (∃(f1 : V → F). is_continuous_linear(f1) ∧ 
+                (∃(ε : ℝ). ε > 0 ∧ (∀(y : V). abs(sub(f1(y), f1(x))) < ε → in_set(y, U)))))
+}
+
+// --------------------------------------------
+// Chapter 5: Hahn-Banach Theorem
+// --------------------------------------------
+
+structure HahnBanach {
+    // Analytic form
+    axiom hahn_banach_analytic: ∀(V : Type, p : V → ℝ, M : Type, f : M → ℝ). 
+        is_sublinear(p) ∧ (∀(m : M). f(m) <= p(m)) → 
+        (∃(F : V → ℝ). extends(F, f) ∧ (∀(v : V). F(v) <= p(v)))
+    
+    // Geometric form (separation)
+    axiom hahn_banach_geometric: ∀(V : Type, A B : Set(V)). 
+        is_convex(A) ∧ is_convex(B) ∧ is_open(A) ∧ intersect(A, B) = empty_set → 
+        (∃(f : V → ℝ, c : ℝ). is_continuous_linear(f) ∧ 
+            (∀(a : V). in_set(a, A) → f(a) < c) ∧ 
+            (∀(b : V). in_set(b, B) → f(b) >= c))
+}
+
+// --------------------------------------------
+// Chapter 6: Operators
+// --------------------------------------------
+
+structure BoundedOperator(H1, H2) {
+    operation T : H1 → H2
+    
+    axiom bounded: ∃(M : ℝ). ∀(x : H1). norm(T(x)) <= mul(M, norm(x))
+    axiom operator_norm: operator_norm(T) = sup_over(norm(T(x)) / norm(x))
+}
+
+structure CompactOperator(H1, H2) {
+    operation T : H1 → H2
+    
+    axiom compact: ∀(B : Set(H1)). is_bounded(B) → is_relatively_compact(image(T, B))
+}
+
+structure SelfAdjointOperator(H) {
+    operation T : H → H
+    
+    axiom self_adjoint: ∀(x y : H). inner(T(x), y) = inner(x, T(y))
+}
+
+structure UnitaryOperator(H) {
+    operation U : H → H
+    
+    axiom unitary: ∀(x y : H). inner(U(x), U(y)) = inner(x, y)
+    axiom surjective: ∀(y : H). ∃(x : H). U(x) = y
+}

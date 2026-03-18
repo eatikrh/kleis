@@ -1,0 +1,38 @@
+// ============================================================================
+// The Ontological Argument: Are the eigenvalues and zeros the same thing?
+// ============================================================================
+//
+// RESULTS:
+//   V1  ❌  Im-parts match (what we proved) → NOT enough.
+//           Z3 counterexample: σ=1/4, re_eig=1/2, im_eig=γ.
+//   V2  ✅  Complex identity (eigenvalue = zero in ℂ) → RH.
+//   V3  ❌  Matrix is blind to σ → NOT enough.
+//
+// THE GAP: The matrix H(γ) only uses Im(ρ_k) = γ_k as entries.
+//   It never sees Re(ρ_k) = σ_k.  Therefore H computes Re(eigenvalue) = 1/2
+//   from the structure theorem, but σ_k is a free variable.
+//
+//   Eigenvalue = 1/2 + iγ_k  (determined by H)
+//   Zero       = σ_k + iγ_k  (determined by ζ)
+//   Same imaginary part.  Different real part unless σ_k = 1/2.
+//
+// The "ontological identity" (eigenvalue = zero in ℂ) is exactly the
+// spectral identity axiom.  If true, RH follows in one step.
+// ============================================================================
+
+operation sigma : ℤ → ℝ
+operation gamma : ℤ → ℝ
+operation re_eig : ℤ → ℝ
+operation im_eig : ℤ → ℝ
+
+// What we proved: Im-parts match
+structure RealFixedPoint {
+    element k : ℤ
+    axiom critical_strip : sigma(k) > 0 ∧ sigma(k) < 1
+    axiom structure : re_eig(k) = 1 / 2
+    axiom fixed_point : im_eig(k) = gamma(k)
+}
+
+example "V1: Im-parts match → RH?" {
+    assert(sigma(k) = 1 / 2)
+}

@@ -1,0 +1,85 @@
+// =============================================================================
+// POT Flat Rotation Curve — Numerical Computation & Plot
+// =============================================================================
+//
+// Computes v(r) for two models:
+//   1. POT:       M(r) = λr³/Rc² for r<Rc, M(r) = λr for r≥Rc
+//   2. Newtonian: M(r) = λRc  (all mass inside core, Keplerian falloff)
+//
+// v(r) = sqrt(M(r)/r)  in natural units where G=1
+//
+// Galaxy: R_core = 5 kpc, lambda = 50000 M☉/kpc
+// =============================================================================
+
+import "stdlib/prelude.kleis"
+
+// POT projected mass: cubic core → linear outer
+// R_core = 5, lambda = 50000
+define pot_mass(r) =
+    if r < 5.0
+    then 50000.0 * r * r * r / 25.0
+    else 50000.0 * r
+
+// Newtonian: all baryonic mass enclosed by R_core, nothing beyond
+define newton_mass(r) =
+    if r < 5.0
+    then 50000.0 * r * r * r / 25.0
+    else 50000.0 * 5.0
+
+// v(r) = sqrt(M(r)/r)
+define v_pot(r) = sqrt(pot_mass(r) / r)
+define v_newton(r) = sqrt(newton_mass(r) / r)
+
+// =============================================================================
+// Compute rotation curves
+// =============================================================================
+
+example "POT vs Newtonian Rotation Curves" {
+    out("Galactic Rotation Curve: POT vs Newtonian")
+    out("R_core = 5 kpc, lambda = 50000 M☉/kpc")
+    out("")
+
+    let radii = linspace(0.5, 30.0, 60)
+
+    let v_pot_curve = list_map(lambda r . v_pot(r), radii)
+    let v_newt_curve = list_map(lambda r . v_newton(r), radii)
+
+    out("=== Velocity at key radii ===")
+    out(concat("r=1  kpc:  v_pot=", concat(intToStr(floor(v_pot(1.0))), concat("  v_newton=", intToStr(floor(v_newton(1.0)))))))
+    out(concat("r=5  kpc:  v_pot=", concat(intToStr(floor(v_pot(5.0))), concat("  v_newton=", intToStr(floor(v_newton(5.0)))))))
+    out(concat("r=10 kpc:  v_pot=", concat(intToStr(floor(v_pot(10.0))), concat("  v_newton=", intToStr(floor(v_newton(10.0)))))))
+    out(concat("r=20 kpc:  v_pot=", concat(intToStr(floor(v_pot(20.0))), concat("  v_newton=", intToStr(floor(v_newton(20.0)))))))
+    out(concat("r=30 kpc:  v_pot=", concat(intToStr(floor(v_pot(30.0))), concat("  v_newton=", intToStr(floor(v_newton(30.0)))))))
+    out("")
+    out("POT: v is CONSTANT beyond R_core (flat rotation curve)")
+    out("Newton: v DECLINES as 1/sqrt(r) (Keplerian)")
+
+    diagram(
+        plot(radii, v_pot_curve, color = "blue", label = "POT (projected mass)"),
+        plot(radii, v_newt_curve, color = "red", label = "Newtonian (finite core)"),
+        title = "Galactic Rotation Curve",
+        xlabel = "Radius (kpc)",
+        ylabel = "Orbital velocity (sqrt(GM/r))",
+        legend_position = "right + top",
+        width = 10
+    )
+}
+
+example "Rotation Curve — Mass Profiles" {
+    out("Enclosed Mass Profiles: POT vs Newtonian")
+    out("")
+
+    let radii = linspace(0.5, 30.0, 60)
+    let m_pot_curve = list_map(lambda r . pot_mass(r), radii)
+    let m_newt_curve = list_map(lambda r . newton_mass(r), radii)
+
+    diagram(
+        plot(radii, m_pot_curve, color = "blue", label = "POT: M grows linearly (outer)"),
+        plot(radii, m_newt_curve, color = "red", label = "Newtonian: M = const (outer)"),
+        title = "Enclosed Mass vs Radius",
+        xlabel = "Radius (kpc)",
+        ylabel = "Enclosed mass (M☉)",
+        legend_position = "left + top",
+        width = 10
+    )
+}

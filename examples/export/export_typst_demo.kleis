@@ -1,0 +1,52 @@
+// export_typst_demo.kleis
+// Demonstrates exporting plots as Typst code for embedding in documents
+
+// Example 1: Export complete Typst code (with preamble)
+example "export full typst" {
+    let code = export_typst(
+        plot([0, 1, 2, 3, 4], [0, 1, 4, 9, 16], color = "blue", label = "x²"),
+        title = "Quadratic Function",
+        xlabel = "x",
+        ylabel = "y"
+    )
+    
+    out(code)
+}
+
+// Example 2: Export just the lq.diagram fragment (for embedding)
+example "export fragment" {
+    let fragment = export_typst_fragment(
+        plot([0, 1, 2, 3], [1, 2, 4, 8], color = "red"),
+        bar([0, 1, 2, 3], [3, 5, 2, 7], color = "green"),
+        title = "Combined Plot"
+    )
+    
+    out(fragment)
+}
+
+// Example 3: Build a complete document with multiple plots
+example "build document" {
+    // Generate plots as Typst fragments
+    let plot1 = export_typst_fragment(
+        plot([1, 2, 3, 4], [1, 4, 9, 16]),
+        title = "Figure 1"
+    )
+    
+    let plot2 = export_typst_fragment(
+        scatter([1, 2, 3, 4, 5], [5, 4, 6, 3, 7], mark = "diamond"),
+        title = "Figure 2"
+    )
+    
+    // These can be embedded in a Typst document like:
+    // #import "@preview/lilaq:0.5.0" as lq
+    // = My Paper
+    // #lq.diagram(...)  <-- paste plot1 here
+    // #lq.diagram(...)  <-- paste plot2 here
+    
+    out("Plot 1 fragment:")
+    out(plot1)
+    out("---")
+    out("Plot 2 fragment:")
+    out(plot2)
+}
+

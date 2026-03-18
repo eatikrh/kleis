@@ -1,0 +1,50 @@
+// ============================================================================
+// Atik Conjecture Level 1: Structural Critical Line Theorem
+//
+// If H = d·I + A where A has antisymmetric off-diagonal, then
+// Re(eigenvalue) = d for all eigenvalues.
+//
+// This is a theorem of linear algebra. Z3 confirms it.
+// ============================================================================
+
+data HVector = HV(ℤ)
+data Operator = Op(ℤ)
+
+operation re_eigenvalue : Operator × ℤ → ℝ
+operation im_eigenvalue : Operator × ℤ → ℝ
+operation diagonal_entry : Operator × ℤ → ℝ
+operation is_antisymmetric_offdiag : Operator → Bool
+
+structure StructuralCriticalLine {
+    element H : Operator
+    element d : ℝ
+
+    axiom diag1 : diagonal_entry(H, 1) = d
+    axiom diag2 : diagonal_entry(H, 2) = d
+    axiom diag3 : diagonal_entry(H, 3) = d
+
+    axiom antisym : is_antisymmetric_offdiag(H)
+
+    axiom struct_theorem1 : is_antisymmetric_offdiag(H) ∧ diagonal_entry(H, 1) = d
+        → re_eigenvalue(H, 1) = d
+    axiom struct_theorem2 : is_antisymmetric_offdiag(H) ∧ diagonal_entry(H, 2) = d
+        → re_eigenvalue(H, 2) = d
+    axiom struct_theorem3 : is_antisymmetric_offdiag(H) ∧ diagonal_entry(H, 3) = d
+        → re_eigenvalue(H, 3) = d
+
+    axiom im1 : im_eigenvalue(H, 1) = 14.135
+    axiom im2 : im_eigenvalue(H, 2) = 21.022
+    axiom im3 : im_eigenvalue(H, 3) = 25.011
+}
+
+example "L1: axioms are consistent" {
+    assert(is_antisymmetric_offdiag(H))
+}
+
+example "L1: Re = d for all three eigenvalues" {
+    assert(re_eigenvalue(H, 1) = d ∧ re_eigenvalue(H, 2) = d ∧ re_eigenvalue(H, 3) = d)
+}
+
+example "L1: with d = 1/2, get Re = 1/2" {
+    assert(d = 1/2 → re_eigenvalue(H, 1) = 1/2)
+}

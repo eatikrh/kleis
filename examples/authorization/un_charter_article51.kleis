@@ -1,0 +1,202 @@
+// UN Charter Article 51: Use of Force and Self-Defense
+//
+// Two competing doctrines formalized over a shared ontology:
+//   1. Strict Charter orthodoxy: self-defense only after armed attack
+//   2. Anticipatory doctrine: self-defense also for imminent attack
+//
+// Both doctrines coexist in the same file without interference.
+// The Doctrine type parameter isolates their axioms — each doctrine
+// produces its own verdict for the same act. Z3 can compare them directly.
+
+// =============================================================================
+// ONTOLOGY: Types and Operations
+// =============================================================================
+
+data State = US | Iran | Russia | Ukraine | Israel | Lebanon | CustomState(ℤ)
+
+data Norm = Permitted | Prohibited
+
+data Act = MilitaryAct(ℤ)
+
+data ThreatEvidence = Intel(ℤ)
+
+data Doctrine = Strict | Anticipatory
+
+operation use_of_force   : Act → Bool
+operation attacker       : Act → State
+operation target         : Act → State
+operation sc_authorized  : Act → Bool
+operation necessary      : Act → Bool
+operation proportional   : Act → Bool
+
+operation armed_attack_occurred : State × State → Bool
+operation imminent_attack       : State × State → Bool
+
+// Parameterized by Doctrine — each doctrine has its own verdict
+operation lawful_self_defense : Doctrine × Act → Bool
+operation status              : Doctrine × Act → Norm
+
+// Imminence sub-model
+operation evidence      : State × State × ThreatEvidence → Bool
+operation credible      : ThreatEvidence → Bool
+operation immediate     : ThreatEvidence → Bool
+operation no_alternative : ThreatEvidence → Bool
+
+// =============================================================================
+// SHARED LAW: Article 2(4) — Prohibition of Force
+// =============================================================================
+
+structure Article2_4 {
+    axiom force_status : ∀(d : Doctrine, a : Act).
+        use_of_force(a) →
+            ((status(d, a) = Permitted ↔ (sc_authorized(a) ∨ lawful_self_defense(d, a)))
+           ∧ (status(d, a) = Prohibited ↔ ¬(sc_authorized(a) ∨ lawful_self_defense(d, a))))
+}
+
+// =============================================================================
+// DOCTRINE A: Strict Charter (armed attack required)
+// =============================================================================
+
+structure StrictArticle51 {
+    axiom sd_requires : ∀(a : Act).
+        lawful_self_defense(Strict, a) →
+            (necessary(a) ∧ proportional(a) ∧
+             armed_attack_occurred(target(a), attacker(a)))
+
+    axiom sd_sufficient : ∀(a : Act).
+        (necessary(a) ∧ proportional(a) ∧
+         armed_attack_occurred(target(a), attacker(a))) →
+            lawful_self_defense(Strict, a)
+}
+
+// =============================================================================
+// DOCTRINE B: Anticipatory Self-Defense (imminence suffices)
+// =============================================================================
+
+structure AnticipatoryArticle51 {
+    axiom sd_requires : ∀(a : Act).
+        lawful_self_defense(Anticipatory, a) →
+            (necessary(a) ∧ proportional(a) ∧
+             (armed_attack_occurred(target(a), attacker(a))
+              ∨ imminent_attack(target(a), attacker(a))))
+
+    axiom sd_sufficient : ∀(a : Act).
+        (necessary(a) ∧ proportional(a) ∧
+         (armed_attack_occurred(target(a), attacker(a))
+          ∨ imminent_attack(target(a), attacker(a)))) →
+            lawful_self_defense(Anticipatory, a)
+}
+
+// =============================================================================
+// IMMINENCE MODEL: What counts as "imminent"?
+// =============================================================================
+
+structure ImminenceDefinition {
+    axiom imminent_def : ∀(v : State, a : State).
+        imminent_attack(v, a) ↔
+            ∃(e : ThreatEvidence).
+                evidence(v, a, e) ∧ credible(e) ∧ immediate(e) ∧ no_alternative(e)
+}
+
+// =============================================================================
+// CASE FILE: A disputed strike
+// =============================================================================
+
+structure CaseFacts {
+    element case_act : Act
+    axiom is_force : use_of_force(case_act)
+    axiom who_attacks : attacker(case_act) = US
+    axiom who_is_target : target(case_act) = Iran
+    axiom no_sc_auth : ¬sc_authorized(case_act)
+    axiom no_prior_attack : ¬armed_attack_occurred(Iran, US)
+}
+
+// =============================================================================
+// EVIDENCE PROFILES
+// =============================================================================
+
+// No evidence provided — prevents Z3 from inventing witnesses.
+structure NoEvidence {
+    axiom no_ev : ∀(e : ThreatEvidence). ¬evidence(Iran, US, e)
+}
+
+// Alternative profile: evidence supports imminence claim.
+// Loading this INSTEAD OF NoEvidence would make imminent_attack(Iran, US)
+// satisfiable, flipping the anticipatory verdict to Permitted.
+//
+// structure EvidenceSupported {
+//     element intel_0 : ThreatEvidence
+//     axiom ev : evidence(Iran, US, intel_0)
+//     axiom cr : credible(intel_0)
+//     axiom im : immediate(intel_0)
+//     axiom na : no_alternative(intel_0)
+// }
+
+// =============================================================================
+// DOCTRINE-LEVEL THEOREMS
+// =============================================================================
+
+example "strict: no armed attack → no self-defense" {
+    assert(∀(a : Act).
+        ¬armed_attack_occurred(target(a), attacker(a)) →
+            ¬lawful_self_defense(Strict, a))
+}
+
+example "anticipatory: imminence + necessity + proportionality → lawful" {
+    assert(∀(a : Act).
+        (necessary(a) ∧ proportional(a) ∧
+         imminent_attack(target(a), attacker(a))) →
+            lawful_self_defense(Anticipatory, a))
+}
+
+example "imminence requires evidence" {
+    assert(∀(v : State, a : State).
+        imminent_attack(v, a) →
+            ∃(e : ThreatEvidence).
+                evidence(v, a, e) ∧ credible(e) ∧ immediate(e) ∧ no_alternative(e))
+}
+
+// =============================================================================
+// CASE-LEVEL THEOREMS: Verdicts from CaseFacts
+// =============================================================================
+
+// Strict doctrine: no armed attack → Prohibited.
+example "case: strict → Prohibited" {
+    assert(status(Strict, case_act) = Prohibited)
+}
+
+// No evidence → imminence impossible.
+example "case: no evidence → no imminence" {
+    assert(∀(v : State, a : State). v = Iran ∧ a = US → ¬imminent_attack(v, a))
+}
+
+// Anticipatory doctrine: without imminence, also Prohibited.
+example "case: anticipatory (no evidence) → Prohibited" {
+    assert(status(Anticipatory, case_act) = Prohibited)
+}
+
+// =============================================================================
+// DOCTRINE COMPARISON: Same facts, different doctrines, same verdict
+// =============================================================================
+
+// Under NoEvidence, both doctrines converge.
+example "case: both doctrines agree → Prohibited" {
+    assert(status(Strict, case_act) = Prohibited
+         ∧ status(Anticipatory, case_act) = Prohibited)
+}
+
+// =============================================================================
+// THE DIVERGENCE POINT
+// =============================================================================
+//
+// All disagreement between the two doctrines collapses to one question:
+//
+//   Is imminent_attack(target, attacker) satisfiable
+//   given the evidence constraints?
+//
+// With NoEvidence loaded: both doctrines yield Prohibited.
+// With EvidenceSupported loaded: Anticipatory can yield Permitted
+// while Strict remains Prohibited.
+//
+// The Doctrine parameter makes this comparison explicit and safe —
+// no axiom collision, no silent domination.

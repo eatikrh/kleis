@@ -1,0 +1,199 @@
+// ============================================
+// Kleis Standard Library - Complex Numbers
+// ============================================
+// Defines complex number operations and their axioms
+// Z3 uses these axioms for verification
+// ============================================
+
+// Import prelude for i, complex, re, im, conj declarations
+import "stdlib/prelude.kleis"
+
+// ============================================
+// COMPLEX NUMBER AXIOMS
+// ============================================
+
+structure ComplexAxioms {
+    // The fundamental property: i² = -1
+    axiom i_squared : complex_mul(i, i) = complex(0 - 1, 0)
+    
+    // Constructor and accessor relationships
+    axiom re_of_complex : ∀(a : ℝ)(b : ℝ). re(complex(a, b)) = a
+    axiom im_of_complex : ∀(a : ℝ)(b : ℝ). im(complex(a, b)) = b
+    
+    // Complex number identity through accessors
+    axiom complex_identity : ∀(z : ℂ). complex(re(z), im(z)) = z
+    
+    // Conjugate definition: conj(a + bi) = a - bi
+    axiom conj_def : ∀(z : ℂ). conj(z) = complex(re(z), 0 - im(z))
+    
+    // Double conjugate: conj(conj(z)) = z
+    axiom conj_involution : ∀(z : ℂ). conj(conj(z)) = z
+    
+    // Addition: (a + bi) + (c + di) = (a+c) + (b+d)i
+    axiom complex_add_re : ∀(z1 : ℂ)(z2 : ℂ). 
+        re(complex_add(z1, z2)) = re(z1) + re(z2)
+    axiom complex_add_im : ∀(z1 : ℂ)(z2 : ℂ). 
+        im(complex_add(z1, z2)) = im(z1) + im(z2)
+    
+    // Multiplication: (a + bi)(c + di) = (ac - bd) + (ad + bc)i
+    axiom complex_mul_re : ∀(z1 : ℂ)(z2 : ℂ). 
+        re(complex_mul(z1, z2)) = re(z1) * re(z2) - im(z1) * im(z2)
+    axiom complex_mul_im : ∀(z1 : ℂ)(z2 : ℂ). 
+        im(complex_mul(z1, z2)) = re(z1) * im(z2) + im(z1) * re(z2)
+    
+    // Real numbers embed into complex (im = 0)
+    axiom real_embed : ∀(r : ℝ). im(complex(r, 0)) = 0
+    
+    // Zero and one
+    axiom complex_zero : complex(0, 0) = complex_add(i, complex(0, 0 - 1))
+    axiom complex_one : complex(1, 0) = complex_mul(i, complex(0, 0 - 1))
+    
+    // Magnitude squared: |z|² = re(z)² + im(z)²  (result is real)
+    // Note: This is z * conj(z)
+    axiom magnitude_squared : ∀(z : ℂ). 
+        re(complex_mul(z, conj(z))) = re(z) * re(z) + im(z) * im(z)
+    axiom magnitude_squared_im : ∀(z : ℂ). 
+        im(complex_mul(z, conj(z))) = 0
+    
+    // abs_squared function
+    axiom abs_squared_def : ∀(z : ℂ).
+        abs_squared(z) = re(z) * re(z) + im(z) * im(z)
+    
+    // Subtraction: (a + bi) - (c + di) = (a-c) + (b-d)i
+    axiom complex_sub_re : ∀(z1 : ℂ)(z2 : ℂ). 
+        re(complex_sub(z1, z2)) = re(z1) - re(z2)
+    axiom complex_sub_im : ∀(z1 : ℂ)(z2 : ℂ). 
+        im(complex_sub(z1, z2)) = im(z1) - im(z2)
+    
+    // Negation: -z = (-re, -im)
+    axiom neg_complex_re : ∀(z : ℂ). re(neg_complex(z)) = 0 - re(z)
+    axiom neg_complex_im : ∀(z : ℂ). im(neg_complex(z)) = 0 - im(z)
+    
+    // Division: z1/z2 = z1 * conj(z2) / |z2|²
+    axiom complex_div_def : ∀(z1 : ℂ)(z2 : ℂ).
+        complex_div(z1, z2) = complex_mul(z1, complex_inverse(z2))
+    
+    // Inverse: 1/z = conj(z) / |z|²
+    axiom complex_inverse_re : ∀(z : ℂ).
+        re(complex_inverse(z)) = re(z) / abs_squared(z)
+    axiom complex_inverse_im : ∀(z : ℂ).
+        im(complex_inverse(z)) = (0 - im(z)) / abs_squared(z)
+}
+
+// ============================================
+// ALGEBRAIC PROPERTIES
+// ============================================
+
+structure ComplexField {
+    // Addition is commutative
+    axiom add_commutative : ∀(z1 : ℂ)(z2 : ℂ). 
+        complex_add(z1, z2) = complex_add(z2, z1)
+    
+    // Addition is associative
+    axiom add_associative : ∀(z1 : ℂ)(z2 : ℂ)(z3 : ℂ). 
+        complex_add(complex_add(z1, z2), z3) = complex_add(z1, complex_add(z2, z3))
+    
+    // Multiplication is commutative
+    axiom mul_commutative : ∀(z1 : ℂ)(z2 : ℂ). 
+        complex_mul(z1, z2) = complex_mul(z2, z1)
+    
+    // Multiplication is associative
+    axiom mul_associative : ∀(z1 : ℂ)(z2 : ℂ)(z3 : ℂ). 
+        complex_mul(complex_mul(z1, z2), z3) = complex_mul(z1, complex_mul(z2, z3))
+    
+    // Distributive law
+    axiom distributive : ∀(z1 : ℂ)(z2 : ℂ)(z3 : ℂ). 
+        complex_mul(z1, complex_add(z2, z3)) = 
+            complex_add(complex_mul(z1, z2), complex_mul(z1, z3))
+    
+    // Additive identity: z + 0 = z
+    axiom add_identity : ∀(z : ℂ). complex_add(z, complex(0, 0)) = z
+    
+    // Multiplicative identity: z * 1 = z
+    axiom mul_identity : ∀(z : ℂ). complex_mul(z, complex(1, 0)) = z
+    
+    // Conjugate of product: conj(z1 * z2) = conj(z1) * conj(z2)
+    axiom conj_of_product : ∀(z1 : ℂ)(z2 : ℂ). 
+        conj(complex_mul(z1, z2)) = complex_mul(conj(z1), conj(z2))
+    
+    // Conjugate of sum: conj(z1 + z2) = conj(z1) + conj(z2)
+    axiom conj_of_sum : ∀(z1 : ℂ)(z2 : ℂ). 
+        conj(complex_add(z1, z2)) = complex_add(conj(z1), conj(z2))
+}
+
+// ============================================
+// CONVENTIONS AND NOTES
+// ============================================
+//
+// CONVENTION: LOOP INDICES
+//    When using Sum, Product, or other indexed operations with complex numbers,
+//    use k, j, n, m as loop indices (NOT i).
+//    
+//    GOOD:  Sum(k, f(k) * i, 1, n)     -- k is index, i is imaginary
+//    GOOD:  Product(j, z^j, 0, n)      -- j is index
+//    BAD:   Sum(i, f(i) * i, 1, n)     -- ambiguous! which 'i' is which?
+//    
+//    The Z3 backend resolves 'i' by priority:
+//    1. Bound variables (loop indices) take precedence
+//    2. Identity elements (e, pi, etc.)
+//    3. Complex imaginary unit (default for free 'i')
+//    
+//    This works correctly, but using different names avoids confusion.
+//
+// ============================================
+// IMPLEMENTATION STATUS (Dec 2024)
+// ============================================
+//
+// ✅ HYBRID DATATYPE APPROACH IMPLEMENTED
+//    The Z3 backend uses a novel hybrid translation:
+//    - Z3 Datatype: Complex = mk_complex(re: Real, im: Real)
+//    - Concrete values: computed algebraically by Z3
+//    - Symbolic values: fresh complex constants for quantifiers
+//    
+//    WORKS:  complex_add(complex(1,2), complex(3,4)) = complex(4,6)  ✅
+//    WORKS:  complex_mul(i, i) = complex(-1, 0)                      ✅
+//    WORKS:  ∀(z : ℂ). conj(conj(z)) = z                             ✅
+//    WORKS:  ∀(z : ℂ). complex_add(z, complex(0,0)) = z              ✅
+//
+// ============================================
+// FUTURE WORK
+// ============================================
+//
+// 1. OPERATOR OVERLOADING NOT YET SUPPORTED
+//    Currently, users must use explicit complex_add, complex_mul, etc.
+//    TODO: Enable z1 + z2 instead of complex_add(z1, z2)
+//    Options: axiom-based, type-aware translation, or parser sugar
+//
+// 2. EXPLICIT IMAGINARY_UNIT OPERATION (idea)
+//    For Equation Editor: consider separate 'imaginary_unit' operation
+//    that explicitly returns complex(0, 1). This would:
+//    - Distinguish from loop variable 'i' at the AST level
+//    - Allow different styling in rendered output (𝑖 vs i)
+//    - Make type checking more explicit
+//    
+//    Current approach works via priority resolution, but explicit
+//    operation would be more robust for visual editors.
+//
+// 3. MISSING OPERATIONS
+//    - abs(z) : magnitude |z| = sqrt(re² + im²) - requires sqrt
+//    - exp(z), log(z) : complex exponential/logarithm - transcendental
+//    - sin(z), cos(z) : complex trig - transcendental
+//    - sqrt(z) : complex square root - multi-valued
+//    - Polar form (r, θ) representation
+//    - Euler's formula: e^{iθ} = cos(θ) + i·sin(θ)
+//
+// 4. ARCHITECTURE NOTE
+//    The hybrid approach combines:
+//    a) Z3 Datatype with algebraic operations - concrete computation
+//    b) Fresh complex constants - symbolic quantified variables
+//    c) Axioms (this file) - additional theorem proving support
+//    
+//    See: src/solvers/z3/backend.rs (ComplexDatatype, translate_operation)
+//
+// See: feature/complex-numbers branch (Dec 2024)
+// ============================================
+
+// ============================================
+// END OF COMPLEX NUMBERS
+// ============================================
+

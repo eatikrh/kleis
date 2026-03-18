@@ -1,0 +1,1028 @@
+// Rust Code Review Policy — Formal Coding Standards
+//
+// String-based checks: pattern matching for clippy, style, and error handling.
+// Structural checks: AST-based analysis via rust_parser.kleis for context-aware
+//   safety, cleanliness, security, SQL injection, naming, docs, and more.
+// Z3 structures: formal axioms (SafeCode, CleanCode, SecureCode, SqlSafe).
+//
+// Each check_* function receives source code as a string and returns
+// "pass" or "fail: <reason>".
+//
+// Usage: kleis review-mcp --policy examples/policies/rust_review_policy.kleis
+
+import "../meta-programming/rust_parser.kleis"
+
+// --- Style ---
+
+define check_no_allow_unused(source) =
+    if contains(source, "#[allow(unused)]") then "fail: #[allow(unused)] — remove dead code instead"
+    else if contains(source, "#[allow(dead_code)]") then "fail: #[allow(dead_code)] — remove dead code instead"
+    else "pass"
+
+// --- Error handling ---
+
+define check_no_result_string(source) =
+    if contains(source, "Result<Self, String>") then "fail: C-GOOD-ERR — Result<_, String> use thiserror for typed errors (https://rust-lang.github.io/api-guidelines/interoperability.html#c-good-err)"
+    else if contains(source, "Result<(), String>") then "fail: C-GOOD-ERR — Result<(), String> use thiserror for typed errors (https://rust-lang.github.io/api-guidelines/interoperability.html#c-good-err)"
+    else if contains(source, "Result<String, String>") then "fail: C-GOOD-ERR — Result<String, String> use thiserror for typed errors (https://rust-lang.github.io/api-guidelines/interoperability.html#c-good-err)"
+    else if contains(source, "Result<Vec<String>, String>") then "fail: C-GOOD-ERR — Result<_, String> use thiserror for typed errors (https://rust-lang.github.io/api-guidelines/interoperability.html#c-good-err)"
+    else "pass"
+
+// --- Clippy discipline ---
+
+define check_no_clippy_suppression(source) =
+    if contains(source, "#[allow(clippy::") then "fail: clippy suppression — fix the lint or use #[expect(clippy::..., reason = \"...\")] (https://microsoft.github.io/rust-guidelines/universal/#M-LINT-OVERRIDE-EXPECT)"
+    else if contains(source, "#![allow(clippy::") then "fail: module-wide clippy suppression — fix the lints or use #![expect(...)] (https://microsoft.github.io/rust-guidelines/universal/#M-LINT-OVERRIDE-EXPECT)"
+    else "pass"
+
+define check_no_too_many_arguments(source) =
+    if contains(source, "too_many_arguments") then "fail: too many function arguments — refactor into a config struct"
+    else "pass"
+
+define check_no_type_complexity(source) =
+    if contains(source, "type_complexity") then "fail: type complexity suppressed — introduce a type alias"
+    else "pass"
+
+// --- Clippy -D warnings patterns ---
+// These catch code that `cargo clippy -- -D warnings` would reject.
+
+define check_clippy_ptr_arg(source) =
+    if contains(source, "&String") then "fail: clippy::ptr_arg — use &str instead of &String"
+    else if contains(source, "&Vec<") then "fail: clippy::ptr_arg — use &[T] instead of &Vec<T>"
+    else "pass"
+
+define check_clippy_len_zero(source) =
+    if contains(source, ".len() == 0") then "fail: clippy::len_zero — use .is_empty() instead"
+    else if contains(source, ".len() > 0") then "fail: clippy::len_zero — use !.is_empty() instead"
+    else if contains(source, ".len() != 0") then "fail: clippy::len_zero — use !.is_empty() instead"
+    else "pass"
+
+define check_clippy_bool_comparison(source) =
+    if contains(source, "== true") then "fail: clippy::bool_comparison — remove == true, use value directly"
+    else if contains(source, "== false") then "fail: clippy::bool_comparison — use !value instead of == false"
+    else if contains(source, "!= true") then "fail: clippy::bool_comparison — use !value instead"
+    else "pass"
+
+define check_clippy_redundant_clone(source) =
+    if contains(source, ".to_string().as_str()") then "fail: clippy — needless .to_string().as_str(), use &str directly"
+    else if contains(source, ".to_owned().as_str()") then "fail: clippy — needless .to_owned().as_str()"
+    else if contains(source, ".clone().as_ref()") then "fail: clippy — needless .clone().as_ref()"
+    else "pass"
+
+define check_clippy_manual_is_ascii(source) =
+    if contains(source, ">= 'a' && ") then "fail: clippy::manual_is_ascii_check — use .is_ascii_lowercase()"
+    else if contains(source, ">= 'A' && ") then "fail: clippy::manual_is_ascii_check — use .is_ascii_uppercase()"
+    else if contains(source, ">= '0' && ") then "fail: clippy::manual_is_ascii_check — use .is_ascii_digit()"
+    else "pass"
+
+define check_clippy_single_char_pattern(source) =
+    if contains(source, ".split(\"\\n\")") then "fail: clippy::single_char_pattern — use .split('\\n') with a char"
+    else if contains(source, ".contains(\"\\n\")") then "fail: clippy::single_char_pattern — use .contains('\\n') with a char"
+    else if contains(source, ".starts_with(\"/\")") then "fail: clippy::single_char_pattern — use .starts_with('/') with a char"
+    else if contains(source, ".ends_with(\"/\")") then "fail: clippy::single_char_pattern — use .ends_with('/') with a char"
+    else "pass"
+
+define check_clippy_expect_fun_call(source) =
+    if contains(source, ".expect(&format!(") then "fail: clippy::expect_fun_call — use .unwrap_or_else or build msg lazily"
+    else "pass"
+
+// --- No color emoji or decorative icons in Rust source ---
+// Unicode strings are fine; decorative emoji are not.
+
+define advise_no_emoji(source) =
+    if contains(source, "✅") then "fail: color emoji in source — use plain text"
+    else if contains(source, "❌") then "fail: color emoji in source — use plain text"
+    else if contains(source, "🔥") then "fail: color emoji in source — use plain text"
+    else if contains(source, "🚀") then "fail: color emoji in source — use plain text"
+    else if contains(source, "🎉") then "fail: color emoji in source — use plain text"
+    else if contains(source, "🐛") then "fail: color emoji in source — use plain text"
+    else if contains(source, "💡") then "fail: color emoji in source — use plain text"
+    else if contains(source, "✨") then "fail: color emoji in source — use plain text"
+    else if contains(source, "👍") then "fail: color emoji in source — use plain text"
+    else if contains(source, "📝") then "fail: color emoji in source — use plain text"
+    else if contains(source, "🔧") then "fail: color emoji in source — use plain text"
+    else if contains(source, "📦") then "fail: color emoji in source — use plain text"
+    else if contains(source, "🔒") then "fail: color emoji in source — use plain text"
+    else if contains(source, "🔑") then "fail: color emoji in source — use plain text"
+    else if contains(source, "💥") then "fail: color emoji in source — use plain text"
+    else if contains(source, "🤖") then "fail: color emoji in source — use plain text"
+    else if contains(source, "🔴") then "fail: color emoji in source — use plain text"
+    else if contains(source, "🟢") then "fail: color emoji in source — use plain text"
+    else if contains(source, "🟡") then "fail: color emoji in source — use plain text"
+    else if contains(source, "⚠️") then "fail: color emoji in source — use plain text"
+    else if contains(source, "⬆️") then "fail: color emoji in source — use plain text"
+    else if contains(source, "⬇️") then "fail: color emoji in source — use plain text"
+    else if contains(source, "➡️") then "fail: color emoji in source — use plain text"
+    else "pass"
+
+define advise_no_separator_comments(source) =
+    if contains(source, "// ====") then "fail: decorative separator comment — use blank lines instead"
+    else if contains(source, "// ----") then "fail: decorative separator comment — use blank lines instead"
+    else if contains(source, "// ****") then "fail: decorative separator comment — use blank lines instead"
+    else if contains(source, "// ####") then "fail: decorative separator comment — use blank lines instead"
+    else if contains(source, "// ~~~~") then "fail: decorative separator comment — use blank lines instead"
+    else "pass"
+
+define check_no_transmute(source) =
+    if contains(source, "transmute(") then "fail: M-UNSAFE — std::mem::transmute, use safe conversions (From/Into, as, bytemuck) (https://microsoft.github.io/rust-guidelines/safety/#M-UNSAFE)"
+    else if contains(source, "transmute_copy(") then "fail: M-UNSAFE — std::mem::transmute_copy, use safe conversions (https://microsoft.github.io/rust-guidelines/safety/#M-UNSAFE)"
+    else "pass"
+
+define check_no_deprecated_syntax(source) =
+    if contains(source, "try!(") then "fail: try!() macro is deprecated — use ? operator"
+    else if contains(source, "extern crate ") then "fail: extern crate is unnecessary since Rust 2018 — use 'use' imports"
+    else "pass"
+
+// Only flag hardcoded URLs in production code (skip test modules and doc comments).
+// Doc comment URLs (/// https://, //! https://) are legitimate references.
+define advise_no_hardcoded_urls(source) =
+    let prod = production_code(source) in
+    if contains(prod, "http://")
+    then if or(contains(prod, "http://localhost"), contains(prod, "http://127.0.0.1"))
+         then "pass"
+         else "fail: hardcoded HTTP URL in production code — use configuration or constants"
+    else if contains(prod, "https://")
+    then if or(contains(prod, "/// https://"), or(contains(prod, "//! https://"), contains(prod, "// https://")))
+         then "pass"
+         else "fail: hardcoded HTTPS URL in production code — use configuration or constants"
+    else "pass"
+
+define advise_no_ignored_tests(source) =
+    if contains(source, "#[ignore]") then "fail: #[ignore] test — provide a reason or remove the test"
+    else "pass"
+
+define advise_no_needless_collect(source) =
+    if contains(source, ".collect::<Vec<") then "fail: possible needless .collect() — consider using iterator directly"
+    else "pass"
+
+// =============================================================================
+// Microsoft Pragmatic Rust Guidelines + Rust API Guidelines
+// =============================================================================
+// Rules derived from:
+//   https://microsoft.github.io/rust-guidelines/
+//   https://rust-lang.github.io/api-guidelines/checklist.html
+// Only rules NOT already caught by default clippy lints are included here.
+
+// --- M-LOG-STRUCTURED: Structured logging with message templates ---
+// format! in logging allocates at runtime; use message templates instead.
+// https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED
+
+define advise_no_format_in_log(source) =
+    if contains(source, "tracing::info!(format!(")
+    then "fail: M-LOG-STRUCTURED — format! in tracing::info!, use message template instead (https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED)"
+    else if contains(source, "tracing::warn!(format!(")
+    then "fail: M-LOG-STRUCTURED — format! in tracing::warn!, use message template instead (https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED)"
+    else if contains(source, "tracing::error!(format!(")
+    then "fail: M-LOG-STRUCTURED — format! in tracing::error!, use message template instead (https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED)"
+    else if contains(source, "tracing::debug!(format!(")
+    then "fail: M-LOG-STRUCTURED — format! in tracing::debug!, use message template instead (https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED)"
+    else if contains(source, "log::info!(format!(")
+    then "fail: M-LOG-STRUCTURED — format! in log::info!, use message template instead (https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED)"
+    else if contains(source, "log::warn!(format!(")
+    then "fail: M-LOG-STRUCTURED — format! in log::warn!, use message template instead (https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED)"
+    else if contains(source, "log::error!(format!(")
+    then "fail: M-LOG-STRUCTURED — format! in log::error!, use message template instead (https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED)"
+    else if contains(source, "info!(format!(")
+    then "fail: M-LOG-STRUCTURED — format! in info!, use structured fields instead (https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED)"
+    else if contains(source, "warn!(format!(")
+    then "fail: M-LOG-STRUCTURED — format! in warn!, use structured fields instead (https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED)"
+    else if contains(source, "error!(format!(")
+    then "fail: M-LOG-STRUCTURED — format! in error!, use structured fields instead (https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED)"
+    else if contains(source, "debug!(format!(")
+    then "fail: M-LOG-STRUCTURED — format! in debug!, use structured fields instead (https://microsoft.github.io/rust-guidelines/universal/#M-LOG-STRUCTURED)"
+    else "pass"
+
+// --- C-CONV-TRAITS: Conversions use standard traits From, AsRef, AsMut ---
+// impl Into<T> and impl TryInto<T> should never be implemented directly;
+// implement From<T> and TryFrom<T> instead (blanket impls cover Into/TryInto).
+// https://rust-lang.github.io/api-guidelines/interoperability.html#c-conv-traits
+
+define check_no_impl_into(source) =
+    if contains(source, "impl Into<")
+    then "fail: C-CONV-TRAITS — implement From<T> instead of Into<T> (blanket impl covers Into) (https://rust-lang.github.io/api-guidelines/interoperability.html#c-conv-traits)"
+    else if contains(source, "impl TryInto<")
+    then "fail: C-CONV-TRAITS — implement TryFrom<T> instead of TryInto<T> (blanket impl covers TryInto) (https://rust-lang.github.io/api-guidelines/interoperability.html#c-conv-traits)"
+    else "pass"
+
+// --- M-UNSAFE: unsafe needs reason, should be avoided ---
+// Every unsafe block must have a // SAFETY: comment explaining invariants.
+// Clippy has undocumented_unsafe_blocks but only in restriction group (opt-in).
+// https://microsoft.github.io/rust-guidelines/safety/#M-UNSAFE
+
+define check_unsafe_documented(source) =
+    if and(contains(source, "unsafe {"), not(contains(source, "// SAFETY:")))
+    then "fail: M-UNSAFE — unsafe block without // SAFETY: comment explaining invariants (https://microsoft.github.io/rust-guidelines/safety/#M-UNSAFE)"
+    else "pass"
+
+// --- C-GOOD-ERR: Error types are meaningful and well-behaved ---
+// Never use () as an error type.
+// Clippy has result_unit_err but only in pedantic group (opt-in).
+// https://rust-lang.github.io/api-guidelines/interoperability.html#c-good-err
+
+define check_no_unit_error(source) =
+    if contains(source, "Result<(), ()>")
+    then "fail: C-GOOD-ERR — Result<(), ()> uses unit error type, define a meaningful error (https://rust-lang.github.io/api-guidelines/interoperability.html#c-good-err)"
+    else if contains(source, "Result<bool, ()>")
+    then "fail: C-GOOD-ERR — Result<_, ()> uses unit error type, define a meaningful error (https://rust-lang.github.io/api-guidelines/interoperability.html#c-good-err)"
+    else if contains(source, "Result<String, ()>")
+    then "fail: C-GOOD-ERR — Result<_, ()> uses unit error type, define a meaningful error (https://rust-lang.github.io/api-guidelines/interoperability.html#c-good-err)"
+    else if contains(source, "Result<usize, ()>")
+    then "fail: C-GOOD-ERR — Result<_, ()> uses unit error type, define a meaningful error (https://rust-lang.github.io/api-guidelines/interoperability.html#c-good-err)"
+    else "pass"
+
+// --- M-NO-GLOB-REEXPORTS: Don't glob re-export items ---
+// pub use foo::* can accidentally leak unintended types.
+// Clippy does not catch this.
+// https://microsoft.github.io/rust-guidelines/libs/resilience/#M-NO-GLOB-REEXPORTS
+
+define check_no_glob_reexport(source) =
+    if contains(source, "pub use ")
+    then if contains(source, "::*;")
+         then "fail: M-NO-GLOB-REEXPORTS — pub use with glob re-export, list items explicitly (https://microsoft.github.io/rust-guidelines/libs/resilience/#M-NO-GLOB-REEXPORTS)"
+         else "pass"
+    else "pass"
+
+// --- C-GETTER: Getter names follow Rust convention ---
+// The get_ prefix is not used for getters in Rust.
+// Clippy does not catch this.
+// https://rust-lang.github.io/api-guidelines/naming.html#c-getter
+
+// Only flag get_ on &self methods (field getters). Exclude: get_unchecked, get_mut,
+// get_or_, get_ref, get_all, get_from, get_user (lookup/query methods are fine).
+define advise_no_get_prefix(source) =
+    if and(contains(source, "fn get_"), contains(source, "&self"))
+    then if or(contains(source, "fn get_unchecked"),
+           or(contains(source, "fn get_mut"),
+           or(contains(source, "fn get_or_"),
+           or(contains(source, "fn get_ref"),
+           or(contains(source, "fn get_all"),
+           or(contains(source, "fn get_from"),
+           or(contains(source, "fn get_user"),
+           or(contains(source, "fn get_paths"),
+              contains(source, "fn get_by")))))))))
+         then "pass"
+         else "fail: C-GETTER — fn get_ prefix on &self getter, use field name directly: foo() not get_foo() (https://rust-lang.github.io/api-guidelines/naming.html#c-getter)"
+    else "pass"
+
+// --- M-AVOID-STATICS: Libraries should avoid static items ---
+// static mut is unsound in most contexts and being deprecated.
+// Clippy does not specifically flag static mut declarations.
+// https://microsoft.github.io/rust-guidelines/libs/resilience/#M-AVOID-STATICS
+
+define check_no_static_mut(source) =
+    if contains(source, "static mut ")
+    then "fail: M-AVOID-STATICS — static mut is unsound in most contexts, use AtomicT, Mutex, or OnceLock instead (https://microsoft.github.io/rust-guidelines/libs/resilience/#M-AVOID-STATICS)"
+    else "pass"
+
+// --- M-AVOID-WRAPPERS: Avoid smart pointers and wrappers in APIs ---
+// Arc<Mutex<...>> in public fn signatures exposes implementation details.
+// Clippy does not catch this.
+// https://microsoft.github.io/rust-guidelines/libs/ux/#M-AVOID-WRAPPERS
+
+define check_no_arc_mutex_api(source) =
+    if contains(source, "pub fn ")
+    then if contains(source, "Arc<Mutex<")
+         then "fail: M-AVOID-WRAPPERS — Arc<Mutex<>> in public API, hide behind a clean interface (https://microsoft.github.io/rust-guidelines/libs/ux/#M-AVOID-WRAPPERS)"
+         else if contains(source, "Rc<RefCell<")
+              then "fail: M-AVOID-WRAPPERS — Rc<RefCell<>> in public API, hide behind a clean interface (https://microsoft.github.io/rust-guidelines/libs/ux/#M-AVOID-WRAPPERS)"
+              else "pass"
+    else "pass"
+
+// --- M-CONCISE-NAMES: Names are free of weasel words ---
+// Type names should not contain Service, Manager, Factory.
+// Clippy does not catch this.
+// https://microsoft.github.io/rust-guidelines/universal/#M-CONCISE-NAMES
+
+define rule_weasel_word_types(c: Crate) : String =
+    let structs = crate_structs(c) in
+    weasel_word_acc(structs, "")
+
+define weasel_word_acc(structs: List(StructDecl), acc: String) : String =
+    match structs {
+        Nil => acc
+      | Cons(s, rest) =>
+            let n = struct_name(s) in
+            if contains(n, "Service")
+            then weasel_word_acc(rest,
+                append_name(acc, concat("M-CONCISE-NAMES — weasel word 'Service' in type name, be more specific: ",
+                    concat(name_at(n, struct_line(s)), " (https://microsoft.github.io/rust-guidelines/universal/#M-CONCISE-NAMES)"))))
+            else if contains(n, "Manager")
+            then weasel_word_acc(rest,
+                append_name(acc, concat("M-CONCISE-NAMES — weasel word 'Manager' in type name, be more specific: ",
+                    concat(name_at(n, struct_line(s)), " (https://microsoft.github.io/rust-guidelines/universal/#M-CONCISE-NAMES)"))))
+            else if contains(n, "Factory")
+            then weasel_word_acc(rest,
+                append_name(acc, concat("M-CONCISE-NAMES — weasel word 'Factory' in type name, use Builder: ",
+                    concat(name_at(n, struct_line(s)), " (https://microsoft.github.io/rust-guidelines/universal/#M-CONCISE-NAMES)"))))
+            else weasel_word_acc(rest, acc)
+    }
+
+// --- M-PANIC-IS-STOP: Panic means 'stop the program' ---
+// .expect("") with an empty message is a programming error indicator without context.
+// https://microsoft.github.io/rust-guidelines/universal/#M-PANIC-IS-STOP
+
+define advise_expect_has_message(source) =
+    if contains(source, ".expect(\"\")")
+    then "fail: M-PANIC-IS-STOP — .expect(\"\") with empty message, provide context for the panic (https://microsoft.github.io/rust-guidelines/universal/#M-PANIC-IS-STOP)"
+    else "pass"
+
+// --- M-DOCUMENTED-MAGIC: Magic values are documented ---
+// Hardcoded timeout/retry/size values without named constants.
+// Clippy does not catch domain-specific magic numbers.
+// https://microsoft.github.io/rust-guidelines/universal/#M-DOCUMENTED-MAGIC
+
+define advise_no_magic_timeout(source) =
+    if and(contains(source, "Duration::from_secs("), not(contains(source, "const ")))
+    then if or(contains(source, "Duration::from_secs(60)"), or(contains(source, "Duration::from_secs(3600)"), contains(source, "Duration::from_secs(86400)")))
+         then "fail: M-DOCUMENTED-MAGIC — magic timeout value, use a named constant with a comment (https://microsoft.github.io/rust-guidelines/universal/#M-DOCUMENTED-MAGIC)"
+         else "pass"
+    else "pass"
+
+// --- C-FAILURE: Function docs include error, panic, and safety considerations ---
+// Functions returning Result should have # Errors doc section.
+// Functions with unsafe should have # Safety doc section.
+// Clippy does not check for missing # Errors sections.
+// https://rust-lang.github.io/api-guidelines/documentation.html#c-failure
+
+define rule_result_fn_missing_errors_doc(source: String, c: Crate) : String =
+    let fns = crate_functions(c) in
+    result_errors_doc_acc(source, fns, "")
+
+define result_errors_doc_acc(source: String, fns: List(Function), acc: String) : String =
+    match fns {
+        Nil => acc
+      | Cons(f, rest) =>
+            let n = fn_name(f) in
+            let ret = fn_return_type(f) in
+            if and(fn_is_pub(f), not(fn_is_test(f)))
+            then if and(contains(ret, "Result"), not(contains(source, "# Errors")))
+                 then result_errors_doc_acc(source, rest,
+                     append_name(acc, concat("C-FAILURE — pub fn returning Result missing '# Errors' doc section: ",
+                         concat(name_at(n, fn_line(f)), " (https://rust-lang.github.io/api-guidelines/documentation.html#c-failure)"))))
+                 else result_errors_doc_acc(source, rest, acc)
+            else result_errors_doc_acc(source, rest, acc)
+    }
+
+// =============================================================================
+// Wiring: add guideline rules to check_structural
+// =============================================================================
+
+// --- M-PUBLIC-DEBUG / C-COMMON-TRAITS: Public types should implement Debug ---
+// Most pub structs should derive Debug. Clippy has missing_debug_implementations
+// but only as a compiler lint (opt-in). This is frequently forgotten.
+// https://microsoft.github.io/rust-guidelines/universal/#M-PUBLIC-DEBUG
+// https://rust-lang.github.io/api-guidelines/interoperability.html#c-common-traits
+
+define rule_pub_struct_missing_debug(source: String, c: Crate) : String =
+    let structs = crate_structs(c) in
+    pub_struct_debug_acc(source, structs, "")
+
+define pub_struct_debug_acc(source: String, structs: List(StructDecl), acc: String) : String =
+    match structs {
+        Nil => acc
+      | Cons(s, rest) =>
+            if struct_is_pub(s)
+            then let n = struct_name(s) in
+                 if or(contains(source, "derive(Debug"), contains(source, ", Debug"))
+                 then pub_struct_debug_acc(source, rest, acc)
+                 else pub_struct_debug_acc(source, rest,
+                     append_name(acc, concat("M-PUBLIC-DEBUG — pub struct missing #[derive(Debug)]: ",
+                         concat(name_at(n, struct_line(s)), " (https://microsoft.github.io/rust-guidelines/universal/#M-PUBLIC-DEBUG)"))))
+            else pub_struct_debug_acc(source, rest, acc)
+    }
+
+define advise_pub_struct_debug(source) =
+    let c = scan(source) in
+    let f1 = rule_pub_struct_missing_debug(source, c) in
+    if eq(f1, "") then "pass"
+    else concat("fail: ", f1)
+
+define advise_weasel_word_types(source) =
+    let c = scan(source) in
+    let f1 = rule_weasel_word_types(c) in
+    if eq(f1, "") then "pass"
+    else concat("fail: ", f1)
+
+define advise_result_fn_errors_doc(source) =
+    let c = scan(source) in
+    let f1 = rule_result_fn_missing_errors_doc(source, c) in
+    if eq(f1, "") then "pass"
+    else concat("fail: ", f1)
+
+// --- STRIDE threat model coverage ---
+
+define check_no_tls_bypass(source) =
+    if contains(source, "insecure") then "fail: STRIDE/Spoofing — 'insecure' in code, review TLS/auth configuration"
+    else if contains(source, "no_verify") then "fail: STRIDE/Spoofing — 'no_verify' pattern, TLS verification may be disabled"
+    else if contains(source, "skip_verify") then "fail: STRIDE/Spoofing — 'skip_verify' pattern, TLS verification may be disabled"
+    else if contains(source, "allow_invalid") then "fail: STRIDE/Spoofing — 'allow_invalid' pattern, invalid certs/hostnames may be accepted"
+    else if contains(source, "disable_tls") then "fail: STRIDE/Spoofing — TLS explicitly disabled"
+    else "pass"
+
+define check_no_credential_logging(source) =
+    let prod = production_code(source) in
+    let c = scan(prod) in
+    let fns = crate_functions(c) in
+    let f1 = non_test_fns_containing(prod, fns, "println!(\"{}\", password") in
+    let f2 = non_test_fns_containing(prod, fns, "println!(\"{}\", secret") in
+    let f3 = non_test_fns_containing(prod, fns, "println!(\"{:?}\", password") in
+    let f4 = non_test_fns_containing(prod, fns, "println!(\"{:?}\", secret") in
+    let f5 = non_test_fns_containing(prod, fns, "debug!(password") in
+    let f6 = non_test_fns_containing(prod, fns, "debug!(secret") in
+    let f7 = non_test_fns_containing(prod, fns, "info!(password") in
+    let f8 = non_test_fns_containing(prod, fns, "info!(secret") in
+    let all = append_failure(
+        if eq(f1, "") then "" else concat("STRIDE/Disclosure — printing password to stdout in: ", f1),
+        append_failure(
+        if eq(f2, "") then "" else concat("STRIDE/Disclosure — printing secret to stdout in: ", f2),
+        append_failure(
+        if eq(f3, "") then "" else concat("STRIDE/Disclosure — debug-printing password in: ", f3),
+        append_failure(
+        if eq(f4, "") then "" else concat("STRIDE/Disclosure — debug-printing secret in: ", f4),
+        append_failure(
+        if eq(f5, "") then "" else concat("STRIDE/Disclosure — debug-logging password in: ", f5),
+        append_failure(
+        if eq(f6, "") then "" else concat("STRIDE/Disclosure — debug-logging secret in: ", f6),
+        append_failure(
+        if eq(f7, "") then "" else concat("STRIDE/Disclosure — info-logging password in: ", f7),
+        if eq(f8, "") then "" else concat("STRIDE/Disclosure — info-logging secret in: ", f8)
+        ))))))) in
+    if eq(all, "") then "pass"
+    else concat("fail: ", all)
+
+define check_no_unbounded_read(source) =
+    if contains(source, "read_to_end(") then "fail: STRIDE/DoS — unbounded read_to_end, use take() or read with a size limit"
+    else if contains(source, "read_to_string(") then "fail: STRIDE/DoS — unbounded read_to_string, use take() to limit input size"
+    else "pass"
+
+define check_no_command_injection(source) =
+    if and(contains(source, "Command::new("), contains(source, "format!(")) then "fail: STRIDE/EoP — Command::new with format!, possible shell injection"
+    else if contains(source, ".arg(format!(") then "fail: STRIDE/EoP — command arg built with format!, validate and sanitize input"
+    else "pass"
+
+// --- Team review patterns (inferred from human code reviews) ---
+
+define advise_no_debug_serialization(source) =
+    if and(contains(source, "serde_json::to_string"), contains(source, "debug!("))
+    then "fail: serde_json::to_string in debug! — use {:?} instead of serializing"
+    else if and(contains(source, "serde_json::to_string"), contains(source, "tracing::debug"))
+    then "fail: serde_json::to_string in tracing debug — use {:?} instead"
+    else if and(contains(source, "serde_yml::to_string"), contains(source, "debug!("))
+    then "fail: serde_yml::to_string in debug! — use {:?} instead of serializing"
+    else "pass"
+
+define advise_no_ambiguous_status_match(source) =
+    if contains(source, "| StatusCode::")
+    then "fail: OR'd status codes in match — each endpoint returns one status code, verify which one"
+    else "pass"
+
+define advise_no_client_layer_filtering(source) =
+    if and(contains(source, "fn find_by_name"), contains(source, ".iter()"))
+    then "fail: find_by_name with .iter() — client should use API search, not filter in code"
+    else if and(contains(source, "fn list_"), contains(source, ".filter("))
+    then "fail: list_ method with .filter() — filtering belongs in application layer, not client"
+    else if and(contains(source, "fn get_used_"), contains(source, ".filter("))
+    then "fail: get_used_ with .filter() — derived views belong in application layer"
+    else "pass"
+
+// --- AI-generated artifacts (gpt-5.3-codex style signatures) ---
+
+define advise_no_step_comments(source) =
+    if contains(source, "// Step 1")
+    then "fail: numbered step comments — AI artifact, refactor into named functions"
+    else if contains(source, "// Step 2")
+    then "fail: numbered step comments — AI artifact, refactor into named functions"
+    else if contains(source, "// Step 3")
+    then "fail: numbered step comments — AI artifact, refactor into named functions"
+    else "pass"
+
+define advise_no_region_comments(source) =
+    if contains(source, "// region")
+    then "fail: IDE region marker — AI artifact, use modules/blank lines for organization"
+    else if contains(source, "// endregion")
+    then "fail: IDE region marker — AI artifact, use modules/blank lines for organization"
+    else "pass"
+
+define advise_no_ai_breadcrumbs(source) =
+    if contains(source, "AI-generated")
+    then "fail: AI breadcrumb in source — remove generation attribution comments"
+    else if contains(source, "Generated by ChatGPT")
+    then "fail: AI breadcrumb in source — remove generation attribution comments"
+    else if contains(source, "Generated by Copilot")
+    then "fail: AI breadcrumb in source — remove generation attribution comments"
+    else if contains(source, "Generated by Claude")
+    then "fail: AI breadcrumb in source — remove generation attribution comments"
+    else "pass"
+
+define advise_no_self_referential_docs(source) =
+    if contains(source, "/// This function")
+    then "fail: self-referential doc comment — describe intent/behavior, not boilerplate"
+    else if contains(source, "/// This method")
+    then "fail: self-referential doc comment — describe intent/behavior, not boilerplate"
+    else if contains(source, "/// Helper function")
+    then "fail: generic helper doc comment — use a domain-specific description"
+    else if contains(source, "/// Utility function")
+    then "fail: generic utility doc comment — use a domain-specific description"
+    else "pass"
+
+// =============================================================================
+// Context-Aware Structural Checks (AST-based)
+// =============================================================================
+
+// --- Sub-checks: named rule_* so the engine doesn't auto-discover them ---
+
+define rule_wildcard_imports(c: Crate) : String =
+    let bad = non_test_wildcard_uses(c) in
+    let names = wildcard_use_names(bad) in
+    if eq(names, "") then ""
+    else concat("wildcard import outside test module: ", names)
+
+define rule_narrating_line_comments(c: Crate) : String =
+    let bad = has_narrating_line_comment(crate_comments(c)) in
+    if eq(bad, "") then ""
+    else concat("narrating comment on ", bad)
+
+define rule_pub_fn_docs(c: Crate) : String =
+    let fns = filter_non_test_fns(crate_functions(c)) in
+    let missing = pub_fns_missing_docs(fns, crate_comments(c)) in
+    if eq(missing, "") then ""
+    else concat("pub fn missing doc comment: ", missing)
+
+define rule_param_count(c: Crate) : String =
+    let fns = filter_non_test_fns(crate_functions(c)) in
+    let bad = fns_with_too_many_params(fns, 5) in
+    if eq(bad, "") then ""
+    else concat("too many parameters (>5): ", bad)
+
+define rule_function_count(c: Crate) : String =
+    if gt(count_functions(c), 50)
+    then concat("file has ", concat(intToStr(count_functions(c)), " functions (>50) — consider splitting"))
+    else ""
+
+define rule_test_presence(c: Crate) : String =
+    let fns = crate_functions(c) in
+    let non_test = filter_non_test_fns(fns) in
+    let test_count = count_test_fns(fns) in
+    let fn_count = count_fn_list(non_test) in
+    if and(gt(fn_count, 3), eq(test_count, 0))
+    then concat(intToStr(fn_count), " functions but no tests — consider adding test coverage")
+    else ""
+
+define rule_fn_naming(c: Crate) : String =
+    let fns = crate_functions(c) in
+    let bad = fns_with_bad_names(fns) in
+    if eq(bad, "") then ""
+    else concat("function names should be snake_case: ", bad)
+
+define rule_struct_naming(c: Crate) : String =
+    let structs = crate_structs(c) in
+    let bad = structs_with_bad_names(structs) in
+    if eq(bad, "") then ""
+    else concat("struct names should be PascalCase: ", bad)
+
+define rule_use_in_fn_body(source: String, c: Crate) : String =
+    let fns = crate_functions(c) in
+    let bad = non_test_fns_containing(source, fns, "use ") in
+    if eq(bad, "") then ""
+    else concat("use statement inside function body — move to top of file: ", bad)
+
+define rule_string_translation(source: String, c: Crate) : String =
+    let fns = crate_functions(c) in
+    let out_match = non_test_fns_containing(source, fns, "=> \"") in
+    let in_match = non_test_fns_containing(source, fns, "\" =>") in
+    let bad = append_failure(out_match, in_match) in
+    if eq(bad, "") then ""
+    else concat("string matching or string translation via match — consider an enum with #[serde(rename/alias)]: ", bad)
+
+// --- String validation should live inside a validated newtype struct ---
+// Example: `fn validate_name(s: &str) -> bool { s.chars().all(|c| c.is_alphanumeric()) }`
+// should be: `struct ScimName(String); impl ScimName { fn new(s: String) -> Result<Self, Error> { ... } }`
+// Type boundary functions (constructors, conversion traits, serde visitors) are excluded
+// because they ARE the correct pattern — validation at the type boundary.
+
+define is_type_boundary_fn(f: Function) : Bool =
+    let n = fn_name(f) in
+    or(eq(n, "new"),
+    or(eq(n, "try_new"),
+    or(eq(n, "build"),
+    or(eq(n, "create"),
+    or(eq(n, "from"),
+    or(eq(n, "try_from"),
+    or(eq(n, "from_str"),
+    or(eq(n, "into"),
+    or(eq(n, "parse"),
+    or(eq(n, "deserialize"),
+    or(eq(n, "visit_str"),
+    or(eq(n, "visit_string"),
+    or(eq(n, "visit_bytes"),
+    or(eq(n, "expecting"),
+    false))))))))))))))
+
+define rule_string_validation_needs_type(source: String, c: Crate) : String =
+    let fns = crate_functions(c) in
+    string_validation_acc(source, fns, "")
+
+define string_validation_acc(source: String, fns: List(Function), acc: String) : String =
+    match fns {
+        Nil => acc
+      | Cons(f, rest) =>
+            if or(fn_is_test(f), is_type_boundary_fn(f))
+            then string_validation_acc(source, rest, acc)
+            else
+                let body = fn_body_text(source, f) in
+                if contains(body, ".chars().all(")
+                then string_validation_acc(source, rest,
+                    append_name(acc, concat("string character validation in fn — consider a validated newtype struct: ",
+                        name_at(fn_name(f), fn_line(f)))))
+                else string_validation_acc(source, rest, acc)
+    }
+
+define check_structural(source) =
+    let c = scan(source) in
+    let f1 = rule_wildcard_imports(c) in
+    let f2 = rule_narrating_line_comments(c) in
+    let f3 = rule_pub_fn_docs(c) in
+    let f4 = rule_param_count(c) in
+    let f5 = rule_function_count(c) in
+    let f6 = rule_test_presence(c) in
+    let f7 = rule_fn_naming(c) in
+    let f8 = rule_struct_naming(c) in
+    let f9 = rule_use_in_fn_body(source, c) in
+    let f10 = rule_string_translation(source, c) in
+    let f11 = rule_string_validation_needs_type(source, c) in
+    let all = append_failure(f1,
+              append_failure(f2,
+              append_failure(f3,
+              append_failure(f4,
+              append_failure(f5,
+              append_failure(f6,
+              append_failure(f7,
+              append_failure(f8,
+              append_failure(f9,
+              append_failure(f10, f11)))))))))) in
+    if eq(all, "") then "pass"
+    else concat("fail: ", all)
+
+// =============================================================================
+// Context-Aware Safety & Cleanliness Checks (skip test code)
+// =============================================================================
+
+define check_safe_structural(source) =
+    let prod = production_code(source) in
+    let c = scan(source) in
+    let fns = crate_functions(c) in
+    let unwrap_fns  = non_test_fns_containing(source, fns, ".unwrap()") in
+    let panic_fns   = non_test_fns_containing(source, fns, "panic!(") in
+    let unsafe_hits = if contains(prod, "unsafe {") then "unsafe block in production code" else "" in
+    let f1 = if eq(unwrap_fns, "") then "" else concat(".unwrap() in production fn: ", unwrap_fns) in
+    let f2 = if eq(panic_fns, "") then "" else concat("panic!() in production fn: ", panic_fns) in
+    let all = append_failure(f1, append_failure(f2, unsafe_hits)) in
+    if eq(all, "") then "pass"
+    else concat("fail: ", all)
+
+define check_clean_structural(source) =
+    let prod = production_code(source) in
+    let c = scan(source) in
+    let fns = crate_functions(c) in
+    let println_fns = non_test_fns_containing(source, fns, "println!(") in
+    let todo_fns    = non_test_fns_containing(source, fns, "todo!(") in
+    let dbg_fns     = non_test_fns_containing(source, fns, "dbg!(") in
+    let f1 = if eq(println_fns, "") then "" else concat("println! in production fn: ", println_fns) in
+    let f2 = if eq(todo_fns, "") then "" else concat("todo! in production fn: ", todo_fns) in
+    let f3 = if eq(dbg_fns, "") then "" else concat("dbg! in production fn: ", dbg_fns) in
+    let all = append_failure(f1, append_failure(f2, f3)) in
+    if eq(all, "") then "pass"
+    else concat("fail: ", all)
+
+define check_secure_structural(source) =
+    let prod = production_code(source) in
+    let f1 = if contains(prod, "password = \"") then "hardcoded password literal in production code" else "" in
+    let f2 = if contains(prod, "secret = \"") then "hardcoded secret literal in production code" else "" in
+    let f3 = if contains(prod, "api_key = \"") then "hardcoded api_key literal in production code" else "" in
+    let f4 = if contains(prod, "password: \"") then "hardcoded password literal in struct init" else "" in
+    let f5 = if contains(prod, "secret: \"") then "hardcoded secret literal in struct init" else "" in
+    let all = append_failure(f1, append_failure(f2, append_failure(f3, append_failure(f4, f5)))) in
+    if eq(all, "") then "pass"
+    else concat("fail: ", all)
+
+define check_sql_safe_structural(source) =
+    let prod = production_code(source) in
+    let f1 = if and(contains(prod, "format!("), contains(prod, "SELECT"))
+             then "format! with SELECT in production code — use parameterized queries" else "" in
+    let f2 = if and(contains(prod, "format!("), contains(prod, "INSERT"))
+             then "format! with INSERT in production code — use parameterized queries" else "" in
+    let f3 = if and(contains(prod, ".push_str("), contains(prod, "WHERE"))
+             then ".push_str with WHERE in production code — use parameterized queries" else "" in
+    let f4 = if contains(prod, "sqlx::query!")
+             then "" else "" in
+    let all = append_failure(f1, append_failure(f2, f3)) in
+    if eq(all, "") then "pass"
+    else concat("fail: ", all)
+
+// =============================================================================
+// Formal Properties (Z3-verified)
+// =============================================================================
+//
+// These structures define formal properties of the coding standards.
+// The agent can verify them via the `evaluate` tool, which routes
+// propositions to Z3. String-level check_* functions above are unaffected.
+
+structure SafeCode {
+    operation is_safe : String -> Bool
+
+    axiom safe_no_unwrap : ∀(s : String).
+        implies(is_safe(s), not(contains(s, ".unwrap()")))
+
+    axiom safe_no_panic : ∀(s : String).
+        implies(is_safe(s), not(contains(s, "panic!(")))
+
+    axiom safe_no_unsafe : ∀(s : String).
+        implies(is_safe(s), not(contains(s, "unsafe {")))
+
+    axiom safe_complete : ∀(s : String).
+        implies(
+            and(not(contains(s, ".unwrap()")),
+                and(not(contains(s, "panic!(")),
+                    not(contains(s, "unsafe {")))),
+            is_safe(s))
+}
+
+structure CleanCode {
+    operation is_clean : String -> Bool
+
+    axiom clean_no_println : ∀(s : String).
+        implies(is_clean(s), not(contains(s, "println!(")))
+
+    axiom clean_no_todo : ∀(s : String).
+        implies(is_clean(s), not(contains(s, "todo!(")))
+
+    axiom clean_no_dbg : ∀(s : String).
+        implies(is_clean(s), not(contains(s, "dbg!(")))
+
+    axiom clean_complete : ∀(s : String).
+        implies(
+            and(not(contains(s, "println!(")),
+                and(not(contains(s, "todo!(")),
+                    not(contains(s, "dbg!(")))),
+            is_clean(s))
+}
+
+structure SecureCode {
+    operation is_secure : String -> Bool
+
+    axiom secure_no_hardcoded_password : ∀(s : String).
+        implies(is_secure(s), not(contains(s, "password =")))
+
+    axiom secure_no_hardcoded_secret : ∀(s : String).
+        implies(is_secure(s), not(contains(s, "secret =")))
+
+    axiom secure_no_hardcoded_api_key : ∀(s : String).
+        implies(is_secure(s), not(contains(s, "api_key =")))
+
+    axiom secure_complete : ∀(s : String).
+        implies(
+            and(not(contains(s, "password =")),
+                and(not(contains(s, "secret =")),
+                    not(contains(s, "api_key =")))),
+            is_secure(s))
+}
+
+structure SqlSafe {
+    operation is_tainted : String -> Bool
+    operation is_sanitized : String -> Bool
+    operation reaches_query : String -> Bool
+
+    axiom no_tainted_query : ∀(s : String).
+        implies(and(is_tainted(s), reaches_query(s)), is_sanitized(s))
+
+    axiom parameterized_is_sanitized : ∀(s : String).
+        implies(contains(s, "sqlx::query!"), is_sanitized(s))
+
+    axiom format_select_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, "format!("), contains(s, "SELECT")),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom format_select_lower_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, "format!("), contains(s, "select")),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom format_insert_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, "format!("), contains(s, "INSERT")),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom format_insert_lower_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, "format!("), contains(s, "insert into")),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom concat_where_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, ".push_str("), contains(s, "WHERE")),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom concat_where_lower_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, ".push_str("), contains(s, "where")),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom placeholder_is_sanitized : ∀(s : String).
+        implies(contains(s, "$1"), is_sanitized(s))
+
+    axiom question_mark_is_sanitized : ∀(s : String).
+        implies(contains(s, "?"), is_sanitized(s))
+
+    axiom select_without_placeholder_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, "SELECT"), and(not(contains(s, "$")), not(contains(s, "?")))),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom select_lower_without_placeholder_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, "select"), and(not(contains(s, "$")), not(contains(s, "?")))),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom insert_without_placeholder_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, "INSERT"), and(not(contains(s, "$")), not(contains(s, "?")))),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom insert_lower_without_placeholder_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, "insert into"), and(not(contains(s, "$")), not(contains(s, "?")))),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom update_without_placeholder_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, "UPDATE"), and(not(contains(s, "$")), not(contains(s, "?")))),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom update_lower_without_placeholder_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, "update"), and(not(contains(s, "$")), not(contains(s, "?")))),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom delete_without_placeholder_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, "DELETE"), and(not(contains(s, "$")), not(contains(s, "?")))),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom delete_lower_without_placeholder_is_tainted : ∀(s : String).
+        implies(
+            and(contains(s, "delete from"), and(not(contains(s, "$")), not(contains(s, "?")))),
+            and(is_tainted(s), not(is_sanitized(s)))
+        )
+
+    axiom drop_is_tainted : ∀(s : String).
+        implies(contains(s, "DROP"), and(is_tainted(s), not(is_sanitized(s))))
+
+    axiom drop_lower_is_tainted : ∀(s : String).
+        implies(contains(s, "drop table"), and(is_tainted(s), not(is_sanitized(s))))
+
+    axiom truncate_is_tainted : ∀(s : String).
+        implies(contains(s, "TRUNCATE"), and(is_tainted(s), not(is_sanitized(s))))
+
+    axiom truncate_lower_is_tainted : ∀(s : String).
+        implies(contains(s, "truncate"), and(is_tainted(s), not(is_sanitized(s))))
+}
+
+// =============================================================================
+// Tests for check_structural
+// =============================================================================
+
+example "structural_clean_code" {
+    let source = "/// Add two numbers\npub fn add(a: i32, b: i32) -> i32 {\n    a + b\n}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_add() {\n        assert_eq!(add(1, 2), 3);\n    }\n}" in
+    out(check_structural(source))
+}
+
+example "structural_wildcard_import" {
+    let source = "use std::io::*;\npub fn process() {}" in
+    out(check_structural(source))
+}
+
+example "structural_missing_pub_docs" {
+    let source = "pub fn undocumented_public() {}\npub fn also_no_docs() {}" in
+    out(check_structural(source))
+}
+
+example "structural_too_many_params" {
+    let source = "fn too_many(a: i32, b: i32, c: i32, d: i32, e: i32, f: i32) {}" in
+    out(check_structural(source))
+}
+
+example "structural_bad_naming" {
+    let source = "fn badCamelCase() {}\nstruct lowercase {}" in
+    out(check_structural(source))
+}
+
+example "structural_narrating_comment" {
+    let source = "// Import the module\nfn helper() {}" in
+    out(check_structural(source))
+}
+
+// --- Context-aware safety/cleanliness tests ---
+
+example "safe_unwrap_in_test_is_ok" {
+    let source = "fn production() {\n    let x = compute();\n}\n\n#[test]\nfn test_it() {\n    production().unwrap();\n}" in
+    out(check_safe_structural(source))
+}
+
+example "safe_unwrap_in_production_flagged" {
+    let source = "fn production() {\n    let x = get_value().unwrap();\n}" in
+    out(check_safe_structural(source))
+}
+
+example "clean_println_in_test_is_ok" {
+    let source = "fn real_fn() {\n    compute();\n}\n\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn test_it() {\n        println!(\"debug\");\n    }\n}" in
+    out(check_clean_structural(source))
+}
+
+example "clean_println_in_production_flagged" {
+    let source = "fn real_fn() {\n    println!(\"oops\");\n}" in
+    out(check_clean_structural(source))
+}
+
+example "secure_password_in_test_ok" {
+    let source = "fn login() {\n    auth();\n}\n\n#[test]\nfn test_login() {\n    let password = \"test123\";\n}" in
+    out(check_secure_structural(source))
+}
+
+example "sql_safe_format_in_test_ok" {
+    let source = "fn query_db() {\n    sqlx::query!(\"SELECT id FROM users WHERE id = ?\");\n}\n\n#[test]\nfn test_query() {\n    let q = format!(\"SELECT * FROM test\");\n}" in
+    out(check_sql_safe_structural(source))
+}
+
+// ============================================================================
+// Diff-Aware Rules (CLI only, invisible to MCP)
+// ============================================================================
+//
+// These rules compare current vs base branch content. They are discovered
+// by the `diff_check_*` prefix and only run when `--base-branch` is provided.
+// The MCP's `check_*` discovery filter does not match this prefix.
+
+// Extra files that should be included alongside *.rs source in reviews.
+// The engine and MCP expose this so agents and CI scripts know which
+// non-source files to feed to the reviewer.
+define review_extra_files() =
+    "Cargo.toml\nCargo.lock"
+
+// Filter: only fetch base branch content for version-bearing files
+define diff_file_filter(path) =
+    if hasSuffix(path, "Cargo.toml") then true
+    else if contains(path, "config") then true
+    else if hasSuffix(path, "package.json") then true
+    else false
+
+// --- Helpers for version line extraction ---
+
+define pick_cargo_version_line(line, acc) =
+    if hasPrefix(trim(line), "version = ") then trim(line) else acc
+
+define extract_cargo_version_line(source) =
+    foldLines(pick_cargo_version_line, "", source)
+
+define pick_image_tag(line, acc) =
+    if hasPrefix(line, "IMAGE_TAG=") then substring(line, 10, 100)
+    else acc
+
+define extract_image_tag(source) =
+    foldLines(pick_image_tag, "", source)
+
+// --- Diff Rules ---
+
+define diff_check_cargo_version(current, base, path) =
+    if not(hasSuffix(path, "Cargo.toml")) then "pass"
+    else
+        let cur_line = extract_cargo_version_line(current) in
+        let base_line = extract_cargo_version_line(base) in
+        if eq(cur_line, "") then "pass"
+        else if eq(base_line, "") then "pass"
+        else if eq(cur_line, base_line) then
+            concat("fail: Cargo.toml version not bumped (", concat(cur_line, ")"))
+        else "pass"
+
+define diff_check_version_bump(current, base, path) =
+    if not(contains(path, "config")) then "pass"
+    else
+        let cur_ver = extract_image_tag(current) in
+        let base_ver = extract_image_tag(base) in
+        if eq(cur_ver, "") then "pass"
+        else if eq(base_ver, "") then "pass"
+        else if eq(cur_ver, base_ver) then
+            concat("fail: IMAGE_TAG not bumped (still ", concat(cur_ver, ")"))
+        else "pass"

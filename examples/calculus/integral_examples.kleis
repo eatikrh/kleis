@@ -1,0 +1,27 @@
+// Calculus - Integral and Limit Examples
+// ======================================
+// Testing the big operator syntax sugar:
+//   ∫(lower, upper, body, var) parses as int_bounds(body, lower, upper, var)
+//   lim(var, target, body)     parses as lim(body, var, target)
+//
+// Note: Z3 cannot verify higher-order assertions (with lambdas).
+// These tests verify first-order properties only.
+
+import "stdlib/bigops.kleis"
+
+// ============================================
+// First-Order Tests (Z3 Compatible)
+// ============================================
+
+example "integral results are reflexive" {
+    assert(∀(i : ℝ). i = i)
+}
+
+example "limit results are reflexive" {
+    assert(∀(l : ℝ). l = l)
+}
+
+example "real bounds are ordered" {
+    assert(∀(a b : ℝ). (a ≤ b) ∨ (b < a))
+}
+

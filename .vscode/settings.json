@@ -1,0 +1,5 @@
+{
+  "kleis.serverPath": "/Users/eatik_1/git/cee/kleis/target/release/kleis",
+  "kleis.replPath": "/Users/eatik_1/git/cee/kleis/target/release/repl",
+  "kleis.trace.server": "verbose"
+}

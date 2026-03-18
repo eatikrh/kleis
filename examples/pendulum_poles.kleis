@@ -1,0 +1,54 @@
+// =============================================================================
+// Inverted Pendulum - Pole Analysis with LAPACK
+// =============================================================================
+
+// Physical parameters
+define M = 1.0      // cart mass (kg)
+define m_p = 0.1    // pendulum mass (kg)  
+define l = 0.5      // pendulum length (m)
+define g = 9.81     // gravity (m/s²)
+
+// Linearized A matrix (around θ = 0)
+// State: [x, ẋ, θ, θ̇]
+define a12 = neg(m_p * g / M)           // -mg/M = -0.981
+define a34 = (M + m_p) * g / (M * l)    // (M+m)g/(Ml) = 21.582
+
+define A = [[0, 1, 0, 0], 
+            [0, 0, a12, 0],
+            [0, 0, 0, 1],
+            [0, 0, a34, 0]]
+
+// B matrix
+define b2 = 1 / M           // 1/M = 1
+define b4 = neg(1 / (M * l)) // -1/(Ml) = -2
+
+define B = [[0], [b2], [0], [b4]]
+
+example "open loop poles" {
+  // Compute eigenvalues of A
+  let poles = eigenvalues(A) in
+  // Should be approximately: 0, 0, +4.65, -4.65
+  // The positive eigenvalue means UNSTABLE
+  poles
+}
+
+// State feedback gains (computed analytically for poles at -2, -2.5, -3, -3.5)
+define K1 = 11.5
+define K2 = 16.9
+define K3 = neg(93.2)
+define K4 = neg(25.4)
+
+// Closed-loop matrix: A - B*K
+// A_cl = A - B * [K1, K2, K3, K4]
+define A_cl = [
+  [0, 1, 0, 0],
+  [neg(b2*K1), neg(b2*K2), a12 - b2*K3, neg(b2*K4)],
+  [0, 0, 0, 1],
+  [neg(b4*K1), neg(b4*K2), a34 - b4*K3, neg(b4*K4)]
+]
+
+example "closed loop poles with computed gains" {
+  // Should be approximately: -2, -2.5, -3, -3.5 (all negative = stable!)
+  eigenvalues(A_cl)
+}
+

@@ -1,0 +1,33 @@
+// Prefix Operators Demo
+// Demonstrates all 8 prefix operators supported by Kleis
+
+// Unary minus (negate)
+define negated(x) = -x
+
+// Logical negation
+define inverted(p) = ¬p
+
+// Gradient (nabla)
+define grad(f) = ∇f
+
+// Single integral
+define antiderivative(f) = ∫f
+
+// Double integral (area)
+define area_integral(f) = ∬f
+
+// Triple integral (volume)
+define volume_integral(f) = ∭f
+
+// Line/contour integral
+define circulation(F) = ∮F
+
+// Surface integral
+define flux(F) = ∯F
+
+// Combined example: negate the gradient
+define neg_grad(f) = -(∇f)
+
+// Using prefix in expressions
+define laplacian_like(f) = ∇(∇f)
+

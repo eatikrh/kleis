@@ -1,0 +1,154 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  KLEIS_Z3_MEMORY_MB: 0
+
+jobs:
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        os: [macos-latest]  # Ubuntu disabled due to disk space issues with vendored Z3
+        rust: [stable]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: ${{ matrix.rust }}
+        components: rustfmt, clippy
+    
+    - name: Install Z3 (macOS)
+      run: |
+        brew install z3
+        Z3_PREFIX=$(brew --prefix z3)
+        echo "Z3_SYS_Z3_HEADER=$Z3_PREFIX/include/z3.h" >> $GITHUB_ENV
+        echo "RUSTFLAGS=-L $Z3_PREFIX/lib" >> $GITHUB_ENV
+        z3 --version
+        
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+        
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+        
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Check formatting
+      run: cargo fmt -- --check
+      
+    - name: Run clippy
+      run: cargo clippy --all-targets --all-features -- -D warnings
+      continue-on-error: true  # Don't fail on clippy warnings initially
+      
+    - name: Build
+      run: cargo build --verbose
+      
+    - name: Run all tests (library + integration)
+      run: cargo test --verbose
+      timeout-minutes: 15
+      continue-on-error: false  # All tests should pass (unit + integration)
+    
+    - name: Run integration tests without Z3 (fallback)
+      if: failure()  # Only if Z3 tests failed
+      run: cargo test --test '*' --no-default-features --verbose
+      continue-on-error: true
+      
+    # Examples disabled to save disk space (vendored z3 is large)
+    # - name: Build examples
+    #   run: cargo build --examples
+    #   continue-on-error: true
+
+  build-bins:
+    name: Build Binaries
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Build server
+      run: cargo build --bin server --release
+      
+    - name: Check server binary
+      run: |
+        ls -lh target/release/server
+        echo "✅ Server binary built successfully"
+
+  docs:
+    name: Check Documentation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Check documentation builds
+      run: cargo doc --no-deps --document-private-items
+      continue-on-error: true
+      
+    - name: Verify key docs exist
+      run: |
+        echo "Checking documentation files..."
+        test -f README.md && echo "✅ README exists" || echo "❌ README missing"
+        test -f docs/README.md && echo "✅ Docs index exists" || echo "❌ Docs index missing"
+        test -d docs/adr && echo "✅ ADR directory exists" || echo "❌ ADR directory missing"
+        test -f docs/adr/README.md && echo "✅ ADR index exists" || echo "❌ ADR index missing"
+        test -d docs/reference && echo "✅ Reference directory exists" || echo "❌ Reference directory missing"
+        test -f docs/reference/README.md && echo "✅ Reference index exists" || echo "❌ Reference index missing"
+        test -f docs/reference/KLEIS_OVERVIEW.md && echo "✅ Kleis overview exists" || echo "❌ Kleis overview missing"
+        test -f docs/parser-implementation/TYPST_TEXT_IN_MATH.md && echo "✅ Typst guide exists" || echo "❌ Typst guide missing"
+        
+    - name: Validate manual examples
+      run: python3 scripts/validate_manual_examples.py
+
+  coverage:
+    name: Template Coverage Report
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      
+    - name: Run template tests
+      run: cargo test --lib 'templates::' --verbose
+      
+    - name: Count templates
+      run: |
+        echo "📊 Template Statistics:"
+        echo "Templates in registry: $(grep -c '("' src/templates.rs | head -1)"
+        echo "Template functions: $(grep -c '^pub fn template_' src/templates.rs)"
+        echo "Template tests: $(grep -c 'fn test_.*transform\|fn test_.*projection\|fn test_.*modal\|fn test_.*causal\|fn test_.*hont' src/templates.rs)"
+

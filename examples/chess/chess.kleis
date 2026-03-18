@@ -1,0 +1,181 @@
+// ============================================================================
+// Chess Rules in Kleis
+// ============================================================================
+//
+// A simplified formalization of chess move legality.
+// Uses Z3 for constraint verification.
+//
+// ============================================================================
+
+// Basic types
+type File = ℕ     // 1..8 (a=1, b=2, ..., h=8)
+type Rank = ℕ     // 1..8
+type PieceType = ℕ   // 1=Pawn, 2=Knight, 3=Bishop, 4=Rook, 5=Queen, 6=King
+type Color = ℕ       // 1=White, 2=Black
+
+// ============================================================================
+// Chess Structure
+// ============================================================================
+
+structure Chess {
+    // -------------------------------------------------------------------------
+    // Validity predicates
+    // -------------------------------------------------------------------------
+    
+    operation valid_file : File → Bool
+    operation valid_rank : Rank → Bool
+    operation valid_piece : PieceType → Bool
+    operation valid_color : Color → Bool
+    
+    axiom valid_file_def :
+        ∀(f : File). valid_file(f) = (f ≥ 1 ∧ f ≤ 8)
+    
+    axiom valid_rank_def :
+        ∀(r : Rank). valid_rank(r) = (r ≥ 1 ∧ r ≤ 8)
+    
+    axiom valid_piece_def :
+        ∀(p : PieceType). valid_piece(p) = (p ≥ 1 ∧ p ≤ 6)
+    
+    axiom valid_color_def :
+        ∀(c : Color). valid_color(c) = (c = 1 ∨ c = 2)
+    
+    // -------------------------------------------------------------------------
+    // Movement pattern predicates
+    // -------------------------------------------------------------------------
+    
+    operation abs_diff : ℕ × ℕ → ℕ
+    
+    operation knight_move : File × Rank × File × Rank → Bool
+    operation rook_move   : File × Rank × File × Rank → Bool
+    operation bishop_move : File × Rank × File × Rank → Bool
+    operation queen_move  : File × Rank × File × Rank → Bool
+    operation king_move   : File × Rank × File × Rank → Bool
+    
+    // Knight moves in L-shape: 2+1 or 1+2
+    axiom knight_move_def :
+        ∀(f1 : File). ∀(r1 : Rank). ∀(f2 : File). ∀(r2 : Rank).
+            knight_move(f1, r1, f2, r2) = 
+                ((abs_diff(f2, f1) = 1 ∧ abs_diff(r2, r1) = 2) ∨
+                 (abs_diff(f2, f1) = 2 ∧ abs_diff(r2, r1) = 1))
+    
+    // Rook moves horizontally or vertically
+    axiom rook_move_def :
+        ∀(f1 : File). ∀(r1 : Rank). ∀(f2 : File). ∀(r2 : Rank).
+            rook_move(f1, r1, f2, r2) = 
+                ((f1 = f2 ∧ r1 ≠ r2) ∨ (r1 = r2 ∧ f1 ≠ f2))
+    
+    // Bishop moves diagonally
+    axiom bishop_move_def :
+        ∀(f1 : File). ∀(r1 : Rank). ∀(f2 : File). ∀(r2 : Rank).
+            bishop_move(f1, r1, f2, r2) = 
+                (abs_diff(f2, f1) = abs_diff(r2, r1) ∧ (f1 ≠ f2 ∨ r1 ≠ r2))
+    
+    // Queen moves like rook or bishop
+    axiom queen_move_def :
+        ∀(f1 : File). ∀(r1 : Rank). ∀(f2 : File). ∀(r2 : Rank).
+            queen_move(f1, r1, f2, r2) = 
+                (rook_move(f1, r1, f2, r2) ∨ bishop_move(f1, r1, f2, r2))
+    
+    // King moves one square in any direction
+    axiom king_move_def :
+        ∀(f1 : File). ∀(r1 : Rank). ∀(f2 : File). ∀(r2 : Rank).
+            king_move(f1, r1, f2, r2) = 
+                (abs_diff(f2, f1) ≤ 1 ∧ abs_diff(r2, r1) ≤ 1 ∧ (f1 ≠ f2 ∨ r1 ≠ r2))
+}
+
+// ============================================================================
+// Computable Functions (for eval())
+// ============================================================================
+
+// Absolute difference (computable)
+define abs_diff_compute(a, b) = if a > b then a - b else b - a
+
+// Knight L-shape check (computable)
+define knight_move_check(f1, r1, f2, r2) = 
+    if abs_diff_compute(f2, f1) = 1 then if abs_diff_compute(r2, r1) = 2 then 1 else 0
+    else if abs_diff_compute(f2, f1) = 2 then if abs_diff_compute(r2, r1) = 1 then 1 else 0
+    else 0
+
+// Rook move check (computable)
+define rook_move_check(f1, r1, f2, r2) = 
+    if f1 = f2 then if r1 ≠ r2 then 1 else 0
+    else if r1 = r2 then if f1 ≠ f2 then 1 else 0
+    else 0
+
+// King move check (computable)  
+define king_move_check(f1, r1, f2, r2) =
+    if abs_diff_compute(f2, f1) ≤ 1 then 
+        if abs_diff_compute(r2, r1) ≤ 1 then
+            if f1 ≠ f2 then 1 else if r1 ≠ r2 then 1 else 0
+        else 0
+    else 0
+
+// Valid file check
+define valid_file_check(f) = if f ≥ 1 then if f ≤ 8 then 1 else 0 else 0
+
+// Valid rank check
+define valid_rank_check(r) = if r ≥ 1 then if r ≤ 8 then 1 else 0 else 0
+
+// ============================================================================
+// Examples: Concrete Movement Tests with eval()
+// ============================================================================
+
+example "eval: knight L-shape e4 to f6" {
+    // Knight from e4 (5,4) to f6 (6,6) - 1 file right, 2 ranks up
+    assert(eval(knight_move_check(5, 4, 6, 6)) = 1)
+}
+
+example "eval: knight L-shape e4 to g5" {
+    // Knight from e4 (5,4) to g5 (7,5) - 2 files right, 1 rank up
+    assert(eval(knight_move_check(5, 4, 7, 5)) = 1)
+}
+
+example "eval: invalid knight move" {
+    // Knight cannot move diagonally like a bishop
+    assert(eval(knight_move_check(5, 4, 6, 5)) = 0)
+}
+
+example "eval: rook moves along file" {
+    // Rook from a1 (1,1) to a8 (1,8)
+    assert(eval(rook_move_check(1, 1, 1, 8)) = 1)
+}
+
+example "eval: rook moves along rank" {
+    // Rook from a1 (1,1) to h1 (8,1)
+    assert(eval(rook_move_check(1, 1, 8, 1)) = 1)
+}
+
+example "eval: invalid rook diagonal" {
+    // Rook cannot move diagonally
+    assert(eval(rook_move_check(1, 1, 2, 2)) = 0)
+}
+
+example "eval: king moves one square" {
+    // King from e1 (5,1) to f1 (6,1)
+    assert(eval(king_move_check(5, 1, 6, 1)) = 1)
+    // King from e1 (5,1) to e2 (5,2)
+    assert(eval(king_move_check(5, 1, 5, 2)) = 1)
+    // King from e1 (5,1) to f2 (6,2) - diagonal
+    assert(eval(king_move_check(5, 1, 6, 2)) = 1)
+}
+
+example "eval: king cannot move two squares" {
+    // King from e1 (5,1) to e3 (5,3) - too far
+    assert(eval(king_move_check(5, 1, 5, 3)) = 0)
+}
+
+example "eval: valid file and rank" {
+    // Files and ranks 1-8 are valid
+    assert(eval(valid_file_check(1)) = 1)
+    assert(eval(valid_file_check(8)) = 1)
+    assert(eval(valid_file_check(0)) = 0)
+    assert(eval(valid_file_check(9)) = 0)
+}
+
+// ============================================================================
+// Symbolic Examples (verified by Z3)
+// ============================================================================
+
+example "valid file bounds" {
+    assert(∀(f : File). valid_file(f) → (f ≥ 1 ∧ f ≤ 8))
+}

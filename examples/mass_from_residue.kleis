@@ -1,0 +1,196 @@
+// Mass from Residue - Projected Ontology Theory (POT)
+// 
+// This Kleis program formalizes the POT/HONT principle:
+// "Mass arises from the residue of poles in the Fourier spectrum 
+//  of the modal flow φ, not from spacetime curvature"
+//
+// Key insight: Mass is ontological (from Hont), not emergent (from ℝ⁴)
+
+@library("pot.mass_residue")
+@version("0.1.0")
+
+// ============================================
+// HONT: Hilbert Ontology Structure
+// ============================================
+
+structure HilbertSpace(H) {
+    // Inner product structure
+    operation ⟨·,·⟩ : H × H → ℂ
+    
+    // Norm derived from inner product
+    operation norm : H → ℝ
+    define norm(ψ) = √(⟨ψ, ψ⟩)
+    
+    axiom inner_product_positive:
+        ∀ (ψ : H) . ⟨ψ, ψ⟩ ≥ 0
+    
+    axiom inner_product_hermitian:
+        ∀ (ψ φ : H) . ⟨ψ, φ⟩ = conj(⟨φ, ψ⟩)
+}
+
+// The ontological substrate
+structure Hont extends HilbertSpace(Hont) {
+    // Modal states live here
+    // This is the "real" reality
+}
+
+// ============================================
+// SPACETIME: The Projected Reality
+// ============================================
+
+structure Spacetime {
+    // Spacetime is 4-dimensional
+    structure manifold : Manifold(4)
+    
+    // Fields defined on spacetime
+    operation field : Spacetime → ℂ
+}
+
+// Spacetime coordinates
+define M4 = Spacetime
+
+// ============================================
+// PROJECTION OPERATOR
+// ============================================
+
+// The central object: Π : Hont → M⁴
+// Maps modal reality to observable spacetime
+operation Π : Hont → M4
+
+// Projection kernel (like Green's function)
+operation K : M4 × Hont → ℂ
+
+// Projection as convolution
+define Π(ψ)(x) = ∫_Hont K(x, m) × ψ(m) dm
+
+axiom projection_linearity:
+    ∀ (ψ φ : Hont) (α β : ℂ) .
+        Π(α×ψ + β×φ) = α×Π(ψ) + β×Π(φ)
+
+// ============================================
+// MODAL FLOW
+// ============================================
+
+// Modal flow: evolution in Hont
+define ModalFlow = Hont → Hont
+
+// Modal function evolves with parameter τ (modal time)
+define φ : ℝ → Hont
+
+// Modal dynamics (governed by Hont-internal laws)
+operation modal_evolve : Hont × ℝ → Hont
+
+axiom modal_continuity:
+    ∀ (τ : ℝ) . continuous(φ(τ))
+
+// ============================================
+// FOURIER SPECTRUM in Hont
+// ============================================
+
+// Fourier transform of modal flow
+operation ℱ : ModalFlow → (ℂ → ℂ)
+
+define φ_hat(ω) = ∫_{-∞}^{∞} φ(τ) × exp(-i×ω×τ) dτ
+
+// Spectral density
+define S(ω) = abs(φ_hat(ω))²
+
+// ============================================
+// RESIDUE: Where Mass Comes From
+// ============================================
+
+// Residue at a pole (Cauchy residue theorem)
+operation Res : (ℂ → ℂ) × ℂ → ℂ
+
+// Mass emerges from residues of poles in φ_hat
+// If φ_hat has a pole at ω = ω₀, the residue gives mass
+
+define mass_from_pole(ω₀) = Res(φ_hat, ω₀)
+
+axiom mass_is_residue:
+    ∀ (particle : Observable) .
+        mass(particle) = abs(Res(φ_hat, resonance_frequency(particle)))
+
+// Different particles = different pole residues
+define electron_mass = mass_from_pole(ω_electron)
+define proton_mass = mass_from_pole(ω_proton)
+
+// ============================================
+// THE KEY INSIGHT
+// ============================================
+
+// Mass is NOT a property of spacetime (ℝ⁴)
+// Mass is a RESIDUE of the Fourier spectrum in Hont
+//
+// This means:
+// 1. Mass is ontological (from Hont), not emergent (from curvature)
+// 2. Mass quantization comes from discrete poles in φ_hat
+// 3. Mass differences = different resonance frequencies in modal space
+// 4. No need for Higgs mechanism - mass comes from modal structure!
+
+axiom mass_not_from_curvature:
+    ¬(∃ (g : Metric(M4)) . mass = f(curvature(g)))
+
+axiom mass_from_modal_residue:
+    ∀ (m : Mass) . ∃ (ω : ℂ) (φ : ModalFlow) .
+        m = abs(Res(ℱ(φ), ω))
+
+// ============================================
+// PHYSICAL INTERPRETATION
+// ============================================
+
+// Observable mass in spacetime
+define m_obs : M4 → ℝ⁺
+
+// Mass field is projection of modal residue
+define m_obs(x) = abs(∫_Hont K(x, m) × Res(φ_hat, ω₀) dm)
+
+// Energy-mass relation (still holds, but mass is residue!)
+define E(x) = m_obs(x) × c(x)²
+
+// But now c(x) is also a field (not constant!)
+// c(x) = projection residue from lightcone structure in Hont
+
+axiom variable_speed_of_light:
+    c : M4 → ℝ⁺  // Field, not constant!
+
+axiom c_from_projection:
+    c(x) = Res(K, lightcone)(x)
+
+// ============================================
+// VERIFICATION
+// ============================================
+
+// Check dimensional consistency
+assert typeof(mass_from_pole(ω₀)) == typeof(m_obs(x))
+
+// Check that mass is real and positive
+assert ∀ (ω : ℂ) . abs(Res(φ_hat, ω)) ∈ ℝ⁺
+
+// Check projection preserves positivity
+assert ∀ (x : M4) . m_obs(x) ≥ 0
+
+// ============================================
+// SUMMARY
+// ============================================
+
+// POT/HONT Mass Principle:
+//
+// mass = |Res(ℱ[φ], ω₀)|
+//        ↑   ↑   ↑   ↑
+//        │   │   │   └─ Resonance frequency (pole)
+//        │   │   └───── Modal flow in Hont
+//        │   └───────── Fourier transform
+//        └───────────── Residue (Cauchy theorem)
+//
+// Mass is the "leftover" (residue) when you project modal flow
+// from Hont to spacetime. It's not fundamental - it's derived!
+//
+// Implications:
+// - Explains mass quantization (discrete poles)
+// - No need for Higgs field (mass from geometry, not symmetry breaking)
+// - Variable constants possible (c, G, ℏ as fields)
+// - Unifies quantum mechanics with spacetime emergence
+
+// Next: Express charge, spin, and time similarly as projection residues
+

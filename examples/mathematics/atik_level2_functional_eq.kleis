@@ -1,0 +1,70 @@
+// ============================================================================
+// Atik Conjecture Level 2: Functional Equation Forces d = 1/2
+//
+// The functional equation ξ(s) = ξ(1-s) combined with:
+//   - Spectral-zero bridge: ξ vanishes at complex(d, γ)
+//   - Spectral symmetry: ±γ both eigenvalues
+//   - Zero uniqueness at each imaginary height
+// forces d = 1/2.
+//
+// d is the constant diagonal of the (d·I + A) operator.
+// This proves that the functional equation pins the diagonal to 1/2.
+// ============================================================================
+
+data HVector = HV(ℤ)
+data Operator = Op(ℤ)
+
+operation re_eigenvalue : Operator × ℤ → ℝ
+operation im_eigenvalue : Operator × ℤ → ℝ
+operation diagonal_entry : Operator × ℤ → ℝ
+operation is_antisymmetric_offdiag : Operator → Bool
+operation xi : ℂ → ℂ
+
+structure FunctionalEquationForcesDiagonal {
+    element H : Operator
+    element d : ℝ
+
+    axiom antisym : is_antisymmetric_offdiag(H)
+    axiom diag1 : diagonal_entry(H, 1) = d
+    axiom diag2 : diagonal_entry(H, 2) = d
+
+    axiom re1 : re_eigenvalue(H, 1) = d
+    axiom re2 : re_eigenvalue(H, 2) = d
+
+    axiom im1 : im_eigenvalue(H, 1) = 14.135
+    axiom im2 : im_eigenvalue(H, 2) = 21.022
+
+    axiom xi_zero1 : xi(complex(d, 14.135)) = complex(0, 0)
+    axiom xi_zero2 : xi(complex(d, 21.022)) = complex(0, 0)
+
+    axiom func_eq1 : xi(complex(d, 14.135)) = xi(complex(1 - d, 0 - 14.135))
+    axiom func_eq2 : xi(complex(d, 21.022)) = xi(complex(1 - d, 0 - 21.022))
+
+    axiom xi_refl1 : xi(complex(1 - d, 0 - 14.135)) = complex(0, 0)
+    axiom xi_refl2 : xi(complex(1 - d, 0 - 21.022)) = complex(0, 0)
+
+    axiom neg_ev1 : im_eigenvalue(H, 0 - 1) = 0 - im_eigenvalue(H, 1)
+    axiom neg_ev2 : im_eigenvalue(H, 0 - 2) = 0 - im_eigenvalue(H, 2)
+
+    axiom xi_neg1 : xi(complex(d, 0 - 14.135)) = complex(0, 0)
+    axiom xi_neg2 : xi(complex(d, 0 - 21.022)) = complex(0, 0)
+
+    axiom unique1 : complex(1 - d, 0 - 14.135) = complex(d, 0 - 14.135)
+    axiom unique2 : complex(1 - d, 0 - 21.022) = complex(d, 0 - 21.022)
+}
+
+example "L2: axioms are consistent" {
+    assert(is_antisymmetric_offdiag(H))
+}
+
+example "L2: Z3 derives d = 1/2" {
+    assert(d = 1/2)
+}
+
+example "L2: Re = 1/2 for both eigenvalues" {
+    assert(re_eigenvalue(H, 1) = 1/2 ∧ re_eigenvalue(H, 2) = 1/2)
+}
+
+example "L2: d ≠ 1/2 is DISPROVED (expect disproved)" {
+    assert(d ≠ 1/2)
+}

@@ -1,0 +1,23 @@
+// ============================================================================
+// Can we prove RH WITHOUT the trace formula / spectral identity?
+// Just structure theorem + convergence, no identification of comb = zeros.
+// (This should FAIL — without identification, σ is unconstrained.)
+// ============================================================================
+
+operation sigma : ℤ → ℝ
+operation gamma_zeta : ℤ → ℝ
+operation re_comb : ℤ → ℝ
+operation gamma_star : ℤ → ℝ
+
+structure WithoutTraceFormula {
+    element k : ℤ
+    axiom critical_strip : sigma(k) > 0 ∧ sigma(k) < 1
+    axiom structure_theorem : re_comb(k) = 1 / 2
+    axiom convergence : gamma_star(k) = gamma_zeta(k)
+    // NO spectral_identity: re_comb(k) = sigma(k)
+    // NO functional_equation
+}
+
+example "RH without trace formula?" {
+    assert(sigma(k) = 1 / 2)
+}

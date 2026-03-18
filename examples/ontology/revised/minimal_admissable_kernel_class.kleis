@@ -1,0 +1,82 @@
+// ============================================================================
+// Minimal admissible kernel class (v0)
+// ============================================================================
+//
+// Goal: capture the weakest "transform-like" constraints on a kernel
+// so POT remains general (not hardcoding GR/QM), but still structured.
+//
+// This is a standalone version that declares all operations locally.
+// ============================================================================
+
+// Types (declared as data with single constructor for uninterpreted types)
+data GreenKernel = GK(ℤ)
+data Flow = Fl(ℤ)
+data FieldR4 = FR4(ℤ)
+
+// Flow algebra operations
+structure FlowOps {
+    operation flow_add : Flow × Flow → Flow
+    operation flow_smul : ℂ × Flow → Flow
+    element flow_zero : Flow
+}
+
+// Field algebra operations
+structure FieldOps {
+    operation field_add : FieldR4 × FieldR4 → FieldR4
+    operation field_smul : ℂ × FieldR4 → FieldR4
+    element field_zero : FieldR4
+}
+
+// Kernel application
+structure KernelOps {
+    operation apply_kernel : GreenKernel × Flow → FieldR4
+}
+
+// AdmissibleKernel defines what makes a kernel "well-behaved"
+structure AdmissibleKernel {
+    // Predicate: is this kernel admissible?
+    operation is_admissible : GreenKernel → Bool
+
+    // ------------------------------------------------------------------------
+    // (K1) Linearity: projection respects superposition
+    // ------------------------------------------------------------------------
+
+    axiom kernel_lin_add:
+        ∀(G : GreenKernel, a b : Flow).
+            is_admissible(G) →
+            apply_kernel(G, flow_add(a, b))
+            =
+            field_add(apply_kernel(G, a), apply_kernel(G, b))
+
+    axiom kernel_lin_smul:
+        ∀(G : GreenKernel, α : ℂ, a : Flow).
+            is_admissible(G) →
+            apply_kernel(G, flow_smul(α, a))
+            =
+            field_smul(α, apply_kernel(G, a))
+
+    // ------------------------------------------------------------------------
+    // (K2) Zero preservation
+    // ------------------------------------------------------------------------
+
+    axiom kernel_maps_zero:
+        ∀(G : GreenKernel).
+            is_admissible(G) →
+            apply_kernel(G, flow_zero) = field_zero
+}
+
+// ============================================================================
+// Example: Test the admissibility predicate
+// ============================================================================
+
+example "admissibility is well-defined" {
+    // Law of excluded middle for the predicate
+    assert(∀(G : GreenKernel). is_admissible(G) ∨ ¬is_admissible(G))
+}
+
+example "kernel linearity test" {
+    // Test the linearity axiom structure
+    assert(∀(G : GreenKernel, a b : Flow).
+        is_admissible(G) →
+        apply_kernel(G, flow_add(a, b)) = field_add(apply_kernel(G, a), apply_kernel(G, b)))
+}

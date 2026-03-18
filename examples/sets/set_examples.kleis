@@ -1,0 +1,156 @@
+// Set Theory - Examples
+// ======================
+// Test examples for set theory axioms.
+// These should all verify instantly using Z3's built-in set theory.
+
+import "set_axioms.kleis"
+
+// ============================================
+// Examples: Basic Membership
+// ============================================
+
+example "empty set has no elements" {
+    
+    // Nothing is in the empty set
+    assert(∀(x : ℤ). ¬member(x, empty_set))
+}
+
+example "singleton contains its element" {
+    
+    // 5 is in {5}
+    assert(∀(n : ℤ). member(n, singleton(n)))
+}
+
+example "element not in singleton of different value" {
+    
+    // If x ≠ y, then x is not in {y}
+    assert(∀(x : ℤ). ∀(y : ℤ). (x ≠ y) → ¬member(x, singleton(y)))
+}
+
+// ============================================
+// Examples: Union Properties
+// ============================================
+
+example "union with empty set is identity" {
+    
+    assert(∀(A : Set). ∀(x : ℤ). member(x, union(A, empty_set)) ↔ member(x, A))
+}
+
+example "union is commutative" {
+    
+    assert(∀(A : Set). ∀(B : Set). ∀(x : ℤ). 
+           member(x, union(A, B)) ↔ member(x, union(B, A)))
+}
+
+example "union is associative" {
+    
+    assert(∀(A : Set). ∀(B : Set). ∀(C : Set). ∀(x : ℤ).
+           member(x, union(union(A, B), C)) ↔ member(x, union(A, union(B, C))))
+}
+
+example "union is idempotent" {
+    
+    assert(∀(A : Set). ∀(x : ℤ). member(x, union(A, A)) ↔ member(x, A))
+}
+
+// ============================================
+// Examples: Intersection Properties
+// ============================================
+
+example "intersection with empty set is empty" {
+    
+    assert(∀(A : Set). ∀(x : ℤ). ¬member(x, intersect(A, empty_set)))
+}
+
+example "intersection is commutative" {
+    
+    assert(∀(A : Set). ∀(B : Set). ∀(x : ℤ).
+           member(x, intersect(A, B)) ↔ member(x, intersect(B, A)))
+}
+
+example "intersection is associative" {
+    
+    assert(∀(A : Set). ∀(B : Set). ∀(C : Set). ∀(x : ℤ).
+           member(x, intersect(intersect(A, B), C)) ↔ member(x, intersect(A, intersect(B, C))))
+}
+
+example "intersection is idempotent" {
+    
+    assert(∀(A : Set). ∀(x : ℤ). member(x, intersect(A, A)) ↔ member(x, A))
+}
+
+// ============================================
+// Examples: Complement Properties
+// ============================================
+
+example "double complement is identity" {
+    
+    assert(∀(A : Set). ∀(x : ℤ). member(x, complement(complement(A))) ↔ member(x, A))
+}
+
+example "De Morgan union" {
+    
+    assert(∀(A : Set). ∀(B : Set). ∀(x : ℤ).
+           member(x, complement(union(A, B))) ↔ member(x, intersect(complement(A), complement(B))))
+}
+
+example "De Morgan intersection" {
+    
+    assert(∀(A : Set). ∀(B : Set). ∀(x : ℤ).
+           member(x, complement(intersect(A, B))) ↔ member(x, union(complement(A), complement(B))))
+}
+
+// ============================================
+// Examples: Subset Properties
+// ============================================
+
+example "subset is reflexive" {
+    
+    assert(∀(A : Set). subset(A, A))
+}
+
+example "empty set is subset of all" {
+    
+    assert(∀(A : Set). subset(empty_set, A))
+}
+
+example "subset of union" {
+    
+    assert(∀(A : Set). ∀(B : Set). subset(A, union(A, B)))
+}
+
+example "intersection is subset" {
+    
+    assert(∀(A : Set). ∀(B : Set). subset(intersect(A, B), A))
+}
+
+// ============================================
+// Examples: Distributivity
+// ============================================
+
+example "intersection distributes over union" {
+    
+    assert(∀(A : Set). ∀(B : Set). ∀(C : Set). ∀(x : ℤ).
+           member(x, intersect(A, union(B, C))) ↔ 
+           member(x, union(intersect(A, B), intersect(A, C))))
+}
+
+// ============================================
+// Examples: Difference Properties
+// ============================================
+
+example "difference with empty set is identity" {
+    
+    assert(∀(A : Set). ∀(x : ℤ). member(x, difference(A, empty_set)) ↔ member(x, A))
+}
+
+example "difference from self is empty" {
+    
+    assert(∀(A : Set). ∀(x : ℤ). ¬member(x, difference(A, A)))
+}
+
+example "empty set difference with anything is empty" {
+    
+    assert(∀(A : Set). ∀(x : ℤ). ¬member(x, difference(empty_set, A)))
+}
+

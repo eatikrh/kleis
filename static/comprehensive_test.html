@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Comprehensive Template Rendering Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 40px;
+            background: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 40px;
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .test-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .test-title {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+        .test-formula {
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 15px;
+            background: #fafafa;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Comprehensive Template Rendering Test - All 118 Operations</h1>
+    <div class="test-grid">
+        <div class="test-card"><div class="test-title">1. Fraction</div><div class="test-formula">\[\frac{a}{b}\]</div></div>
+        <div class="test-card"><div class="test-title">2. Integral with bounds</div><div class="test-formula">\[\int_{a}^{b} f(x) \, \mathrm{d}x\]</div></div>
+        <div class="test-card"><div class="test-title">3. Summation</div><div class="test-formula">\[\sum_{i=1}^{n} a_i\]</div></div>
+        <div class="test-card"><div class="test-title">4. Product</div><div class="test-formula">\[\prod_{i=1}^{n} a_i\]</div></div>
+        <div class="test-card"><div class="test-title">5. Partial Derivative</div><div class="test-formula">\[\frac{\partial\,f}{\partial x}\]</div></div>
+        <div class="test-card"><div class="test-title">6. Second Partial</div><div class="test-formula">\[\frac{\partial^{2} \,f}{\partial x^{2}}\]</div></div>
+        <div class="test-card"><div class="test-title">7. Matrix 2×2</div><div class="test-formula">\[\begin{bmatrix}a&b\\c&d\end{bmatrix}\]</div></div>
+        <div class="test-card"><div class="test-title">8. Pmatrix 2×2</div><div class="test-formula">\[\begin{pmatrix}a&b\\c&d\end{pmatrix}\]</div></div>
+        <div class="test-card"><div class="test-title">9. Determinant</div><div class="test-formula">\[\det\!\left(A\right)\]</div></div>
+        <div class="test-card"><div class="test-title">10. Ket</div><div class="test-formula">\[|\psi\rangle\]</div></div>
+        <div class="test-card"><div class="test-title">11. Bra</div><div class="test-formula">\[\langle\phi|\]</div></div>
+        <div class="test-card"><div class="test-title">12. Inner Product</div><div class="test-formula">\[\langle \psi, \phi \rangle\]</div></div>
+        <div class="test-card"><div class="test-title">13. Commutator</div><div class="test-formula">\[[A, B]\]</div></div>
+        <div class="test-card"><div class="test-title">14. Square Root</div><div class="test-formula">\[\sqrt{x}\]</div></div>
+        <div class="test-card"><div class="test-title">15. Nth Root</div><div class="test-formula">\[\sqrt[3]{x}\]</div></div>
+        <div class="test-card"><div class="test-title">16. Power</div><div class="test-formula">\[x^{n}\]</div></div>
+        <div class="test-card"><div class="test-title">17. Subscript</div><div class="test-formula">\[x_{i}\]</div></div>
+        <div class="test-card"><div class="test-title">18. Mixed Index</div><div class="test-formula">\[T^{i}_{j}\]</div></div>
+        <div class="test-card"><div class="test-title">19. Christoffel</div><div class="test-formula">\[\Gamma^{{\mu}}_{{\nu \sigma}}\]</div></div>
+        <div class="test-card"><div class="test-title">20. Riemann Tensor</div><div class="test-formula">\[R^{{\rho}}_{{\sigma \mu \nu}}\]</div></div>
+        <div class="test-card"><div class="test-title">21. Gradient</div><div class="test-formula">\[\nabla f\]</div></div>
+        <div class="test-card"><div class="test-title">22. Divergence</div><div class="test-formula">\[\nabla \cdot F\]</div></div>
+        <div class="test-card"><div class="test-title">23. Curl</div><div class="test-formula">\[\nabla \times F\]</div></div>
+        <div class="test-card"><div class="test-title">24. Laplacian</div><div class="test-formula">\[\nabla^2 \phi\]</div></div>
+        <div class="test-card"><div class="test-title">25. Limit</div><div class="test-formula">\[\lim_{ x \to 0 } f(x)\]</div></div>
+        <div class="test-card"><div class="test-title">26. Binomial</div><div class="test-formula">\[\binom{n}{k}\]</div></div>
+        <div class="test-card"><div class="test-title">27. Floor</div><div class="test-formula">\[\lfloor x \rfloor\]</div></div>
+        <div class="test-card"><div class="test-title">28. Ceiling</div><div class="test-formula">\[\lceil x \rceil\]</div></div>
+        <div class="test-card"><div class="test-title">29. Factorial</div><div class="test-formula">\[n!\]</div></div>
+        <div class="test-card"><div class="test-title">30. Hat accent</div><div class="test-formula">\[\hat{x}\]</div></div>
+        <div class="test-card"><div class="test-title">31. Dot accent</div><div class="test-formula">\[\dot{x}\]</div></div>
+        <div class="test-card"><div class="test-title">32. Sine</div><div class="test-formula">\[\sin\!(x)\]</div></div>
+        <div class="test-card"><div class="test-title">33. Cosine</div><div class="test-formula">\[\cos(x)\]</div></div>
+        <div class="test-card"><div class="test-title">34. Arcsine</div><div class="test-formula">\[\arcsin(x)\]</div></div>
+        <div class="test-card"><div class="test-title">35. Exponential</div><div class="test-formula">\[\exp(x)\]</div></div>
+        <div class="test-card"><div class="test-title">36. Natural Log</div><div class="test-formula">\[\ln(x)\]</div></div>
+        <div class="test-card"><div class="test-title">37. Transpose</div><div class="test-formula">\[A^{\mathsf{T}}\]</div></div>
+        <div class="test-card"><div class="test-title">38. Trace</div><div class="test-formula">\[\mathrm{Tr}(A)\]</div></div>
+        <div class="test-card"><div class="test-title">39. Inverse</div><div class="test-formula">\[A^{-1}\]</div></div>
+        <div class="test-card"><div class="test-title">40. Norm</div><div class="test-formula">\[\left\lVert v \right\rVert\]</div></div>
+        <div class="test-card"><div class="test-title">41. Cross Product</div><div class="test-formula">\[a \times b\]</div></div>
+        <div class="test-card"><div class="test-title">42. Dot Product</div><div class="test-formula">\[a \cdot b\]</div></div>
+        <div class="test-card"><div class="test-title">43. Element Of</div><div class="test-formula">\[x \in S\]</div></div>
+        <div class="test-card"><div class="test-title">44. Subset</div><div class="test-formula">\[A \subset B\]</div></div>
+        <div class="test-card"><div class="test-title">45. Union</div><div class="test-formula">\[A \cup B\]</div></div>
+        <div class="test-card"><div class="test-title">46. Intersection</div><div class="test-formula">\[A \cap B\]</div></div>
+        <div class="test-card"><div class="test-title">47. For All</div><div class="test-formula">\[\forall x \colon P(x)\]</div></div>
+        <div class="test-card"><div class="test-title">48. Exists</div><div class="test-formula">\[\exists x \colon P(x)\]</div></div>
+        <div class="test-card"><div class="test-title">49. Implies</div><div class="test-formula">\[P \Rightarrow Q\]</div></div>
+        <div class="test-card"><div class="test-title">50. Less Than</div><div class="test-formula">\[x < y\]</div></div>
+        <div class="test-card"><div class="test-title">51. Greater Equal</div><div class="test-formula">\[x \geq y\]</div></div>
+        <div class="test-card"><div class="test-title">52. Not Equal</div><div class="test-formula">\[x \neq y\]</div></div>
+        <div class="test-card"><div class="test-title">53. Approximately</div><div class="test-formula">\[x \approx y\]</div></div>
+        <div class="test-card"><div class="test-title">54. Proportional</div><div class="test-formula">\[x \propto y\]</div></div>
+        <div class="test-card"><div class="test-title">55. Vector Arrow</div><div class="test-formula">\[\vec{v}\]</div></div>
+        <div class="test-card"><div class="test-title">56. Conjugate</div><div class="test-formula">\[\overline{z}\]</div></div>
+        <div class="test-card"><div class="test-title">57. Real Part</div><div class="test-formula">\[\mathrm{Re}(z)\]</div></div>
+        <div class="test-card"><div class="test-title">58. Imaginary Part</div><div class="test-formula">\[\mathrm{Im}(z)\]</div></div>
+        <div class="test-card"><div class="test-title">59. Double Integral</div><div class="test-formula">\[\iint_{D} f \, \mathrm{d}x \, \mathrm{d}y\]</div></div>
+        <div class="test-card"><div class="test-title">60. Triple Integral</div><div class="test-formula">\[\iiint_{V} f \, \mathrm{d}x \, \mathrm{d}y \, \mathrm{d}z\]</div></div>
+    </div>
+</body>
+</html>
+

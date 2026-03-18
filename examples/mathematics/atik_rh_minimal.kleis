@@ -1,0 +1,18 @@
+// ============================================================================
+// Minimal axiom test: does the functional equation WITHOUT uniqueness
+// prove RH? (It shouldn't — σ could be anything in (0,1).)
+// ============================================================================
+
+operation sigma : ℤ → ℝ
+operation sigma_paired : ℤ → ℝ
+
+structure HonestFunctionalEq {
+    element k : ℤ
+    axiom critical_strip : sigma(k) > 0 ∧ sigma(k) < 1
+    axiom func_eq : sigma_paired(k) = 1 - sigma(k)
+    axiom paired_strip : sigma_paired(k) > 0 ∧ sigma_paired(k) < 1
+}
+
+example "Functional eq WITHOUT uniqueness → RH?" {
+    assert(sigma(k) = 1 / 2)
+}

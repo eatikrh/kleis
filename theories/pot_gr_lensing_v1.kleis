@@ -1,0 +1,570 @@
+// =============================================================================
+// POT vs GR: Gravitational Lensing Predictions
+// =============================================================================
+//
+// Numerically and axiomatically compares gravitational lensing predictions
+// between General Relativity (with various mass profiles) and Projected
+// Ontology Theory (POT).
+//
+// Z3 METHODOLOGY:
+//   Each axiomatic "example" checks satisfiability (SAT) of axioms + claim.
+//   For the algebraic identities tested here (examples 8-15), the claims
+//   follow from the axioms by algebraic necessity: Z3 cannot construct a
+//   countermodel because the axioms uniquely determine the deflection.
+//   Nevertheless, the Z3 result is technically SAT (consistent), not a
+//   formal derivation proof. We label results accordingly.
+//
+// DECLARED ASSUMPTIONS:
+//   (A1) Weak-field thin-lens approximation: deflection angles α << 1 radian.
+//        The formula α(b) = 4GM(b)/(c²b) is valid only when the gravitational
+//        field is weak (GM/(c²b) << 1) and the lens is thin compared to
+//        D_L, D_S, D_LS. For all cases computed here, α < 30 arcsec
+//        = 1.5×10⁻⁴ rad, so this approximation is excellent.
+//   (A2) The SIS velocity dispersion satisfies σ² = v²_flat/2. This is
+//        exact for an idealized Singular Isothermal Sphere by definition.
+//        Real galaxies have more complex velocity dispersion profiles.
+//   (A3) Lensing geometry: D_L = 1 Gpc, D_S = 2 Gpc, D_LS = 1 Gpc.
+//        These are representative values for galaxy-galaxy lensing at
+//        cosmological distances. Actual distances depend on redshifts
+//        and cosmological model.
+//   (A4) Milky Way-like galaxy: v_flat = 220 km/s, M_baryonic = 6×10¹⁰ M☉,
+//        M_halo = 1.5×10¹² M☉. These are standard literature values.
+//   (A5) Circular symmetry: the lens has axial symmetry about the optical
+//        axis. This is implicit in the thin-lens formalism used throughout.
+//   (A6) For a circularly symmetric lens with constant deflection angle,
+//        the magnification has two components:
+//          μ_radial = (dβ/dθ)⁻¹ = 1 (since dα/dθ = 0)
+//          μ_tangential = (β/θ)⁻¹ = θ/(θ - θ_E)
+//        Total: μ = θ/(θ - θ_E), which DIVERGES at θ = θ_E.
+//        Both SIS and POT (both having constant deflection) produce
+//        caustics and divergent magnification at their Einstein rings.
+//
+// RELATIONSHIP TO gr_cartan_v1.kleis:
+//   gr_cartan_v1.kleis DERIVES the full nonlinear GR curvature via the
+//   Cartan pipeline (metric → tetrad → connection → R = dω + ω∧ω → Ricci).
+//   This file operates at the WEAK-FIELD approximation level, using the
+//   well-established deflection formula α = 4GM(b)/(c²b) which is an
+//   integral of the geodesic equation in the linearized metric.
+//   Both analyses are correct at their respective levels.
+//
+// Self-contained: no imports required for weak-field lensing.
+// =============================================================================
+
+// =============================================================================
+// PART 1: PHYSICAL CONSTANTS & GALAXY PARAMETERS
+// =============================================================================
+
+define G_newton = 6.674 * pow(10.0, -11.0)
+define c_light = 2.998 * pow(10.0, 8.0)
+define c_squared = c_light * c_light
+define M_sun = 1.989 * pow(10.0, 30.0)
+define kpc = 3.086 * pow(10.0, 19.0)
+define Mpc = 3.086 * pow(10.0, 22.0)
+define Gpc = 3.086 * pow(10.0, 25.0)
+define rad_to_arcsec = 180.0 * 3600.0 / pi()
+
+// Assumption A4: Milky Way-like galaxy
+define v_flat = 220000.0
+define v_flat_sq = v_flat * v_flat
+
+define M_baryonic = 6.0 * pow(10.0, 10.0) * M_sun
+define M_halo = 1.5 * pow(10.0, 12.0) * M_sun
+
+// POT mass rate: μ = v²/G (kg/m)
+define mu_pot = v_flat_sq / G_newton
+
+// Assumption A3: lensing geometry
+define D_L = 1.0 * Gpc
+define D_S = 2.0 * Gpc
+define D_LS = 1.0 * Gpc
+
+// =============================================================================
+// PART 2: LENSING FORMULAS (Assumption A1: weak-field thin-lens)
+// =============================================================================
+
+// GR point mass: α = 4GM/(c²b)
+define alpha_gr_point(M, b) = 4.0 * G_newton * M / (c_squared * b)
+
+// SIS velocity dispersion (Assumption A2): σ² = v²/2
+define sigma_sq = v_flat_sq / 2.0
+
+// GR SIS deflection: α_SIS = 4πσ²/c² (constant)
+define alpha_sis = 4.0 * pi() * sigma_sq / c_squared
+
+// POT deflection: α_POT = 4v²/c² (constant)
+define alpha_pot = 4.0 * v_flat_sq / c_squared
+
+// Einstein ring angular radii
+define theta_E_gr(M) = sqrt(4.0 * G_newton * M * D_LS / (c_squared * D_L * D_S))
+define theta_E_sis = alpha_sis * D_LS / D_S
+define theta_E_pot = alpha_pot * D_LS / D_S
+
+// Projected mass profiles
+define M_proj_sis(b) = pi() * sigma_sq * b / G_newton
+define M_proj_pot(b) = mu_pot * b
+
+// Projected mass in solar masses (pre-simplified for numerical reduction)
+define M_sis_solar(b_kpc) = pi() * sigma_sq * b_kpc * kpc / (G_newton * M_sun)
+define M_pot_solar(b_kpc) = mu_pot * b_kpc * kpc / M_sun
+
+// --- Magnification formulas (Assumption A5: circular symmetry) ---
+
+// GR point mass: μ(u) = (u² + 2) / (u √(u² + 4))
+// where u = β/θ_E (source offset in Einstein ring units)
+// This is the total magnification summing both images.
+define mag_gr_point(u) = (u * u + 2.0) / (u * sqrt(u * u + 4.0))
+
+// Constant-deflection lens (SIS and POT): Assumption A6
+// Primary image: μ₁ = 1 + 1/u (always exists for u > 0)
+// Secondary image: μ₂ = 1/u - 1 (exists only for u < 1)
+// Total for u < 1: μ = μ₁ + μ₂ = 2/u
+// Total for u ≥ 1: μ = μ₁ = 1 + 1/u
+define mag_const_primary(u) = 1.0 + 1.0 / u
+define mag_const_two_image(u) = 2.0 / u
+
+// =============================================================================
+// EXAMPLE 1: Deflection angle comparison at b = 10 kpc
+// =============================================================================
+
+example "1. Deflection angles at b = 10 kpc" {
+    let b = 10.0 * kpc in
+
+    let a_bary = alpha_gr_point(M_baryonic, b) * rad_to_arcsec in
+    let a_halo = alpha_gr_point(M_halo, b) * rad_to_arcsec in
+    let a_sis = alpha_sis * rad_to_arcsec in
+    let a_pot = alpha_pot * rad_to_arcsec in
+
+    out("=== Deflection Angle Comparison at b = 10 kpc ===")
+    out("(Assumption A1: weak-field thin-lens, α << 1 rad)")
+    out("")
+    out("GR point mass (baryonic 6e10 M_sun): arcsec =")
+    out(a_bary)
+    out("GR point mass (DM halo 1.5e12 M_sun): arcsec =")
+    out(a_halo)
+    out("GR SIS (Assumption A2: σ² = v²/2): arcsec =")
+    out(a_sis)
+    out("POT (v_flat = 220 km/s): arcsec =")
+    out(a_pot)
+    out("")
+    out("Ratio α_SIS / α_POT =")
+    out(alpha_sis / alpha_pot)
+    out("Expected π/2 =")
+    out(pi() / 2.0)
+}
+
+// =============================================================================
+// EXAMPLE 2: Deflection vs impact parameter
+// =============================================================================
+
+define show_deflection(b_kpc, b_m) =
+    let a_pt = alpha_gr_point(M_halo, b_m) * rad_to_arcsec in
+    let a_sis_val = alpha_sis * rad_to_arcsec in
+    let a_pot_val = alpha_pot * rad_to_arcsec in
+    [b_kpc, a_pt, a_sis_val, a_pot_val]
+
+example "2. α(b) at multiple impact parameters" {
+    out("=== Deflection vs Impact Parameter ===")
+    out("[b_kpc, GR_point(halo), GR_SIS, POT]")
+
+    out(show_deflection(5.0, 5.0 * kpc))
+    out(show_deflection(10.0, 10.0 * kpc))
+    out(show_deflection(50.0, 50.0 * kpc))
+    out(show_deflection(100.0, 100.0 * kpc))
+    out(show_deflection(500.0, 500.0 * kpc))
+
+    out("")
+    out("GR point mass: α ∝ 1/b (decreasing)")
+    out("GR SIS & POT: α = constant (independent of b)")
+    out("SIS/POT ratio = π/2 ≈ 1.57 (Assumption A2: σ² = v²/2)")
+}
+
+// =============================================================================
+// EXAMPLE 3: Einstein ring radii (Assumption A3: D_L, D_S, D_LS)
+// =============================================================================
+
+example "3. Einstein ring radii" {
+    out("=== Einstein Ring Radii ===")
+    out("(Assumption A3: D_L = 1 Gpc, D_S = 2 Gpc, D_LS = 1 Gpc)")
+    out("")
+
+    let tE_bary = theta_E_gr(M_baryonic) * rad_to_arcsec in
+    let tE_halo = theta_E_gr(M_halo) * rad_to_arcsec in
+    let tE_sis = theta_E_sis * rad_to_arcsec in
+    let tE_pot = theta_E_pot * rad_to_arcsec in
+
+    out("GR point mass (baryonic): arcsec =")
+    out(tE_bary)
+    out("GR point mass (DM halo): arcsec =")
+    out(tE_halo)
+    out("GR SIS: arcsec =")
+    out(tE_sis)
+    out("POT: arcsec =")
+    out(tE_pot)
+    out("")
+    out("Ratio θ_E_SIS / θ_E_POT = π/2:")
+    out(tE_sis / tE_pot)
+}
+
+// =============================================================================
+// EXAMPLE 4: Projected mass comparison
+// =============================================================================
+
+example "4. Projected mass M(b) in solar masses" {
+    out("=== Projected Mass Profiles ===")
+    out("[b_kpc, M_SIS (M_sun), M_POT (M_sun), Ratio]")
+
+    let ms1 = M_sis_solar(1.0) in
+    let mp1 = M_pot_solar(1.0) in
+    out([1.0, ms1, mp1, ms1 / mp1])
+
+    let ms10 = M_sis_solar(10.0) in
+    let mp10 = M_pot_solar(10.0) in
+    out([10.0, ms10, mp10, ms10 / mp10])
+
+    let ms100 = M_sis_solar(100.0) in
+    let mp100 = M_pot_solar(100.0) in
+    out([100.0, ms100, mp100, ms100 / mp100])
+
+    out("")
+    out("Both grow linearly with b. Ratio is always π/2.")
+}
+
+// =============================================================================
+// EXAMPLE 5: The π/2 ratio — numerical verification
+// =============================================================================
+
+example "5. The π/2 ratio theorem" {
+    out("=== The π/2 Ratio ===")
+    out("GR SIS: M_SIS(b) = πσ²b/G = πv²b/(2G)")
+    out("POT:    M_POT(b) = v²b/G")
+    out("Ratio:  M_SIS/M_POT = π/2")
+    out("")
+    out("GR SIS: α_SIS = 4πσ²/c² = 2πv²/c²")
+    out("POT:    α_POT = 4v²/c²")
+    out("Ratio:  α_SIS/α_POT = 2π/4 = π/2")
+    out("")
+    out("Numerical: α_SIS / α_POT =")
+    out(alpha_sis / alpha_pot)
+    let ms42 = M_sis_solar(42.0) in
+    let mp42 = M_pot_solar(42.0) in
+    out("Numerical: M_SIS(42kpc) / M_POT(42kpc) =")
+    out(ms42 / mp42)
+    out("π/2 =")
+    out(pi() / 2.0)
+    out("")
+    out("Origin: GR projects 3D density ρ(r) = σ²/(2πGr²) to get")
+    out("  Σ(ξ) = σ²/(2Gξ), then M_2D = πσ²b/G (factor of π from integration).")
+    out("POT: M(b) = μb is the projected mass directly (no 3D→2D step).")
+}
+
+// =============================================================================
+// EXAMPLE 6: Magnification — CORRECTED (Assumption A6)
+//
+// BOTH constant-deflection lenses (SIS and POT) have caustics.
+// The magnification for circular symmetry with α = constant is:
+//   μ = θ/(θ - θ_E), diverging at θ = θ_E.
+// In terms of u = β/θ_E: primary image μ₁ = 1 + 1/u, total μ = 2/u (u<1).
+// =============================================================================
+
+example "6. Magnification comparison (corrected)" {
+    out("=== Magnification: All Models Have Caustics ===")
+    out("(Assumption A5: circular symmetry, A6: magnification formula)")
+    out("")
+    out("--- GR point mass ---")
+    out("μ(u) = (u² + 2) / (u √(u² + 4))")
+    out("u = 0.1:")
+    out(mag_gr_point(0.1))
+    out("u = 0.5:")
+    out(mag_gr_point(0.5))
+    out("u = 1.0:")
+    out(mag_gr_point(1.0))
+    out("u = 2.0:")
+    out(mag_gr_point(2.0))
+    out("")
+    out("--- Constant-deflection lens (SIS and POT) ---")
+    out("Primary image: μ₁ = 1 + 1/u")
+    out("Secondary image (u < 1): μ₂ = 1/u - 1")
+    out("Total (u < 1): 2/u. Total (u ≥ 1): 1 + 1/u")
+    out("u = 0.1: total μ =")
+    out(mag_const_two_image(0.1))
+    out("u = 0.5: total μ =")
+    out(mag_const_two_image(0.5))
+    out("u = 1.0: μ₁ =")
+    out(mag_const_primary(1.0))
+    out("u = 2.0: μ₁ =")
+    out(mag_const_primary(2.0))
+    out("")
+    out("BOTH SIS and POT produce caustics (μ → ∞ at u → 0).")
+    out("The constant-deflection lens has HIGHER magnification than")
+    out("point mass at the same u, because μ_cd = 2/u > μ_pm ≈ 1/u + 1/u.")
+    out("")
+    out("The SIS and POT Einstein rings differ by π/2:")
+    out("θ_E_SIS / θ_E_POT =")
+    out(theta_E_sis / theta_E_pot)
+    out("At the same physical source offset β, POT has larger u (by π/2),")
+    out("hence WEAKER magnification than SIS.")
+}
+
+// =============================================================================
+// EXAMPLE 7: Weak lensing convergence κ
+// =============================================================================
+
+example "7. Weak lensing convergence κ" {
+    out("=== Weak Lensing Convergence ===")
+    out("κ(θ) = Σ(θ) / Σ_cr, where Σ_cr = c² D_S / (4πG D_L D_LS)")
+    out("")
+
+    let Sigma_cr = c_squared * D_S / (4.0 * pi() * G_newton * D_L * D_LS) in
+    out("Σ_cr (kg/m²) =")
+    out(Sigma_cr)
+    out("Σ_cr (M_sun/kpc²) =")
+    out(Sigma_cr * kpc * kpc / M_sun)
+
+    out("")
+    out("SIS surface density: Σ_SIS(ξ) = σ²/(2Gξ)")
+    out("POT surface density: Σ_POT(ξ) = μ/(2πξ)")
+    out("  (from M(b) = μb, so dM/db = μ, Σ = (1/(2πξ)) dM/dξ = μ/(2π)·(1/ξ)... no)")
+    out("  Corrected: M(b) = μb = ∫₀ᵇ 2πξ Σ(ξ) dξ. If Σ = C/ξ, then M = 2πCb.")
+    out("  So C = μ/(2π), and Σ_POT(ξ) = μ/(2πξ) = v²/(2πGξ)")
+    out("")
+    out("Ratio Σ_SIS/Σ_POT = [σ²/(2G)] / [v²/(2πG)] = πσ²/v² = π/2")
+    out("  (using σ² = v²/2)")
+
+    let theta_test = 5.0 / rad_to_arcsec in
+    let kappa_sis = theta_E_sis / (2.0 * theta_test) in
+    let kappa_pot = theta_E_pot / (2.0 * theta_test) in
+    out("")
+    out("κ_SIS at θ = 5 arcsec =")
+    out(kappa_sis)
+    out("κ_POT at θ = 5 arcsec =")
+    out(kappa_pot)
+    out("Ratio κ_SIS / κ_POT =")
+    out(kappa_sis / kappa_pot)
+    out("Expected π/2 =")
+    out(pi() / 2.0)
+}
+
+// =============================================================================
+// PART 3: AXIOMATIC CONSISTENCY CHECKS (Z3)
+//
+// These check satisfiability: Z3 finds a model where axioms AND claim hold.
+// For the algebraic identities below, the axioms determine deflection
+// uniquely, so SAT implies the claim is the ONLY possibility (no
+// countermodel exists). But the Z3 methodology is still SAT, not UNSAT.
+// =============================================================================
+
+data MassProfile = MP(ℤ)
+
+operation enclosed_mass : MassProfile → ℝ → ℝ
+operation deflection : MassProfile → ℝ → ℝ
+operation mass_rate_ax : MassProfile → ℝ
+operation total_mass_ax : MassProfile → ℝ
+
+// =============================================================================
+// AXIOM SET 1: GR Deflection Formula (Assumption A1)
+// =============================================================================
+
+structure GRDeflection {
+    element G_ax : ℝ
+    element c2_ax : ℝ
+
+    axiom G_pos : G_ax > 0
+    axiom c2_pos : c2_ax > 0
+
+    axiom gr_deflection_law : ∀(prof : MassProfile, b : ℝ).
+        implies(b > 0,
+            deflection(prof, b) * c2_ax * b = 4 * G_ax * enclosed_mass(prof, b))
+}
+
+// =============================================================================
+// AXIOM SET 2: Point Mass Profile
+// =============================================================================
+
+structure PointMassProfile {
+    element pm : MassProfile
+
+    axiom constant_mass : ∀(b : ℝ).
+        implies(b > 0, enclosed_mass(pm, b) = total_mass_ax(pm))
+
+    axiom mass_positive : total_mass_ax(pm) > 0
+}
+
+example "8. Point mass: α·b is constant (Z3-consistent)" {
+    assert(∀(b1 b2 : ℝ).
+        implies(b1 > 0 ∧ b2 > b1,
+            deflection(pm, b2) * b2 = deflection(pm, b1) * b1))
+}
+
+example "9. Point mass: doubling b halves α (Z3-consistent)" {
+    assert(∀(b : ℝ).
+        implies(b > 0,
+            deflection(pm, 2 * b) * 2 = deflection(pm, b)))
+}
+
+// =============================================================================
+// AXIOM SET 3: POT Linear Mass Profile
+// =============================================================================
+
+structure LinearMassProfile {
+    element lm : MassProfile
+
+    axiom linear_mass : ∀(b : ℝ).
+        implies(b > 0, enclosed_mass(lm, b) = mass_rate_ax(lm) * b)
+
+    axiom rate_positive : mass_rate_ax(lm) > 0
+}
+
+example "10. Linear mass: α is constant (Z3-consistent)" {
+    assert(∀(b1 b2 : ℝ).
+        implies(b1 > 0 ∧ b2 > 0,
+            deflection(lm, b1) = deflection(lm, b2)))
+}
+
+example "11. Linear mass: α = 4Gμ/c² (Z3-consistent)" {
+    assert(∀(b : ℝ).
+        implies(b > 0,
+            deflection(lm, b) * c2_ax = 4 * G_ax * mass_rate_ax(lm)))
+}
+
+// =============================================================================
+// AXIOM SET 4: SIS Profile (Assumption A2)
+// =============================================================================
+
+structure SISProfile {
+    element sis : MassProfile
+    element sigma_sq_ax : ℝ
+    element v_sq_ax : ℝ
+    element pi_ax : ℝ
+
+    axiom sigma_pos : sigma_sq_ax > 0
+    axiom sis_projected_mass : ∀(b : ℝ).
+        implies(b > 0,
+            enclosed_mass(sis, b) * G_ax = pi_ax * sigma_sq_ax * b)
+
+    // Assumption A2: v² = 2σ² (exact for SIS by definition)
+    axiom v_from_sigma : v_sq_ax = 2 * sigma_sq_ax
+
+    axiom pi_bound_lo : pi_ax > 3.14159
+    axiom pi_bound_hi : pi_ax < 3.14160
+}
+
+structure POTMatchingSIS {
+    element pot_match : MassProfile
+
+    axiom pot_mass_from_v : ∀(b : ℝ).
+        implies(b > 0,
+            enclosed_mass(pot_match, b) * G_ax = v_sq_ax * b)
+}
+
+example "12. Mass ratio M_SIS/M_POT = π/2 (Z3-consistent)" {
+    assert(∀(b : ℝ).
+        implies(b > 0,
+            enclosed_mass(sis, b) * 2 * G_ax = pi_ax * v_sq_ax * b))
+}
+
+example "13. Deflection ratio α_SIS/α_POT = π/2 (Z3-consistent)" {
+    assert(∀(b : ℝ).
+        implies(b > 0,
+            deflection(sis, b) * 2 = pi_ax * deflection(pot_match, b)))
+}
+
+// =============================================================================
+// AXIOM SET 5: Kernel Selection Theorem
+//
+// Formalizes the claim: within the admissible kernel class, flat rotation
+// curves (M(r) = μr) uniquely select h(G,r) = κ/r.
+//
+// The coherence function h determines mass growth: dM/dr is proportional
+// to g(r) = h(r)·r. Admissibility requires g non-decreasing.
+// Flat rotation requires M(r) = μr, hence dM/dr = μ = constant.
+// Therefore g(r) must be constant: g(r1) = g(r2) for all r1, r2 > 0.
+// This means h(r)·r = κ (constant), i.e., h(r) = κ/r.
+// =============================================================================
+
+operation coherence : ℝ → ℝ
+operation mass_growth : ℝ → ℝ
+
+structure AdmissibleKernelAxioms {
+    element kappa_ax : ℝ
+    axiom kappa_pos : kappa_ax > 0
+
+    // g(r) = h(r)·r is the "mass growth function"
+    axiom growth_def : ∀(r : ℝ).
+        implies(r > 0, mass_growth(r) = coherence(r) * r)
+
+    // Admissibility (A5): g(r) = h(r)·r is non-decreasing
+    axiom admissible : ∀(r1 r2 : ℝ).
+        implies(r1 > 0 ∧ r2 > r1,
+            mass_growth(r2) >= mass_growth(r1))
+
+    // Flat rotation: mass grows linearly, so dM/dr is constant.
+    // In the discrete formulation: M(r) = μr means the mass growth
+    // function g(r) is constant (same rate at every radius).
+    axiom flat_rotation : ∀(r1 r2 : ℝ).
+        implies(r1 > 0 ∧ r2 > 0,
+            mass_growth(r1) = mass_growth(r2))
+}
+
+// Theorem: flat rotation + admissibility implies h(r) = κ/r
+// (i.e., h(r)·r = constant for all r > 0)
+example "K1. Kernel selection: flat rotation implies h·r = constant (Z3-consistent)" {
+    assert(∀(r1 r2 : ℝ).
+        implies(r1 > 0 ∧ r2 > 0,
+            coherence(r1) * r1 = coherence(r2) * r2))
+}
+
+// Theorem: stronger coherence (g strictly increasing) is incompatible
+// with flat rotation (g constant)
+example "K2. Stronger kernel incompatible with flat rotation (Z3-consistent)" {
+    assert(∀(r1 r2 : ℝ).
+        implies(r1 > 0 ∧ r2 > r1,
+            ¬(mass_growth(r2) > mass_growth(r1))))
+}
+
+// Theorem: the coherence function at any radius equals κ/r
+// (where κ = h(1)·1 = mass_growth(1))
+example "K3. Coherence satisfies h(r) = g(1)/r for all r > 0 (Z3-consistent)" {
+    assert(∀(r : ℝ).
+        implies(r > 0,
+            coherence(r) * r = mass_growth(1.0)))
+}
+
+// =============================================================================
+// EXAMPLE 14: Incompatibility of point mass and linear mass
+// =============================================================================
+
+example "14. Point mass and linear mass give different profiles (Z3-consistent)" {
+    assert(
+        deflection(pm, 10.0) ≠ deflection(pm, 20.0) ∧
+        deflection(lm, 10.0) = deflection(lm, 20.0)
+    )
+}
+
+// =============================================================================
+// EXAMPLE 15: Summary
+// =============================================================================
+
+example "15. Summary of predictions" {
+    out("=== PREDICTIONS: POT vs GR ===")
+    out("Assumptions: A1 (weak-field), A2 (σ²=v²/2 for SIS),")
+    out("  A3 (lensing geometry), A4 (galaxy parameters),")
+    out("  A5 (circular symmetry), A6 (magnification formula)")
+    out("")
+    out("1. DEFLECTION: Both SIS and POT constant, differ by π/2")
+    out("   α_SIS / α_POT = π/2 ≈ 1.57")
+    out("   GR point mass falls as 1/b")
+    out("")
+    out("2. EINSTEIN RING: θ_E_SIS / θ_E_POT = π/2")
+    out("   POT predicts smaller Einstein rings for same v_flat")
+    out("")
+    out("3. MAGNIFICATION: Both SIS and POT have caustics")
+    out("   μ_SIS(u) = μ_POT(u) = 2/u (u<1) or 1+1/u (u≥1)")
+    out("   Same functional form, but θ_E differs by π/2,")
+    out("   so at fixed β, POT has larger u → weaker magnification")
+    out("")
+    out("4. WEAK LENSING: κ_SIS/κ_POT = π/2 at all angles")
+    out("   Stacked shear measurements could discriminate")
+    out("")
+    out("5. MASS PROFILE: M_SIS(b)/M_POT(b) = π/2 at all b")
+    out("   The π/2 factor is the geometric cost of 3D→2D projection")
+}

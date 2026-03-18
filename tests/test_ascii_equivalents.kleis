@@ -1,0 +1,90 @@
+// Test file: Verify all ASCII equivalents from grammar documentation
+// This file uses ASCII syntax instead of Unicode to verify parser support
+// 
+// VERIFIED ASCII EQUIVALENTS (Kleis 0.96):
+// ✅ forall (∀)
+// ✅ exists (∃)
+// ✅ -> (→)
+// ✅ lambda (λ)
+// ✅ <= (≤)
+// ✅ >= (≥)
+// ✅ != (≠)
+// ✅ Nat, Int, Rational, Real, Complex (type names)
+// ✅ * (multiplication in expressions only)
+//
+// UNICODE ONLY (no ASCII equivalent):
+// ✗ × (product type)
+// ✗ ∧ (logical and)
+// ✗ ∨ (logical or)
+// ✗ ¬ (logical not)
+
+// ============================================================
+// 1. forall (∀) - Universal quantifier
+// ============================================================
+structure TestForall {
+    axiom test_forall: forall x : Int . x = x
+}
+
+// ============================================================
+// 2. exists (∃) - Existential quantifier
+// ============================================================
+structure TestExists {
+    axiom test_exists: exists x : Int . x = 0
+}
+
+// ============================================================
+// 3. -> (→) - Function type
+// ============================================================
+operation test_arrow : Int -> Int
+
+// ============================================================
+// 4. lambda (λ) - Lambda expressions
+// ============================================================
+define test_lambda = lambda (x : Int) . x
+
+// Also test untyped parameter
+define test_lambda_simple = lambda x . x
+
+// ============================================================
+// 5. <= (≤) - Less or equal
+// ============================================================
+structure TestLeq {
+    axiom test_leq: forall x : Int . x <= x
+}
+
+// ============================================================
+// 6. >= (≥) - Greater or equal
+// ============================================================
+structure TestGeq {
+    axiom test_geq: forall x : Int . x >= x
+}
+
+// ============================================================
+// 7. != (≠) - Not equal
+// ============================================================
+structure TestNeq {
+    axiom test_neq: forall x : Int . forall y : Int .
+        (x != y) ∨ (x = y)
+}
+
+// ============================================================
+// 8. Type names: Nat, Int, Rational, Real, Complex
+// ============================================================
+operation test_nat : Nat -> Nat
+operation test_int : Int -> Int
+operation test_rational : Rational -> Rational
+operation test_real : Real -> Real
+operation test_complex : Complex -> Complex
+
+// ============================================================
+// 9. * (multiplication in expressions - NOT product types)
+// ============================================================
+define test_multiply(a: Int, b: Int) : Int = a * b
+
+// ============================================================
+// UNICODE ONLY - These require Unicode characters:
+// - Product types: Int × Int -> Int (not Int * Int -> Int)
+// - Logical and: a ∧ b (not a and b)
+// - Logical or: a ∨ b (not a or b)
+// - Logical not: ¬a
+// ============================================================

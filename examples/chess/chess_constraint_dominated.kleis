@@ -1,0 +1,206 @@
+// ============================================================================
+// Constraint-Dominated Chess Formulation
+// ============================================================================
+//
+// Idea:
+// Instead of centering the proof on move generation, center it on:
+//
+//   1. control / coverage of regions
+//   2. forbidden-state predicates
+//   3. elimination of all surviving Black responses
+//
+// This is especially natural for mating-net positions.
+//
+// ============================================================================
+
+type File      = ℕ
+type Rank      = ℕ
+type PieceCode = ℕ
+type Side      = ℕ
+type Position  = ℕ
+
+structure ChessConstraintDominated {
+
+    // ----------------------------------------------------------------------
+    // Basic board access
+    // ----------------------------------------------------------------------
+
+    operation piece_at     : Position × File × Rank → PieceCode
+    operation side_to_move : Position → Side
+    operation opposite     : Side → Side
+
+    axiom opposite_def :
+        ∀(s : Side). opposite(s) = (if s = 1 then 2 else 1)
+
+    // ----------------------------------------------------------------------
+    // Existing geometric / attack layer
+    // (assume these come from the ordinary chess theory)
+    // ----------------------------------------------------------------------
+
+    operation attacks_square : Position × Side × File × Rank → Bool
+    operation in_check       : Position × Side → Bool
+    operation legal_move     : Position × File × Rank × File × Rank → Bool
+    operation apply_move     : Position × File × Rank × File × Rank → Position
+    operation king_file      : Position × Side → File
+    operation king_rank      : Position × Side → Rank
+
+    // ----------------------------------------------------------------------
+    // Constraint-dominated primitives
+    // ----------------------------------------------------------------------
+
+    // A square is a legal king destination for side s only if:
+    //   - it lies on the board
+    //   - it is not occupied by same side
+    //   - it is not attacked by the opponent
+    //
+    // In a reduced mate-net formulation, occupancy can be specialized
+    // puzzle-by-puzzle.
+    operation safe_square : Position × Side × File × Rank → Bool
+
+    axiom safe_square_def :
+        ∀(p : Position). ∀(s : Side). ∀(f : File). ∀(r : Rank).
+            safe_square(p, s, f, r) =
+                (f ≥ 1 ∧ f ≤ 8 ∧ r ≥ 1 ∧ r ≤ 8 ∧
+                 ¬attacks_square(p, opposite(s), f, r))
+
+    // ----------------------------------------------------------------------
+    // Escape region for a king
+    // ----------------------------------------------------------------------
+
+    // The escape region consists of the 8-neighborhood around the king.
+    operation in_king_neighborhood : File × Rank × File × Rank → Bool
+
+    axiom in_king_neighborhood_def :
+        ∀(kf : File). ∀(kr : Rank). ∀(f : File). ∀(r : Rank).
+            in_king_neighborhood(kf, kr, f, r) =
+                (f ≥ 1 ∧ f ≤ 8 ∧ r ≥ 1 ∧ r ≤ 8 ∧
+                 ((f = kf ∧ r = kr + 1) ∨
+                  (f = kf ∧ kr = r + 1) ∨
+                  (f = kf + 1 ∧ r = kr) ∨
+                  (kf = f + 1 ∧ r = kr) ∨
+                  (f = kf + 1 ∧ r = kr + 1) ∨
+                  (f = kf + 1 ∧ kr = r + 1) ∨
+                  (kf = f + 1 ∧ r = kr + 1) ∨
+                  (kf = f + 1 ∧ kr = r + 1)))
+
+    // Candidate king escapes = all squares in the king neighborhood.
+    operation king_escape_square : Position × Side × File × Rank → Bool
+
+    axiom king_escape_square_def :
+        ∀(p : Position). ∀(s : Side). ∀(f : File). ∀(r : Rank).
+            king_escape_square(p, s, f, r) =
+                in_king_neighborhood(king_file(p, s), king_rank(p, s), f, r)
+
+    // ----------------------------------------------------------------------
+    // Covering relation
+    // ----------------------------------------------------------------------
+
+    // A side covers the entire king escape region of the opponent.
+    operation covers_escape_region : Position × Side × Side → Bool
+
+    axiom covers_escape_region_def :
+        ∀(p : Position). ∀(attacker : Side). ∀(defender : Side).
+            covers_escape_region(p, attacker, defender) =
+                ∀(f : File). ∀(r : Rank).
+                    king_escape_square(p, defender, f, r) →
+                        attacks_square(p, attacker, f, r)
+
+    // ----------------------------------------------------------------------
+    // Forbidden move region
+    // ----------------------------------------------------------------------
+
+    // A king move is forbidden if the destination is attacked.
+    operation forbidden_king_destination : Position × Side × File × Rank → Bool
+
+    axiom forbidden_king_destination_def :
+        ∀(p : Position). ∀(s : Side). ∀(f : File). ∀(r : Rank).
+            forbidden_king_destination(p, s, f, r) =
+                attacks_square(p, opposite(s), f, r)
+
+    // Constraint-dominated elimination:
+    // every candidate escape square is forbidden.
+    operation no_safe_king_escape : Position × Side → Bool
+
+    axiom no_safe_king_escape_def :
+        ∀(p : Position). ∀(s : Side).
+            no_safe_king_escape(p, s) =
+                ∀(f : File). ∀(r : Rank).
+                    king_escape_square(p, s, f, r) →
+                        forbidden_king_destination(p, s, f, r)
+
+    // ----------------------------------------------------------------------
+    // Constraint-dominated checkmate
+    // ----------------------------------------------------------------------
+
+    // Instead of "no legal moves whatsoever" in full generality,
+    // we isolate the dominating constraint:
+    //
+    //   the king is in check
+    //   and every escape square is covered
+    //
+    // For positions with only a lone king remaining, this is enough.
+    operation constrained_mate : Position × Side → Bool
+
+    axiom constrained_mate_def :
+        ∀(p : Position). ∀(s : Side).
+            constrained_mate(p, s) =
+                (in_check(p, s) ∧
+                 no_safe_king_escape(p, s))
+
+    // ----------------------------------------------------------------------
+    // Puzzle-specific state after Rd8
+    // ----------------------------------------------------------------------
+
+    operation pos1 : Position
+    operation p_rd8 : Position
+
+    axiom p_rd8_def :
+        p_rd8 = apply_move(pos1, 4, 1, 4, 8)
+
+    // White to move initially, then Black after Rd8
+    axiom white_moves :
+        side_to_move(pos1) = 1
+
+    axiom black_moves_after_rd8 :
+        side_to_move(p_rd8) = 2
+
+    // Black king location after Rd8
+    axiom bk_file_rd8 :
+        king_file(p_rd8, 2) = 1
+
+    axiom bk_rank_rd8 :
+        king_rank(p_rd8, 2) = 8
+
+    // ----------------------------------------------------------------------
+    // Puzzle-specific covering facts
+    // ----------------------------------------------------------------------
+
+    // White king at a6 covers a7 and b7
+    // White rook at d8 covers b8
+    axiom cover_a7 :
+        attacks_square(p_rd8, 1, 1, 7)
+
+    axiom cover_b7 :
+        attacks_square(p_rd8, 1, 2, 7)
+
+    axiom cover_b8 :
+        attacks_square(p_rd8, 1, 2, 8)
+
+    // Black is in check (rook on d8 attacks a8)
+    axiom bk_in_check :
+        in_check(p_rd8, 2)
+}
+
+// Examples must be top-level, outside the structure.
+
+example "escape region covered after Rd8" {
+    assert(covers_escape_region(p_rd8, 1, 2))
+}
+
+example "no safe black king escape after Rd8" {
+    assert(no_safe_king_escape(p_rd8, 2))
+}
+
+example "Rd8 is constrained mate" {
+    assert(constrained_mate(p_rd8, 2))
+}

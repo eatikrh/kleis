@@ -1,0 +1,57 @@
+/target
+
+# macOS
+.DS_Store
+
+# LaTeX auxiliary files
+*.aux
+*.log
+
+# Temporary LaTeX output files
+tmp_*.pdf
+tmp_*.tex
+
+# Generated test reports
+# Note: These are kept in root as they show current state
+# comparison_report.html
+# html_gallery.html
+# template_coverage_report.html
+
+# Private planning and strategy documents
+/funding/
+/private/
+FUNDING_*.md
+GRANT_*.md
+PITCH_*.md
+*_PROPOSAL.md
+*_proposal.md
+*_INTERNAL*.md
+*_PRIVATE*.md
+*_STRATEGY*.md
+*_PLAN_*.md
+
+# Video/presentation materials (private)
+/pot_video_90/
+kleis_doc_example.html
+
+# Theory MCP session/scratch files (ephemeral)
+.theory-sessions/
+
+# Python / Jupyter (kleis-notebook)
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+Untitled*.ipynb
+kleis-notebook/examples/demo_output/
+examples/documents/output/
+
+# Build artifacts
+.wrangler/
+_site/
+
+# Personal scripts
+scripts/backup-icloud.sh

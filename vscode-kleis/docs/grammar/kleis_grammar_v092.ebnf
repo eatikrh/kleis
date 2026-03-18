@@ -1,0 +1,252 @@
+(* ============================================ *)
+(* Kleis Grammar v0.92 - EBNF Specification    *)
+(* Date: 2025-12-22                             *)
+(* NEW: Type-Level Arithmetic                   *)
+(*   - 2*n, n+1, n-1 in type parameters         *)
+(*   - Enables dependent dimension expressions  *)
+(* Based on: v0.91 (parameterized type aliases) *)
+(* ============================================ *)
+
+(* ============================================ *)
+(* CHANGES FROM v0.91                           *)
+(*                                              *)
+(* 1. TYPE-LEVEL ARITHMETIC EXPRESSIONS         *)
+(*    Type parameters can now include:          *)
+(*      - Multiplication: 2*n, m*k              *)
+(*      - Addition: n+1, m+k                    *)
+(*      - Subtraction: n-1, m-k                 *)
+(*      - Parentheses: (n+1)*2                  *)
+(*      - Natural literals: 0, 1, 2, ...        *)
+(*                                              *)
+(*    Examples:                                 *)
+(*      Matrix(2*n, 2*n, ℝ)     -- realification*)
+(*      Matrix(n+1, n+1, ℝ)     -- augmentation *)
+(*      Matrix(n-1, n-1, ℝ)     -- submatrix    *)
+(*      Matrix(m*n, p*q, ℝ)     -- Kronecker    *)
+(*      Vector((n+1)*k)         -- block vector *)
+(*                                              *)
+(* 2. TYPE-LEVEL FUNCTIONS (optional future)    *)
+(*      min(m, n)  -- minimum dimension         *)
+(*      max(m, n)  -- maximum dimension         *)
+(*      gcd(m, n)  -- greatest common divisor   *)
+(*                                              *)
+(* ============================================ *)
+
+(* ============================================ *)
+(* TYPE SYSTEM (updated rules)                  *)
+(* ============================================ *)
+
+type
+    ::= primitiveType
+      | parametricType
+      | functionType
+      | tupleType
+      | productType
+      | typeVariable
+      | "(" type ")"
+      ;
+
+primitiveType
+    ::= "ℝ" | "ℂ" | "ℤ" | "ℕ" | "ℚ"
+      | "Real" | "Complex" | "Integer" | "Nat" | "Rational"
+      | "Bool" | "String"
+      ;
+
+(* v0.92: Updated to support arithmetic expressions in type args *)
+parametricType ::= identifier "(" typeArgList ")" ;
+typeArgList ::= typeArg { "," typeArg } ;
+
+(* v0.92: Type argument can be a type OR a dimension expression *)
+typeArg
+    ::= type
+      | dimExpr
+      ;
+
+(* ============================================ *)
+(* DIMENSION EXPRESSIONS (v0.92: NEW)           *)
+(* ============================================ *)
+
+(* Dimension expressions for type-level naturals.
+ * These represent compile-time natural number computations.
+ * 
+ * Precedence (highest to lowest):
+ *   1. Primary: literals, variables, parentheses, function calls
+ *   2. Power: ^ (right-associative: n^m^k = n^(m^k))
+ *   3. Multiplicative: *, /
+ *   4. Additive: +, -
+ * 
+ * Examples:
+ *   n           -- dimension variable
+ *   2           -- literal dimension
+ *   2*n         -- double dimension
+ *   n+1         -- dimension plus one
+ *   n^2         -- dimension squared
+ *   2^k         -- power of two
+ *   (n+1)*2     -- grouped arithmetic
+ *   min(m, n)   -- dimension function
+ *)
+
+dimExpr
+    ::= dimAddExpr
+      ;
+
+dimAddExpr
+    ::= dimMulExpr { dimAddOp dimMulExpr }
+      ;
+
+dimAddOp
+    ::= "+"
+      | "-"
+      ;
+
+dimMulExpr
+    ::= dimPowExpr { dimMulOp dimPowExpr }
+      ;
+
+dimMulOp
+    ::= "*"
+      | "/"   (* integer division *)
+      ;
+
+(* Power is right-associative: n^m^k means n^(m^k) *)
+dimPowExpr
+    ::= dimPrimary [ "^" dimPowExpr ]
+      ;
+
+dimPrimary
+    ::= natLiteral              (* 0, 1, 2, ... *)
+      | identifier              (* n, m, k *)
+      | dimFunctionCall         (* min(m, n) *)
+      | "(" dimExpr ")"         (* grouping *)
+      ;
+
+natLiteral
+    ::= digit { digit }
+      ;
+
+(* v0.92: Dimension-level function calls 
+ * Common use cases:
+ *   min(m, n) -- for rectangular matrix operations
+ *   max(m, n) -- for padding/extension
+ *   gcd(m, n) -- for divisibility constraints
+ *)
+dimFunctionCall
+    ::= dimFunctionName "(" dimExpr { "," dimExpr } ")"
+      ;
+
+dimFunctionName
+    ::= "min" | "max" | "gcd" | "lcm"
+      ;
+
+(* ============================================ *)
+(* REST OF TYPE SYSTEM (unchanged from v0.91)   *)
+(* ============================================ *)
+
+functionType
+    ::= type "→" type
+      | type "->" type
+      ;
+
+tupleType
+    ::= "(" type "," type { "," type } ")"
+      ;
+
+productType
+    ::= type "×" type
+      ;
+
+typeVariable
+    ::= greekLower
+      | identifier
+      ;
+
+typeAnnotation ::= ":" type ;
+
+typeAlias
+    ::= "type" identifier [ "(" typeAliasParams ")" ] "=" type
+      ;
+
+typeAliasParams
+    ::= typeAliasParam { "," typeAliasParam }
+      ;
+
+typeAliasParam
+    ::= identifier [ ":" kind ]
+      ;
+
+kind
+    ::= "Type"
+      | "Nat"
+      | kind "→" kind
+      ;
+
+(* ============================================ *)
+(* EXAMPLES                                     *)
+(* ============================================ *)
+
+(* Example: Realification functor
+ * 
+ * structure Realification(n: Nat) {
+ *     operation realify : ComplexMatrix(n, n) → Matrix(2*n, 2*n, ℝ)
+ *     operation complexify : Matrix(2*n, 2*n, ℝ) → ComplexMatrix(n, n)
+ * }
+ *)
+
+(* Example: Matrix augmentation
+ * 
+ * structure Augment(m: Nat, n: Nat) {
+ *     operation augment_col : Matrix(m, n, ℝ) → Vector(m) → Matrix(m, n+1, ℝ)
+ *     operation augment_row : Matrix(m, n, ℝ) → Vector(n) → Matrix(m+1, n, ℝ)
+ * }
+ *)
+
+(* Example: Kronecker product
+ * 
+ * structure Kronecker(m: Nat, n: Nat, p: Nat, q: Nat) {
+ *     operation kron : Matrix(m, n, ℝ) → Matrix(p, q, ℝ) → Matrix(m*p, n*q, ℝ)
+ * }
+ *)
+
+(* Example: QR decomposition return type
+ * 
+ * structure QRDecomp(m: Nat, n: Nat) {
+ *     -- Q is m × min(m,n), R is min(m,n) × n
+ *     operation qr : Matrix(m, n, ℝ) → (Matrix(m, min(m,n), ℝ), Matrix(min(m,n), n, ℝ))
+ * }
+ *)
+
+(* Example: Submatrix extraction
+ * 
+ * structure Submatrix(m: Nat, n: Nat) {
+ *     operation drop_first_row : Matrix(m, n, ℝ) → Matrix(m-1, n, ℝ)
+ *     operation drop_first_col : Matrix(m, n, ℝ) → Matrix(m, n-1, ℝ)
+ * }
+ *)
+
+(* ============================================ *)
+(* SEMANTIC NOTES                               *)
+(* ============================================ *)
+
+(* Type-level arithmetic has several semantic constraints:
+ * 
+ * 1. WELL-FORMEDNESS
+ *    Dimension expressions must evaluate to natural numbers.
+ *    - n-1 is only valid when n ≥ 1
+ *    - n/k is only valid when k divides n evenly
+ * 
+ * 2. UNIFICATION
+ *    Type checking requires dimension unification:
+ *    - 2*n unifies with 6 when n = 3
+ *    - n+1 unifies with m when n = m-1
+ * 
+ * 3. INFERENCE
+ *    Dimension variables can often be inferred:
+ *    - realify(M) where M : ComplexMatrix(3,3) implies n=3
+ * 
+ * 4. CONSTRAINTS
+ *    Some operations require dimension constraints:
+ *    - Matrix multiplication: Matrix(m,n) × Matrix(n,p) → Matrix(m,p)
+ *    - The shared dimension n must match
+ *)
+
+

@@ -1,0 +1,17 @@
+-- Simple test file for debugging
+-- Try stepping through these functions
+
+define double(x) = x + x
+
+define square(x) = x * x
+
+define hypotenuse(a, b) = 
+  let a2 = square(a) in
+  let b2 = square(b) in
+  sqrt(a2 + b2)
+
+-- Test evaluation
+define test1 = double(5)
+define test2 = square(3)
+define test3 = hypotenuse(3, 4)
+

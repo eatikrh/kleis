@@ -1,0 +1,535 @@
+(* ============================================ *)
+(* Kleis Grammar v0.94 - EBNF Specification    *)
+(* Date: 2025-12-26                             *)
+(* NEW: N-ary Product Types                     *)
+(*   - A × B × C × D  (right-associative)       *)
+(*   - Enables multi-argument type signatures   *)
+(* Based on: v0.93 (example blocks)             *)
+(* ============================================ *)
+
+(* ============================================ *)
+(* CHANGES FROM v0.93                           *)
+(*                                              *)
+(* 1. N-ARY PRODUCT TYPES                       *)
+(*    Product types now support any number of   *)
+(*    factors, not just two:                    *)
+(*                                              *)
+(*    -- Binary (v0.93):                        *)
+(*    operation f : A × B → C                   *)
+(*                                              *)
+(*    -- N-ary (v0.94):                         *)
+(*    operation f : A × B × C × D → E           *)
+(*                                              *)
+(*    Semantically: right-associative           *)
+(*    A × B × C  ≡  A × (B × C)                 *)
+(*                                              *)
+(* 2. MOTIVATION (POT formalization)            *)
+(*    Projected Ontology Theory requires:       *)
+(*    - metric_probe : FieldR4 × Point × Point → ℝ *)
+(*    - mass_at : Kernel × Flow × Event → ℝ    *)
+(*    Without n-ary products, these require     *)
+(*    awkward structure workarounds.            *)
+(*                                              *)
+(* ============================================ *)
+
+(* ============================================ *)
+(* TOP-LEVEL DECLARATIONS                       *)
+(* ============================================ *)
+
+program ::= { declaration } ;
+
+declaration 
+    ::= importDecl
+      | libraryAnnotation
+      | versionAnnotation
+      | structureDecl
+      | implementsDecl
+      | dataDecl
+      | functionDef
+      | letBinding
+      | typeAlias
+      | exampleBlock
+      ;
+
+(* ============================================ *)
+(* EXAMPLE BLOCKS (from v0.93)                  *)
+(* ============================================ *)
+
+exampleBlock
+    ::= "example" string "{" exampleBody "}"
+      ;
+
+exampleBody
+    ::= { exampleStatement } [ expression ]
+      ;
+
+exampleStatement
+    ::= letBinding
+      | assertStatement
+      | expression ";"
+      ;
+
+assertStatement
+    ::= "assert" "(" expression ")"
+      ;
+
+(* ============================================ *)
+(* IMPORTS & ANNOTATIONS                        *)
+(* ============================================ *)
+
+importDecl 
+    ::= "import" string
+      ;
+
+libraryAnnotation 
+    ::= "@library" "(" string ")"
+      ;
+
+versionAnnotation 
+    ::= "@version" "(" string ")"
+      ;
+
+(* ============================================ *)
+(* STRUCTURES                                   *)
+(* ============================================ *)
+
+structureDecl
+    ::= "structure" identifier [ "(" typeParams ")" ] 
+        [ extendsClause ] [ overClause ]
+        "{" { structureBody } "}"
+      ;
+
+typeParams ::= typeParam { "," typeParam } ;
+typeParam ::= identifier [ ":" kind ] ;
+extendsClause ::= "extends" identifier [ "(" typeArgs ")" ] ;
+overClause ::= "over" "Field" "(" type ")" ;
+
+structureBody
+    ::= operationDecl
+      | elementDecl
+      | axiomDecl
+      | functionDef
+      | supportsBlock
+      | notationDecl
+      ;
+
+operationDecl ::= "operation" operatorSymbol ":" typeSignature ;
+elementDecl ::= "element" identifier ":" type ;
+axiomDecl ::= "axiom" identifier ":" proposition ;
+supportsBlock ::= "supports" "{" { operationDecl } "}" ;
+notationDecl ::= "notation" identifier "(" params ")" "=" expression ;
+
+(* ============================================ *)
+(* IMPLEMENTS                                   *)
+(* ============================================ *)
+
+implementsDecl
+    ::= "implements" identifier [ "(" typeArgs ")" ] 
+        "{" { implementsBody } "}"
+      ;
+
+implementsBody
+    ::= operationImpl
+      | elementImpl
+      | verifyStmt
+      ;
+
+operationImpl ::= "operation" operatorSymbol "=" expression ;
+elementImpl ::= "element" identifier "=" expression ;
+verifyStmt ::= "verify" identifier ;
+
+(* ============================================ *)
+(* DATA TYPES (ADTs)                            *)
+(* ============================================ *)
+
+dataDecl
+    ::= "data" identifier [ "(" typeParams ")" ] "=" dataConstructors
+      ;
+
+dataConstructors 
+    ::= dataConstructor { "|" dataConstructor }
+      ;
+
+dataConstructor
+    ::= identifier [ "(" dataFields ")" ]
+      ;
+
+dataFields ::= dataField { "," dataField } ;
+dataField ::= identifier ":" type ;
+
+(* ============================================ *)
+(* FUNCTIONS                                    *)
+(* ============================================ *)
+
+functionDef
+    ::= "define" identifier [ "(" params ")" ] [ ":" type ] "=" expression
+      ;
+
+params ::= param { "," param } ;
+param ::= identifier [ ":" type ] ;
+
+(* ============================================ *)
+(* LET BINDINGS                                 *)
+(* ============================================ *)
+
+letBinding
+    ::= "let" pattern [ ":" type ] "=" expression
+      ;
+
+(* ============================================ *)
+(* TYPE SYSTEM (v0.94: N-ary products)          *)
+(* ============================================ *)
+
+(* Top-level type: function types bind loosest *)
+type
+    ::= functionType
+      | productType
+      ;
+
+(* Function types: right-associative
+ * A → B → C  parses as  A → (B → C)
+ *)
+functionType
+    ::= productType "→" type
+      | productType "->" type
+      ;
+
+(* Product types: right-associative (v0.94: NEW)
+ * A × B × C  parses as  A × (B × C)
+ * 
+ * This allows n-ary product types:
+ *   operation f : A × B × C × D → E
+ *)
+productType
+    ::= simpleType "×" productType
+      | simpleType
+      ;
+
+(* Simple types: everything except function and product *)
+simpleType
+    ::= primitiveType
+      | parametricType
+      | tupleType
+      | typeVariable
+      | "(" type ")"
+      ;
+
+primitiveType
+    ::= "ℝ" | "ℂ" | "ℤ" | "ℕ" | "ℚ"
+      | "Real" | "Complex" | "Integer" | "Nat" | "Rational"
+      | "Bool" | "String"
+      ;
+
+parametricType ::= identifier "(" typeArgList ")" ;
+typeArgList ::= typeArg { "," typeArg } ;
+
+typeArg
+    ::= type
+      | dimExpr
+      ;
+
+tupleType
+    ::= "(" type "," type { "," type } ")"
+      ;
+
+typeVariable
+    ::= greekLower
+      | identifier
+      ;
+
+typeAnnotation ::= ":" type ;
+
+typeAlias
+    ::= "type" identifier [ "(" typeAliasParams ")" ] "=" type
+      ;
+
+typeAliasParams ::= typeAliasParam { "," typeAliasParam } ;
+typeAliasParam ::= identifier [ ":" kind ] ;
+
+kind
+    ::= "Type"
+      | "Nat"
+      | kind "→" kind
+      ;
+
+typeSignature
+    ::= type { "→" type }
+      | type { "->" type }
+      ;
+
+(* ============================================ *)
+(* DIMENSION EXPRESSIONS (from v0.92)           *)
+(* ============================================ *)
+
+dimExpr ::= dimAddExpr ;
+
+dimAddExpr ::= dimMulExpr { dimAddOp dimMulExpr } ;
+dimAddOp ::= "+" | "-" ;
+
+dimMulExpr ::= dimPowExpr { dimMulOp dimPowExpr } ;
+dimMulOp ::= "*" | "/" ;
+
+dimPowExpr ::= dimPrimary [ "^" dimPowExpr ] ;
+
+dimPrimary
+    ::= natLiteral
+      | identifier
+      | dimFunctionCall
+      | "(" dimExpr ")"
+      ;
+
+natLiteral ::= digit { digit } ;
+
+dimFunctionCall
+    ::= dimFunctionName "(" dimExpr { "," dimExpr } ")"
+      ;
+
+dimFunctionName ::= "min" | "max" | "gcd" | "lcm" ;
+
+(* ============================================ *)
+(* EXPRESSIONS                                  *)
+(* ============================================ *)
+
+expression
+    ::= letExpression
+      | matchExpression
+      | ifExpression
+      | lambdaExpression
+      | quantifiedExpression
+      | binaryExpression
+      ;
+
+letExpression
+    ::= "let" pattern [ ":" type ] "=" expression "in" expression
+      ;
+
+matchExpression
+    ::= "match" expression "with" matchArms
+      ;
+
+matchArms ::= { matchArm } ;
+matchArm ::= "|" pattern [ guard ] "=>" expression ;
+guard ::= "when" expression ;
+
+ifExpression
+    ::= "if" expression "then" expression "else" expression
+      ;
+
+lambdaExpression
+    ::= "λ" params "." expression
+      | "\\" params "." expression
+      ;
+
+quantifiedExpression
+    ::= forAllQuantifier "(" bindings ")" "." expression
+      | existsQuantifier "(" bindings ")" "." expression
+      ;
+
+forAllQuantifier ::= "∀" | "forall" ;
+existsQuantifier ::= "∃" | "exists" ;
+
+bindings ::= binding { "," binding } ;
+binding ::= identifier ":" type ;
+
+binaryExpression
+    ::= unaryExpression { binaryOp unaryExpression }
+      ;
+
+binaryOp
+    ::= "+" | "-" | "*" | "/" | "^"
+      | "=" | "≠" | "<" | ">" | "≤" | "≥"
+      | "∧" | "∨" | "→" | "↔"
+      | "and" | "or" | "implies" | "iff"
+      | "≈"
+      ;
+
+unaryExpression
+    ::= unaryOp unaryExpression
+      | applicationExpression
+      ;
+
+unaryOp ::= "-" | "¬" | "not" ;
+
+applicationExpression
+    ::= primaryExpression { applicationSuffix }
+      ;
+
+applicationSuffix
+    ::= "(" arguments ")"
+      | "." identifier
+      | "[" expression "]"
+      ;
+
+arguments ::= expression { "," expression } ;
+
+primaryExpression
+    ::= literal
+      | identifier
+      | placeholder
+      | tupleExpression
+      | listExpression
+      | "(" expression ")"
+      ;
+
+literal
+    ::= number
+      | string
+      | boolean
+      ;
+
+number ::= integer | decimal | scientific ;
+integer ::= [ "-" ] digit { digit } ;
+decimal ::= integer "." digit { digit } ;
+scientific ::= decimal "e" [ "+" | "-" ] digit { digit } ;
+string ::= '"' { character } '"' ;
+boolean ::= "True" | "False" ;
+
+placeholder ::= "□" | "_" ;
+
+tupleExpression
+    ::= "(" expression "," expression { "," expression } ")"
+      ;
+
+listExpression
+    ::= "[" [ expression { "," expression } ] "]"
+      ;
+
+(* ============================================ *)
+(* PATTERNS                                     *)
+(* ============================================ *)
+
+pattern
+    ::= wildcardPattern
+      | literalPattern
+      | variablePattern
+      | constructorPattern
+      | tuplePattern
+      | listPattern
+      | asPattern
+      ;
+
+wildcardPattern ::= "_" ;
+literalPattern ::= literal ;
+variablePattern ::= identifier ;
+constructorPattern ::= identifier [ "(" patternArgs ")" ] ;
+patternArgs ::= pattern { "," pattern } ;
+tuplePattern ::= "(" pattern "," pattern { "," pattern } ")" ;
+listPattern ::= "[" [ pattern { "," pattern } ] "]" ;
+asPattern ::= identifier "@" pattern ;
+
+(* ============================================ *)
+(* PROPOSITIONS                                 *)
+(* ============================================ *)
+
+proposition
+    ::= quantifiedProp
+      | implicationProp
+      | expression
+      ;
+
+quantifiedProp
+    ::= forAllQuantifier "(" bindings ")" "." proposition
+      | existsQuantifier "(" bindings ")" "." proposition
+      ;
+
+implicationProp
+    ::= proposition ( "⇒" | "=>" ) proposition
+      | proposition ( "↔" | "<=>" ) proposition
+      ;
+
+(* ============================================ *)
+(* OPERATOR SYMBOLS                             *)
+(* ============================================ *)
+
+operatorSymbol
+    ::= identifier
+      | "(" operator ")"
+      ;
+
+operator
+    ::= "+" | "-" | "*" | "/" | "^"
+      | "⊕" | "⊗" | "⊙"
+      | customOp
+      ;
+
+customOp ::= letter { letter | digit | "_" } ;
+
+(* ============================================ *)
+(* LEXICAL ELEMENTS                             *)
+(* ============================================ *)
+
+identifier ::= letter { letter | digit | "_" | "'" } ;
+letter ::= "a"..."z" | "A"..."Z" | greekLetter ;
+greekLetter ::= greekLower | greekUpper ;
+greekLower ::= "α" | "β" | "γ" | "δ" | "ε" | "ζ" | "η" | "θ" | "ι" | "κ" 
+             | "λ" | "μ" | "ν" | "ξ" | "ο" | "π" | "ρ" | "σ" | "τ" | "υ" 
+             | "φ" | "χ" | "ψ" | "ω" ;
+greekUpper ::= "Α" | "Β" | "Γ" | "Δ" | "Ε" | "Ζ" | "Η" | "Θ" | "Ι" | "Κ" 
+             | "Λ" | "Μ" | "Ν" | "Ξ" | "Ο" | "Π" | "Ρ" | "Σ" | "Τ" | "Υ" 
+             | "Φ" | "Χ" | "Ψ" | "Ω" ;
+digit ::= "0"..."9" ;
+character ::= ? any Unicode character except '"' and newline ? ;
+
+(* ============================================ *)
+(* EXAMPLES OF v0.94 FEATURES                   *)
+(* ============================================ *)
+
+(* Example: N-ary product types
+ * 
+ * -- POT formalization needs:
+ * operation metric_probe : FieldR4 × Point × Point → ℝ
+ * operation mass_at : GreenKernel × Flow × Event → ℝ
+ * operation apply : Kernel × Flow × Event × Channel → ℝ
+ * 
+ * -- These parse correctly in v0.94
+ * -- Semantics: right-associative
+ * -- A × B × C ≡ A × (B × C)
+ *)
+
+(* Example: Mixed with function types
+ * 
+ * -- Function types bind looser than product:
+ * operation f : A × B × C → D × E → F
+ * 
+ * -- Parses as:
+ * -- f : (A × (B × C)) → ((D × E) → F)
+ *)
+
+(* Example: Parentheses for explicit grouping
+ * 
+ * -- Left-associative grouping if needed:
+ * operation f : (A × B) × C → D
+ * 
+ * -- Different from:
+ * operation g : A × B × C → D  -- which is A × (B × C)
+ *)
+
+(* ============================================ *)
+(* VERSION HISTORY                              *)
+(* ============================================ *)
+
+(* v0.94 (2025-12-26):
+ *   - N-ary product types: A × B × C × D
+ *   - Right-associative: A × B × C = A × (B × C)
+ *   - Motivated by POT formalization requirements
+ * 
+ * v0.93 (2025-12-24):
+ *   - Added example blocks for executable documentation
+ *   - Added assert statement for verification
+ *   - Enables step-through debugging
+ * 
+ * v0.92 (2025-12-22):
+ *   - Type-level arithmetic (2*n, n+1, etc.)
+ *   - Dimension expressions in type parameters
+ * 
+ * v0.91 (2025-12-22):
+ *   - Parameterized type aliases
+ *   - Tuple types (A, B) syntax
+ * 
+ * v0.8 (2025-12-18):
+ *   - Pattern matching with guards
+ *   - Tuple patterns
+ *   - Import statements
+ *)
+
+

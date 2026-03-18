@@ -1,0 +1,14 @@
+[book]
+title = "The Kleis Manual"
+authors = ["Eatik"]
+description = "The official guide to the Kleis mathematical specification language"
+language = "en"
+src = "src"
+
+[output.html]
+default-theme = "navy"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/eatikrh/kleis"
+edit-url-template = "https://github.com/eatikrh/kleis/edit/main/docs/manual/{path}"
+site-url = "/docs/manual/book/"
+

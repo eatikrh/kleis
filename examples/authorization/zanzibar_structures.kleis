@@ -1,0 +1,129 @@
+// Zanzibar Permission Hierarchy as Extending Structures
+// 
+// This example models the permission hierarchy using Kleis's 
+// structural inheritance (extends clause) rather than integer comparisons.
+//
+// Permission Hierarchy:
+//   None < Viewer < Commenter < Editor < Owner
+//
+// Each level extends the previous, inheriting its capabilities.
+
+// ============================================
+// Permission Level Type (ADT approach)
+// ============================================
+
+// Define permission levels as an ADT
+// This works with the symbolic ADT matching fix!
+
+data PermissionLevel = PNone | PViewer | PCommenter | PEditor | POwner
+
+// Convert permission level to integer for comparison
+define perm_to_int(p) = match p {
+    PNone => 0
+  | PViewer => 1
+  | PCommenter => 2
+  | PEditor => 3
+  | POwner => 4
+}
+
+// Check if a permission level has at least another level
+define has_at_least(user_perm, required_perm) = 
+    if perm_to_int(user_perm) >= perm_to_int(required_perm) then 1 else 0
+
+// ============================================
+// Capability Checks using ADT
+// ============================================
+
+define can_read_adt(p) = has_at_least(p, PViewer)
+define can_comment_adt(p) = has_at_least(p, PCommenter)
+define can_edit_adt(p) = has_at_least(p, PEditor)
+define can_delete_adt(p) = has_at_least(p, POwner)
+define can_share_adt(p) = has_at_least(p, POwner)
+
+// ============================================
+// Structure-Based Hierarchy
+// ============================================
+
+// Base: No permissions
+structure NoPerm(T) {
+    element level : ℤ
+    
+    axiom base_level: level = 0
+}
+
+// Viewer extends NoPerm
+structure ViewerPerm(T) extends NoPerm(T) {
+    element can_read : ℤ
+    
+    axiom viewer_level: level = 1
+    axiom viewer_read: can_read = 1
+}
+
+// Commenter extends Viewer
+structure CommenterPerm(T) extends ViewerPerm(T) {
+    element can_comment : ℤ
+    
+    axiom commenter_level: level = 2
+    axiom commenter_comment: can_comment = 1
+}
+
+// Editor extends Commenter
+structure EditorPerm(T) extends CommenterPerm(T) {
+    element can_edit : ℤ
+    
+    axiom editor_level: level = 3
+    axiom editor_edit: can_edit = 1
+}
+
+// Owner extends Editor (full permissions)
+structure OwnerPerm(T) extends EditorPerm(T) {
+    element can_delete : ℤ
+    element can_share : ℤ
+    
+    axiom owner_level: level = 4
+    axiom owner_delete: can_delete = 1
+    axiom owner_share: can_share = 1
+}
+
+// ============================================
+// Verification Examples
+// ============================================
+
+// These can be verified with :verify in the REPL:
+//
+// ADT-based verification (uses symbolic ADT matching fix):
+// :verify perm_to_int(POwner) = 4
+// :verify perm_to_int(PEditor) = 3
+// :verify perm_to_int(PViewer) = 1
+// :verify perm_to_int(PNone) = 0
+//
+// Capability inheritance via ADT:
+// :verify can_read_adt(POwner) = 1
+// :verify can_read_adt(PEditor) = 1
+// :verify can_read_adt(PViewer) = 1
+// :verify can_read_adt(PNone) = 0
+//
+// Permission ordering:
+// :verify has_at_least(POwner, PViewer) = 1
+// :verify has_at_least(PViewer, POwner) = 0
+
+// ============================================
+// Theoretical Note
+// ============================================
+
+// This file demonstrates TWO approaches to modeling permissions:
+//
+// 1. ADT (Algebraic Data Type):
+//    data PermissionLevel = PNone | PViewer | ...
+//    - Values of the same type
+//    - Pattern matching dispatches on value
+//    - Good for Z3 verification (symbolic ADT matching)
+//
+// 2. Structures with extends:
+//    structure OwnerPerm extends EditorPerm extends ...
+//    - Each permission level is a separate TYPE
+//    - Inheritance models "is-a" relationship
+//    - Good for type-theoretic reasoning
+//
+// The ADT approach is more practical for Z3 verification.
+// The structure approach shows Kleis's algebraic hierarchy modeling.

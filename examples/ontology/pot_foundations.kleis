@@ -1,0 +1,240 @@
+// Projected Ontology Theory (POT) - Foundations
+// 
+// POT posits that ontology lives in an Ontological Hilbert space H_ont.
+// Reality (R⁴) emerges through projection via Green's-function-like kernels.
+//
+// Key insight: Different projection kernels → Different universes
+
+// =============================================================================
+// 1. ONTOLOGICAL HILBERT SPACE (H_ont = C³)
+// =============================================================================
+
+// The ontological Hilbert space with standard inner product
+// ⟨x,y⟩ = Σₖ x̄ₖ yₖ
+structure OntologicalHilbertSpace(n : Nat) {
+    // Elements are complex n-vectors
+    element zero : Vector(n, ℂ)
+    
+    // Inner product (sesquilinear)
+    operation inner : Vector(n, ℂ) × Vector(n, ℂ) → ℂ
+    
+    // Norm derived from inner product
+    operation norm : Vector(n, ℂ) → ℝ
+    
+    // Axioms for inner product
+    axiom conjugate_symmetry: ∀(x y : Vector(n, ℂ)). 
+        inner(x, y) = conjugate(inner(y, x))
+    
+    axiom linearity_second: ∀(x y z : Vector(n, ℂ), α : ℂ). 
+        inner(x, α * y + z) = α * inner(x, y) + inner(x, z)
+    
+    axiom positive_definite: ∀(x : Vector(n, ℂ)). 
+        inner(x, x) ≥ 0
+    
+    axiom norm_from_inner: ∀(x : Vector(n, ℂ)). 
+        norm(x) = sqrt(real(inner(x, x)))
+}
+
+// Initial assumption: H_ont = C³ (smallest nontrivial geometry)
+// Three complex degrees of freedom allow:
+// - Orthogonality (incompatibility)
+// - Non-trivial projections
+// - Rich enough for 3 meaning channels
+structure H_ont extends OntologicalHilbertSpace(3) {
+    // The three channels could represent:
+    // - Referential / Affective / Pragmatic
+    // - Or simply minimal expressive geometry
+}
+
+// =============================================================================
+// 2. ONTOLOGICAL ENTITIES AND REPRESENTATION MAP
+// =============================================================================
+
+// Ω = domain of "things that have ontological status"
+// (objects, events, propositions, concepts)
+structure OntologicalDomain {
+    // Abstract type for ontological entities
+    element entity : Type
+}
+
+// The representation map Φ: Ω → H_ont
+// Maps ontological entities to vectors in Hilbert space
+structure RepresentationMap(Ω : OntologicalDomain) over H_ont {
+    operation Φ : Ω.entity → Vector(3, ℂ)
+    
+    // Similarity / semantic proximity via inner product
+    operation similarity : Ω.entity × Ω.entity → ℝ
+    
+    axiom similarity_def: ∀(a b : Ω.entity). 
+        similarity(a, b) = abs(inner(Φ(a), Φ(b))) / (norm(Φ(a)) * norm(Φ(b)))
+    
+    // Orthogonality = incompatibility
+    axiom orthogonal_incompatible: ∀(a b : Ω.entity). 
+        inner(Φ(a), Φ(b)) = 0 → incompatible(a, b)
+}
+
+// =============================================================================
+// 3. PROJECTION OPERATORS (Views/Contexts)
+// =============================================================================
+
+// A view/context is an orthogonal projection P: C³ → C³
+// Satisfies P² = P and P* = P (self-adjoint, idempotent)
+structure ProjectionOperator(n : Nat) over OntologicalHilbertSpace(n) {
+    operation P : Vector(n, ℂ) → Vector(n, ℂ)
+    
+    // Idempotent: applying twice = applying once
+    axiom idempotent: ∀(x : Vector(n, ℂ)). P(P(x)) = P(x)
+    
+    // Self-adjoint: ⟨Px, y⟩ = ⟨x, Py⟩
+    axiom self_adjoint: ∀(x y : Vector(n, ℂ)). 
+        inner(P(x), y) = inner(x, P(y))
+    
+    // "Meaning is what survives projection"
+    operation observed_meaning : Vector(n, ℂ) → Vector(n, ℂ)
+    
+    axiom meaning_def: ∀(x : Vector(n, ℂ)). observed_meaning(x) = P(x)
+}
+
+// =============================================================================
+// 4. MODAL FLOW IN H_ont
+// =============================================================================
+
+// Ontology is not static - it evolves as modal flow
+// dψ/dτ = A ψ(τ)  where A is a linear operator
+// This is semigroup dynamics (not unitary QM evolution)
+structure ModalFlow over H_ont {
+    // Evolution parameter (not physical time)
+    element τ : ℝ
+    
+    // State at parameter τ
+    operation ψ : ℝ → Vector(3, ℂ)
+    
+    // Generator of the flow
+    operation A : Vector(3, ℂ) → Vector(3, ℂ)
+    
+    // Evolution equation
+    axiom evolution: ∀(τ : ℝ). derivative(ψ, τ) = A(ψ(τ))
+    
+    // Note: A is NOT necessarily self-adjoint
+    // Irreversibility is allowed
+    // Stability/instability is meaningful
+}
+
+// =============================================================================
+// 5. GREEN'S FUNCTION KERNELS (The Heart of POT)
+// =============================================================================
+
+// The projection from H_ont to R⁴ via integral transform:
+// Φ(x^μ) = ∫_Γ G(x^μ, τ) ψ(τ) dτ
+//
+// The kernel G plays three roles:
+// 1. Projection - maps ontological structure to spacetime observables
+// 2. Memory - encodes history (Φ(x) depends on ψ(τ') for many τ')
+// 3. Constraint propagation - boundary conditions, causality
+
+structure GreenKernel {
+    // The kernel maps (spacetime point, modal parameter) → ℂ
+    // Actually tensor-valued for proper transformation
+    operation G : ℝ⁴ × ℝ → Matrix(4, 3, ℂ)
+    
+    // The integral transform (projection to spacetime)
+    operation project : (ℝ → Vector(3, ℂ)) → ℝ⁴ → ℝ⁴
+    
+    // Φ(x) = ∫ G(x, τ) ψ(τ) dτ
+    axiom projection_def: ∀(ψ : ℝ → Vector(3, ℂ), x : ℝ⁴). 
+        project(ψ)(x) = integral(λ τ . G(x, τ) * ψ(τ))
+    
+    // The null space: ontologically exists but never appears in R⁴
+    operation kernel : Set(ℝ → Vector(3, ℂ))
+    
+    axiom null_space_def: ∀(ψ : ℝ → Vector(3, ℂ)). 
+        in_set(ψ, kernel) ↔ ∀(x : ℝ⁴). project(ψ)(x) = zero_R4
+}
+
+// =============================================================================
+// 6. UNIVERSES AS KERNEL IMAGES
+// =============================================================================
+
+// CRITICAL INSIGHT: Different kernels → Different universes
+// U_α := Im(G_α)
+
+structure Universe(G : GreenKernel) {
+    // A universe is the image of a kernel
+    element spacetime : Set(ℝ⁴)
+    
+    axiom universe_def: ∀(x : ℝ⁴). 
+        in_set(x, spacetime) ↔ ∃(ψ : ℝ → Vector(3, ℂ)). G.project(ψ)(x) = x
+}
+
+// Equivalence under projection: same reality, different ontology
+structure OntologicalEquivalence(G : GreenKernel) {
+    // Two modal flows are equivalent iff they project to same spacetime
+    operation equivalent : (ℝ → Vector(3, ℂ)) × (ℝ → Vector(3, ℂ)) → Bool
+    
+    axiom equiv_def: ∀(ψ₁ ψ₂ : ℝ → Vector(3, ℂ)). 
+        equivalent(ψ₁, ψ₂) ↔ ∀(x : ℝ⁴). G.project(ψ₁)(x) = G.project(ψ₂)(x)
+}
+
+// =============================================================================
+// 7. KERNEL ORDERING (Lattice of Universes)
+// =============================================================================
+
+// Kernels can be partially ordered:
+// G_α ⪯ G_β iff ker(G_β) ⊆ ker(G_α)
+// Meaning: U_β is more expressive, U_α is a coarse-graining
+
+structure KernelOrdering {
+    operation refines : GreenKernel × GreenKernel → Bool
+    
+    axiom refines_def: ∀(Gα Gβ : GreenKernel). 
+        refines(Gα, Gβ) ↔ subset(Gβ.kernel, Gα.kernel)
+    
+    // If G_β = H ∘ G_α, then U_β is a re-projection of U_α
+    axiom factorization: ∀(Gα Gβ : GreenKernel, H : ℝ⁴ → ℝ⁴). 
+        (∀(ψ x). Gβ.project(ψ)(x) = H(Gα.project(ψ)(x))) → 
+        refines(Gα, Gβ)
+}
+
+// =============================================================================
+// 8. LAWS AS KERNEL PROPERTIES
+// =============================================================================
+
+// Laws of physics are properties of the kernel, NOT of ontology
+// Changing G_α means changing:
+// - Causality structure
+// - Propagation speed  
+// - Dimensional rank
+// - Stability spectrum
+
+structure PhysicalLaws(G : GreenKernel) {
+    // The associated differential operator L where L G = δ
+    operation L : (ℝ⁴ → ℝ⁴) → (ℝ⁴ → ℝ⁴)
+    
+    axiom green_equation: ∀(x τ : ℝ). 
+        L(λ y . G.G(y, τ))(x) = delta(x, τ)
+    
+    // Causality: G(x, τ) = 0 for τ > x⁰ (retarded kernel)
+    axiom causality: ∀(x : ℝ⁴, τ : ℝ). 
+        τ > time_component(x) → G.G(x, τ) = zero_matrix
+}
+
+// =============================================================================
+// SUMMARY: POT v0 Axiom Set
+// =============================================================================
+// 
+// (A0) Ontological representations live in C³ with Hilbert inner product
+// (A1) Representation map Φ: Ω → H_ont
+// (A2) Views are projection operators P² = P = P*
+// (A3) Modal flow dψ/dτ = Aψ (semigroup, not unitary)
+// (A4) Reality via kernel: Φ(x) = ∫ G(x,τ) ψ(τ) dτ
+// (A5) Universe = Im(G)
+// (A6) Equivalence: ψ₁ ≡ ψ₂ iff ∀x. G(ψ₁)(x) = G(ψ₂)(x)
+// (A7) Laws = kernel properties (causality, stability, etc.)
+// (A8) Different kernels → Different universes
+//
+// Key philosophical payoffs:
+// - Ontology is universal, laws are projection artifacts
+// - Null space exists ontologically but never appears in R⁴
+// - No measurement collapse, no Born rule
+// - Spacetime is emergent (image space, not base space)
+

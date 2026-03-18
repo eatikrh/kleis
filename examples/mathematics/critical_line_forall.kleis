@@ -1,0 +1,95 @@
+// ============================================================================
+// De-Skolemized Critical Line: Universal Quantifier over Zeros
+// ============================================================================
+//
+// The "Nuclear Option": instead of Skolemizing (asserting for specific zeros
+// like 14.135, 21.022...), we use a UNIVERSAL QUANTIFIER to assert that the
+// Hilbert-Polya axioms hold for ALL zeros simultaneously.
+//
+// If Z3 can prove s_re = 1/2 under ∀, we have a machine-verified derivation
+// that works for EVERY non-trivial zero, not just the first few.
+//
+// Risk: quantified real arithmetic is undecidable in general. Z3 may timeout.
+//
+// Self-contained: no imports.
+// ============================================================================
+
+// ============================================
+// TYPES
+// ============================================
+
+data Operator = Op(ℤ)
+
+// ============================================
+// OPERATIONS
+// ============================================
+
+operation is_self_adjoint : Operator → Bool
+operation is_densely_defined : Operator → Bool
+operation eigenvalue_of : Operator × ℤ → ℝ
+operation xi : ℂ → ℂ
+operation num_zeros : ℤ
+
+// ============================================
+// STRUCTURE: Universal Critical Line
+// ============================================
+
+structure UniversalCriticalLine {
+    element T : Operator
+    element s_re : ℝ
+
+    // --- The Operator ---
+    axiom T_sa : is_self_adjoint(T)
+    axiom T_dd : is_densely_defined(T)
+
+    // --- At least one zero exists ---
+    axiom at_least_one : num_zeros() ≥ 1
+
+    // --- Universal Spectral-Zero Bridge ---
+    // For ALL n: xi vanishes at complex(s_re, eigenvalue_of(T, n))
+    axiom xi_zero_all : ∀(n : ℤ).
+        xi(complex(s_re, eigenvalue_of(T, n))) = complex(0, 0)
+
+    // --- Universal Functional Equation ---
+    axiom func_eq_all : ∀(n : ℤ).
+        xi(complex(s_re, eigenvalue_of(T, n)))
+        = xi(complex(1 - s_re, 0 - eigenvalue_of(T, n)))
+
+    // --- Universal Reflected Zero ---
+    axiom xi_refl_all : ∀(n : ℤ).
+        xi(complex(1 - s_re, 0 - eigenvalue_of(T, n))) = complex(0, 0)
+
+    // --- Universal Spectral Symmetry ---
+    axiom neg_ev_all : ∀(n : ℤ).
+        eigenvalue_of(T, 0 - n) = 0 - eigenvalue_of(T, n)
+
+    axiom xi_neg_all : ∀(n : ℤ).
+        xi(complex(s_re, 0 - eigenvalue_of(T, n))) = complex(0, 0)
+
+    // --- Universal Zero Uniqueness ---
+    axiom zero_unique_all : ∀(n : ℤ).
+        complex(1 - s_re, 0 - eigenvalue_of(T, n))
+        = complex(s_re, 0 - eigenvalue_of(T, n))
+}
+
+// ============================================
+// TESTS
+// ============================================
+
+example "universal axioms are consistent" {
+    assert(is_self_adjoint(T) ∧ is_densely_defined(T))
+}
+
+// THE UNIVERSAL CRITICAL LINE
+example "UNIVERSAL: s_re = 1/2 (for ALL zeros)" {
+    assert(s_re = 1/2)
+}
+
+example "UNIVERSAL: 1 - s_re = s_re" {
+    assert(1 - s_re = s_re)
+}
+
+// CONTRAPOSITIVE
+example "UNIVERSAL DISPROOF: s_re ≠ 1/2 (expect disproved)" {
+    assert(s_re ≠ 1/2)
+}

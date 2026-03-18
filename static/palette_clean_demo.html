@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Clean Palette Design - Demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 40px;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            margin: 0 0 10px 0;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        /* Section Styles */
+        .palette-section {
+            margin-bottom: 32px;
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        /* Button Grid */
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+            gap: 8px;
+        }
+
+        /* Math Button Style */
+        .math-btn {
+            min-width: 70px;
+            height: 56px;
+            padding: 10px;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 8px;
+            background: linear-gradient(to bottom, #ffffff, #fafafa);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            user-select: none;
+        }
+
+        .math-btn:hover {
+            border-color: #4CAF50;
+            background: white;
+            box-shadow: 
+                0 2px 8px rgba(76, 175, 80, 0.2),
+                0 4px 16px rgba(76, 175, 80, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .math-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+            background: #f5f5f5;
+        }
+
+        /* Tooltip */
+        .math-btn::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: -36px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 6px 12px;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            font-size: 11px;
+            border-radius: 4px;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .math-btn:hover::after {
+            opacity: 1;
+        }
+
+        /* MathJax rendered content */
+        .math-btn .MathJax {
+            font-size: 20px !important;
+        }
+
+        .math-btn .MathJax_SVG {
+            vertical-align: middle !important;
+        }
+
+        /* Comparison Section */
+        .comparison {
+            margin-top: 40px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+
+        .comparison h3 {
+            margin: 0 0 15px 0;
+            color: #555;
+        }
+
+        .old-style {
+            padding: 8px 12px;
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin: 4px;
+            font-size: 12px;
+        }
+
+        /* Click feedback */
+        @keyframes clickPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.95); }
+            100% { transform: scale(1); }
+        }
+
+        .math-btn.clicked {
+            animation: clickPulse 0.2s;
+        }
+
+        /* Notification */
+        #notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: #4CAF50;
+            color: white;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s;
+            z-index: 2000;
+        }
+
+        #notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Clean Palette Design</h1>
+        <p class="subtitle">Click any button to copy its LaTeX template</p>
+
+        <!-- Basic Operations -->
+        <div class="palette-section">
+            <div class="section-title">Basic Operations</div>
+            <div class="button-grid">
+                <button class="math-btn" data-template="\frac{□}{□}" data-tooltip="Fraction">
+                    \(\frac{a}{b}\)
+                </button>
+                <button class="math-btn" data-template="\sqrt{□}" data-tooltip="Square Root">
+                    \(\sqrt{x}\)
+                </button>
+                <button class="math-btn" data-template="\sqrt[□]{□}" data-tooltip="Nth Root">
+                    \(\sqrt[n]{x}\)
+                </button>
+                <button class="math-btn" data-template="□^{□}" data-tooltip="Power">
+                    \(x^n\)
+                </button>
+                <button class="math-btn" data-template="□_{□}" data-tooltip="Subscript">
+                    \(x_i\)
+                </button>
+                <button class="math-btn" data-template="□^{□}_{□}" data-tooltip="Sup-Sub">
+                    \(T^i_j\)
+                </button>
+                <button class="math-btn" data-template="□_{□}^{□}" data-tooltip="Sub-Sup">
+                    \(T_j^i\)
+                </button>
+            </div>
+        </div>
+
+        <!-- Brackets -->
+        <div class="palette-section">
+            <div class="section-title">Brackets & Grouping</div>
+            <div class="button-grid">
+                <button class="math-btn" data-template="\left(□\right)" data-tooltip="Parentheses">
+                    \((x)\)
+                </button>
+                <button class="math-btn" data-template="\left[□\right]" data-tooltip="Square Brackets">
+                    \([x]\)
+                </button>
+                <button class="math-btn" data-template="\left\{□\right\}" data-tooltip="Curly Braces">
+                    \(\{x\}\)
+                </button>
+                <button class="math-btn" data-template="\left\langle □ \right\rangle" data-tooltip="Angle Brackets">
+                    \(\langle x \rangle\)
+                </button>
+                <button class="math-btn" data-template="\left|□\right|" data-tooltip="Absolute Value">
+                    \(|x|\)
+                </button>
+                <button class="math-btn" data-template="\left\|□\right\|" data-tooltip="Norm">
+                    \(\|v\|\)
+                </button>
+                <button class="math-btn" data-template="\lfloor □ \rfloor" data-tooltip="Floor">
+                    \(\lfloor x \rfloor\)
+                </button>
+                <button class="math-btn" data-template="\lceil □ \rceil" data-tooltip="Ceiling">
+                    \(\lceil x \rceil\)
+                </button>
+            </div>
+        </div>
+
+        <!-- Calculus -->
+        <div class="palette-section">
+            <div class="section-title">Calculus</div>
+            <div class="button-grid">
+                <button class="math-btn" data-template="\int_{□}^{□} □ \, dx" data-tooltip="Integral">
+                    \(\int_a^b f\,dx\)
+                </button>
+                <button class="math-btn" data-template="\sum_{□}^{□} □" data-tooltip="Summation">
+                    \(\sum_{i=1}^n a_i\)
+                </button>
+                <button class="math-btn" data-template="\prod_{□}^{□} □" data-tooltip="Product">
+                    \(\prod_{i=1}^n a_i\)
+                </button>
+                <button class="math-btn" data-template="\lim_{□ \to □} □" data-tooltip="Limit">
+                    \(\lim_{x\to 0} f(x)\)
+                </button>
+                <button class="math-btn" data-template="\frac{\partial □}{\partial □}" data-tooltip="Partial Derivative">
+                    \(\frac{\partial f}{\partial x}\)
+                </button>
+                <button class="math-btn" data-template="\nabla □" data-tooltip="Gradient">
+                    \(\nabla f\)
+                </button>
+            </div>
+        </div>
+
+        <!-- Tensors -->
+        <div class="palette-section">
+            <div class="section-title">Tensors & Indices</div>
+            <div class="button-grid">
+                <button class="math-btn" data-template="□^{□ □}" data-tooltip="Contravariant">
+                    \(T^{\mu\nu}\)
+                </button>
+                <button class="math-btn" data-template="□_{□ □}" data-tooltip="Covariant">
+                    \(g_{\mu\nu}\)
+                </button>
+                <button class="math-btn" data-template="□^{□}_{□ □ □}" data-tooltip="1 Up, 3 Down">
+                    \(R^\rho_{\sigma\mu\nu}\)
+                </button>
+                <button class="math-btn" data-template="□^{□ □}_{□ □}" data-tooltip="Riemann Tensor">
+                    \(R^{\mu\nu}_{\rho\sigma}\)
+                </button>
+            </div>
+        </div>
+
+        <!-- Quantum -->
+        <div class="palette-section">
+            <div class="section-title">Quantum Mechanics</div>
+            <div class="button-grid">
+                <button class="math-btn" data-template="|□\rangle" data-tooltip="Ket">
+                    \(|\psi\rangle\)
+                </button>
+                <button class="math-btn" data-template="\langle□|" data-tooltip="Bra">
+                    \(\langle\phi|\)
+                </button>
+                <button class="math-btn" data-template="\langle□|□\rangle" data-tooltip="Inner Product">
+                    \(\langle\phi|\psi\rangle\)
+                </button>
+                <button class="math-btn" data-template="|□\rangle\langle□|" data-tooltip="Outer Product">
+                    \(|\psi\rangle\langle\phi|\)
+                </button>
+                <button class="math-btn" data-template="[□, □]" data-tooltip="Commutator">
+                    \([A, B]\)
+                </button>
+                <button class="math-btn" data-template="\langle □ \rangle" data-tooltip="Expectation">
+                    \(\langle A \rangle\)
+                </button>
+            </div>
+        </div>
+
+        <!-- Comparison -->
+        <div class="comparison">
+            <h3>📊 Comparison with Old Style</h3>
+            <p><strong>Old (crowded):</strong></p>
+            <button class="old-style">□^□ Power</button>
+            <button class="old-style">□_□ Subscript</button>
+            <button class="old-style">( ) Paren</button>
+            <button class="old-style">⌊x⌋ Floor</button>
+
+            <p style="margin-top: 15px;"><strong>New (clean):</strong></p>
+            <button class="math-btn" style="display: inline-flex; margin: 4px;">\(x^n\)</button>
+            <button class="math-btn" style="display: inline-flex; margin: 4px;">\(x_i\)</button>
+            <button class="math-btn" style="display: inline-flex; margin: 4px;">\((x)\)</button>
+            <button class="math-btn" style="display: inline-flex; margin: 4px;">\(\lfloor x \rfloor\)</button>
+        </div>
+    </div>
+
+    <div id="notification">Copied to clipboard!</div>
+
+    <script>
+        // Wait for MathJax to load
+        window.MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)']],
+                displayMath: [['\\[', '\\]']]
+            },
+            startup: {
+                ready: () => {
+                    MathJax.startup.defaultReady();
+                    MathJax.startup.promise.then(() => {
+                        console.log('✓ MathJax ready, buttons rendered');
+                    });
+                }
+            }
+        };
+
+        // Handle button clicks
+        document.addEventListener('DOMContentLoaded', () => {
+            const notification = document.getElementById('notification');
+            
+            document.querySelectorAll('.math-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const template = btn.getAttribute('data-template');
+                    
+                    // Copy to clipboard
+                    navigator.clipboard.writeText(template).then(() => {
+                        // Visual feedback
+                        btn.classList.add('clicked');
+                        setTimeout(() => btn.classList.remove('clicked'), 200);
+                        
+                        // Show notification
+                        notification.classList.add('show');
+                        setTimeout(() => notification.classList.remove('show'), 2000);
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+

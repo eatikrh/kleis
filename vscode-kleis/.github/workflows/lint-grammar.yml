@@ -1,0 +1,24 @@
+name: Lint Grammar
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-grammar:
+    name: Lint grammar JSON
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint grammar JSON
+        run: npm run lint-grammar
+      - name: Run token-scope assertions
+        run: npm run test-syntax

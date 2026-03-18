@@ -1,0 +1,449 @@
+// ============================================================================
+// Langlands Transfer Axiom: Spectral Consequence of L-function Factoring
+// ============================================================================
+//
+// The Langlands Functoriality Conjecture says: given a homomorphism of
+// L-groups r : ᴸH → ᴸG, there is a "transfer" of automorphic representations
+// π ↦ π' such that L(s, π, r) = L(s, π').
+//
+// The simplest instance is the ARTIN FORMALISM for the quadratic extension
+// ℚ(i)/ℚ. The Dedekind zeta function of the Gaussian integers factors:
+//
+//   ζ_{ℚ(i)}(s) = ζ(s) · L(s, χ₄)
+//
+// where χ₄ is the unique non-trivial Dirichlet character mod 4.
+//
+// SPECTRAL CONSEQUENCE (Transfer Axiom):
+//   If each L-function has a Hilbert-Pólya operator, then the operator for
+//   the product L-function must have spectrum = union of the two spectra.
+//
+//   spectrum(T_{ℚ(i)}) ⊇ spectrum(T_ζ) ∪ spectrum(T_{χ₄})
+//
+// This is the hard constraint. We already showed T_ζ and T_{χ₄} can coexist
+// independently (langlands_relational.kleis, 8/10). Now we FORCE a third
+// operator whose eigenvalues must include ALL eigenvalues of both, interleaved
+// in the correct order. If Z3 says SAT, the transfer is spectrally consistent.
+//
+// Interleaved spectrum (sorted by imaginary part of zero):
+//   6.021  (χ₄)  →  T_{ℚ(i)} eigenvalue #1
+//  10.244  (χ₄)  →  T_{ℚ(i)} eigenvalue #2
+//  12.588  (χ₄)  →  T_{ℚ(i)} eigenvalue #3
+//  14.135   (ζ)  →  T_{ℚ(i)} eigenvalue #4
+//  21.022   (ζ)  →  T_{ℚ(i)} eigenvalue #5
+//  25.011   (ζ)  →  T_{ℚ(i)} eigenvalue #6
+//
+// Self-contained: no imports. All ground instances (Skolemized).
+// ============================================================================
+
+// ============================================
+// TYPES
+// ============================================
+
+data HVector = HV(ℤ)
+data Operator = Op(ℤ)
+data DirichletSeries = DS(ℤ)
+
+// ============================================
+// OPERATIONS
+// ============================================
+
+// Parameterized spectral operator: each L-function gets its own operator
+operation spectral_op : DirichletSeries → Operator
+
+// Spectral theory
+operation is_self_adjoint : Operator → Bool
+operation is_densely_defined : Operator → Bool
+operation adjoint : Operator → Operator
+operation op_apply : Operator × HVector → HVector
+operation ip : HVector × HVector → ℂ
+operation h_smul : ℂ × HVector → HVector
+
+// Eigenvalues and eigenvectors (parameterized by operator)
+operation eigenvalue_of : Operator × ℤ → ℝ
+operation eigenvector_of : Operator × ℤ → HVector
+
+// L-functions
+operation zeta : ℂ → ℂ
+operation L_chi4 : ℂ → ℂ
+operation zeta_QGi : ℂ → ℂ
+operation xi_zeta : ℂ → ℂ
+operation xi_chi4 : ℂ → ℂ
+operation xi_QGi : ℂ → ℂ
+
+// Selberg class
+operation has_euler_product : DirichletSeries → Bool
+operation has_continuation : DirichletSeries → Bool
+operation has_functional_eq : DirichletSeries → Bool
+operation L_degree : DirichletSeries → ℕ
+
+// Zero classification
+operation is_nontrivial_zero_of : DirichletSeries × ℂ → Bool
+
+// Dirichlet character
+operation chi4 : ℕ → ℤ
+
+// ============================================
+// THREE L-FUNCTIONS
+// ============================================
+
+structure ThreeLFunctions {
+    element zeta_series : DirichletSeries
+    element chi4_series : DirichletSeries
+    element QGi_series : DirichletSeries
+
+    // All are in the Selberg class
+    axiom zeta_euler : has_euler_product(zeta_series)
+    axiom zeta_cont : has_continuation(zeta_series)
+    axiom zeta_func : has_functional_eq(zeta_series)
+    axiom zeta_deg : L_degree(zeta_series) = 1
+
+    axiom chi4_euler : has_euler_product(chi4_series)
+    axiom chi4_cont : has_continuation(chi4_series)
+    axiom chi4_func : has_functional_eq(chi4_series)
+    axiom chi4_deg : L_degree(chi4_series) = 1
+
+    axiom QGi_euler : has_euler_product(QGi_series)
+    axiom QGi_cont : has_continuation(QGi_series)
+    axiom QGi_func : has_functional_eq(QGi_series)
+
+    // TRANSFER AXIOM: degree is additive under factoring
+    // deg(ζ_{ℚ(i)}) = deg(ζ) + deg(L(χ₄)) = 1 + 1 = 2
+    axiom degree_transfer : L_degree(QGi_series) = 2
+
+    // All three are distinct
+    axiom distinct_12 : zeta_series ≠ chi4_series
+    axiom distinct_13 : zeta_series ≠ QGi_series
+    axiom distinct_23 : chi4_series ≠ QGi_series
+}
+
+// ============================================
+// THREE SPECTRAL OPERATORS
+// ============================================
+
+structure ThreeOperators {
+    element T_zeta : Operator
+    element T_chi4 : Operator
+    element T_QGi : Operator
+
+    axiom T_zeta_is : T_zeta = spectral_op(zeta_series)
+    axiom T_chi4_is : T_chi4 = spectral_op(chi4_series)
+    axiom T_QGi_is : T_QGi = spectral_op(QGi_series)
+
+    // All three are self-adjoint and unbounded
+    axiom zeta_sa : is_self_adjoint(T_zeta)
+    axiom zeta_dd : is_densely_defined(T_zeta)
+    axiom zeta_adj : adjoint(T_zeta) = T_zeta
+
+    axiom chi4_sa : is_self_adjoint(T_chi4)
+    axiom chi4_dd : is_densely_defined(T_chi4)
+    axiom chi4_adj : adjoint(T_chi4) = T_chi4
+
+    axiom QGi_sa : is_self_adjoint(T_QGi)
+    axiom QGi_dd : is_densely_defined(T_QGi)
+    axiom QGi_adj : adjoint(T_QGi) = T_QGi
+
+    // All three are distinct
+    axiom distinct_ops_12 : T_zeta ≠ T_chi4
+    axiom distinct_ops_13 : T_zeta ≠ T_QGi
+    axiom distinct_ops_23 : T_chi4 ≠ T_QGi
+}
+
+// ============================================
+// EIGENVALUES: ζ AND L(χ₄)
+// ============================================
+
+structure ZetaSpectrum {
+    axiom zeta_ev1 : eigenvalue_of(T_zeta, 1) = 14.135
+    axiom zeta_ev2 : eigenvalue_of(T_zeta, 2) = 21.022
+    axiom zeta_ev3 : eigenvalue_of(T_zeta, 3) = 25.011
+
+    axiom zeta_increasing :
+        eigenvalue_of(T_zeta, 1) < eigenvalue_of(T_zeta, 2) ∧
+        eigenvalue_of(T_zeta, 2) < eigenvalue_of(T_zeta, 3)
+}
+
+structure Chi4Spectrum {
+    axiom chi4_ev1 : eigenvalue_of(T_chi4, 1) = 6.021
+    axiom chi4_ev2 : eigenvalue_of(T_chi4, 2) = 10.244
+    axiom chi4_ev3 : eigenvalue_of(T_chi4, 3) = 12.588
+
+    axiom chi4_increasing :
+        eigenvalue_of(T_chi4, 1) < eigenvalue_of(T_chi4, 2) ∧
+        eigenvalue_of(T_chi4, 2) < eigenvalue_of(T_chi4, 3)
+}
+
+// ============================================
+// TRANSFER AXIOM: SPECTRUM OF T_{ℚ(i)}
+// ============================================
+//
+// The hard constraint. The factoring ζ_{ℚ(i)} = ζ · L(χ₄) means every zero
+// of ζ or L(χ₄) is a zero of ζ_{ℚ(i)}. In spectral terms:
+//
+//   eigenvalues(T_{ℚ(i)}) ⊇ eigenvalues(T_ζ) ∪ eigenvalues(T_{χ₄})
+//
+// We Skolemize this with specific index assignments, interleaved by size:
+//   #1 = 6.021 (χ₄),  #2 = 10.244 (χ₄),  #3 = 12.588 (χ₄),
+//   #4 = 14.135 (ζ),   #5 = 21.022 (ζ),   #6 = 25.011 (ζ)
+
+structure TransferAxiom {
+    // Merged spectrum: χ₄ zeros first (smaller), then ζ zeros
+    axiom transfer_from_chi4_1 : eigenvalue_of(T_QGi, 1) = eigenvalue_of(T_chi4, 1)
+    axiom transfer_from_chi4_2 : eigenvalue_of(T_QGi, 2) = eigenvalue_of(T_chi4, 2)
+    axiom transfer_from_chi4_3 : eigenvalue_of(T_QGi, 3) = eigenvalue_of(T_chi4, 3)
+
+    axiom transfer_from_zeta_1 : eigenvalue_of(T_QGi, 4) = eigenvalue_of(T_zeta, 1)
+    axiom transfer_from_zeta_2 : eigenvalue_of(T_QGi, 5) = eigenvalue_of(T_zeta, 2)
+    axiom transfer_from_zeta_3 : eigenvalue_of(T_QGi, 6) = eigenvalue_of(T_zeta, 3)
+
+    // The merged spectrum is strictly increasing
+    axiom merged_increasing :
+        eigenvalue_of(T_QGi, 1) < eigenvalue_of(T_QGi, 2) ∧
+        eigenvalue_of(T_QGi, 2) < eigenvalue_of(T_QGi, 3) ∧
+        eigenvalue_of(T_QGi, 3) < eigenvalue_of(T_QGi, 4) ∧
+        eigenvalue_of(T_QGi, 4) < eigenvalue_of(T_QGi, 5) ∧
+        eigenvalue_of(T_QGi, 5) < eigenvalue_of(T_QGi, 6)
+
+    // Concrete values for the merged operator
+    axiom QGi_ev1 : eigenvalue_of(T_QGi, 1) = 6.021
+    axiom QGi_ev2 : eigenvalue_of(T_QGi, 2) = 10.244
+    axiom QGi_ev3 : eigenvalue_of(T_QGi, 3) = 12.588
+    axiom QGi_ev4 : eigenvalue_of(T_QGi, 4) = 14.135
+    axiom QGi_ev5 : eigenvalue_of(T_QGi, 5) = 21.022
+    axiom QGi_ev6 : eigenvalue_of(T_QGi, 6) = 25.011
+
+    // Eigenpairs for the merged operator
+    axiom QGi_pair1 :
+        op_apply(T_QGi, eigenvector_of(T_QGi, 1))
+        = h_smul(complex(6.021, 0), eigenvector_of(T_QGi, 1))
+
+    axiom QGi_pair4 :
+        op_apply(T_QGi, eigenvector_of(T_QGi, 4))
+        = h_smul(complex(14.135, 0), eigenvector_of(T_QGi, 4))
+
+    // Orthogonality within T_{ℚ(i)}
+    axiom QGi_orth_12 :
+        ip(eigenvector_of(T_QGi, 1), eigenvector_of(T_QGi, 2)) = complex(0, 0)
+
+    axiom QGi_orth_34 :
+        ip(eigenvector_of(T_QGi, 3), eigenvector_of(T_QGi, 4)) = complex(0, 0)
+}
+
+// ============================================
+// ZERO TRANSFER: Artin Factoring at the Zeros
+// ============================================
+//
+// ζ_{ℚ(i)}(s) = ζ(s) · L(s, χ₄)
+//
+// If ζ(ρ) = 0 then ζ_{ℚ(i)}(ρ) = 0 · L(ρ, χ₄) = 0
+// If L(ρ', χ₄) = 0 then ζ_{ℚ(i)}(ρ') = ζ(ρ') · 0 = 0
+
+structure ZeroTransfer {
+    // ζ zeros transfer to ζ_{ℚ(i)}
+    axiom zeta_zero_transfers_1 :
+        zeta(complex(1/2, 14.135)) = complex(0, 0) ∧
+        zeta_QGi(complex(1/2, 14.135)) = complex(0, 0)
+
+    axiom zeta_zero_transfers_2 :
+        zeta(complex(1/2, 21.022)) = complex(0, 0) ∧
+        zeta_QGi(complex(1/2, 21.022)) = complex(0, 0)
+
+    // L(χ₄) zeros transfer to ζ_{ℚ(i)}
+    axiom chi4_zero_transfers_1 :
+        L_chi4(complex(1/2, 6.021)) = complex(0, 0) ∧
+        zeta_QGi(complex(1/2, 6.021)) = complex(0, 0)
+
+    axiom chi4_zero_transfers_2 :
+        L_chi4(complex(1/2, 10.244)) = complex(0, 0) ∧
+        zeta_QGi(complex(1/2, 10.244)) = complex(0, 0)
+
+    // ζ_{ℚ(i)} zeros are classified
+    axiom QGi_zero_class_1 :
+        is_nontrivial_zero_of(QGi_series, complex(1/2, 6.021))
+    axiom QGi_zero_class_2 :
+        is_nontrivial_zero_of(QGi_series, complex(1/2, 10.244))
+    axiom QGi_zero_class_3 :
+        is_nontrivial_zero_of(QGi_series, complex(1/2, 14.135))
+    axiom QGi_zero_class_4 :
+        is_nontrivial_zero_of(QGi_series, complex(1/2, 21.022))
+}
+
+// ============================================
+// FUNCTIONAL EQUATION FOR ζ_{ℚ(i)}
+// ============================================
+
+structure FunctionalEquationQGi {
+    // ξ_{ℚ(i)}(s) = ξ_{ℚ(i)}(1-s) at zeros
+    axiom xi_QGi_at_zero1 :
+        xi_QGi(complex(1/2, 6.021)) = complex(0, 0)
+    axiom xi_QGi_symm1 :
+        xi_QGi(complex(1/2, 6.021)) = xi_QGi(complex(1/2, 0 - 6.021))
+
+    axiom xi_QGi_at_zero4 :
+        xi_QGi(complex(1/2, 14.135)) = complex(0, 0)
+    axiom xi_QGi_symm4 :
+        xi_QGi(complex(1/2, 14.135)) = xi_QGi(complex(1/2, 0 - 14.135))
+
+    // Off the critical line
+    axiom xi_QGi_off : xi_QGi(complex(2, 0)) = xi_QGi(complex(0 - 1, 0))
+
+    // Source functional equations
+    axiom xi_zeta_off : xi_zeta(complex(2, 0)) = xi_zeta(complex(0 - 1, 0))
+    axiom xi_chi4_off : xi_chi4(complex(2, 0)) = xi_chi4(complex(0 - 1, 0))
+}
+
+// ============================================
+// SPECTRAL SYMMETRY OF MERGED OPERATOR
+// ============================================
+// T_{ℚ(i)} must also have symmetric spectrum (from its own functional equation)
+
+structure MergedSpectralSymmetry {
+    // Negative eigenvalues exist for T_{ℚ(i)}
+    axiom neg_QGi_1 : eigenvalue_of(T_QGi, 0 - 1) = 0 - 6.021
+    axiom neg_QGi_4 : eigenvalue_of(T_QGi, 0 - 4) = 0 - 14.135
+
+    // Spectral symmetry: λ_{-n} = -λ_n
+    axiom QGi_symmetry_1 :
+        eigenvalue_of(T_QGi, 0 - 1) = 0 - eigenvalue_of(T_QGi, 1)
+    axiom QGi_symmetry_4 :
+        eigenvalue_of(T_QGi, 0 - 4) = 0 - eigenvalue_of(T_QGi, 4)
+
+    // The negative eigenvalues also track back to source operators
+    axiom neg_tracks_chi4 :
+        eigenvalue_of(T_QGi, 0 - 1) = 0 - eigenvalue_of(T_chi4, 1)
+    axiom neg_tracks_zeta :
+        eigenvalue_of(T_QGi, 0 - 4) = 0 - eigenvalue_of(T_zeta, 1)
+}
+
+// ============================================
+// SPECIAL VALUES
+// ============================================
+
+structure SpecialValues {
+    // Leibniz formula: L(1, χ₄) = π/4
+    axiom leibniz : L_chi4(complex(1, 0)) = complex(pi / 4, 0)
+
+    // ζ(2) = π²/6
+    axiom zeta_at_2 : zeta(complex(2, 0)) = complex(pi * pi / 6, 0)
+
+    // ζ_{ℚ(i)}(s) = ζ(s) · L(s, χ₄) at s = 2:
+    // ζ_{ℚ(i)}(2) = ζ(2) · L(2, χ₄) = (π²/6) · G
+    // where G = L(2, χ₄) = Catalan's constant ≈ 0.9159655...
+    // (The exact product is π²G/6 ≈ 1.5067...)
+    // We don't assert the exact value; just that it's nonzero.
+    axiom QGi_at_2_nonzero : zeta_QGi(complex(2, 0)) ≠ complex(0, 0)
+
+    // χ₄ character values (for reference)
+    axiom chi4_1 : chi4(1) = 1
+    axiom chi4_2 : chi4(2) = 0
+    axiom chi4_3 : chi4(3) = 0 - 1
+}
+
+// ============================================
+// CONSISTENCY TESTS
+// ============================================
+
+// --- Transfer Core ---
+
+example "all three operators are self-adjoint" {
+    assert(
+        is_self_adjoint(T_zeta) ∧
+        is_self_adjoint(T_chi4) ∧
+        is_self_adjoint(T_QGi)
+    )
+}
+
+example "all three operators are distinct" {
+    assert(T_zeta ≠ T_chi4 ∧ T_zeta ≠ T_QGi ∧ T_chi4 ≠ T_QGi)
+}
+
+example "degree adds under transfer: 1 + 1 = 2" {
+    assert(
+        L_degree(zeta_series) = 1 ∧
+        L_degree(chi4_series) = 1 ∧
+        L_degree(QGi_series) = 2
+    )
+}
+
+// --- Spectrum Merging ---
+
+example "T_QGi eigenvalue #1 equals T_chi4 eigenvalue #1 (transfer)" {
+    assert(eigenvalue_of(T_QGi, 1) = eigenvalue_of(T_chi4, 1))
+}
+
+example "T_QGi eigenvalue #4 equals T_zeta eigenvalue #1 (transfer)" {
+    assert(eigenvalue_of(T_QGi, 4) = eigenvalue_of(T_zeta, 1))
+}
+
+example "merged spectrum is strictly increasing" {
+    assert(
+        eigenvalue_of(T_QGi, 1) < eigenvalue_of(T_QGi, 2) ∧
+        eigenvalue_of(T_QGi, 2) < eigenvalue_of(T_QGi, 3) ∧
+        eigenvalue_of(T_QGi, 3) < eigenvalue_of(T_QGi, 4) ∧
+        eigenvalue_of(T_QGi, 4) < eigenvalue_of(T_QGi, 5) ∧
+        eigenvalue_of(T_QGi, 5) < eigenvalue_of(T_QGi, 6)
+    )
+}
+
+// --- Zero Transfer ---
+
+example "zeta zero at 14.135 transfers to Dedekind zeta" {
+    assert(
+        zeta(complex(1/2, 14.135)) = complex(0, 0) ∧
+        zeta_QGi(complex(1/2, 14.135)) = complex(0, 0)
+    )
+}
+
+example "chi4 zero at 6.021 transfers to Dedekind zeta" {
+    assert(
+        L_chi4(complex(1/2, 6.021)) = complex(0, 0) ∧
+        zeta_QGi(complex(1/2, 6.021)) = complex(0, 0)
+    )
+}
+
+// --- Eigenpairs of Merged Operator ---
+
+example "T_QGi first eigenpair (from chi4)" {
+    assert(
+        op_apply(T_QGi, eigenvector_of(T_QGi, 1))
+        = h_smul(complex(6.021, 0), eigenvector_of(T_QGi, 1))
+    )
+}
+
+example "T_QGi fourth eigenpair (from zeta)" {
+    assert(
+        op_apply(T_QGi, eigenvector_of(T_QGi, 4))
+        = h_smul(complex(14.135, 0), eigenvector_of(T_QGi, 4))
+    )
+}
+
+// --- Spectral Symmetry of Merged Operator ---
+
+example "T_QGi spectral symmetry: lambda_{-1} = -lambda_1" {
+    assert(eigenvalue_of(T_QGi, 0 - 1) = 0 - eigenvalue_of(T_QGi, 1))
+}
+
+example "T_QGi spectral symmetry: lambda_{-4} = -lambda_4" {
+    assert(eigenvalue_of(T_QGi, 0 - 4) = 0 - eigenvalue_of(T_QGi, 4))
+}
+
+// --- Functional Equation ---
+
+example "functional equation for Dedekind zeta off critical line" {
+    assert(xi_QGi(complex(2, 0)) = xi_QGi(complex(0 - 1, 0)))
+}
+
+// --- Special Values ---
+
+example "Leibniz formula: L(1, chi4) = pi/4" {
+    assert(L_chi4(complex(1, 0)) = complex(pi / 4, 0))
+}
+
+// --- Cross-Consistency ---
+
+example "negative eigenvalue of T_QGi tracks back to chi4" {
+    assert(eigenvalue_of(T_QGi, 0 - 1) = 0 - eigenvalue_of(T_chi4, 1))
+}
+
+example "negative eigenvalue of T_QGi tracks back to zeta" {
+    assert(eigenvalue_of(T_QGi, 0 - 4) = 0 - eigenvalue_of(T_zeta, 1))
+}

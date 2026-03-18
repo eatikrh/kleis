@@ -1,0 +1,289 @@
+// ============================================================================
+// Resolvent-Spectral Bridge: ξ Symmetry Constrains the Operator Domain
+// ============================================================================
+//
+// This file connects the functional equation ξ(s) = ξ(1-s) to the spectral
+// operator T via the resolvent R(z,T) = (T - zI)^{-1}.
+//
+// The chain of reasoning:
+//
+//   Functional equation     Resolvent identity        Spectral constraint
+//   ξ(s) = ξ(1-s)    →    R(z,T)·vₙ = vₙ/(λₙ-z)  →  spectrum is symmetric
+//
+// At s = 1/2 + it on the critical line:
+//   1 - s = 1/2 - it = conj(s)
+//   ξ(1/2+it) = ξ(1/2-it)
+//
+// If ξ(1/2+iλ) = 0 (λ is an eigenvalue), then ξ(1/2-iλ) = 0 too.
+// This means -λ is ALSO associated with a zero: the operator's spectrum
+// must be symmetric about 0, or equivalently, the operator must commute
+// with a time-reversal symmetry.
+//
+// This is the "stiffness" that the functional equation imposes on the
+// operator's domain D(T): D(T) must be invariant under the involution
+// that sends eigenvalues λ → -λ.
+//
+// Self-contained: no imports. All ground instances.
+// ============================================================================
+
+// ============================================
+// TYPES
+// ============================================
+
+data HVector = HV(ℤ)
+data Operator = Op(ℤ)
+
+// ============================================
+// OPERATIONS
+// ============================================
+
+operation is_self_adjoint : Operator → Bool
+operation is_densely_defined : Operator → Bool
+operation adjoint : Operator → Operator
+operation op_apply : Operator × HVector → HVector
+operation ip : HVector × HVector → ℂ
+operation h_smul : ℂ × HVector → HVector
+
+// Resolvent: R(z, T) = (T - zI)^{-1}
+operation resolvent : Operator × ℂ → Operator
+
+// Eigenvalues and eigenvectors
+operation eigenvalue_of : Operator × ℕ → ℝ
+operation eigenvector_of : Operator × ℕ → HVector
+
+// Completed zeta function
+operation xi : ℂ → ℂ
+operation zeta : ℂ → ℂ
+
+// Complex arithmetic (local)
+operation cmul : ℂ × ℂ → ℂ
+operation csub : ℂ × ℂ → ℂ
+operation cdiv : ℂ × ℂ → ℂ
+operation cnorm_sq : ℂ → ℝ
+
+// Spectral symmetry
+operation spectral_involution : Operator → Operator
+
+// ============================================
+// THE OPERATOR T
+// ============================================
+
+structure SpectralOperator {
+    element T : Operator
+
+    axiom T_sa : is_self_adjoint(T)
+    axiom T_dd : is_densely_defined(T)
+    axiom T_adj : adjoint(T) = T
+
+    // First five eigenvalues (imaginary parts of zeta zeros)
+    axiom ev1 : eigenvalue_of(T, 1) = 14.135
+    axiom ev2 : eigenvalue_of(T, 2) = 21.022
+    axiom ev3 : eigenvalue_of(T, 3) = 25.011
+    axiom ev4 : eigenvalue_of(T, 4) = 30.425
+    axiom ev5 : eigenvalue_of(T, 5) = 32.935
+
+    axiom ev_increasing :
+        eigenvalue_of(T, 1) < eigenvalue_of(T, 2) ∧
+        eigenvalue_of(T, 2) < eigenvalue_of(T, 3) ∧
+        eigenvalue_of(T, 3) < eigenvalue_of(T, 4) ∧
+        eigenvalue_of(T, 4) < eigenvalue_of(T, 5)
+
+    // Eigenpairs
+    axiom pair1 :
+        op_apply(T, eigenvector_of(T, 1))
+        = h_smul(complex(eigenvalue_of(T, 1), 0), eigenvector_of(T, 1))
+
+    axiom pair2 :
+        op_apply(T, eigenvector_of(T, 2))
+        = h_smul(complex(eigenvalue_of(T, 2), 0), eigenvector_of(T, 2))
+
+    // Orthogonality
+    axiom orth12 : ip(eigenvector_of(T, 1), eigenvector_of(T, 2)) = complex(0, 0)
+}
+
+// ============================================
+// RESOLVENT IDENTITY (ground instances)
+// ============================================
+// R(z, T) · vₙ = vₙ / (λₙ - z)
+//
+// We evaluate at z = i (purely imaginary, off the real spectrum).
+// For v₁ with λ₁ = 14.135:
+//   R(i, T) · v₁ = v₁ / (14.135 - i)
+//   = (14.135 + i) / (14.135² + 1) · v₁
+//   = (14.135 + i) / 200.798 · v₁
+
+structure ResolventIdentity {
+    // The resolvent is bounded off the real axis (from UnboundedSelfAdjoint)
+    axiom resolvent_bounded_at_i :
+        is_self_adjoint(T) ∧ is_densely_defined(T)
+
+    // Resolvent applied to eigenvector = eigenvector / (eigenvalue - z)
+    // At z = complex(0, 1) = i:
+    axiom resolvent_eigen1_at_i :
+        op_apply(resolvent(T, complex(0, 1)), eigenvector_of(T, 1))
+        = h_smul(
+            cdiv(complex(1, 0), csub(complex(14.135, 0), complex(0, 1))),
+            eigenvector_of(T, 1)
+        )
+
+    axiom resolvent_eigen2_at_i :
+        op_apply(resolvent(T, complex(0, 1)), eigenvector_of(T, 2))
+        = h_smul(
+            cdiv(complex(1, 0), csub(complex(21.022, 0), complex(0, 1))),
+            eigenvector_of(T, 2)
+        )
+
+    // Resolvent identity at z = complex(0, 10) (closer to first eigenvalue)
+    // This probes the "stiffness" — as z approaches λ₁, R(z,T) grows
+    axiom resolvent_eigen1_near :
+        op_apply(resolvent(T, complex(0, 10)), eigenvector_of(T, 1))
+        = h_smul(
+            cdiv(complex(1, 0), csub(complex(14.135, 0), complex(0, 10))),
+            eigenvector_of(T, 1)
+        )
+}
+
+// ============================================
+// ξ-SPECTRAL BRIDGE
+// ============================================
+// ξ(1/2 + iλₙ) = 0 ↔ λₙ is an eigenvalue of T
+//
+// This connects the analytic object (ξ function) to the operator (T).
+
+structure XiSpectralBridge {
+    // ξ vanishes at 1/2 + iλₙ for each eigenvalue λₙ
+    axiom xi_at_ev1 : xi(complex(1/2, eigenvalue_of(T, 1))) = complex(0, 0)
+    axiom xi_at_ev2 : xi(complex(1/2, eigenvalue_of(T, 2))) = complex(0, 0)
+    axiom xi_at_ev3 : xi(complex(1/2, eigenvalue_of(T, 3))) = complex(0, 0)
+
+    // Equivalently, with concrete values:
+    axiom xi_zero1 : xi(complex(1/2, 14.135)) = complex(0, 0)
+    axiom xi_zero2 : xi(complex(1/2, 21.022)) = complex(0, 0)
+    axiom xi_zero3 : xi(complex(1/2, 25.011)) = complex(0, 0)
+
+    // ζ vanishes at the zeros
+    axiom zeta_zero1 : zeta(complex(1/2, 14.135)) = complex(0, 0)
+    axiom zeta_zero2 : zeta(complex(1/2, 21.022)) = complex(0, 0)
+}
+
+// ============================================
+// FUNCTIONAL EQUATION → SPECTRAL SYMMETRY
+// ============================================
+// ξ(s) = ξ(1-s)
+//
+// At s = 1/2 + iλ: 1-s = 1/2 - iλ
+// So: ξ(1/2 + iλ) = ξ(1/2 - iλ)
+//
+// If ξ(1/2 + iλ) = 0 (λ is an eigenvalue), then ξ(1/2 - iλ) = 0.
+// This means -λ is ALSO associated with a zero.
+//
+// CONSEQUENCE: The spectrum of T must be symmetric about 0.
+// If λₙ > 0 is an eigenvalue, there exists λ_{-n} = -λₙ.
+// The operator must commute with a "time-reversal" involution J
+// satisfying JTJ = -T.
+
+structure SpectralSymmetry {
+    // Functional equation at eigenvalues:
+    // ξ(1/2 + iλ) = ξ(1/2 - iλ)
+    axiom func_eq_ev1 :
+        xi(complex(1/2, 14.135)) = xi(complex(1/2, 0 - 14.135))
+    axiom func_eq_ev2 :
+        xi(complex(1/2, 21.022)) = xi(complex(1/2, 0 - 21.022))
+    axiom func_eq_ev3 :
+        xi(complex(1/2, 25.011)) = xi(complex(1/2, 0 - 25.011))
+
+    // CONSEQUENCE: ξ also vanishes at the reflected points
+    axiom xi_reflected1 : xi(complex(1/2, 0 - 14.135)) = complex(0, 0)
+    axiom xi_reflected2 : xi(complex(1/2, 0 - 21.022)) = complex(0, 0)
+    axiom xi_reflected3 : xi(complex(1/2, 0 - 25.011)) = complex(0, 0)
+
+    // SPECTRAL SYMMETRY: negative eigenvalues exist
+    axiom neg_ev1 : eigenvalue_of(T, 0 - 1) = 0 - 14.135
+    axiom neg_ev2 : eigenvalue_of(T, 0 - 2) = 0 - 21.022
+    axiom neg_ev3 : eigenvalue_of(T, 0 - 3) = 0 - 25.011
+
+    // The spectral involution J satisfies JTJ^{-1} = -T
+    element J : Operator
+    axiom J_involution :
+        op_apply(spectral_involution(T), eigenvector_of(T, 1))
+        = eigenvector_of(T, 0 - 1)
+
+    // J maps positive eigenvectors to negative eigenvectors
+    axiom J_maps_ev :
+        eigenvalue_of(T, 0 - 1) = 0 - eigenvalue_of(T, 1)
+}
+
+// ============================================
+// FUNCTIONAL EQUATION OFF THE CRITICAL LINE
+// ============================================
+
+structure FunctionalEquationOff {
+    // ξ(2) = ξ(-1) — non-trivial since neither is a zero
+    axiom func_eq_off1 : xi(complex(2, 0)) = xi(complex(0 - 1, 0))
+
+    // ξ(3) = ξ(-2)
+    axiom func_eq_off2 : xi(complex(3, 0)) = xi(complex(0 - 2, 0))
+
+    // Special values of ζ
+    axiom zeta_neg1 : zeta(complex(0 - 1, 0)) = complex(0 - 1/12, 0)
+    axiom zeta_neg2 : zeta(complex(0 - 2, 0)) = complex(0, 0)
+}
+
+// ============================================
+// CONSISTENCY TESTS
+// ============================================
+
+example "operator is self-adjoint and unbounded" {
+    assert(is_self_adjoint(T) ∧ is_densely_defined(T))
+}
+
+example "first eigenpair" {
+    assert(
+        op_apply(T, eigenvector_of(T, 1))
+        = h_smul(complex(14.135, 0), eigenvector_of(T, 1))
+    )
+}
+
+example "resolvent acts on eigenvector at z=i" {
+    assert(
+        op_apply(resolvent(T, complex(0, 1)), eigenvector_of(T, 1))
+        = h_smul(
+            cdiv(complex(1, 0), csub(complex(14.135, 0), complex(0, 1))),
+            eigenvector_of(T, 1)
+        )
+    )
+}
+
+example "xi vanishes at eigenvalue" {
+    assert(xi(complex(1/2, 14.135)) = complex(0, 0))
+}
+
+example "functional equation forces reflected zero" {
+    assert(
+        xi(complex(1/2, 14.135)) = xi(complex(1/2, 0 - 14.135)) ∧
+        xi(complex(1/2, 0 - 14.135)) = complex(0, 0)
+    )
+}
+
+example "spectral symmetry: negative eigenvalue exists" {
+    assert(eigenvalue_of(T, 0 - 1) = 0 - eigenvalue_of(T, 1))
+}
+
+example "J maps positive eigenvector to negative" {
+    assert(
+        op_apply(spectral_involution(T), eigenvector_of(T, 1))
+        = eigenvector_of(T, 0 - 1)
+    )
+}
+
+example "functional equation off critical line" {
+    assert(xi(complex(2, 0)) = xi(complex(0 - 1, 0)))
+}
+
+example "orthogonality preserved" {
+    assert(ip(eigenvector_of(T, 1), eigenvector_of(T, 2)) = complex(0, 0))
+}
+
+example "eigenvalues increasing" {
+    assert(eigenvalue_of(T, 1) < eigenvalue_of(T, 2))
+}

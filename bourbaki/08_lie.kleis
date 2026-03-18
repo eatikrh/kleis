@@ -1,0 +1,206 @@
+// ============================================
+// Bourbaki Volume VIII: Lie Groups and Lie Algebras
+// Éléments de mathématique
+// ============================================
+//
+// This file formalizes Lie theory from Bourbaki's
+// eighth volume.
+
+// --------------------------------------------
+// Chapter 1: Lie Algebras
+// --------------------------------------------
+
+structure LieAlgebra(g, F) {
+    operation bracket : g × g → g
+    operation add : g × g → g
+    operation scalar : F × g → g
+    element zero : g
+    
+    // Vector space axioms
+    axiom add_assoc: ∀(x y z : g). add(add(x, y), z) = add(x, add(y, z))
+    axiom add_comm: ∀(x y : g). add(x, y) = add(y, x)
+    axiom add_identity: ∀(x : g). add(x, zero) = x
+    
+    // Lie bracket axioms
+    axiom bilinear_left: ∀(x y z : g, a : F). 
+        bracket(add(scalar(a, x), y), z) = add(scalar(a, bracket(x, z)), bracket(y, z))
+    axiom bilinear_right: ∀(x y z : g, a : F). 
+        bracket(x, add(scalar(a, y), z)) = add(scalar(a, bracket(x, y)), bracket(x, z))
+    axiom antisymmetric: ∀(x y : g). bracket(x, y) = neg(bracket(y, x))
+    axiom jacobi: ∀(x y z : g). 
+        add(add(bracket(x, bracket(y, z)), bracket(y, bracket(z, x))), bracket(z, bracket(x, y))) = zero
+}
+
+// Subalgebras and Ideals
+structure LieSubalgebra(h, g) {
+    axiom closed: ∀(x y : h). in_set(bracket(x, y), h)
+}
+
+structure LieIdeal(i, g) {
+    axiom ideal: ∀(x : i, y : g). in_set(bracket(x, y), i)
+}
+
+// Special Lie algebras
+structure AbelianLieAlgebra(g, F) {
+    operation bracket : g × g → g
+    element zero : g
+    
+    axiom abelian: ∀(x y : g). bracket(x, y) = zero
+}
+
+structure NilpotentLieAlgebra(g, F) {
+    operation bracket : g × g → g
+    
+    axiom nilpotent: ∃(n : ℕ). lower_central_series(g, n) = zero_space
+}
+
+structure SolvableLieAlgebra(g, F) {
+    operation bracket : g × g → g
+    
+    axiom solvable: ∃(n : ℕ). derived_series(g, n) = zero_space
+}
+
+structure SemisimpleLieAlgebra(g, F) {
+    operation bracket : g × g → g
+    
+    axiom no_solvable_ideal: ∀(i : LieIdeal). is_solvable(i) → i = zero_space
+    axiom killing_form_nondegenerate: is_nondegenerate(killing_form(g))
+}
+
+// --------------------------------------------
+// Chapter 2: Representations
+// --------------------------------------------
+
+structure LieAlgebraRepresentation(g, V, F) {
+    operation rho : g → EndV
+    
+    axiom homomorphism: ∀(x y : g). 
+        rho(bracket(x, y)) = sub(compose(rho(x), rho(y)), compose(rho(y), rho(x)))
+    
+    axiom linear: ∀(x y : g, a : F). 
+        rho(add(scalar(a, x), y)) = add(scalar(a, rho(x)), rho(y))
+}
+
+structure AdjointRepresentation(g, F) {
+    operation ad : g × g → g
+    
+    axiom adjoint: ∀(x y : g). ad(x, y) = bracket(x, y)
+}
+
+// Killing Form
+structure KillingForm(g, F) {
+    operation B : g × g → F
+    
+    axiom killing_def: ∀(x y : g). B(x, y) = trace(ad_compose(x, y))
+    axiom symmetric: ∀(x y : g). B(x, y) = B(y, x)
+    axiom invariant: ∀(x y z : g). B(bracket(x, y), z) = B(x, bracket(y, z))
+}
+
+// --------------------------------------------
+// Chapter 3: Lie Groups
+// --------------------------------------------
+
+structure LieGroup(G) {
+    operation mul : G × G → G
+    operation inv : G → G
+    element e : G
+    
+    axiom group_assoc: ∀(g1 g2 g3 : G). mul(mul(g1, g2), g3) = mul(g1, mul(g2, g3))
+    axiom group_identity: ∀(g : G). mul(e, g) = g ∧ mul(g, e) = g
+    axiom group_inverse: ∀(g : G). mul(g, inv(g)) = e
+    axiom mul_smooth: is_smooth(mul)
+    axiom inv_smooth: is_smooth(inv)
+}
+
+structure LieGroupHomomorphism(G, H) {
+    operation phi : G → H
+    
+    axiom group_hom: ∀(g1 g2 : G). phi(mul(g1, g2)) = mul(phi(g1), phi(g2))
+    axiom smooth: is_smooth(phi)
+}
+
+// Lie algebra of a Lie group
+structure LieAlgebraOfGroup(G) {
+    element lie_algebra : Type
+    
+    axiom tangent_space: lie_algebra = tangent_space_at_identity(G)
+}
+
+// Exponential Map
+structure ExponentialMap(G) {
+    operation exp : LieAlg → G
+    
+    axiom exp_zero: exp(zero) = e
+    axiom exp_local_diffeomorphism: is_local_diffeomorphism_at(exp, zero)
+}
+
+// --------------------------------------------
+// Chapter 4: Compact Lie Groups
+// --------------------------------------------
+
+structure CompactLieGroup(G) {
+    operation mul : G × G → G
+    
+    axiom compact: is_compact(G)
+    axiom finite_dimensional_reps: ∀(V : Type). 
+        is_representation(V, G) → is_completely_reducible(V)
+}
+
+structure MaximalTorus(T, G) {
+    axiom torus: is_torus(T)
+    axiom maximal: ∀(S : Type). is_torus(S) ∧ subset(T, S) → S = T
+    axiom conjugate: ∀(T1 T2 : MaximalTorus). 
+        ∃(g : G). T2 = conjugate_by(g, T1)
+}
+
+// --------------------------------------------
+// Chapter 5: Root Systems
+// --------------------------------------------
+
+structure RootSystem(Phi, V) {
+    element roots : Set(V)
+    
+    axiom finite: is_finite(roots)
+    axiom spans: span(roots) = V
+    axiom no_zero: ¬in_set(zero, roots)
+    axiom reflection_closed: ∀(alpha beta : V). 
+        in_set(alpha, roots) ∧ in_set(beta, roots) → 
+        in_set(reflect(beta, alpha), roots)
+}
+
+structure SimpleRoots(Phi, V) {
+    element simple_roots : Set(V)
+    
+    axiom basis: is_basis(simple_roots, V)
+}
+
+structure WeylGroup(W, Phi) {
+    axiom generated_by_reflections: W = group_generated_by(reflections_of_simple_roots)
+    axiom finite: is_finite(W)
+}
+
+// --------------------------------------------
+// Chapter 6: Classification of Semisimple Lie Algebras
+// --------------------------------------------
+
+structure CartanMatrix(g) {
+    element A : Matrix
+    
+    axiom diagonal: ∀(i : ℕ). entry(A, i, i) = 2
+    axiom off_diagonal: ∀(i j : ℕ). i ≠ j → entry(A, i, j) <= 0
+}
+
+structure DynkinDiagram(g) {
+    element vertices : Set(SimpleRoot)
+    element edges : Set(Edge)
+}
+
+// Classification theorem (expressed as types)
+structure ClassificationTheorem {
+    axiom classification: ∀(g : SemisimpleLieAlgebra). 
+        is_simple(g) → (
+            is_type_A(g) ∨ is_type_B(g) ∨ is_type_C(g) ∨ is_type_D(g) ∨
+            is_type_E6(g) ∨ is_type_E7(g) ∨ is_type_E8(g) ∨
+            is_type_F4(g) ∨ is_type_G2(g)
+        )
+}

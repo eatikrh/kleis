@@ -1,0 +1,191 @@
+// =============================================================================
+// General Relativity — Energy Conditions via Z3 Derivation v2
+// =============================================================================
+//
+// This file complements gr_cartan_v1.kleis (which DERIVES curvature from the
+// metric via the Cartan pipeline) with Z3 derivation checks for:
+//
+//   (A) Dust energy conditions (all three derived from p=0, ρ>0)
+//   (B) Radiation energy conditions (all three derived from 3p=ρ, ρ>0)
+//   (C) Dark energy — SEC violation (correctly non-derivable)
+//   (D) Stiff matter energy conditions
+//
+// DECLARED ASSUMPTIONS (complete list for this file):
+//
+//   (A1) Each matter type is modeled as a perfect fluid with scalar
+//        energy density ρ and isotropic pressure p.
+//        Justification: Standard GR matter model; the full stress-energy
+//        tensor T_μν = (ρ+p) u_μ u_ν + p g_μν reduces to two scalars
+//        in the rest frame. More general matter (anisotropic stress,
+//        heat flux) would require tensor-valued operations.
+//
+//   (A2) Each equation of state holds globally (no phase transitions,
+//        no domain restrictions on ρ).
+//        Justification: We test energy conditions for idealized matter
+//        types individually. A realistic cosmological model would
+//        combine multiple matter types with domain-restricted EOS.
+//
+//   (A3) Positive energy density (ρ > 0) is assumed for all matter types.
+//        Justification: Physical matter has positive energy. This is
+//        itself part of the Weak Energy Condition being tested.
+//
+//   (A4) Z3 multiplication form for fractions: radiation uses 3p = ρ
+//        instead of p = ρ/3, and dark energy uses p + ρ = 0 instead
+//        of p = -ρ, because Z3 handles integer multiplication more
+//        reliably than division over reals.
+//        Justification: Algebraically equivalent forms; chosen for
+//        solver robustness, not physics.
+//
+// Z3 METHODOLOGY:
+//   Each assert(P) asks Z3: "Does P follow logically from the axioms?"
+//   Z3 checks whether axioms ∧ ¬P is UNSATISFIABLE.
+//   If UNSAT: the assertion is a logical consequence of the axioms → PASS.
+//   If SAT: Z3 provides a counterexample → FAIL (correctly, if expected).
+//
+// WHAT IS DERIVED HERE (Z3 proves from equation of state + positivity):
+//   - Dust satisfies WEC, SEC, DEC
+//   - Radiation satisfies WEC, SEC, DEC
+//   - Dark energy satisfies WEC and DEC but NOT SEC (expected)
+//   - Stiff matter satisfies WEC, SEC, DEC
+//
+// WHAT IS DERIVED IN v1 (not repeated here):
+//   - Levi-Civita connection from the metric
+//   - Riemann curvature from the connection (R = dω + ω∧ω)
+//   - Ricci tensor from Riemann contraction
+//   - Schwarzschild vacuum: Ric = 0
+//
+// REFERENCES:
+//   - Hawking & Ellis "The Large Scale Structure of Space-Time" (1973) Ch. 4
+//   - Carroll "Spacetime and Geometry" (2004) Ch. 4.6
+//   - Wald "General Relativity" (1984) Ch. 9.2
+//
+// =============================================================================
+
+// =============================================================================
+// (A) DUST: p = 0, ρ > 0
+// =============================================================================
+
+structure DustMatter {
+    operation rho_dust : ℝ
+    operation p_dust : ℝ
+    axiom dust_eos : p_dust = 0
+    axiom dust_positive : rho_dust > 0
+}
+
+example "1. Dust: WEC derived (ρ≥0, ρ+p≥0)" {
+    assert(rho_dust ≥ 0 ∧ rho_dust + p_dust ≥ 0)
+}
+
+example "2. Dust: SEC derived (ρ+p≥0, ρ+3p≥0)" {
+    assert(rho_dust + p_dust ≥ 0 ∧ rho_dust + 3 * p_dust ≥ 0)
+}
+
+example "3. Dust: DEC derived (ρ≥0, ρ+p≥0, ρ-p≥0)" {
+    assert(rho_dust ≥ 0 ∧ rho_dust + p_dust ≥ 0 ∧ rho_dust - p_dust ≥ 0)
+}
+
+// =============================================================================
+// (B) RADIATION: 3p = ρ, ρ > 0
+// =============================================================================
+
+structure RadiationMatter {
+    operation rho_rad : ℝ
+    operation p_rad : ℝ
+    axiom rad_eos : 3 * p_rad = rho_rad
+    axiom rad_positive : rho_rad > 0
+}
+
+example "4. Radiation: WEC derived (ρ≥0, ρ+p≥0)" {
+    assert(rho_rad ≥ 0 ∧ rho_rad + p_rad ≥ 0)
+}
+
+example "5. Radiation: SEC derived (ρ+p≥0, ρ+3p≥0)" {
+    assert(rho_rad + p_rad ≥ 0 ∧ rho_rad + 3 * p_rad ≥ 0)
+}
+
+example "6. Radiation: DEC derived (ρ≥0, ρ+p≥0, ρ-p≥0)" {
+    assert(rho_rad ≥ 0 ∧ rho_rad + p_rad ≥ 0 ∧ rho_rad - p_rad ≥ 0)
+}
+
+// =============================================================================
+// (C) DARK ENERGY: p + ρ = 0 (i.e., p = -ρ), ρ > 0
+// =============================================================================
+
+structure DarkEnergyMatter {
+    operation rho_de : ℝ
+    operation p_de : ℝ
+    axiom de_eos : p_de + rho_de = 0
+    axiom de_positive : rho_de > 0
+}
+
+example "7. Dark energy: WEC derived (ρ≥0, ρ+p≥0)" {
+    assert(rho_de ≥ 0 ∧ rho_de + p_de ≥ 0)
+}
+
+example "8. Dark energy: SEC CORRECTLY FAILS" {
+    out("SEC requires ρ + 3p ≥ 0.")
+    out("With p = -ρ: ρ + 3(-ρ) = -2ρ < 0 for ρ > 0.")
+    out("Z3 would correctly produce a counterexample. Not asserted.")
+}
+
+example "9. Dark energy: DEC derived (ρ≥0, ρ+p≥0, ρ-p≥0)" {
+    assert(rho_de ≥ 0 ∧ rho_de + p_de ≥ 0 ∧ rho_de - p_de ≥ 0)
+}
+
+// =============================================================================
+// (D) STIFF MATTER: p = ρ, ρ > 0
+// =============================================================================
+
+structure StiffMatter {
+    operation rho_stiff : ℝ
+    operation p_stiff : ℝ
+    axiom stiff_eos : p_stiff = rho_stiff
+    axiom stiff_positive : rho_stiff > 0
+}
+
+example "10. Stiff matter: WEC derived (ρ≥0, ρ+p≥0)" {
+    assert(rho_stiff ≥ 0 ∧ rho_stiff + p_stiff ≥ 0)
+}
+
+example "11. Stiff matter: SEC derived (ρ+p≥0, ρ+3p≥0)" {
+    assert(rho_stiff + p_stiff ≥ 0 ∧ rho_stiff + 3 * p_stiff ≥ 0)
+}
+
+example "12. Stiff matter: DEC derived (ρ≥0, ρ+p≥0, ρ-p≥0)" {
+    assert(rho_stiff ≥ 0 ∧ rho_stiff + p_stiff ≥ 0 ∧ rho_stiff - p_stiff ≥ 0)
+}
+
+// =============================================================================
+// (E) SUMMARY TABLE
+// =============================================================================
+
+example "13. Energy condition summary" {
+    out("=== Energy Condition Derivation Results ===")
+    out("")
+    out("Matter type   | Equation of state | WEC | SEC | DEC")
+    out("──────────────┼───────────────────┼─────┼─────┼────")
+    out("Dust          | p = 0             |  ✓  |  ✓  |  ✓")
+    out("Radiation     | 3p = ρ            |  ✓  |  ✓  |  ✓")
+    out("Dark energy   | p = -ρ            |  ✓  |  ✗  |  ✓")
+    out("Stiff matter  | p = ρ             |  ✓  |  ✓  |  ✓")
+    out("")
+    out("✓ = Z3 DERIVED from equation of state + ρ > 0.")
+    out("✗ = Z3 would correctly DISPROVE (dark energy violates SEC).")
+}
+
+// =============================================================================
+// SUMMARY
+// =============================================================================
+//
+// Declared assumptions: (A1) perfect fluid, (A2) global EOS, (A3) ρ > 0,
+// (A4) multiplication form for Z3.
+//
+// Combined with gr_cartan_v1.kleis assumptions: (A1) dim=4, (A2) Lorentzian
+// signature, (A3) torsion-free, (A4) metric-compatible.
+//
+// Total across both files: 8 declared assumptions, 0 undeclared.
+//
+// No representational data. No external claims. Every assertion is a
+// Z3 derivation from the declared axioms.
+//
+// =============================================================================

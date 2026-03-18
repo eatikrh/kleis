@@ -1,0 +1,7 @@
+# Treat .kleis files as Rust-like for syntax highlighting
+*.kleis linguist-language=Rust
+
+# Alternative options:
+# *.kleis linguist-language=Haskell
+# *.kleis linguist-language=OCaml
+

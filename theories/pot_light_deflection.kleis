@@ -1,0 +1,248 @@
+// =============================================================================
+// Light Deflection in POT: Gap Analysis and Open Requirements
+// =============================================================================
+//
+// This file answers the question: Can POT derive light deflection
+// from its projection axioms alone?
+//
+// ANSWER: No. Three ingredients are missing. This file identifies
+// them precisely, formalizes what would be needed, and verifies the
+// conditional structure: IF the gaps are filled, THEN deflection follows.
+//
+// =============================================================================
+// WHAT POT CURRENTLY PROVIDES (from pot_core_kernel_projection.kleis)
+// =============================================================================
+//
+//   (P1) apply_kernel : GreenKernel × Flow → FieldR4
+//   (P2) kernel_inner : Vec4R × Vec4R → ℝ  (abstract bilinear form)
+//   (P3) metric_probe(apply_kernel(G, ψ), u, v) = kernel_inner(u, v)
+//   (P4) residue : FieldR4 × Event × Channel → ℝ
+//   (P5) point_mass : Event × ℝ → FieldR4  with residue = m
+//   (P6) Admissible kernel class with coherence h(G,r), selecting h = κ/r
+//
+// =============================================================================
+// WHAT IS MISSING (three gaps)
+// =============================================================================
+//
+//   GAP 1 — MASS → METRIC COUPLING
+//     The bridge axiom P3 says metric_probe = kernel_inner regardless of ψ.
+//     The metric does not depend on matter content. There is no mechanism
+//     for mass to curve geometry. POT currently has a fixed background metric.
+//
+//   GAP 2 — FORCE LAW / GEODESIC EQUATION
+//     POT has no principle that says "mass attracts" or "light follows
+//     geodesics." The rotation curve paper assumes v = √(GM/r) from
+//     Newtonian gravity. This is external physics, not a POT axiom.
+//
+//   GAP 3 — TEMPORAL VS SPATIAL DISTINCTION
+//     kernel_inner is declared on Vec4R but nothing in POT distinguishes
+//     time from space components. The PPN parameter γ (ratio of spatial
+//     to temporal metric perturbation) cannot be determined because the
+//     metric perturbation itself does not exist (see GAP 1).
+//
+// =============================================================================
+// WHAT FOLLOWS IF THE GAPS ARE FILLED
+// =============================================================================
+//
+// This file formalizes three OPEN REQUIREMENTS as Kleis structures.
+// They are labeled R1, R2, R3. Each is an axiom that POT does not
+// currently provide. We then show that R1 + R2 + R3 together yield
+// the deflection formula α = 4GM/(c²b), and verify this with Z3.
+//
+// The Z3 checks confirm: the requirements are mutually consistent,
+// and the deflection formula follows from them. They do NOT confirm
+// that the requirements are derivable from POT's existing axioms.
+//
+// Self-contained: no imports required.
+// =============================================================================
+
+// Operations used in this file
+operation projected_mass : ℝ → ℝ
+operation potential : ℝ → ℝ
+operation deflection_angle : ℝ → ℝ
+operation ppn_gamma : ℝ
+
+// Physical constants (declared as positive elements)
+structure PhysicalConstants {
+    element G_const : ℝ
+    element c2_const : ℝ
+    element m_const : ℝ
+
+    axiom G_pos : G_const > 0
+    axiom c2_pos : c2_const > 0
+    axiom m_pos : m_const > 0
+}
+
+// =============================================================================
+// POT-PROVIDED: Mass profile from coherence kernel
+// =============================================================================
+// This IS derived from POT. The admissible kernel class with h = κ/r
+// gives M(r) = μr (linear growth). For a point source, M(r) = m.
+// These are consequences of the kernel axioms, not assumptions.
+
+structure KernelMassProfile {
+    axiom point_source : ∀(r : ℝ).
+        implies(r > 0, projected_mass(r) = m_const)
+}
+
+// =============================================================================
+// REQUIREMENT R1: Mass → Potential (MISSING FROM POT)
+// =============================================================================
+// POT needs: projected mass M(r) induces a gravitational potential
+//   Φ(r) = -G·M(r)/r
+//
+// STATUS: Not derivable from current axioms. The bridge axiom
+//   metric_probe(apply_kernel(G, ψ), u, v) = kernel_inner(u, v)
+// makes the metric independent of ψ (and hence of mass content).
+// No POT axiom connects residue(f, e, Mass) to metric_probe.
+//
+// SOURCE OF THIS FORMULA: Newtonian gravity (Poisson equation).
+
+structure Requirement_R1_MassPotential {
+    axiom mass_induces_potential : ∀(r : ℝ).
+        implies(r > 0,
+            potential(r) * r = 0 - G_const * projected_mass(r))
+}
+
+// =============================================================================
+// REQUIREMENT R2: PPN parameter γ (MISSING FROM POT)
+// =============================================================================
+// POT needs: the weak-field metric perturbation has equal temporal
+// and spatial parts (γ = 1).
+//
+// STATUS: Not derivable. kernel_inner is abstract and its components
+// are never specified. A bilinear form on Vec4R CAN distinguish time
+// from space (e.g., Minkowski metric η = diag(-1,1,1,1) does exactly
+// this). Nothing in POT forces isotropy between components.
+//
+// SOURCE OF γ = 1: In GR, this follows from Einstein's field equations.
+// In POT, it would require a new axiom about kernel_inner's structure.
+
+structure Requirement_R2_PPNGamma {
+    axiom gamma_equals_one : ppn_gamma = 1
+}
+
+// =============================================================================
+// REQUIREMENT R3: Deflection integral (MISSING FROM POT)
+// =============================================================================
+// POT needs: light follows null geodesics in the perturbed metric,
+// and the weak-field deflection is:
+//   α(b) = (1 + γ) · 2GM/(c²b)
+//
+// STATUS: Not derivable. POT has no geodesic equation, no variational
+// principle for light paths, and no concept of null curves.
+//
+// SOURCE: Integration of the geodesic equation in the PPN formalism.
+// This is a standard GR/PPN calculation.
+
+structure Requirement_R3_DeflectionIntegral {
+    axiom geodesic_deflection : ∀(b : ℝ).
+        implies(b > 0,
+            deflection_angle(b) * c2_const * b =
+                (1 + ppn_gamma) * 2 * G_const * projected_mass(b))
+}
+
+// =============================================================================
+// Z3 VERIFICATION: Conditional consistency
+// =============================================================================
+// These checks verify: IF R1 + R2 + R3 hold, THEN the following are true.
+// They do NOT verify that R1, R2, R3 follow from POT.
+
+// C1: Requirements are mutually consistent (Z3 finds a model)
+example "C1. R1 + R2 + R3 are mutually consistent" {
+    assert(G_const > 0 ∧ c2_const > 0 ∧ m_const > 0)
+    assert(ppn_gamma = 1)
+    assert(∀(b : ℝ).
+        implies(b > 0,
+            deflection_angle(b) * c2_const * b =
+                (1 + ppn_gamma) * 2 * G_const * m_const))
+}
+
+// C2: Given R1 + R2 + R3, deflection = 4GM/(c²b)
+example "C2. Conditional: R1+R2+R3 imply α = 4GM/(c²b)" {
+    assert(∀(b : ℝ).
+        implies(b > 0,
+            deflection_angle(b) * c2_const * b = 4 * G_const * m_const))
+}
+
+// C3: The factor 4 comes from (1+γ)·2 with γ = 1
+example "C3. Factor 4 = (1+1)·2" {
+    assert((1 + 1) * 2 = 4)
+}
+
+// C4: Without R2 (γ = 0 instead), factor would be 2
+example "C4. Without R2 (γ=0): Newtonian factor = 2" {
+    assert((1 + 0) * 2 = 2)
+}
+
+// =============================================================================
+// EXTENSION: Linear mass profile (from POT coherence kernel)
+// =============================================================================
+// The coherence kernel h = κ/r gives M(r) = μr. This IS from POT.
+// But deflection still requires R1, R2, R3.
+
+operation projected_mass_lin : ℝ → ℝ
+operation deflection_lin : ℝ → ℝ
+
+structure LinearMassDeflection {
+    element mu_const : ℝ
+    axiom mu_pos : mu_const > 0
+
+    axiom linear_profile : ∀(b : ℝ).
+        implies(b > 0, projected_mass_lin(b) = mu_const * b)
+
+    axiom linear_deflection : ∀(b : ℝ).
+        implies(b > 0,
+            deflection_lin(b) * c2_const * b =
+                (1 + ppn_gamma) * 2 * G_const * projected_mass_lin(b))
+}
+
+// C5: Linear mass + R2 + R3 gives constant deflection α = 4Gμ/c²
+example "C5. Conditional: linear mass α = 4Gμ/c²" {
+    assert(∀(b : ℝ).
+        implies(b > 0,
+            deflection_lin(b) * c2_const = 4 * G_const * mu_const))
+}
+
+// C6: Deflection is independent of impact parameter
+example "C6. Conditional: linear mass α is constant" {
+    assert(∀(b1 b2 : ℝ).
+        implies(b1 > 0 ∧ b2 > 0,
+            deflection_lin(b1) = deflection_lin(b2)))
+}
+
+// =============================================================================
+// SUMMARY
+// =============================================================================
+//
+// POT provides:
+//   - Mass profile M(r) from the admissible kernel class
+//   - M(r) = m (point source) or M(r) = μr (coherence kernel)
+//   - These are genuine POT results, derived from kernel axioms.
+//
+// POT does NOT provide:
+//   - R1: How mass creates a potential (needs mass → metric coupling)
+//   - R2: Whether γ = 1 (needs kernel_inner component structure)
+//   - R3: How potential deflects light (needs geodesic equation)
+//
+// Conditional result:
+//   IF R1 + R2 + R3 are added, THEN α = 4GM/(c²b) for point mass
+//   and α = 4Gμ/c² (constant) for linear mass. Z3-verified.
+//
+// The foundational question:
+//   Can R1, R2, R3 be DERIVED from existing POT axioms, or must they
+//   be added as new axioms? If added, POT becomes a theory that
+//   provides mass distributions and borrows gravitational dynamics
+//   from GR/Newtonian gravity. If derived, POT becomes a standalone
+//   theory of gravity.
+//
+// RESOLUTION: See pot_kernel_geometry_coupling.kleis, which proposes:
+//   - A1 (coupling): Φ = -GM/r, motivated by Green kernel in 3D
+//     (closes R1 — not derived, but motivated by POT structure)
+//   - T1 (isotropy): γ = 1 from scalar coherence function
+//     (closes R2 — derived from POT)
+//   - A2 (geodesic): equivalence principle (minimal external postulate)
+//     (closes R3 — external, shared with GR)
+//   From A1 + T1 + A2: deflection, rotation curves, and the
+//   lensing-rotation link α = 4v²/c² all follow. 8/8 Z3-verified.
+// =============================================================================

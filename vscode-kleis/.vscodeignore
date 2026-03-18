@@ -1,0 +1,20 @@
+.vscode/**
+.vscode-test/**
+.gitignore
+.yarnrc
+vsc-extension-quickstart.md
+**/tsconfig.json
+**/.eslintrc.json
+**/*.map
+**/*.ts
+src/**
+*.vsix
+
+# Exclude dev dependencies but keep production dependencies
+node_modules/.bin/**
+node_modules/@types/**
+node_modules/typescript/**
+node_modules/@vscode/vsce/**
+node_modules/vscode-oniguruma/**
+node_modules/vscode-textmate/**
+

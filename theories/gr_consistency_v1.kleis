@@ -1,0 +1,267 @@
+// =============================================================================
+// General Relativity — Logical Consistency Analysis v1
+// =============================================================================
+//
+// We formalize the core axioms of General Relativity and check whether
+// they can be simultaneously satisfied (SAT) using the Z3 SMT solver.
+//
+// Z3 METHODOLOGY:
+//   Each "example" block asks Z3: "Does there exist a model satisfying
+//   ALL declared axioms AND the asserted proposition?"
+//   SAT = the axiom set is consistent (no contradiction found).
+//   This is a SATISFIABILITY check, NOT a derivation or proof.
+//   Z3 finding SAT means the axioms + claim have at least one model.
+//   It does NOT mean the claim follows from the axioms alone.
+//
+// DECLARED ASSUMPTIONS:
+//   (A1) Spacetime has exactly 4 coordinate indices (i0..i3).
+//   (A2) Covariant divergence (div_t2) is an uninterpreted operation.
+//        It is NOT defined in terms of the connection or metric.
+//        Therefore the contracted Bianchi identity and energy conservation
+//        are independent axioms, not derived from curvature symmetries.
+//   (A3) The Ricci scalar definition sums only diagonal metric terms:
+//        R = Σ_μ g^{μμ} R_{μμ}. This is exact for diagonal metrics
+//        and a restriction for general (non-diagonal) metrics.
+//   (A4) The inverse metric relation is verified at a single component
+//        (μ=ν=0). Full invertibility would require all 4 diagonal
+//        and 6 off-diagonal checks.
+//
+// The axiom system:
+//   (1) Metric: symmetric, non-degenerate, Lorentzian signature
+//   (2) Connection: torsion-free (Levi-Civita)
+//   (3) Curvature: Riemann tensor with standard symmetries
+//   (4) Bianchi identity: ∇_μ G^μν = 0 (axiomatized, not derived)
+//   (5) Einstein field equations: G_μν + Λ g_μν = 8πG T_μν
+//   (6) Energy-momentum conservation: ∇_μ T^μν = 0 (axiomatized independently)
+//   (7) Geodesic equation: free particles follow geodesics
+//
+// Self-contained: no imports.
+// =============================================================================
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+data Index = Idx(ℤ)
+data Tensor2 = T2(ℤ)
+data Tensor4 = T4(ℤ)
+data Vector = Vec(ℤ)
+data Curve = Cv(ℤ)
+
+// =============================================================================
+// OPERATIONS
+// =============================================================================
+
+operation g : Index × Index → ℝ
+operation g_inv : Index × Index → ℝ
+operation gamma_conn : Index × Index × Index → ℝ
+operation R4 : Index × Index × Index × Index → ℝ
+operation Ric : Index × Index → ℝ
+operation G_ein : Index × Index → ℝ
+operation T_em : Index × Index → ℝ
+
+// Uninterpreted covariant divergence (see Assumption A2)
+operation div_t2 : Tensor2 × Index → ℝ
+
+operation is_geodesic : Curve → Bool
+operation curve_accel : Curve × Index → ℝ
+
+// =============================================================================
+// SPACETIME INDICES (Assumption A1: exactly 4 dimensions)
+// =============================================================================
+
+structure Spacetime {
+    element i0 : Index
+    element i1 : Index
+    element i2 : Index
+    element i3 : Index
+
+    axiom distinct_01 : i0 ≠ i1
+    axiom distinct_02 : i0 ≠ i2
+    axiom distinct_03 : i0 ≠ i3
+    axiom distinct_12 : i1 ≠ i2
+    axiom distinct_13 : i1 ≠ i3
+    axiom distinct_23 : i2 ≠ i3
+}
+
+// =============================================================================
+// CONSTANTS AND TENSORS
+// =============================================================================
+
+structure Constants {
+    element cosmo_lambda : ℝ
+    element G_newton : ℝ
+    element pi_val : ℝ
+    element det_g : ℝ
+    element R_scalar : ℝ
+
+    element einstein_t : Tensor2
+    element stress_energy_t : Tensor2
+
+    element free_particle : Curve
+
+    axiom G_positive : G_newton > 0
+    axiom pi_positive : pi_val > 0
+}
+
+// =============================================================================
+// (1) METRIC AXIOMS
+// =============================================================================
+
+structure MetricAxioms {
+    axiom metric_symmetry : ∀(mu nu : Index). g(mu, nu) = g(nu, mu)
+    axiom metric_nondegenerate : det_g ≠ 0
+    axiom metric_lorentzian : det_g < 0
+    axiom inverse_symmetry : ∀(mu nu : Index). g_inv(mu, nu) = g_inv(nu, mu)
+
+    // Assumption A4: single-component inverse check (μ=ν=0 only)
+    axiom inverse_contract_00 :
+        g_inv(i0, i0) * g(i0, i0) + g_inv(i0, i1) * g(i1, i0) +
+        g_inv(i0, i2) * g(i2, i0) + g_inv(i0, i3) * g(i3, i0) = 1
+}
+
+// =============================================================================
+// (2) LEVI-CIVITA CONNECTION
+// =============================================================================
+
+structure LeviCivitaAxioms {
+    axiom torsion_free : ∀(lam mu nu : Index).
+        gamma_conn(lam, mu, nu) = gamma_conn(lam, nu, mu)
+}
+
+// =============================================================================
+// (3) RIEMANN CURVATURE TENSOR SYMMETRIES
+// =============================================================================
+
+structure RiemannSymmetries {
+    axiom riemann_antisym : ∀(rho sigma mu nu : Index).
+        R4(rho, sigma, mu, nu) = 0 - R4(rho, sigma, nu, mu)
+
+    axiom first_bianchi : ∀(rho sigma mu nu : Index).
+        R4(rho, sigma, mu, nu) + R4(rho, mu, nu, sigma) + R4(rho, nu, sigma, mu) = 0
+
+    axiom ricci_from_riemann : ∀(mu nu : Index).
+        Ric(mu, nu) = R4(i0, mu, i0, nu) + R4(i1, mu, i1, nu) +
+                       R4(i2, mu, i2, nu) + R4(i3, mu, i3, nu)
+
+    axiom ricci_symmetry : ∀(mu nu : Index). Ric(mu, nu) = Ric(nu, mu)
+
+    // Assumption A3: diagonal-only Ricci scalar (exact for diagonal metrics)
+    axiom ricci_scalar_diagonal :
+        R_scalar = g_inv(i0, i0) * Ric(i0, i0) + g_inv(i1, i1) * Ric(i1, i1) +
+                   g_inv(i2, i2) * Ric(i2, i2) + g_inv(i3, i3) * Ric(i3, i3)
+}
+
+// =============================================================================
+// (4) EINSTEIN TENSOR AND BIANCHI IDENTITY
+// =============================================================================
+
+structure EinsteinTensor {
+    axiom einstein_def : ∀(mu nu : Index).
+        G_ein(mu, nu) = Ric(mu, nu) - (1/2) * R_scalar * g(mu, nu)
+
+    axiom einstein_symmetry : ∀(mu nu : Index). G_ein(mu, nu) = G_ein(nu, mu)
+
+    // Axiomatized, not derived from Riemann symmetries (see Assumption A2)
+    axiom bianchi_contracted : ∀(nu : Index). div_t2(einstein_t, nu) = 0
+}
+
+// =============================================================================
+// (5) EINSTEIN FIELD EQUATIONS
+// =============================================================================
+
+structure FieldEquations {
+    axiom einstein_eq : ∀(mu nu : Index).
+        G_ein(mu, nu) + cosmo_lambda * g(mu, nu) = 8 * pi_val * G_newton * T_em(mu, nu)
+
+    axiom stress_energy_symmetry : ∀(mu nu : Index). T_em(mu, nu) = T_em(nu, mu)
+}
+
+// =============================================================================
+// (6) ENERGY-MOMENTUM CONSERVATION
+// Axiomatized independently of (4). See Assumption A2.
+// In full GR this follows from the field equations + Bianchi identity,
+// but with uninterpreted div_t2, it must be stated separately.
+// =============================================================================
+
+structure Conservation {
+    axiom energy_conservation : ∀(nu : Index). div_t2(stress_energy_t, nu) = 0
+}
+
+// =============================================================================
+// (7) GEODESIC EQUATION
+// =============================================================================
+
+structure GeodesicAxioms {
+    axiom free_is_geodesic : is_geodesic(free_particle)
+
+    axiom geodesic_eq : ∀(mu : Index).
+        is_geodesic(free_particle) → curve_accel(free_particle, mu) = 0
+}
+
+// =============================================================================
+// CONSISTENCY TESTS
+// Each test checks: axioms ∧ proposition is SAT (jointly satisfiable).
+// =============================================================================
+
+example "1. Metric symmetry is satisfiable" {
+    assert(g(i0, i1) = g(i1, i0))
+}
+
+example "2. Lorentzian signature is satisfiable" {
+    assert(det_g < 0)
+}
+
+example "3. Torsion-free connection is satisfiable" {
+    assert(gamma_conn(i0, i1, i2) = gamma_conn(i0, i2, i1))
+}
+
+example "4. Riemann antisymmetry is satisfiable" {
+    assert(R4(i0, i1, i2, i3) = 0 - R4(i0, i1, i3, i2))
+}
+
+example "5. First Bianchi identity is satisfiable" {
+    assert(R4(i0, i1, i2, i3) + R4(i0, i2, i3, i1) + R4(i0, i3, i1, i2) = 0)
+}
+
+example "6. Einstein tensor symmetry is satisfiable" {
+    assert(G_ein(i0, i1) = G_ein(i1, i0))
+}
+
+example "7. Contracted Bianchi identity is satisfiable" {
+    assert(div_t2(einstein_t, i0) = 0 ∧ div_t2(einstein_t, i1) = 0)
+}
+
+example "8. Field equations relate geometry to matter (satisfiable)" {
+    assert(
+        G_ein(i0, i0) + cosmo_lambda * g(i0, i0) = 8 * pi_val * G_newton * T_em(i0, i0)
+    )
+}
+
+example "9. Energy-momentum conservation is satisfiable" {
+    assert(div_t2(stress_energy_t, i0) = 0)
+}
+
+example "10. Geodesic acceleration vanishes for free particle (satisfiable)" {
+    assert(curve_accel(free_particle, i0) = 0)
+}
+
+example "11. Einstein definition and field equations are jointly satisfiable" {
+    assert(
+        Ric(i0, i0) - (1/2) * R_scalar * g(i0, i0) + cosmo_lambda * g(i0, i0)
+        = 8 * pi_val * G_newton * T_em(i0, i0)
+    )
+}
+
+// NOTE: This tests joint satisfiability of the two INDEPENDENT axioms
+// (bianchi_contracted and energy_conservation). The implication is trivially
+// SAT because the consequent is an axiom. This does NOT demonstrate that
+// Bianchi ENTAILS conservation — that would require deriving conservation
+// from the field equations and Bianchi identity, which needs an interpreted
+// covariant derivative (not available here).
+example "12. Bianchi and conservation are jointly satisfiable (NOT a derivation)" {
+    assert(
+        div_t2(einstein_t, i0) = 0 ∧
+        div_t2(stress_energy_t, i0) = 0
+    )
+}

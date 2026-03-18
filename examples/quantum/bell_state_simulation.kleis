@@ -1,0 +1,163 @@
+// ============================================================================
+// BELL STATE SIMULATION WITH NUMERICAL COMPUTATION
+// ============================================================================
+//
+// This file demonstrates quantum state evolution using Kleis's numerical
+// linear algebra capabilities. We simulate the creation of entangled
+// Bell states through gate application.
+//
+// ============================================================================
+
+import "stdlib/prelude.kleis"
+
+// =============================================================================
+// Part 1: Single-Qubit Gates (2×2 matrices)
+// =============================================================================
+
+define H = [[0.7071067811865476, 0.7071067811865476],
+            [0.7071067811865476, negate(0.7071067811865476)]]
+
+define X = [[0, 1], [1, 0]]
+
+define Z = [[1, 0], [0, negate(1)]]
+
+define I2 = [[1, 0], [0, 1]]
+
+// =============================================================================
+// Part 2: Two-Qubit Gates (4×4 matrices)
+// =============================================================================
+
+define CNOT = [[1, 0, 0, 0],
+               [0, 1, 0, 0],
+               [0, 0, 0, 1],
+               [0, 0, 1, 0]]
+
+define CZ = [[1, 0, 0, 0],
+             [0, 1, 0, 0],
+             [0, 0, 1, 0],
+             [0, 0, 0, negate(1)]]
+
+// =============================================================================
+// Part 3: Computational Basis States (column vectors)
+// =============================================================================
+
+define ket_0 = [[1], [0]]
+define ket_1 = [[0], [1]]
+
+define ket_00 = [[1], [0], [0], [0]]
+define ket_01 = [[0], [1], [0], [0]]
+define ket_10 = [[0], [0], [1], [0]]
+define ket_11 = [[0], [0], [0], [1]]
+
+// H ⊗ I (Hadamard on first qubit, identity on second)
+define H_tensor_I = [[0.7071067811865476, 0, 0.7071067811865476, 0],
+                     [0, 0.7071067811865476, 0, 0.7071067811865476],
+                     [0.7071067811865476, 0, negate(0.7071067811865476), 0],
+                     [0, 0.7071067811865476, 0, negate(0.7071067811865476)]]
+
+// =============================================================================
+// Part 4: Numerical Simulation Examples
+// =============================================================================
+
+example "Hadamard on |0⟩ creates |+⟩" {
+    out("H|0⟩ = |+⟩ (equal superposition)")
+    out("")
+    out("Hadamard gate H =")
+    out([[0.7071067811865476, 0.7071067811865476],
+         [0.7071067811865476, negate(0.7071067811865476)]])
+    out("")
+    out("|0⟩ =")
+    out([[1], [0]])
+    out("")
+    out("H|0⟩ =")
+    out(multiply([[0.7071067811865476, 0.7071067811865476],
+                  [0.7071067811865476, negate(0.7071067811865476)]],
+                 [[1], [0]]))
+}
+
+example "Hadamard on |1⟩ creates |−⟩" {
+    out("H|1⟩ = |−⟩")
+    out("")
+    out("|1⟩ =")
+    out([[0], [1]])
+    out("")
+    out("H|1⟩ =")
+    out(multiply([[0.7071067811865476, 0.7071067811865476],
+                  [0.7071067811865476, negate(0.7071067811865476)]],
+                 [[0], [1]]))
+}
+
+example "H² = I (Hadamard is self-inverse)" {
+    out("Verifying H² = I")
+    out("")
+    out("H × H =")
+    out(multiply([[0.7071067811865476, 0.7071067811865476],
+                  [0.7071067811865476, negate(0.7071067811865476)]],
+                 [[0.7071067811865476, 0.7071067811865476],
+                  [0.7071067811865476, negate(0.7071067811865476)]]))
+    out("")
+    out("Result should be identity matrix I = [[1,0],[0,1]]")
+}
+
+example "CNOT gate action" {
+    out("CNOT Gate: flips target qubit when control is |1⟩")
+    out("")
+    out("CNOT|00⟩ = |00⟩ (control=0, no flip)")
+    out(multiply([[1,0,0,0],[0,1,0,0],[0,0,0,1],[0,0,1,0]], [[1],[0],[0],[0]]))
+    out("")
+    out("CNOT|01⟩ = |01⟩ (control=0, no flip)")
+    out(multiply([[1,0,0,0],[0,1,0,0],[0,0,0,1],[0,0,1,0]], [[0],[1],[0],[0]]))
+    out("")
+    out("CNOT|10⟩ = |11⟩ (control=1, FLIP!)")
+    out(multiply([[1,0,0,0],[0,1,0,0],[0,0,0,1],[0,0,1,0]], [[0],[0],[1],[0]]))
+    out("")
+    out("CNOT|11⟩ = |10⟩ (control=1, FLIP!)")
+    out(multiply([[1,0,0,0],[0,1,0,0],[0,0,0,1],[0,0,1,0]], [[0],[0],[0],[1]]))
+}
+
+example "Bell state creation: (H⊗I)|00⟩" {
+    out("Step 1: Apply H⊗I to |00⟩")
+    out("Creates (|00⟩ + |10⟩)/√2")
+    out("")
+    out("(H⊗I)|00⟩ =")
+    out(multiply([[0.7071067811865476, 0, 0.7071067811865476, 0],
+                  [0, 0.7071067811865476, 0, 0.7071067811865476],
+                  [0.7071067811865476, 0, negate(0.7071067811865476), 0],
+                  [0, 0.7071067811865476, 0, negate(0.7071067811865476)]],
+                 [[1],[0],[0],[0]]))
+}
+
+example "Bell state creation: CNOT on superposition" {
+    out("Step 2: Apply CNOT to (|00⟩ + |10⟩)/√2")
+    out("Creates Bell state |Φ+⟩ = (|00⟩ + |11⟩)/√2")
+    out("")
+    out("CNOT · (H⊗I)|00⟩ =")
+    out(multiply([[1,0,0,0],[0,1,0,0],[0,0,0,1],[0,0,1,0]],
+                 multiply([[0.7071067811865476, 0, 0.7071067811865476, 0],
+                           [0, 0.7071067811865476, 0, 0.7071067811865476],
+                           [0.7071067811865476, 0, negate(0.7071067811865476), 0],
+                           [0, 0.7071067811865476, 0, negate(0.7071067811865476)]],
+                          [[1],[0],[0],[0]])))
+    out("")
+    out("Result: [0.707, 0, 0, 0.707]ᵀ = (|00⟩ + |11⟩)/√2")
+    out("This is maximally entangled - measuring one qubit")
+    out("instantly determines the other!")
+}
+
+example "measurement probabilities" {
+    out("Born Rule: P(outcome) = |amplitude|²")
+    out("")
+    out("For Bell state |Φ+⟩ = [0.707, 0, 0, 0.707]ᵀ:")
+    out("")
+    out("P(00) = |0.707|² = 0.5  (50%)")
+    out("P(01) = |0|² = 0        (0%)")
+    out("P(10) = |0|² = 0        (0%)")
+    out("P(11) = |0.707|² = 0.5  (50%)")
+    out("")
+    out("Total = 1.0 ✓")
+    out("")
+    out("Outcomes are PERFECTLY CORRELATED:")
+    out("  Measure 00 → both qubits are 0")
+    out("  Measure 11 → both qubits are 1")
+    out("  NEVER 01 or 10!")
+}

@@ -1,0 +1,39 @@
+name: Build and Deploy mdBook Documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/manual/src/**'
+      - 'docs/manual/book.toml'
+      - '.github/workflows/mdbook.yml'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  build-and-commit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup mdBook
+        uses: peaceiris/actions-mdbook@v2
+        with:
+          mdbook-version: 'latest'
+
+      - name: Build mdBook
+        run: |
+          cd docs/manual
+          mdbook build
+
+      - name: Commit built book to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/manual/book/
+          git diff --staged --quiet || git commit -m "docs: auto-build mdBook [skip ci]"
+          git push
+

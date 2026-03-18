@@ -1,0 +1,94 @@
+// Maxwell's Equations in Covariant Form
+//
+// The electromagnetic field tensor F_μν is antisymmetric and contains E, B fields:
+//   F_μν = | 0    -Ex  -Ey  -Ez |
+//          | Ex    0   -Bz   By |
+//          | Ey   Bz    0   -Bx |
+//          | Ez  -By   Bx    0  |
+//
+// Maxwell's equations in covariant form:
+// 1. ∂_μ F^μν = μ₀ J^ν  (inhomogeneous - Gauss + Ampère)
+// 2. ∂_[λ F_μν] = 0     (homogeneous - Faraday + no monopoles)
+
+structure FieldTensorProperties {
+    // Electromagnetic field tensor
+    operation F : Nat → Nat → ℝ
+    
+    // Antisymmetry: F_μν = -F_νμ
+    axiom F_antisymmetric : ∀ mu : Nat . ∀ nu : Nat .
+        F(mu, nu) = negate(F(nu, mu))
+    
+    // Diagonal vanishes (follows from antisymmetry)
+    axiom F_diagonal_zero : ∀ mu : Nat . F(mu, mu) = 0
+}
+
+structure MaxwellInhomogeneous {
+    // Field tensor and 4-current
+    operation F : Nat → Nat → ℝ
+    operation J : Nat → ℝ
+    
+    // Divergence of F (∂_μ F^μν summed over μ)
+    operation divF : Nat → ℝ
+    
+    element mu0 : ℝ  // Permeability of free space
+    
+    // Inhomogeneous Maxwell equation: ∂_μ F^μν = μ₀ J^ν
+    // This encodes:
+    //   ν=0: Gauss's law ∇·E = ρ/ε₀
+    //   ν=i: Ampère's law ∇×B = μ₀J + μ₀ε₀ ∂E/∂t
+    axiom maxwell_inhomogeneous : ∀ nu : Nat .
+        divF(nu) = times(mu0, J(nu))
+}
+
+structure MaxwellHomogeneous {
+    // Field tensor
+    operation F : Nat → Nat → ℝ
+    
+    // Cyclic derivative ∂_[λ F_μν]
+    operation cyclicF : Nat → Nat → Nat → ℝ
+    
+    // Homogeneous Maxwell equation (Bianchi identity for F):
+    // ∂_λ F_μν + ∂_μ F_νλ + ∂_ν F_λμ = 0
+    // This encodes:
+    //   No magnetic monopoles: ∇·B = 0
+    //   Faraday's law: ∇×E = -∂B/∂t
+    axiom maxwell_homogeneous : ∀ lam : Nat . ∀ mu : Nat . ∀ nu : Nat .
+        cyclicF(lam, mu, nu) = 0
+}
+
+// Einstein-Maxwell: Electromagnetism in curved spacetime
+// Used for charged black holes (Reissner-Nordström), etc.
+structure EinsteinMaxwell {
+    // Metric and Einstein tensor
+    operation g : Nat → Nat → ℝ
+    operation G : Nat → Nat → ℝ
+    
+    // Electromagnetic field tensor and stress-energy
+    operation F : Nat → Nat → ℝ
+    operation T_EM : Nat → Nat → ℝ
+    
+    element Lambda : ℝ  // Cosmological constant
+    element kappa : ℝ   // Einstein's constant (8πG/c⁴)
+    
+    // Field tensor antisymmetry
+    axiom F_antisym : ∀ mu : Nat . ∀ nu : Nat .
+        F(mu, nu) = negate(F(nu, mu))
+    
+    // EM stress-energy tensor is symmetric
+    axiom T_EM_symmetric : ∀ mu : Nat . ∀ nu : Nat .
+        T_EM(mu, nu) = T_EM(nu, mu)
+    
+    // Metric symmetry
+    axiom g_symmetric : ∀ mu : Nat . ∀ nu : Nat .
+        g(mu, nu) = g(nu, mu)
+    
+    // Einstein tensor symmetry
+    axiom G_symmetric : ∀ mu : Nat . ∀ nu : Nat .
+        G(mu, nu) = G(nu, mu)
+    
+    // Einstein-Maxwell field equations:
+    // G_μν + Λg_μν = κ T^EM_μν
+    axiom einstein_maxwell_field_eqn : ∀ mu : Nat . ∀ nu : Nat .
+        plus(G(mu, nu), times(Lambda, g(mu, nu))) = times(kappa, T_EM(mu, nu))
+}
+

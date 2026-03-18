@@ -1,0 +1,44 @@
+// Complex Number REPL Test
+// Load this in REPL with: :load examples/math/complex_test.kleis
+
+import "stdlib/prelude.kleis"
+
+// Basic complex numbers
+define z1 : ℂ = complex(3, 4)
+define z2 : ℂ = complex(1, 2)
+
+// Operations
+define sum : ℂ = complex_add(z1, z2)
+define product : ℂ = complex_mul(z1, z2)
+define z1_conj : ℂ = conj(z1)
+
+// Extract parts
+define z1_real : ℝ = re(z1)
+define z1_imag : ℝ = im(z1)
+
+// Theorem: i² = -1
+// Verify: complex_mul(i, i) should equal complex(-1, 0)
+define i_squared : ℂ = complex_mul(i, i)
+
+// Theorem: z * conj(z) = |z|² (real number)
+// For z1 = 3+4i: |z1|² = 9 + 16 = 25
+define z1_norm_sq : ℂ = complex_mul(z1, conj(z1))
+
+// Theorem: conj(conj(z)) = z
+define z1_double_conj : ℂ = conj(conj(z1))
+
+// Structure with axioms to verify
+structure ComplexTest {
+    // Fundamental: i² = -1
+    axiom i_squared_minus_one : 
+        complex_mul(i, i) = complex(0 - 1, 0)
+    
+    // Conjugate involution
+    axiom conj_involution : 
+        ∀(z : ℂ). conj(conj(z)) = z
+    
+    // z * conj(z) has zero imaginary part
+    axiom norm_is_real :
+        ∀(z : ℂ). im(complex_mul(z, conj(z))) = 0
+}
+

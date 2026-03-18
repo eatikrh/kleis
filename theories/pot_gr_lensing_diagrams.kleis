@@ -1,0 +1,277 @@
+// =============================================================================
+// POT vs GR Gravitational Lensing — Diagrams
+// =============================================================================
+//
+// Generates Lilaq diagrams from the lensing computations in
+// pot_gr_lensing_v1.kleis. All data is computed by Kleis, not hardcoded.
+//
+// =============================================================================
+
+import "stdlib/prelude.kleis"
+
+// ── Physical constants (same as v1, repeated for self-containment) ──────────
+
+define G_N = 6.674 * pow(10.0, -11.0)
+define c_light = 2.998 * pow(10.0, 8.0)
+define c2 = c_light * c_light
+define M_sun = 1.989 * pow(10.0, 30.0)
+define kpc = 3.086 * pow(10.0, 19.0)
+define Gpc = 3.086 * pow(10.0, 25.0)
+define r2a = 180.0 * 3600.0 / pi()
+
+// ── Galaxy parameters ───────────────────────────────────────────────────────
+
+define v_flat = 220000.0
+define v2 = v_flat * v_flat
+define M_halo = 1.5 * pow(10.0, 12.0) * M_sun
+define M_bary = 6.0 * pow(10.0, 10.0) * M_sun
+define sigma2 = v2 / 2.0
+define mu = v2 / G_N
+
+define D_L = 1.0 * Gpc
+define D_S = 2.0 * Gpc
+define D_LS = 1.0 * Gpc
+
+// ── Lensing formulas ────────────────────────────────────────────────────────
+
+define alpha_gr(M, b) = 4.0 * G_N * M / (c2 * b)
+define alpha_sis_val = 4.0 * pi() * sigma2 / c2
+define alpha_pot_val = 4.0 * v2 / c2
+
+define mag_gr(u) = (u * u + 2.0) / (u * sqrt(u * u + 4.0))
+
+define M_sis_sol(b_kpc) = pi() * sigma2 * b_kpc * kpc / (G_N * M_sun)
+define M_pot_sol(b_kpc) = mu * b_kpc * kpc / M_sun
+
+// =============================================================================
+// DIAGRAM 1: Deflection angle α(b) — the central prediction
+// =============================================================================
+
+example "Diagram 1: Deflection angle vs impact parameter" {
+    let bs = [2.0, 5.0, 10.0, 20.0, 50.0, 80.0, 100.0, 150.0, 200.0, 300.0, 500.0]
+
+    let a_gr_halo = list_map(lambda b .
+        alpha_gr(M_halo, b * kpc) * r2a, bs)
+
+    let a_gr_bary = list_map(lambda b .
+        alpha_gr(M_bary, b * kpc) * r2a, bs)
+
+    let a_sis = list_map(lambda b . alpha_sis_val * r2a, bs)
+    let a_pot = list_map(lambda b . alpha_pot_val * r2a, bs)
+
+    diagram(
+        plot(bs, a_gr_halo, color = "red", label = "GR point mass (DM halo 1.5×10¹² M☉)", mark = "o", mark_size = 4),
+        plot(bs, a_gr_bary, color = "orange", label = "GR point mass (baryonic 6×10¹⁰ M☉)", mark = "s", mark_size = 4),
+        plot(bs, a_sis, color = "blue", label = "GR + SIS dark matter halo", stroke = "2pt"),
+        plot(bs, a_pot, color = "green", label = "POT (projected mass)", stroke = "2pt"),
+        title = "Deflection Angle vs Impact Parameter",
+        xlabel = "Impact parameter b (kpc)",
+        ylabel = "Deflection angle α (arcsec)",
+        legend_position = "right + top",
+        width = 12,
+        yscale = "log"
+    )
+
+    out("GR point mass: α falls as 1/b")
+    out("GR+SIS (blue) and POT (green): both constant, differ by π/2")
+    out("α_SIS / α_POT =")
+    out(alpha_sis_val / alpha_pot_val)
+}
+
+// =============================================================================
+// DIAGRAM 2: Deflection angle — linear scale, zoom on outer region
+// =============================================================================
+
+example "Diagram 2: Deflection angle — outer region zoom" {
+    let bs = [10.0, 20.0, 30.0, 50.0, 80.0, 100.0, 150.0, 200.0, 300.0]
+
+    let a_gr = list_map(lambda b .
+        alpha_gr(M_halo, b * kpc) * r2a, bs)
+
+    let a_sis = list_map(lambda b . alpha_sis_val * r2a, bs)
+    let a_pot = list_map(lambda b . alpha_pot_val * r2a, bs)
+
+    diagram(
+        plot(bs, a_gr, color = "red", label = "GR point mass (1.5×10¹² M☉)", mark = "o", mark_size = 4),
+        plot(bs, a_sis, color = "blue", label = "GR+SIS: α = 4πσ²/c² = 0.70\"", stroke = "2pt"),
+        plot(bs, a_pot, color = "green", label = "POT: α = 4v²/c² = 0.44\"", stroke = "2pt"),
+        fill_between(bs, a_sis, a_pot, fill = "blue.lighten(80%)"),
+        title = "Outer Region: The π/2 Gap",
+        xlabel = "Impact parameter b (kpc)",
+        ylabel = "Deflection angle α (arcsec)",
+        legend_position = "right + top",
+        width = 12
+    )
+
+    out("Shaded region: the π/2 ≈ 57% difference between SIS and POT")
+    out("This gap is observable via weak lensing shear profiles")
+}
+
+// =============================================================================
+// DIAGRAM 3: Projected mass M(b) — both linear, ratio = π/2
+// =============================================================================
+
+define M_halo_11 = M_halo / (M_sun * pow(10.0, 11.0))
+
+// Pre-compute mass-per-kpc constants so lambdas only multiply
+define sis_per_kpc = pi() * sigma2 * kpc / (G_N * M_sun * pow(10.0, 11.0))
+define pot_per_kpc = mu * kpc / (M_sun * pow(10.0, 11.0))
+
+example "Diagram 3: Projected mass profiles" {
+    let bs = [1.0, 5.0, 10.0, 20.0, 50.0, 100.0, 200.0, 300.0]
+
+    let m_sis = list_map(lambda b . sis_per_kpc * b, bs)
+    let m_pot = list_map(lambda b . pot_per_kpc * b, bs)
+
+    let m_halo_const = list_map(lambda b . M_halo_11, bs)
+
+    diagram(
+        plot(bs, m_sis, color = "blue", label = "GR SIS: M = πσ²b/G", stroke = "2pt", mark = "o", mark_size = 4),
+        plot(bs, m_pot, color = "green", label = "POT: M = v²b/G", stroke = "2pt", mark = "s", mark_size = 4),
+        plot(bs, m_halo_const, color = "red", label = "GR point mass: M = const", stroke = "2pt"),
+        title = "Projected Mass vs Radius",
+        xlabel = "Radius b (kpc)",
+        ylabel = "Enclosed mass (×10¹¹ M☉)",
+        legend_position = "left + top",
+        width = 12
+    )
+
+    out("SIS and POT both linear, but SIS is π/2 ≈ 1.57× higher")
+    out("GR point mass is constant — gives falling deflection")
+    out("At b = 100 kpc, POT mass ≈")
+    out(pot_per_kpc * 100.0)
+    out("× 10¹¹ M☉ (≈ 10¹² M☉ total, no dark matter)")
+}
+
+// =============================================================================
+// DIAGRAM 4: Magnification μ(u) — GR divergent vs POT finite
+// =============================================================================
+
+example "Diagram 4: Magnification — caustics vs finite" {
+    let us = [0.02, 0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0, 5.0]
+
+    let mu_gr = list_map(lambda u . mag_gr(u), us)
+    let mu_pot = list_map(lambda u . 1.0, us)
+
+    diagram(
+        plot(us, mu_gr, color = "red", label = "GR point mass: μ → ∞ at u→0", stroke = "2pt", mark = "o", mark_size = 4),
+        plot(us, mu_pot, color = "green", label = "POT constant-α: μ = 1 everywhere", stroke = "2pt"),
+        title = "Magnification vs Source Offset",
+        xlabel = "Source offset u = β/θ_E",
+        ylabel = "Magnification μ",
+        legend_position = "right + top",
+        width = 12,
+        yscale = "log"
+    )
+
+    out("GR: magnification diverges at u→0 (Einstein ring caustic)")
+    out("POT: constant deflection ⟹ linear lens equation ⟹ μ = 1")
+    out("At u = 0.02: μ_GR =")
+    out(mag_gr(0.02))
+    out("Giant arcs (μ > 10) observed in clusters → challenge for POT")
+}
+
+// =============================================================================
+// DIAGRAM 5: Einstein ring radii comparison (bar chart)
+// =============================================================================
+
+example "Diagram 5: Einstein ring radii" {
+    let theta_gr_bary = sqrt(4.0 * G_N * M_bary * D_LS / (c2 * D_L * D_S)) * r2a in
+    let theta_gr_halo = sqrt(4.0 * G_N * M_halo * D_LS / (c2 * D_L * D_S)) * r2a in
+    let theta_sis = alpha_sis_val * D_LS / D_S * r2a in
+    let theta_pot = alpha_pot_val * D_LS / D_S * r2a in
+
+    let labels = ["GR baryonic", "GR+DM halo", "GR+SIS", "POT"] in
+    let xs = [0, 1, 2, 3] in
+    let ys = [theta_gr_bary, theta_gr_halo, theta_sis, theta_pot] in
+
+    out("=== Einstein Ring Radii (arcsec) ===")
+    out("GR baryonic only:")
+    out(theta_gr_bary)
+    out("GR + DM halo (1.5×10¹² M☉):")
+    out(theta_gr_halo)
+    out("GR + SIS:")
+    out(theta_sis)
+    out("POT:")
+    out(theta_pot)
+
+    diagram(
+        bar(xs, ys, fill = "blue.lighten(40%)"),
+        place(0, theta_gr_bary, "0.49\"", align = "top", padding = "0.2em"),
+        place(1, theta_gr_halo, "2.47\"", align = "top", padding = "0.2em"),
+        place(2, theta_sis, "0.35\"", align = "top", padding = "0.2em"),
+        place(3, theta_pot, "0.22\"", align = "top", padding = "0.2em"),
+        title = "Einstein Ring Radius (D_L = 1 Gpc, D_S = 2 Gpc)",
+        ylabel = "θ_E (arcsec)",
+        xaxis_ticks = labels,
+        xaxis_subticks = "none",
+        width = 10
+    )
+
+    out("")
+    out("Observed strong lenses: 1-2 arcsec → matches GR+DM halo")
+    out("POT predicts much smaller rings (0.22\")")
+}
+
+// =============================================================================
+// DIAGRAM 6: The π/2 ratio across radii
+// =============================================================================
+
+example "Diagram 6: SIS/POT ratio is constant π/2" {
+    let bs = [1.0, 5.0, 10.0, 30.0, 50.0, 100.0, 200.0, 500.0]
+
+    let ratios_mass = list_map(lambda b .
+        sis_per_kpc / pot_per_kpc, bs)
+
+    let pi_half = list_map(lambda b . pi() / 2.0, bs)
+
+    diagram(
+        scatter(bs, ratios_mass, color = "blue", label = "M_SIS(b) / M_POT(b)", mark = "o", mark_size = 6),
+        plot(bs, pi_half, color = "red", label = "π/2 = 1.5708", stroke = "2pt"),
+        title = "Mass Ratio: SIS / POT = π/2 at All Radii",
+        xlabel = "Radius b (kpc)",
+        ylabel = "M_SIS / M_POT",
+        legend_position = "right + bottom",
+        width = 10,
+        ylim = [1.0, 2.0]
+    )
+
+    out("The ratio is exactly π/2 at every radius")
+    out("This is the geometric cost of 3D→2D projection in GR")
+}
+
+// =============================================================================
+// DIAGRAM 7: Rotation curve → lensing connection
+// =============================================================================
+
+example "Diagram 7: Rotation curve to lensing — same physics" {
+    let rs = [0.5, 1.0, 2.0, 3.0, 5.0, 8.0, 10.0, 15.0, 20.0, 30.0, 50.0]
+
+    // Keplerian falloff v ∝ 1/√r (GR baryonic, normalized to v_flat at r_core ~ 5 kpc)
+    let v_kepler = list_map(lambda r . 220.0 * sqrt(5.0 / r), rs)
+
+    // Flat rotation (POT / GR+DM)
+    let v_flat_curve = list_map(lambda r . 220.0, rs)
+
+    // Observed: rises then flattens
+    let v_observed = list_map(lambda r .
+        if r < 5.0 then 220.0 * sqrt(r / 5.0) else 220.0, rs)
+
+    diagram(
+        plot(rs, v_kepler, color = "red", label = "GR baryonic: v ∝ 1/√r", stroke = "2pt"),
+        plot(rs, v_flat_curve, color = "blue", label = "Flat: v = 220 km/s (observed)", stroke = "2pt"),
+        plot(rs, v_observed, color = "green", label = "Observed (rises, then flat)", stroke = "2pt", mark = "o", mark_size = 4),
+        title = "Rotation Curve → Lensing Connection",
+        xlabel = "Radius (kpc)",
+        ylabel = "Circular velocity (km/s)",
+        legend_position = "right + bottom",
+        width = 12,
+        ylim = [0, 400]
+    )
+
+    out("Flat rotation ⟹ M(r) ∝ r ⟹ constant deflection α")
+    out("Same linear mass growth drives BOTH flat curves AND constant lensing")
+    out("v_flat = 220 km/s ⟹ α_POT = 4v²/c² =")
+    out(alpha_pot_val * r2a)
+    out("arcsec")
+}

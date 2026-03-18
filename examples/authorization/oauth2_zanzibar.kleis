@@ -1,0 +1,224 @@
+// OAuth2 + Zanzibar: Layered Authorization Architecture
+//
+// This example models the real-world pattern where:
+// 1. OAuth2 controls what the APPLICATION can do (via scopes)
+// 2. Zanzibar controls what the USER can do (via permissions)
+//
+// Both checks must pass for access to be granted!
+//
+// References:
+// - RFC 6749 (OAuth 2.0): https://tools.ietf.org/html/rfc6749
+// - Google Zanzibar: https://research.google/pubs/pub48190/
+
+// ============================================
+// Layer 1: OAuth2 - Application Authorization
+// ============================================
+
+// OAuth2 scopes define what the APPLICATION can do
+data AppScope = 
+    ScopeNone           // No access (invalid token)
+  | ScopeRead           // Can read resources
+  | ScopeWrite          // Can read and write
+  | ScopeDelete         // Can read, write, and delete
+  | ScopeAdmin          // Full access
+
+// Token validity states
+data TokenState = TokenValid | TokenExpired | TokenRevoked | TokenInvalid
+
+define scope_level(s) = match s {
+    ScopeNone => 0
+  | ScopeRead => 1
+  | ScopeWrite => 2
+  | ScopeDelete => 3
+  | ScopeAdmin => 4
+}
+
+define is_token_valid(state) = match state {
+    TokenValid => 1
+  | TokenExpired => 0
+  | TokenRevoked => 0
+  | TokenInvalid => 0
+}
+
+define app_has_scope(token_state, token_scope, required_scope) =
+    if is_token_valid(token_state) = 1
+    then if scope_level(token_scope) >= scope_level(required_scope) then 1 else 0
+    else 0
+
+// ============================================
+// Layer 2: Zanzibar - User Authorization
+// ============================================
+
+// Zanzibar permissions define what the USER can do
+data UserPermission = 
+    PermNone            // No access
+  | PermViewer          // Can view only
+  | PermCommenter       // Can view and comment
+  | PermEditor          // Can view, comment, edit
+  | PermOwner           // Full control (can delete, share)
+
+define perm_level(p) = match p {
+    PermNone => 0
+  | PermViewer => 1
+  | PermCommenter => 2
+  | PermEditor => 3
+  | PermOwner => 4
+}
+
+define user_has_permission(user_perm, required_perm) =
+    if perm_level(user_perm) >= perm_level(required_perm) then 1 else 0
+
+// ============================================
+// Actions and Their Requirements
+// ============================================
+
+// Actions that can be performed on resources
+data Action = 
+    ActionRead          // View the resource
+  | ActionComment       // Add a comment
+  | ActionEdit          // Modify the resource
+  | ActionDelete        // Delete the resource
+  | ActionShare         // Share with others
+
+// Map actions to required OAuth2 scope
+define action_requires_scope(action) = match action {
+    ActionRead => 1      // ScopeRead level
+  | ActionComment => 2   // ScopeWrite level
+  | ActionEdit => 2      // ScopeWrite level
+  | ActionDelete => 3    // ScopeDelete level
+  | ActionShare => 4     // ScopeAdmin level
+}
+
+// Map actions to required Zanzibar permission
+define action_requires_perm(action) = match action {
+    ActionRead => 1      // PermViewer level
+  | ActionComment => 2   // PermCommenter level
+  | ActionEdit => 3      // PermEditor level
+  | ActionDelete => 4    // PermOwner level
+  | ActionShare => 4     // PermOwner level
+}
+
+// ============================================
+// Combined Authorization Check
+// ============================================
+
+// This is the core authorization function!
+// Both OAuth2 AND Zanzibar must approve the request.
+//
+// Returns 1 (granted) only if:
+// 1. Token is valid AND
+// 2. App scope includes required scope for action AND
+// 3. User permission includes required permission for action
+
+define is_access_granted(
+    token_state,    // Is the OAuth2 token valid?
+    app_scope,      // What scope does the app have?
+    user_perm,      // What Zanzibar permission does the user have?
+    action          // What action is being attempted?
+) =
+    // Layer 1: Check OAuth2 scope first
+    if is_token_valid(token_state) = 0
+    then 0  // Token invalid - DENY immediately
+    else if scope_level(app_scope) < action_requires_scope(action)
+    then 0  // App doesn't have scope - DENY (don't even check Zanzibar!)
+    // Layer 2: Check Zanzibar permission
+    else if perm_level(user_perm) < action_requires_perm(action)
+    then 0  // User doesn't have permission - DENY
+    else 1  // Both checks passed - GRANT
+
+// ============================================
+// Convenience Functions
+// ============================================
+
+define can_read(token_state, app_scope, user_perm) =
+    is_access_granted(token_state, app_scope, user_perm, ActionRead)
+
+define can_edit(token_state, app_scope, user_perm) =
+    is_access_granted(token_state, app_scope, user_perm, ActionEdit)
+
+define can_delete(token_state, app_scope, user_perm) =
+    is_access_granted(token_state, app_scope, user_perm, ActionDelete)
+
+define can_share(token_state, app_scope, user_perm) =
+    is_access_granted(token_state, app_scope, user_perm, ActionShare)
+
+// ============================================
+// Security Properties to Verify
+// ============================================
+
+// PROPERTY 1: Expired tokens NEVER grant access, even to owners
+// :verify can_read(TokenExpired, ScopeAdmin, PermOwner) = 0
+// :verify can_delete(TokenExpired, ScopeAdmin, PermOwner) = 0
+
+// PROPERTY 2: Read-only apps can't delete, even for owners
+// A malicious app with only read scope can't delete your files!
+// :verify can_delete(TokenValid, ScopeRead, PermOwner) = 0
+
+// PROPERTY 3: Owners need app scope to delete
+// Even file owners need the app to have delete scope
+// :verify can_delete(TokenValid, ScopeDelete, PermOwner) = 1
+// :verify can_delete(TokenValid, ScopeWrite, PermOwner) = 0
+
+// PROPERTY 4: Viewers can't edit, even with full app scope
+// :verify can_edit(TokenValid, ScopeAdmin, PermViewer) = 0
+
+// PROPERTY 5: Full access requires BOTH app scope AND user permission
+// :verify can_delete(TokenValid, ScopeAdmin, PermOwner) = 1
+// :verify can_delete(TokenValid, ScopeAdmin, PermEditor) = 0
+// :verify can_delete(TokenValid, ScopeRead, PermOwner) = 0
+
+// ============================================
+// Real-World Scenarios
+// ============================================
+
+// Scenario 1: Mobile app with read-only scope
+// User Alice is owner of doc:123, but app can only read
+//
+// Alice tries to delete via mobile app:
+// :verify can_delete(TokenValid, ScopeRead, PermOwner) = 0
+// Result: DENIED - app doesn't have delete scope!
+
+// Scenario 2: Admin app, but user is only viewer
+// Powerful admin app, but Bob only has viewer access
+//
+// Bob tries to edit via admin app:
+// :verify can_edit(TokenValid, ScopeAdmin, PermViewer) = 0
+// Result: DENIED - user doesn't have edit permission!
+
+// Scenario 3: Correct combination - both have access
+// Desktop app with write scope, Alice is editor
+//
+// Alice edits document:
+// :verify can_edit(TokenValid, ScopeWrite, PermEditor) = 1
+// Result: GRANTED - both app and user are authorized!
+
+// Scenario 4: Token expired mid-session
+// User was editing, but token expired
+//
+// :verify can_edit(TokenExpired, ScopeWrite, PermEditor) = 0
+// Result: DENIED - must re-authenticate!
+
+// ============================================
+// Why Two Layers?
+// ============================================
+
+// OAuth2 (Application layer):
+//   - Limits what a THIRD-PARTY APP can do on your behalf
+//   - Protects against malicious or compromised apps
+//   - "I trust this app to read my docs, not delete them"
+//
+// Zanzibar (User layer):
+//   - Limits what a USER can do with a RESOURCE
+//   - Protects resources from unauthorized users
+//   - "Alice can edit doc:123, Bob cannot"
+//
+// Together they provide DEFENSE IN DEPTH:
+//   - Even if an app is compromised, it can only do what its scope allows
+//   - Even with a powerful app, users can only access what they're permitted
+//
+// :verify can_delete(TokenValid, ScopeRead, PermOwner) = 0
+// "Compromised app can't delete, even for legitimate owner"
+//
+// :verify can_delete(TokenValid, ScopeAdmin, PermViewer) = 0
+// "Even with admin app, unauthorized user can't delete"
+

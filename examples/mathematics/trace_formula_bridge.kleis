@@ -1,0 +1,278 @@
+// ============================================================================
+// Trace Formula Bridge: Primes ↔ Eigenvalues (Spectral Duality)
+// ============================================================================
+//
+// The Selberg/Weil Explicit Formula is the "Rosetta Stone" of analytic
+// number theory: it says that the sum over zeros (spectral side) equals
+// the sum over primes (geometric side). Schematically:
+//
+//   Σ h(γ_ρ) = ĥ(0) log(π) + integral term - Σ_p Σ_m (Λ(p^m)/p^{m/2}) ĥ(m log p)
+//
+// where h is a test function, γ_ρ are the imaginary parts of the zeta
+// zeros, ĥ is the Fourier transform, and Λ is the Von Mangoldt function.
+//
+// We Skolemize this at a single test function and ground instances:
+//   - Spectral side: h(14.135) + h(21.022) + h(25.011)
+//   - Geometric side: contributions from primes 2, 3, 5, 7, 11
+//   - The identity: spectral_trace(h) = geometric_sum(h) + correction
+//
+// The question: is the trace identity SAT with our BK operator axioms?
+// If yes, the operator's spectrum is not arbitrary — it is "tuned" by
+// the distribution of primes. The operator's DNA is the Von Mangoldt function.
+//
+// Self-contained: no imports.
+// ============================================================================
+
+// ============================================
+// TYPES
+// ============================================
+
+data HVector = HV(ℤ)
+data Operator = Op(ℤ)
+data TestFunction = TF(ℤ)
+
+// ============================================
+// OPERATIONS — Operator framework
+// ============================================
+
+operation is_self_adjoint : Operator → Bool
+operation is_densely_defined : Operator → Bool
+operation is_unbounded : Operator → Bool
+operation eigenvalue_of : Operator × ℤ → ℝ
+
+// ============================================
+// OPERATIONS — Test function and trace
+// ============================================
+
+// h evaluated at a real number (the test function on the spectral side)
+operation h_eval : TestFunction × ℝ → ℝ
+// ĥ = Fourier transform of h, evaluated at a real number (geometric side)
+operation h_hat : TestFunction × ℝ → ℝ
+
+// Spectral trace: Σ_n h(λ_n) summed over eigenvalues
+operation spectral_trace : TestFunction → ℝ
+// Geometric sum: Σ_p Λ(p)/√p · ĥ(log p) summed over primes
+operation geometric_sum : TestFunction → ℝ
+// Correction/offset term (from pole at s=1, log(π), integral)
+operation trace_correction : TestFunction → ℝ
+
+// ============================================
+// OPERATIONS — Number theory
+// ============================================
+
+// Von Mangoldt function: Λ(n) = log(p) if n = p^k, else 0
+operation von_mangoldt : ℤ → ℝ
+// is_prime predicate
+operation is_prime : ℤ → Bool
+// Natural logarithm
+operation ln : ℝ → ℝ
+
+// ============================================
+// STRUCTURE: The Hilbert-Pólya Operator (from BK)
+// ============================================
+
+structure SpectralOperator {
+    element T : Operator
+    element h : TestFunction
+
+    axiom T_sa : is_self_adjoint(T)
+    axiom T_dd : is_densely_defined(T)
+    axiom T_ub : is_unbounded(T)
+
+    // Eigenvalues at zeta zeros
+    axiom ev1 : eigenvalue_of(T, 1) = 14.135
+    axiom ev2 : eigenvalue_of(T, 2) = 21.022
+    axiom ev3 : eigenvalue_of(T, 3) = 25.011
+
+    // Eigenvalues increase
+    axiom ev_inc :
+        eigenvalue_of(T, 1) < eigenvalue_of(T, 2) ∧
+        eigenvalue_of(T, 2) < eigenvalue_of(T, 3)
+}
+
+// ============================================
+// STRUCTURE: Prime Number Data (Skolemized)
+// ============================================
+
+structure PrimeData {
+    // Primality
+    axiom p2 : is_prime(2)
+    axiom p3 : is_prime(3)
+    axiom p5 : is_prime(5)
+    axiom p7 : is_prime(7)
+    axiom p11 : is_prime(11)
+
+    // Von Mangoldt at primes: Λ(p) = log(p)
+    axiom vm2 : von_mangoldt(2) = ln(2)
+    axiom vm3 : von_mangoldt(3) = ln(3)
+    axiom vm5 : von_mangoldt(5) = ln(5)
+    axiom vm7 : von_mangoldt(7) = ln(7)
+    axiom vm11 : von_mangoldt(11) = ln(11)
+
+    // Ground values of natural logarithm
+    axiom ln2 : ln(2) = 0.6931
+    axiom ln3 : ln(3) = 1.0986
+    axiom ln5 : ln(5) = 1.6094
+    axiom ln7 : ln(7) = 1.9459
+    axiom ln11 : ln(11) = 2.3979
+
+    // Von Mangoldt at non-prime-powers is 0
+    axiom vm1 : von_mangoldt(1) = 0
+    axiom vm6 : von_mangoldt(6) = 0
+    axiom vm10 : von_mangoldt(10) = 0
+}
+
+// ============================================
+// STRUCTURE: Spectral Side (Sum over Eigenvalues)
+// ============================================
+
+structure SpectralSide {
+    // The spectral trace is the sum of h evaluated at eigenvalues.
+    // For our 3 ground instances:
+    //   spectral_trace(h) = h(λ₁) + h(λ₂) + h(λ₃)
+    axiom spectral_sum :
+        spectral_trace(h)
+        = h_eval(h, 14.135) + h_eval(h, 21.022) + h_eval(h, 25.011)
+}
+
+// ============================================
+// STRUCTURE: Geometric Side (Sum over Primes)
+// ============================================
+
+structure GeometricSide {
+    // The geometric sum is: -Σ_p (Λ(p)/√p) · (ĥ(log p) + ĥ(-log p))
+    // For the first 5 primes, Skolemized:
+    //
+    // Each prime p contributes: -(log(p)/√p) · (ĥ(log p) + ĥ(-log p))
+    //
+    // √2  ≈ 1.4142, √3  ≈ 1.7321, √5  ≈ 2.2361, √7  ≈ 2.6458, √11 ≈ 3.3166
+    //
+    // Coefficients: log(p)/√p
+    //   p=2:  0.6931/1.4142 ≈ 0.4901
+    //   p=3:  1.0986/1.7321 ≈ 0.6343
+    //   p=5:  1.6094/2.2361 ≈ 0.7197
+    //   p=7:  1.9459/2.6458 ≈ 0.7355
+    //   p=11: 2.3979/3.3166 ≈ 0.7228
+
+    // We leave the geometric_sum as an uninterpreted function and
+    // constrain it via the trace formula identity below.
+    // The individual prime contributions are encoded as axioms
+    // connecting h_hat evaluations to the geometric side.
+
+    operation prime_coeff : ℤ → ℝ
+    axiom coeff2 : prime_coeff(2) = 0.4901
+    axiom coeff3 : prime_coeff(3) = 0.6343
+    axiom coeff5 : prime_coeff(5) = 0.7197
+    axiom coeff7 : prime_coeff(7) = 0.7355
+    axiom coeff11 : prime_coeff(11) = 0.7228
+
+    axiom geometric_decomposition :
+        geometric_sum(h)
+        = 0 - prime_coeff(2) * (h_hat(h, 0.6931) + h_hat(h, 0 - 0.6931))
+          - prime_coeff(3) * (h_hat(h, 1.0986) + h_hat(h, 0 - 1.0986))
+          - prime_coeff(5) * (h_hat(h, 1.6094) + h_hat(h, 0 - 1.6094))
+          - prime_coeff(7) * (h_hat(h, 1.9459) + h_hat(h, 0 - 1.9459))
+          - prime_coeff(11) * (h_hat(h, 2.3979) + h_hat(h, 0 - 2.3979))
+}
+
+// ============================================
+// STRUCTURE: The Trace Formula Identity
+// ============================================
+
+structure TraceFormula {
+    // THE BRIDGE: spectral side = geometric side + correction
+    //
+    // Σ h(γ_ρ) = geometric_sum(h) + trace_correction(h)
+    //
+    // The correction absorbs the pole contribution, the log(π) term,
+    // and the integral term from the explicit formula.
+
+    axiom trace_identity :
+        spectral_trace(h) = geometric_sum(h) + trace_correction(h)
+
+    // The correction is real-valued and finite
+    axiom correction_finite :
+        trace_correction(h) > 0 - 1000 ∧ trace_correction(h) < 1000
+}
+
+// ============================================
+// TESTS — Consistency
+// ============================================
+
+example "operator axioms are consistent" {
+    assert(is_self_adjoint(T) ∧ is_densely_defined(T) ∧ is_unbounded(T))
+}
+
+example "prime data: Λ(2) = ln(2)" {
+    assert(von_mangoldt(2) = 0.6931)
+}
+
+example "prime data: Λ(6) = 0 (not a prime power)" {
+    assert(von_mangoldt(6) = 0)
+}
+
+example "eigenvalues are strictly increasing" {
+    assert(eigenvalue_of(T, 1) < eigenvalue_of(T, 2))
+}
+
+// ============================================
+// THE KEY TEST: Is the trace formula SAT?
+// ============================================
+
+example "TRACE FORMULA: spectral side equals geometric side (+ correction)" {
+    assert(
+        spectral_trace(h)
+        = geometric_sum(h) + trace_correction(h)
+    )
+}
+
+example "SPECTRAL SIDE: trace decomposes into eigenvalue sum" {
+    assert(
+        spectral_trace(h)
+        = h_eval(h, 14.135) + h_eval(h, 21.022) + h_eval(h, 25.011)
+    )
+}
+
+// ============================================
+// DUALITY TESTS: Can the spectral and geometric sides coexist?
+// ============================================
+
+example "DUALITY: trace identity + eigenvalue sum + prime decomposition" {
+    assert(
+        spectral_trace(h) = geometric_sum(h) + trace_correction(h) ∧
+        spectral_trace(h) = h_eval(h, 14.135) + h_eval(h, 21.022) + h_eval(h, 25.011) ∧
+        is_self_adjoint(T) ∧
+        eigenvalue_of(T, 1) = 14.135
+    )
+}
+
+// ============================================
+// INCOMPATIBILITY TEST: What if the trace doesn't match?
+// If we assert spectral_trace ≠ geometric_sum + correction,
+// should get UNSAT (disproved) because the axiom forces equality.
+// ============================================
+
+example "INCOMPATIBILITY: trace mismatch (expect disproved)" {
+    assert(
+        spectral_trace(h)
+        ≠ geometric_sum(h) + trace_correction(h)
+    )
+}
+
+// ============================================
+// STRESS TEST: All constraints simultaneously
+// ============================================
+
+example "FULL BRIDGE: operator + primes + trace + duality" {
+    assert(
+        is_self_adjoint(T) ∧
+        is_unbounded(T) ∧
+        eigenvalue_of(T, 1) = 14.135 ∧
+        eigenvalue_of(T, 2) = 21.022 ∧
+        eigenvalue_of(T, 3) = 25.011 ∧
+        von_mangoldt(2) = 0.6931 ∧
+        von_mangoldt(3) = 1.0986 ∧
+        is_prime(2) ∧ is_prime(3) ∧
+        spectral_trace(h) = geometric_sum(h) + trace_correction(h)
+    )
+}

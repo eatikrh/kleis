@@ -1,0 +1,44 @@
+// String Theory - Basic Type Definitions
+// =======================================
+// This file defines the basic operations for string theory.
+// Uses Z3's built-in string operations (QF_SLIA theory).
+
+// String concatenation: "hello" ++ " world" = "hello world"
+operation concat : String × String → String
+
+// String length: strlen("hello") = 5
+operation strlen : String → ℤ
+
+// Empty string constant
+operation empty_string : String
+
+// Check if string contains substring
+operation contains : String × String → Bool
+
+// Check if string has prefix
+operation hasPrefix : String × String → Bool
+
+// Check if string has suffix
+operation hasSuffix : String × String → Bool
+
+// Get substring: substr(s, start, length)
+operation substr : String × ℤ × ℤ → String
+
+// Find index of substring: indexOf(s, sub, start)
+operation indexOf : String × String × ℤ → ℤ
+
+// Replace first occurrence: replace(s, old, new)
+operation replace : String × String × String → String
+
+// Get character at index (as single-character string)
+operation charAt : String × ℤ → String
+
+// Convert string to integer
+operation strToInt : String → ℤ
+
+// Convert integer to string
+operation intToStr : ℤ → String
+
+// String equality
+operation str_eq : String × String → Bool
+

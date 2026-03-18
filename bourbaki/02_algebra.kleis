@@ -1,0 +1,221 @@
+// ============================================
+// Bourbaki Volume II: Algebra
+// Éléments de mathématique
+// ============================================
+//
+// This file formalizes algebraic structures from
+// Bourbaki's second volume.
+
+// --------------------------------------------
+// Chapter 1: Algebraic Structures
+// --------------------------------------------
+
+// Magma (set with binary operation)
+structure Magma(M) {
+    operation op : M × M → M
+}
+
+// Semigroup (associative magma)
+structure Semigroup(S) {
+    operation op : S × S → S
+    
+    axiom associativity: ∀(x y z : S). op(op(x, y), z) = op(x, op(y, z))
+}
+
+// Monoid (semigroup with identity)
+structure Monoid(M) {
+    operation op : M × M → M
+    element e : M
+    
+    axiom associativity: ∀(x y z : M). op(op(x, y), z) = op(x, op(y, z))
+    axiom left_identity: ∀(x : M). op(e, x) = x
+    axiom right_identity: ∀(x : M). op(x, e) = x
+}
+
+// Group
+structure Group(G) {
+    operation op : G × G → G
+    operation inv : G → G
+    element e : G
+    
+    axiom associativity: ∀(x y z : G). op(op(x, y), z) = op(x, op(y, z))
+    axiom left_identity: ∀(x : G). op(e, x) = x
+    axiom right_identity: ∀(x : G). op(x, e) = x
+    axiom left_inverse: ∀(x : G). op(inv(x), x) = e
+    axiom right_inverse: ∀(x : G). op(x, inv(x)) = e
+}
+
+// Abelian Group
+structure AbelianGroup(G) {
+    operation op : G × G → G
+    operation inv : G → G
+    element e : G
+    
+    axiom associativity: ∀(x y z : G). op(op(x, y), z) = op(x, op(y, z))
+    axiom commutativity: ∀(x y : G). op(x, y) = op(y, x)
+    axiom identity: ∀(x : G). op(e, x) = x
+    axiom inverse: ∀(x : G). op(inv(x), x) = e
+}
+
+// --------------------------------------------
+// Chapter 2: Linear Algebra
+// --------------------------------------------
+
+// Ring
+structure Ring(R) {
+    operation add : R × R → R
+    operation mul : R × R → R
+    operation neg : R → R
+    element zero : R
+    element one : R
+    
+    axiom add_assoc: ∀(a b c : R). add(add(a, b), c) = add(a, add(b, c))
+    axiom add_comm: ∀(a b : R). add(a, b) = add(b, a)
+    axiom add_identity: ∀(a : R). add(a, zero) = a
+    axiom add_inverse: ∀(a : R). add(a, neg(a)) = zero
+    axiom mul_assoc: ∀(a b c : R). mul(mul(a, b), c) = mul(a, mul(b, c))
+    axiom mul_identity: ∀(a : R). mul(a, one) = a ∧ mul(one, a) = a
+    axiom distributive_left: ∀(a b c : R). mul(a, add(b, c)) = add(mul(a, b), mul(a, c))
+    axiom distributive_right: ∀(a b c : R). mul(add(a, b), c) = add(mul(a, c), mul(b, c))
+}
+
+// Commutative Ring
+structure CommutativeRing(R) {
+    operation add : R × R → R
+    operation mul : R × R → R
+    operation neg : R → R
+    element zero : R
+    element one : R
+    
+    axiom add_assoc: ∀(a b c : R). add(add(a, b), c) = add(a, add(b, c))
+    axiom add_comm: ∀(a b : R). add(a, b) = add(b, a)
+    axiom add_identity: ∀(a : R). add(a, zero) = a
+    axiom add_inverse: ∀(a : R). add(a, neg(a)) = zero
+    axiom mul_assoc: ∀(a b c : R). mul(mul(a, b), c) = mul(a, mul(b, c))
+    axiom mul_comm: ∀(a b : R). mul(a, b) = mul(b, a)
+    axiom mul_identity: ∀(a : R). mul(a, one) = a
+    axiom distributive: ∀(a b c : R). mul(a, add(b, c)) = add(mul(a, b), mul(a, c))
+}
+
+// Integral Domain
+structure IntegralDomain(R) {
+    operation add : R × R → R
+    operation mul : R × R → R
+    operation neg : R → R
+    element zero : R
+    element one : R
+    
+    axiom ring_axioms: ∀(a b c : R). add(add(a, b), c) = add(a, add(b, c))
+    axiom no_zero_divisors: ∀(a b : R). mul(a, b) = zero → (a = zero ∨ b = zero)
+}
+
+// Field
+structure Field(F) {
+    operation add : F × F → F
+    operation mul : F × F → F
+    operation neg : F → F
+    operation inv : F → F
+    element zero : F
+    element one : F
+    
+    axiom add_assoc: ∀(a b c : F). add(add(a, b), c) = add(a, add(b, c))
+    axiom add_comm: ∀(a b : F). add(a, b) = add(b, a)
+    axiom add_identity: ∀(a : F). add(a, zero) = a
+    axiom add_inverse: ∀(a : F). add(a, neg(a)) = zero
+    axiom mul_assoc: ∀(a b c : F). mul(mul(a, b), c) = mul(a, mul(b, c))
+    axiom mul_comm: ∀(a b : F). mul(a, b) = mul(b, a)
+    axiom mul_identity: ∀(a : F). mul(a, one) = a
+    axiom mul_inverse: ∀(a : F) where a ≠ zero. mul(a, inv(a)) = one
+    axiom distributive: ∀(a b c : F). mul(a, add(b, c)) = add(mul(a, b), mul(a, c))
+    axiom nontrivial: zero ≠ one
+}
+
+// Module over a Ring
+structure Module(M, R) {
+    operation add : M × M → M
+    operation scalar : R × M → M
+    element zero : M
+    
+    axiom add_assoc: ∀(u v w : M). add(add(u, v), w) = add(u, add(v, w))
+    axiom add_comm: ∀(u v : M). add(u, v) = add(v, u)
+    axiom add_identity: ∀(v : M). add(v, zero) = v
+    axiom scalar_assoc: ∀(r s : R, v : M). scalar(r, scalar(s, v)) = scalar(mul(r, s), v)
+    axiom scalar_identity: ∀(v : M). scalar(one, v) = v
+    axiom distributive_scalar: ∀(r : R, u v : M). scalar(r, add(u, v)) = add(scalar(r, u), scalar(r, v))
+    axiom distributive_ring: ∀(r s : R, v : M). scalar(add(r, s), v) = add(scalar(r, v), scalar(s, v))
+}
+
+// Vector Space over a Field
+structure VectorSpace(V, F) {
+    operation add : V × V → V
+    operation scalar : F × V → V
+    element zero : V
+    
+    axiom add_assoc: ∀(u v w : V). add(add(u, v), w) = add(u, add(v, w))
+    axiom add_comm: ∀(u v : V). add(u, v) = add(v, u)
+    axiom add_identity: ∀(v : V). add(v, zero) = v
+    axiom scalar_assoc: ∀(a b : F, v : V). scalar(a, scalar(b, v)) = scalar(mul(a, b), v)
+    axiom scalar_identity: ∀(v : V). scalar(one, v) = v
+    axiom distributive_scalar: ∀(a : F, u v : V). scalar(a, add(u, v)) = add(scalar(a, u), scalar(a, v))
+    axiom distributive_field: ∀(a b : F, v : V). scalar(add(a, b), v) = add(scalar(a, v), scalar(b, v))
+}
+
+// --------------------------------------------
+// Chapter 3: Tensor Algebras
+// --------------------------------------------
+
+// Tensor Product
+structure TensorProduct(V, W, F) {
+    operation tensor : V × W → T
+    
+    axiom bilinearity_left: ∀(v1 v2 : V, w : W). 
+        tensor(add(v1, v2), w) = add(tensor(v1, w), tensor(v2, w))
+    axiom bilinearity_right: ∀(v : V, w1 w2 : W). 
+        tensor(v, add(w1, w2)) = add(tensor(v, w1), tensor(v, w2))
+    axiom scalar_tensor: ∀(a : F, v : V, w : W). 
+        tensor(scalar(a, v), w) = tensor(v, scalar(a, w))
+}
+
+// Exterior Algebra
+structure ExteriorAlgebra(V, F) {
+    operation wedge : V × V → E
+    
+    axiom anticommutativity: ∀(v w : V). wedge(v, w) = neg(wedge(w, v))
+    axiom nilpotent: ∀(v : V). wedge(v, v) = zero
+}
+
+// Symmetric Algebra
+structure SymmetricAlgebra(V, F) {
+    operation sym : V × V → S
+    
+    axiom commutativity: ∀(v w : V). sym(v, w) = sym(w, v)
+}
+
+// --------------------------------------------
+// Chapter 4: Polynomials and Rational Fractions
+// --------------------------------------------
+
+structure PolynomialRing(R) {
+    element X : Poly
+    operation eval : Poly × R → R
+    operation degree : Poly → ℕ
+    
+    axiom eval_add: ∀(p q : Poly, x : R). eval(add(p, q), x) = add(eval(p, x), eval(q, x))
+    axiom eval_mul: ∀(p q : Poly, x : R). eval(mul(p, q), x) = mul(eval(p, x), eval(q, x))
+}
+
+// --------------------------------------------
+// Chapter 5: Homological Algebra
+// --------------------------------------------
+
+structure ChainComplex(R) {
+    operation d : C → C
+    
+    axiom boundary_squared: ∀(x : C). d(d(x)) = zero
+}
+
+structure Homology(R) {
+    operation H : ℤ → M
+    
+    axiom ker_im: ∀(n : ℤ). H(n) = quotient(ker(d), im(d))
+}
