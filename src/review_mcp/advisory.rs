@@ -166,14 +166,34 @@ mod inner {
     /// Build the system prompt. When guidelines text is provided, produces a
     /// structured prompt referencing the standards. Otherwise falls back to
     /// the generic review prompt.
+    ///
+    /// When `intent` is non-empty, appends an intent-coherence section that
+    /// asks the LLM to flag misalignment between the stated intent and the code.
     pub fn build_system_prompt(
         language: &str,
         guidelines: Option<&str>,
         formal_rule_names: &[String],
+        intent: Option<&str>,
     ) -> String {
-        match guidelines {
+        let base = match guidelines {
             Some(text) => build_guidelines_prompt(language, text, formal_rule_names),
             None => build_generic_prompt(language),
+        };
+        match intent {
+            Some(i) if !i.is_empty() => format!(
+                "{base}\n\n\
+                 ---\n\n\
+                 ## Change Intent\n\n\
+                 The author stated this change intent:\n\
+                 > {i}\n\n\
+                 In addition to the coding standards above, also check:\n\
+                 - Does the code plausibly advance the stated intent?\n\
+                 - Are there changes that seem unrelated to the intent (scope creep)?\n\
+                 - Is the intent itself unclear or too vague to review against?\n\n\
+                 Report intent-coherence findings with \"check\": \"INTENT-COHERENCE\" \
+                 and \"severity\": \"info\"."
+            ),
+            _ => base,
         }
     }
 
@@ -271,6 +291,7 @@ mod inner {
     /// so the LLM can avoid repeating them.
     /// `formal_rule_names` is the complete list of check_*/advise_* rule names from
     /// the loaded policy, included in the system prompt so the LLM avoids overlap.
+    /// `intent` is the optional change intent from `--intent` or the MCP parameter.
     pub async fn get_advisories(
         config: &AdvisoryConfig,
         source: &str,
@@ -278,6 +299,7 @@ mod inner {
         language: &str,
         formal_messages: &[String],
         formal_rule_names: &[String],
+        intent: Option<&str>,
     ) -> Result<Vec<Advisory>, String> {
         let client = reqwest::Client::new();
 
@@ -299,8 +321,12 @@ mod inner {
              ```{fence_tag}\n{numbered_source}\n```"
         );
 
-        let system_prompt =
-            build_system_prompt(language, config.guidelines.as_deref(), formal_rule_names);
+        let system_prompt = build_system_prompt(
+            language,
+            config.guidelines.as_deref(),
+            formal_rule_names,
+            intent,
+        );
 
         let request = ChatRequest {
             model: config.model.clone(),
@@ -425,7 +451,7 @@ mod inner {
 
         #[test]
         fn generic_prompt_when_no_guidelines() {
-            let prompt = build_system_prompt("Rust", None, &[]);
+            let prompt = build_system_prompt("Rust", None, &[], None);
             assert!(prompt.contains("Rust code reviewer"));
             assert!(prompt.contains("Potential bugs or logic errors"));
             assert!(!prompt.contains("Coding Standards"));
@@ -435,7 +461,7 @@ mod inner {
         fn guidelines_prompt_includes_standards() {
             let guidelines = "## Rule M-INIT-BUILDER\nUse builder pattern for complex init.";
             let rules = vec!["check_no_unwrap".to_string(), "advise_no_emoji".to_string()];
-            let prompt = build_system_prompt("Rust", Some(guidelines), &rules);
+            let prompt = build_system_prompt("Rust", Some(guidelines), &rules, None);
             assert!(prompt.contains("Coding Standards"));
             assert!(prompt.contains("M-INIT-BUILDER"));
             assert!(prompt.contains("check_no_unwrap"));
@@ -445,9 +471,34 @@ mod inner {
 
         #[test]
         fn guidelines_prompt_with_empty_rules() {
-            let prompt = build_system_prompt("Python", Some("PEP 8 rules here"), &[]);
+            let prompt = build_system_prompt("Python", Some("PEP 8 rules here"), &[], None);
             assert!(prompt.contains("(none)"));
             assert!(prompt.contains("PEP 8 rules here"));
+        }
+
+        #[test]
+        fn intent_appended_to_prompt() {
+            let prompt = build_system_prompt(
+                "Rust",
+                Some("guidelines here"),
+                &[],
+                Some("Add --intent flag to kleis review CLI"),
+            );
+            assert!(prompt.contains("Change Intent"));
+            assert!(prompt.contains("Add --intent flag"));
+            assert!(prompt.contains("INTENT-COHERENCE"));
+        }
+
+        #[test]
+        fn empty_intent_not_appended() {
+            let prompt = build_system_prompt("Rust", Some("guidelines here"), &[], Some(""));
+            assert!(!prompt.contains("Change Intent"));
+        }
+
+        #[test]
+        fn none_intent_not_appended() {
+            let prompt = build_system_prompt("Rust", Some("guidelines here"), &[], None);
+            assert!(!prompt.contains("Change Intent"));
         }
 
         #[test]
@@ -569,6 +620,7 @@ mod stub {
         language: &str,
         _guidelines: Option<&str>,
         _formal_rule_names: &[String],
+        _intent: Option<&str>,
     ) -> String {
         format!("You are a {language} code reviewer.")
     }
@@ -580,6 +632,7 @@ mod stub {
         _language: &str,
         _formal_messages: &[String],
         _formal_rule_names: &[String],
+        _intent: Option<&str>,
     ) -> Result<Vec<Advisory>, String> {
         Err("LLM advisory not available (compiled without llm-advisory feature)".to_string())
     }

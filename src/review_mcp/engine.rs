@@ -11,8 +11,34 @@ use crate::kleis_parser::{parse_kleis_program_with_file, KleisParser};
 use crate::pretty_print::PrettyPrinter;
 use crate::solvers::backend::Witness;
 use serde_json::Value;
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
+
+thread_local! {
+    static REVIEW_INTENT: RefCell<String> = RefCell::new(String::new());
+    static REVIEW_PATH: RefCell<String> = RefCell::new(String::new());
+}
+
+/// Set the current review intent (available to `review_intent()` built-in)
+pub fn set_review_intent(intent: &str) {
+    REVIEW_INTENT.with(|cell| *cell.borrow_mut() = intent.to_string());
+}
+
+/// Get the current review intent
+pub fn get_review_intent() -> String {
+    REVIEW_INTENT.with(|cell| cell.borrow().clone())
+}
+
+/// Set the current review path (available to `review_path()` built-in)
+pub fn set_review_path(path: &str) {
+    REVIEW_PATH.with(|cell| *cell.borrow_mut() = path.to_string());
+}
+
+/// Get the current review path
+pub fn get_review_path() -> String {
+    REVIEW_PATH.with(|cell| cell.borrow().clone())
+}
 
 /// Severity level for review rules
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

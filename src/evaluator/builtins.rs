@@ -61,6 +61,16 @@ impl Evaluator {
             "concat" => self.builtin_concat(args),
             "str_eq" => self.builtin_str_eq(args),
 
+            // Review context built-ins (thread-local, set by ReviewEngine)
+            "review_intent" => {
+                let intent = crate::review_mcp::engine::get_review_intent();
+                Ok(Some(Expression::String(intent)))
+            }
+            "review_path" => {
+                let path = crate::review_mcp::engine::get_review_path();
+                Ok(Some(Expression::String(path)))
+            }
+
             // Render EditorNode AST to Typst (for equations in documents)
             "render_to_typst" => self.builtin_render_to_typst(args),
 

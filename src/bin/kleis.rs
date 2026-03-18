@@ -205,6 +205,12 @@ enum Commands {
         /// Enabled by default when the policy defines review_extra_files().
         #[arg(long, default_value_t = true)]
         include_from_policy: bool,
+
+        /// Change intent — a short description of what this change is trying to achieve.
+        /// Made available to review rules via the review_intent() built-in and
+        /// appended to the LLM advisory prompt for intent-coherence checking.
+        #[arg(short = 'I', long)]
+        intent: Option<String>,
     },
 }
 
@@ -259,6 +265,7 @@ async fn main() {
             base_branch,
             include,
             include_from_policy,
+            intent,
         } => {
             run_review(
                 files,
@@ -269,6 +276,7 @@ async fn main() {
                 base_branch,
                 include,
                 include_from_policy,
+                intent,
             );
         }
     }
@@ -808,13 +816,21 @@ fn run_review(
     base_branch: Option<String>,
     include: Vec<PathBuf>,
     include_from_policy: bool,
+    intent: Option<String>,
 ) {
     use kleis::review_mcp::advisory::{self, AdvisoryConfig};
-    use kleis::review_mcp::engine::ReviewEngine;
+    use kleis::review_mcp::engine::{self, ReviewEngine};
 
     if files.is_empty() {
         eprintln!("No files specified. Usage: kleis review [FILES...] --policy <policy.kleis>");
         std::process::exit(1);
+    }
+
+    if let Some(ref intent_str) = intent {
+        engine::set_review_intent(intent_str);
+        if verbose {
+            eprintln!("[kleis-review] Intent: {}", intent_str);
+        }
     }
 
     let kleis_cfg = kleis::config::load();
@@ -990,6 +1006,7 @@ fn run_review(
 
     for file_path in &files {
         let path_str = file_path.to_string_lossy();
+        engine::set_review_path(&path_str);
 
         let language = language_from_path(file_path);
 
@@ -1129,6 +1146,7 @@ fn run_review(
                     &language,
                     &formal_messages,
                     &formal_rule_names,
+                    intent.as_deref(),
                 ))
             }) {
                 Ok(advisories) if advisories.is_empty() => {

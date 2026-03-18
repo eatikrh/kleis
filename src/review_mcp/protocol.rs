@@ -25,6 +25,11 @@ pub fn review_tool_definitions() -> Vec<McpTool> {
                         "type": "string",
                         "description": "Programming language (default: rust)",
                         "default": "rust"
+                    },
+                    "intent": {
+                        "type": "string",
+                        "description": "Change intent — what this code change is trying to achieve. \
+                                        Made available to review rules via the review_intent() built-in."
                     }
                 },
                 "required": ["source"]
@@ -46,6 +51,11 @@ pub fn review_tool_definitions() -> Vec<McpTool> {
                         "type": "string",
                         "description": "Programming language (default: inferred from extension)",
                         "default": "rust"
+                    },
+                    "intent": {
+                        "type": "string",
+                        "description": "Change intent — what this code change is trying to achieve. \
+                                        Made available to review rules via the review_intent() built-in."
                     }
                 },
                 "required": ["path"]
@@ -104,6 +114,11 @@ pub fn review_tool_definitions() -> Vec<McpTool> {
                         "type": "string",
                         "description": "Base branch or commit to compare against (default: main)",
                         "default": "main"
+                    },
+                    "intent": {
+                        "type": "string",
+                        "description": "Change intent — what this code change is trying to achieve. \
+                                        Made available to review rules via the review_intent() built-in."
                     }
                 },
                 "required": ["path"]

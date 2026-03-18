@@ -255,11 +255,22 @@ impl ReviewMcpServer {
             .get("language")
             .and_then(|l| l.as_str())
             .unwrap_or("rust");
+        let intent = arguments
+            .get("intent")
+            .and_then(|i| i.as_str())
+            .unwrap_or("");
+
+        super::engine::set_review_intent(intent);
 
         self.log(&format!(
-            "check_code: {} chars, language={}",
+            "check_code: {} chars, language={}{}",
             source.len(),
-            language
+            language,
+            if intent.is_empty() {
+                String::new()
+            } else {
+                format!(", intent=\"{}\"", intent)
+            }
         ));
 
         let result = self.engine.check_code(source, language);
@@ -335,6 +346,13 @@ impl ReviewMcpServer {
             .get("language")
             .and_then(|l| l.as_str())
             .unwrap_or("rust");
+        let intent = arguments
+            .get("intent")
+            .and_then(|i| i.as_str())
+            .unwrap_or("");
+
+        super::engine::set_review_intent(intent);
+        super::engine::set_review_path(path);
 
         self.log(&format!("check_file: {}, language={}", path, language));
 
@@ -397,6 +415,13 @@ impl ReviewMcpServer {
             .get("base")
             .and_then(|b| b.as_str())
             .unwrap_or("main");
+        let intent = arguments
+            .get("intent")
+            .and_then(|i| i.as_str())
+            .unwrap_or("");
+
+        super::engine::set_review_intent(intent);
+        super::engine::set_review_path(path);
 
         if path.is_empty() {
             return self.check_file_error("'path' argument is required but was empty");

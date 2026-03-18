@@ -7,7 +7,7 @@
 //! - describe_standards
 //! - Real policy file (rust_review_policy.kleis)
 
-use kleis::review_mcp::engine::ReviewEngine;
+use kleis::review_mcp::engine::{self, ReviewEngine};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -1177,4 +1177,112 @@ fn test_extra_review_files_real_python_policy() {
         .extra_review_files()
         .expect("python policy defines extra files");
     assert!(files.contains(&"requirements.txt".to_string()));
+}
+
+// =============================================================================
+// Intent-Aware Review — review_intent() and review_path() built-ins
+// =============================================================================
+
+#[test]
+fn test_review_intent_builtin_returns_empty_by_default() {
+    let engine = load_review_policy(
+        r#"
+        define check_has_intent(source) =
+            if str_eq(review_intent(), "") then "pass"
+            else "pass"
+    "#,
+    );
+
+    engine::set_review_intent("");
+    let result = engine.check_code("fn f() {}", "rust");
+    assert!(result.passed);
+}
+
+#[test]
+fn test_review_intent_builtin_returns_set_value() {
+    let engine = load_review_policy(
+        r#"
+        define advise_intent_present(source) =
+            if str_eq(review_intent(), "") then "fail: no intent provided"
+            else "pass"
+    "#,
+    );
+
+    engine::set_review_intent("Add --intent flag to CLI");
+    let result = engine.check_code("fn f() {}", "rust");
+    assert!(result.passed, "Intent was set, advise should pass");
+    let advise = result
+        .verdicts
+        .iter()
+        .find(|v| v.rule_name == "advise_intent_present");
+    assert!(advise.is_some());
+    assert!(advise.unwrap().passed);
+}
+
+#[test]
+fn test_review_intent_builtin_advisory_warns_when_missing() {
+    let engine = load_review_policy(
+        r#"
+        define advise_intent_present(source) =
+            if str_eq(review_intent(), "") then "fail: no intent provided"
+            else "pass"
+    "#,
+    );
+
+    engine::set_review_intent("");
+    let result = engine.check_code("fn f() {}", "rust");
+    assert!(result.passed, "Advisory failures should not block");
+    let advise = result
+        .verdicts
+        .iter()
+        .find(|v| v.rule_name == "advise_intent_present");
+    assert!(advise.is_some());
+    assert!(!advise.unwrap().passed);
+}
+
+#[test]
+fn test_review_path_builtin_returns_set_value() {
+    let engine = load_review_policy(
+        r#"
+        define advise_path_known(source) =
+            if str_eq(review_path(), "") then "fail: no path"
+            else "pass"
+    "#,
+    );
+
+    engine::set_review_path("src/main.rs");
+    let result = engine.check_code("fn f() {}", "rust");
+    assert!(result.passed);
+    let advise = result
+        .verdicts
+        .iter()
+        .find(|v| v.rule_name == "advise_path_known");
+    assert!(advise.is_some());
+    assert!(advise.unwrap().passed);
+}
+
+#[test]
+fn test_intent_aware_rule_uses_intent_content() {
+    let engine = load_review_policy(
+        r#"
+        define advise_intent_mentions_safety(source) =
+            if contains(review_intent(), "security") then
+                if contains(source, "unsafe") then "fail: unsafe in security change"
+                else "pass"
+            else "pass"
+    "#,
+    );
+
+    engine::set_review_intent("security hardening for input validation");
+    let result = engine.check_code("fn f() { unsafe { } }", "rust");
+    assert!(result.passed, "Advisory should not block");
+    let advise = result
+        .verdicts
+        .iter()
+        .find(|v| v.rule_name == "advise_intent_mentions_safety");
+    assert!(advise.is_some());
+    assert!(
+        !advise.unwrap().passed,
+        "Should flag unsafe in a security change"
+    );
 }
