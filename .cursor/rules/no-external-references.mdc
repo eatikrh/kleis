@@ -1,0 +1,27 @@
+---
+globs: 
+alwaysApply: true
+---
+# No external project references
+
+**CRITICAL: Never reference projects, code, branches, tickets, or systems
+outside the Kleis codebase.**
+
+This includes but is not limited to:
+- Employer names, team names, or organizational references
+- External project names, repository names, or service names
+- External Jira tickets, branch names, or CI/CD pipeline identifiers
+- External code snippets, APIs, or internal tooling
+- Any information that could identify the author's employer or workplace
+
+When examples are needed, use **neutral, generic examples**:
+- Instead of a real ticket ID: `PROJ-1234`
+- Instead of a real project name: `my-service`, `example-api`
+- Instead of a real branch name: `fix/attribute-validation`
+- Instead of a real attribute: `userName`, `emailAddress`
+
+**This rule applies to all generated content**: ADRs, documentation, code
+comments, commit messages, and any other artifacts.
+
+If the user mentions external context in conversation, acknowledge it but
+do NOT reproduce it in any file within the Kleis codebase.
