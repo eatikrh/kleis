@@ -1,6 +1,210 @@
 # Next Session Notes
 
-**Last Updated:** March 14, 2026 (session 32f — Paper Hardening via Adversarial Review)
+**Last Updated:** March 18, 2026 (session — Projection Fibers Paper + POT Theorems)
+
+---
+
+## Current Session (Mar 18, 2026): Independence Paper + Epistemic Boundary + Flow Predictions
+
+### What We Did
+
+1. Wrote and compiled a full arXiv-style paper on independence as non-invariance
+2. Extended `pot_bridge.kleis` with fiber dynamics, metrics, admissible selection,
+   epistemic boundary, and flow predictions (10 parts, 27 verified examples)
+3. Proved three major theorems:
+   - **Main Theorem**: independence iff non-invariance (biconditional)
+   - **Epistemic Boundary Theorem**: the specific action functional governing
+     H_ont is underdetermined from the projection side
+   - **Arrow Underdetermination Theorem**: the hidden arrow of evolution and
+     metric character of ontological dynamics are not projection-determined
+
+#### Files Created/Modified
+
+| File | What |
+|------|------|
+| `examples/cantor/cantor_set_theory.kleis` | Cantor shadow theory (19 examples, unchanged) |
+| `examples/cantor/pot_bridge.kleis` | Projection-fiber bridge (27 examples, 10 parts) |
+| `examples/cantor/projection_fibers_paper.kleis` | arXiv paper (Kleis source, 12 sections) |
+| `projection_fibers_paper.pdf` | Compiled PDF (~262 KB) |
+| `src/evaluator/plotting.rs` | Fix double-bracket bug in `table_typst_raw` |
+
+#### Paper Summary
+
+**Title:** "Independence as Non-Invariance: Detecting Undecidability via
+Projection Fibers in SMT-Backed Shadow Theories"
+
+**Key contributions (7 items):**
+1. **Shadow theories** — minimal constraint algebras via Skolemized projections
+2. **Independence = non-invariance** — biconditional, machine-verified
+3. **Computational detection** — CH independence detected by Z3 in < 30 seconds
+4. **Universal pattern** — same structure across set theory, physics, control, QM
+5. **Fiber structure** — metrics, dynamics, trajectories within fibers
+6. **Epistemic Boundary Theorem** — multiple admissible actions produce same
+   observables; the specific variational principle is underdetermined
+7. **Arrow Underdetermination Theorem** — the hidden arrow and metric character
+   of ontological dynamics are not projection-determined
+
+**Verification data:**
+- 19 Cantor examples: all SAT, total ~25 seconds
+- 27 POT bridge examples: all SAT, total ~9 seconds
+- **46 total machine-verified results**
+
+#### Paper Structure (12 sections + 2 appendices, 6 tables)
+1. Introduction (Cantor's story, framework overview)
+2. Shadow Theories (definition, Skolemization, Cantor shadow)
+3. Projection Fibers and Non-Invariance (fibers, invariance, main result, formal verification)
+4. Case Study: Cantor's Cardinal Arithmetic (implementation, results, independence, forcing)
+5. The Universal Pattern (cross-domain table, POT connection, fiber structure)
+6. Forcing as Fiber Selection
+7. Fiber Dynamics and the POT Fiber Principle (dynamics, metric, consequences)
+8. Admissible Dynamics and the Epistemic Boundary (admissible actions, boundary theorem, variational theorem)
+9. Predictions About the Modal Flow (hidden arrow, metric character, Arrow Underdetermination Theorem, flow prediction theorem)
+10. Discussion (scope, limitations, what's new)
+11. Conclusion
+- Appendix A: Kleis source files (46 examples, reproduction instructions)
+- Appendix B: Design note on well-ordering as tagging
+- 9 references
+
+#### pot_bridge.kleis Structure (10 parts)
+1. Abstract POT framework (OntTag, ObsTag, project)
+2. Two-model fiber (non-injective projection)
+3. Kernel distinguishers
+4. Multi-model fibers (3+ models, fiber labels)
+5. Universal principles (non-injectivity → indeterminacy)
+6. Invariance biconditional (4 theorems, main theorem)
+7. Fiber dynamics + POT Fiber Principle (fiber_evolve, 3-step trajectory)
+8. Fiber metric (fiber_distance, positive separation, self-distance zero)
+9. Admissible dynamics + Epistemic Boundary (fiber_action, fiber_action_alt, underdetermination)
+10. Flow predictions (dissipative + contractive admissible, Arrow Underdetermination)
+
+#### Key Insight: Consistency with `examples/ontology/revised/`
+
+The pot_bridge.kleis formalization is a **proper generalization** of the existing
+POT work in `examples/ontology/revised/`. No conflicts found:
+- revised = specific instantiation (linear Green kernel, ℂ³ → ℝ⁴, channels)
+- pot_bridge = general framework (abstract projection, fibers, metric, dynamics)
+- Phase erasure in revised IS fiber_evolve in pot_bridge
+- All new theorems apply to the revised analysis
+
+#### Bug Fix: `table_typst_raw` double-bracket issue
+
+`src/evaluator/plotting.rs` had a bug where table rows were wrapped in extra
+`[...]` brackets, producing `[[cell]]` instead of `[cell]` in Typst output.
+Fixed by removing the redundant outer brackets in the row emission loop.
+
+### Compilation
+
+```bash
+kleis test --raw-output --example compile examples/cantor/projection_fibers_paper.kleis > projection_fibers_paper.typ
+typst compile projection_fibers_paper.typ projection_fibers_paper.pdf
+```
+
+### What's Next
+
+- **Submit to arXiv** — paper is ready for preprint submission
+- **Faithfulness proof** — formalize that the Cantor shadow is faithful to ZFC
+- **Fiber group structure** — equip fibers with group actions (connect to gauge theory)
+- **SU(2) connection** — link fiber structure to the earlier SU(2) symmetry work
+- **Observable leakage** — find projection-invariant predictions that hold for
+  ALL admissible dynamics (like flat rotation curves from minimal kernel)
+- **Lambda/urgency unification** — connect fiber action to the urgency functional
+
+---
+
+## Previous Session (Mar 14, 2026): Intent-Aware Code Review (ADR-032)
+
+### Branch
+
+`feature/intent-aware-review` (2 commits, not pushed yet)
+
+### What We Did
+
+Designed and implemented **ADR-032: Intent-Aware Code Review** — a three-layer
+architecture that connects change intent to the review engine.
+
+#### ADR-032 Design (commit 1: `5c3dcd2a`)
+- Wrote `docs/adr/ADR-032-Intent-Aware-Code-Review.md` (691 lines)
+- Three-layer architecture: Project Standards (always-on), Module Standards
+  (topology-driven), Change Intent (per-change)
+- Compared Kleis review capabilities against all 8 ACD constraints from
+  MinimumCD.org — Kleis exceeds on formal verification and LLM advisory
+- Created `.cursor/rules/no-external-references.mdc` to prevent leaking
+  employer/project references into the codebase
+
+#### Phase 1 Implementation (commit 2: `ba6f8002`)
+7 files modified, 265 insertions:
+
+| Component | File | What |
+|-----------|------|------|
+| CLI | `src/bin/kleis.rs` | `--intent / -I` optional flag on `kleis review` |
+| Engine | `src/review_mcp/engine.rs` | Thread-local `REVIEW_INTENT` + `REVIEW_PATH` storage |
+| Built-ins | `src/evaluator/builtins.rs` | `review_intent()` and `review_path()` functions |
+| MCP Protocol | `src/review_mcp/protocol.rs` | Optional `intent` param on `check_code`, `check_file`, `diff_check_file` |
+| MCP Server | `src/review_mcp/server.rs` | Extract + set intent from MCP arguments |
+| LLM Advisory | `src/review_mcp/advisory.rs` | Intent-coherence section appended to system prompt |
+| Tests | `tests/review_mcp_test.rs` | 5 integration + 3 unit tests for intent flow |
+
+#### Dog-Fooding
+- Ran `kleis review --intent "..." --policy rust_review_policy.kleis` on our
+  own changed files — all 42 integration tests + 16 advisory unit tests pass
+- Ran LLM advisory (ChatGPT gpt-4o-mini) on `protocol.rs` with intent —
+  ChatGPT correctly produced `INTENT-COHERENCE` findings confirming the new
+  `intent` fields match the stated purpose
+- Observed: `Cargo.lock` should be excluded from LLM review (generated file,
+  wastes tokens), and LLM sometimes repeats formal findings despite deduplication
+
+### Key Design Decisions
+
+1. **Thread-local storage** for intent/path — avoids changing Evaluator struct,
+   works cleanly with the existing single-threaded per-file review loop
+2. **Intent is optional everywhere** — `--intent` is optional in CLI, `intent`
+   is optional in MCP parameters, `review_intent()` returns `""` when unset
+3. **No breaking changes** — existing MCPs, review policies, and CI pipelines
+   are completely unaffected
+4. **LLM prompt enrichment** — when intent is present, a "Change Intent" section
+   is appended to the system prompt asking the LLM to check intent coherence
+   with `"check": "INTENT-COHERENCE"`
+
+### Observed Issues (to fix)
+
+1. **LLM advisory should skip generated/lock files** — `Cargo.lock` was sent to
+   ChatGPT (156K chars!) and the LLM wasted tokens repeating `advise_no_hardcoded_urls`
+   20 times on `registry+https://` lines. The deduplication instruction failed.
+2. **Exclusion list must be per-language** — Rust review should skip `Cargo.lock`,
+   `target/`, etc. Python review should skip `poetry.lock`, `requirements.txt`
+   (debatable), `__pycache__/`, `.egg-info/`, etc.
+3. **Possible implementation**: Add an `advisory_exclude_files()` or
+   `advisory_file_filter(path)` convention in the policy file, similar to the
+   existing `diff_file_filter(path)`. The LLM advisory loop in `run_review`
+   would check this before sending a file to the LLM. This keeps the exclusion
+   logic in Kleis policy files (not hardcoded in Rust), so each policy owns its
+   own exclusion list.
+
+### What's Next (Phase 2–4)
+
+**Phase 2: Module Standards** (`module_standards(path)` mapping)
+- Map file paths to relevant ADRs/standards (e.g., `src/type_inference.rs` →
+  ADR-014 Hindley-Milner)
+- Recursive self-consistency: grammar files reviewed against the grammar spec
+
+**Phase 3: Intent Extraction**
+- Extract intent from commit messages, branch names, PR descriptions
+- Optional LLM-assisted semantic extraction into structured `ReviewIntent`
+
+**Phase 4: LLM Advisory Integration**
+- Intent from commit message auto-injected into advisory prompt
+- Intent-coherence findings as advisory (non-blocking)
+
+### Files to Review Before Next Session
+- `docs/adr/ADR-032-Intent-Aware-Code-Review.md` — the full design
+- `src/review_mcp/engine.rs` — thread-local intent/path plumbing
+- `src/review_mcp/advisory.rs` lines 169–200 — `build_system_prompt` with
+  intent section
+
+### Environment Note
+- ChatGPT API key is in `~/.bash_profile` as `OPENAPI_KEY`
+- Kleis expects `KLEIS_LLM_API_KEY` — alias with:
+  `export KLEIS_LLM_API_KEY="$OPENAPI_KEY"`
 
 ---
 

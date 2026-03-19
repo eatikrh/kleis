@@ -428,14 +428,14 @@ impl Evaluator {
 
         // Rows
         for row in &rows {
-            code.push_str("  [");
             for (i, cell) in row.iter().enumerate() {
-                code.push_str(&format!("[{}]", cell));
+                code.push_str(&format!("  [{}]", cell));
                 if i < num_cols - 1 {
-                    code.push_str(", ");
+                    code.push_str(",");
+                } else {
+                    code.push_str(",\n");
                 }
             }
-            code.push_str("],\n");
         }
 
         code.push(')');
