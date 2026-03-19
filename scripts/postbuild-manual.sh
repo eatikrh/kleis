@@ -27,11 +27,14 @@ count=0
 while IFS= read -r -d '' file; do
     rel="${file#"$BOOK_DIR"/}"
 
-    # Canonical URL: normalize index.html and introduction.html (identical content) to directory form
+    # Canonical URL: normalize index.html and introduction.html (identical content) to directory form.
+    # Strip .html suffix because Cloudflare Pages forces 308 redirects that remove it.
+    # Canonical must match the URL Cloudflare actually serves, otherwise Google Search
+    # Console reports redirect errors (known CF Pages issue since 2021, no server-side fix).
     if [[ "$rel" == "index.html" || "$rel" == "introduction.html" ]]; then
         canonical="${SITE_BASE}/"
     else
-        canonical="${SITE_BASE}/${rel}"
+        canonical="${SITE_BASE}/${rel%.html}"
     fi
 
     # Extract page title for unique meta description
