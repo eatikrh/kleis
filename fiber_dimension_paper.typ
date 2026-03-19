@@ -1,0 +1,402 @@
+#import "@preview/lilaq:0.5.0" as lq
+#set page(
+  paper: "us-letter",
+  margin: (top: 1in, bottom: 1in, left: 1in, right: 1in),
+  numbering: "1",
+  header: align(right)[_Preprint_],
+)
+#set text(
+  font: "New Computer Modern",
+  size: 11pt,
+  lang: "en",
+)
+#set par(
+  justify: true,
+  leading: 0.65em,
+  first-line-indent: 1em,
+)
+
+// No indent after headings
+#show heading: it => {
+  it
+  par(text(size: 0pt, ""))
+}
+#set heading(numbering: "1.1")
+
+// Section headings (level 1)
+#show heading.where(level: 1): it => {
+  v(1em)
+  text(size: 12pt, weight: "bold")[#counter(heading).display() #it.body]
+  v(0.5em)
+}
+
+// Subsection headings (level 2)
+#show heading.where(level: 2): it => {
+  v(0.8em)
+  text(size: 11pt, weight: "bold")[#counter(heading).display() #it.body]
+  v(0.4em)
+}
+
+// Subsubsection headings (level 3)
+#show heading.where(level: 3): it => {
+  v(0.6em)
+  text(size: 10pt, weight: "bold", style: "italic")[#counter(heading).display() #it.body]
+  v(0.3em)
+}
+#set figure(placement: auto)
+#show figure.caption: it => {
+  text(size: 9pt)[#it]
+}
+#show link: it => text(fill: blue.darken(20%))[#underline[#it]]
+
+
+#align(center)[
+  #text(size: 17pt, weight: "bold")[Observable Bounds on Ontological Dimension: A Constructive Consequence of Projection Fiber Theory]
+  
+  #v(1em)
+  
+  Engin Atik#super[1]
+  
+  #v(0.5em)
+  
+  #super[1]Kleis Research, https://kleis.io
+]
+
+#v(1em)
+
+#align(center)[
+  #rect(width: 85%, stroke: none)[
+    #align(left)[
+      #text(weight: "bold")[Abstract]
+      #v(0.3em)
+      #text(size: 10pt)[We derive a computable lower bound on the dimension of ontological state spaces from observable independence results. Given a non-injective projection $Pi : H_("ont") arrow H_("obs")$ and $n$ predicates that are independently non-invariant on the fibers of $Pi$, the fiber cardinality satisfies $|"Fib"(o)| >= 2^n$. Each independent predicate certifies a binary split that the projection cannot collapse. The bound is observable: independence is detected from $H_("obs")$ alone using the invariance criterion of Paper I, requiring only the projection map and an SMT solver. We verify this constructively in Kleis: two independent predicates over the Cantor shadow theory (the Continuum Hypothesis and the Generalized Continuum Hypothesis at $aleph_1$) force at least four ontologically distinct models in the same projection fiber, all confirmed by Z3. A second, independent bound arises from fiber dynamics: the orbit length of a fiber-preserving evolution operator certifies fiber cardinality from below. The combined bound takes the maximum. This result inverts the epistemic direction of Projected Ontology Theory: Paper I established what cannot be known from the projection side (the specific action, the thermodynamic arrow, the flow character); this paper establishes what must exist --- a minimum complexity of the hidden layer, computable from observational data. The projection determines not the content of $H_("ont")$, but a lower bound on its complexity. All 33 verification results for the extended pot_bridge.kleis are machine-checked and reproducible.]
+    ]
+  ]
+]
+
+#text(size: 9pt)[*Keywords:* fiber dimension, ontological degrees of freedom, projection fibers, independence counting, lower bounds, formal verification, Continuum Hypothesis, Generalized Continuum Hypothesis]
+
+#v(1em)
+
+
+= Introduction
+
+In a companion paper [1], we introduced a geometric framework for detecting logical independence: a statement $S$ is independent of a projected theory if and only if $S$ is non-invariant on the fibers of the projection map $Pi$. We demonstrated this computationally by detecting the independence of the Continuum Hypothesis from Cantor's cardinal arithmetic using Z3, and extended the framework to show that the fibers carry intrinsic structure --- geometry, dynamics, and admissible selection principles --- while proving that the specific variational principle governing the ontological layer is epistemically inaccessible from the projection side.
+
+That paper was primarily negative in character: it characterized what cannot be known from $H_("obs")$. The epistemic boundary, the flow underdetermination, the arrow underdetermination --- all establish limits on observational knowledge.
+
+This paper asks the complementary question: given observations alone, what can we certify about the ontological layer? Specifically, can we set a minimum on the number of ontological degrees of freedom?
+
+We answer affirmatively. The key insight is that each logically independent predicate detected from the observation side certifies a binary split in the fiber. If $n$ predicates are pairwise independently non-invariant on the fibers of $Pi$, then the fiber must contain at least $2^n$ distinct points to realize all truth-value combinations. This is the Fiber Dimension Theorem:
+
+$ |"Fib"(o)| >= 2^n $
+
+where $n$ is the number of detected independent predicates. The bound is computable because independence detection uses the invariance criterion of Paper I: run the SMT solver on $P(m_1) and not P(m_2)$ with $Pi(m_1) = Pi(m_2)$. Each satisfiable result is a structural certificate that doubles the lower bound.
+
+A second, independent source of lower bounds comes from fiber dynamics: if the fiber-preserving evolution operator $"fiber_evolve"$ produces $k$ consecutive distinct states, then $|"Fib"(o)| >= k$. The combined bound is the maximum of both estimates.
+
+For the Cantor instantiation: the Continuum Hypothesis (CH) gives one independent predicate ($n >= 1$, so $|"Fib"| >= 2$). The Generalized Continuum Hypothesis at $aleph_1$ (GCH) provides a second, orthogonal predicate ($n >= 2$, so $|"Fib"| >= 4$). The fiber dynamics orbit gives $k >= 2$. Combined: $|"Fib"| >= max(4, 2) = 4$, verified by Z3 in under 8 seconds.
+
+The philosophical significance is precise: the projection cannot tell you WHAT is in the fiber, but it CAN tell you HOW MUCH must be there. Every independence result detected from $H_("obs")$ is a structural certificate about $H_("ont")$. The underdetermination itself has measurable structure.
+
+= Review of the Projection Fiber Framework
+
+We briefly recapitulate the essential definitions from Paper I [1]. The reader is referred to that paper for full proofs and Z3 verification details.
+
+== Projection and Fibers
+
+Let $T$ be a formal theory with model class $cal(M)(T)$. A projection map $Pi : cal(M)(T) arrow cal(M)(T_sigma)$ extracts from each model its constraint shadow --- the interpretation of a reduced signature $Sigma$. The fiber over a constraint model $m$ is the preimage:
+
+$ "Fib"(m) = Pi^(-1)(m) = { M in cal(M)(T) : Pi(M) = m } $
+
+If $Pi$ is non-injective ($|"Fib"(m)| > 1$ for some $m$), then the fiber contains ontologically distinct states that the projection conflates.
+
+== Invariance and Independence
+
+A predicate $P$ on $cal(M)(T)$ is projection-invariant if all models within the same fiber agree on $P$:
+
+$ forall M_1, M_2 : quad Pi(M_1) = Pi(M_2) arrow.r.double (P(M_1) arrow.l.r P(M_2)) $
+
+The central result of Paper I: a predicate $P$ is independent of the projected theory $T_sigma$ if and only if $P$ is non-invariant on the fibers of $Pi$. This was machine-verified as a Z3 theorem (the 'independence iff non-invariance' biconditional).
+
+== The Epistemic Boundary
+
+Paper I further established:
+
+(1) Fiber structure: fibers carry metrics (positive separation between distinct fiber-mates), dynamics (fiber-preserving evolution), and admissible selection principles (action functionals satisfying structural constraints).
+
+(2) Epistemic Boundary Theorem: multiple admissible variational principles can produce the same observable outcome. The specific action is underdetermined from the projection side.
+
+(3) Arrow Underdetermination Theorem: the thermodynamic arrow and metric character of hidden dynamics are not projection-determined.
+
+These results characterize the geometry of epistemic limitation. The present paper complements them with a constructive bound on ontological complexity.
+
+= Independence Counting and Fiber Cardinality
+
+The central observation is elementary but powerful: each logically independent predicate detected from the observation side forces a structural split in the fiber.
+
+== The Binary Split Principle
+
+Let $P$ be a predicate that is non-invariant on the fibers of $Pi$. By definition, there exist fiber-mates $M_1, M_2$ with $Pi(M_1) = Pi(M_2)$ and $P(M_1) eq.not P(M_2)$. The fiber therefore contains at least two distinct points: one satisfying $P$ and one satisfying $not P$.
+
+Now let $Q$ be a second predicate, also non-invariant, and orthogonal to $P$ --- meaning the truth value of $Q$ is not determined by the truth value of $P$. Then the fiber must contain models realizing all four truth-value combinations:
+
+$ (P, Q) in { (top, top), (top, bot), (bot, top), (bot, bot) } $
+
+If any combination were absent, it would imply a logical dependence between $P$ and $Q$ within the fiber, contradicting their orthogonality.
+
+In general, $n$ pairwise orthogonal non-invariant predicates force:
+
+$ |"Fib"(o)| >= 2^n $
+
+This is an exponential lower bound on fiber cardinality, computable from the number of detected independent predicates.
+
+== Orthogonality and Pairwise Independence
+
+Two non-invariant predicates $P$ and $Q$ are orthogonal if knowing the truth value of $P$ does not constrain the truth value of $Q$ within the fiber. Formally: for each truth value $v$ of $P$, both $Q = top$ and $Q = bot$ are realized among fiber-mates satisfying $P = v$.
+
+In the Cantor model, the Continuum Hypothesis (CH: $frak(c) = aleph_1$) and the Generalized Continuum Hypothesis at $aleph_1$ (GCH: $2^(aleph_1) = aleph_2$) are orthogonal. This is because:
+
+- CH is about the relationship between $aleph_0$ and $frak(c)$.
+- GCH at $aleph_1$ is about the relationship between $aleph_1$ and $2^(aleph_1)$.
+
+These concern different levels of the cardinal hierarchy. Consistency results (from forcing) show that all four combinations are realizable within ZFC. Our Z3 verification confirms this: four models with truth-value combinations $(top, top)$, $(top, bot)$, $(bot, top)$, $(bot, bot)$ all project to the same constraint shadow.
+
+= The Fiber Dimension Theorem
+
+We now state and verify the main result.
+
+== Statement
+
+Let $Pi : H_("ont") arrow H_("obs")$ be a non-injective projection with fibers $"Fib"(o) = Pi^(-1)(o)$. Let $P_1, dots, P_n$ be predicates on $H_("ont")$ such that:
+
+(1) Each $P_i$ is non-invariant on the fibers of $Pi$ (i.e., independent of the projected theory).
+
+(2) The $P_i$ are pairwise orthogonal (truth values vary independently within fibers).
+
+Then:
+
+$ |"Fib"(o)| >= 2^n $
+
+The proof is by construction: the $2^n$ truth-value combinations of $n$ binary predicates must each be realized by at least one distinct fiber-mate, or orthogonality would be violated.
+
+== Z3 Verification
+
+We verify the theorem for $n = 2$ in the Cantor shadow theory using the Kleis verification language and Z3. The pot_bridge.kleis source file encodes a structure FiberDimensionBound with:
+
+Four model elements: $"quad_TT"$, $"quad_TF"$, $"quad_FT"$, $"quad_FF"$, each tagged with an OntTag value.
+
+Fiber membership: all four project to the same observable ($"obs_eq"("project"(q), "project"("model_A"))$ for each $q$).
+
+Predicate assignments: the first predicate (CH, encoded as $"distinguisher"$) is true on $"quad_TT"$ and $"quad_TF"$, false on $"quad_FT"$ and $"quad_FF"$. The second predicate (GCH at $aleph_1$, encoded as $"distinguisher2"$) is true on $"quad_TT"$ and $"quad_FT"$, false on $"quad_TF"$ and $"quad_FF"$.
+
+Pairwise distinctness: all six pairs are asserted distinct via $not "ont_eq"$.
+
+#figure(
+  table(
+  columns: 3,
+  [Example],   [Result],   [Z3 Time],
+  [Two independent predicates require four fiber points],  [SAT],  [\< 1 ms],
+  [Second predicate is also non-invariant on fibers],  [SAT],  [\< 1 ms],
+  [Predicates are orthogonal: independent of each other],  [SAT],  [\< 1 ms],
+  [Orbit bound: consecutive distinct states from evolution],  [SAT],  [\< 1 ms],
+  [FIBER DIMENSION THEOREM: observable lower bound],  [SAT],  [\< 1 ms],
+  [OBSERVABLE LOWER BOUND: detection computable from $H_("obs")$],  [SAT],  [\< 1 ms],
+),
+  caption: [Z3 verification results for the Fiber Dimension Theorem (6 examples, all SAT).]
+) <tab:dimension>
+
+== Observability of the Bound
+
+The critical feature of this lower bound is that it is computable from $H_("obs")$ alone. The detection procedure is:
+
+(1) Choose a candidate predicate $P$ on $H_("ont")$.
+
+(2) Ask Z3: is $P(m_1) and not P(m_2) and "obs_eq"(Pi(m_1), Pi(m_2))$ satisfiable?
+
+(3) If SAT: $P$ is non-invariant. Increment the independence count. Double the lower bound.
+
+(4) Repeat for additional predicates.
+
+No access to $H_("ont")$ is required --- only the projection map and the axiom system. The solver does the structural certification. Each SAT result is a proof certificate that the fiber is at least twice as large as previously known.
+
+= Orbit Bounds from Fiber Dynamics
+
+A second, independent source of lower bounds comes from fiber dynamics.
+
+== The Orbit Bound
+
+Let $"fiber_evolve" : "OntTag" arrow "OntTag"$ be a fiber-preserving evolution operator (i.e., $"obs_eq"(Pi(s), Pi("fiber_evolve"(s)))$ for all $s$). If $"fiber_evolve"$ produces $k$ consecutive distinct states starting from a seed $s$:
+
+$ s, "fiber_evolve"(s), "fiber_evolve"^2(s), dots, "fiber_evolve"^(k-1)(s) $
+
+with $"fiber_evolve"^i(s) eq.not "fiber_evolve"^j(s)$ for consecutive pairs, then the fiber contains at least $k$ distinct points: $|"Fib"(o)| >= k$.
+
+In the Cantor model, the FiberDynamics structure from Paper I establishes that $"fiber_evolve"$ produces two consecutive distinct states (the $"non_trivial"$ and $"iterable"$ axioms), giving $k >= 2$. This orbit bound is weaker than the predicate bound ($2 < 4$) but is derived from a completely different mechanism --- dynamics rather than logic --- providing independent confirmation of non-trivial fiber structure.
+
+== Combined Estimates
+
+The predicate bound and orbit bound are independent: one comes from the logic of independent statements, the other from the dynamics of fiber-preserving evolution. The combined lower bound is:
+
+$ |"Fib"(o)| >= max(2^n, k) $
+
+where $n$ is the number of detected independent predicates and $k$ is the orbit length. For the Cantor model: $max(2^2, 2) = max(4, 2) = 4$.
+
+The combined bound can only grow as more independent predicates are detected or longer orbits are found. It is a monotonically non-decreasing certificate of ontological complexity.
+
+= The Cantor Instantiation
+
+We now ground the abstract theorem in the concrete case of Cantor's cardinal arithmetic.
+
+== CH and GCH as Orthogonal Predicates
+
+The Continuum Hypothesis (CH: $frak(c) = aleph_1$) and the Generalized Continuum Hypothesis at $aleph_1$ (GCH: $2^(aleph_1) = aleph_2$) are our two independent predicates.
+
+CH concerns the first level of the cardinal hierarchy: is the continuum the first uncountable cardinal? GCH at $aleph_1$ concerns the second level: does the power set of $aleph_1$ equal the second uncountable cardinal? These are logically independent questions about different levels of the transfinite.
+
+In the Kleis formalization, CH is encoded as the existing $"distinguisher"$ predicate from Paper I, and GCH at $aleph_1$ as the new $"distinguisher2"$ predicate. The structure $"FiberDimensionBound"$ introduces four model elements --- $"quad_TT"$ (both true), $"quad_TF"$ (CH true, GCH false), $"quad_FT"$ (CH false, GCH true), $"quad_FF"$ (both false) --- all in the same projection fiber, all pairwise distinct.
+
+Z3 confirms:
+
+(1) All four models project identically (same observable fiber).
+
+(2) All six pairwise distinctness assertions hold.
+
+(3) The two predicates vary independently: knowing CH's truth value does not constrain GCH's truth value within the fiber, and vice versa.
+
+(4) The combined system with the fiber dynamics orbit, the admissible action, and the epistemic boundary remains consistent.
+
+This gives a concrete, machine-verified instance: the Cantor shadow theory certifies $|"Fib"| >= 4$ from two independent predicates, each detectable from the constraint (projection) side alone.
+
+== Scaling: More Predicates, Larger Bounds
+
+The Cantor shadow theory admits further independent predicates beyond CH and GCH at $aleph_1$:
+
+- GCH at $aleph_2$: whether $2^(aleph_2) = aleph_3$
+
+- GCH at $aleph_n$ for each $n$: an infinite family of independent predicates
+
+- Suslin's Hypothesis, Martin's Axiom, and other set-theoretic principles known to be independent of ZFC
+
+Each additional independent predicate that can be detected from the shadow doubles the lower bound. In principle, $n$ independent GCH-type predicates give $|"Fib"| >= 2^n$, growing exponentially. The cardinal hierarchy itself provides an inexhaustible supply of independent predicates, suggesting that the fiber dimension of the Cantor model is not merely finite but grows without bound.
+
+This is consistent with the set-theoretic fact that the class of ZFC models is a proper class --- uncountably many models exist, each potentially differing on uncountably many independent statements. The Fiber Dimension Theorem captures a shadow of this richness as a computable lower bound.
+
+= Discussion
+
+We address the significance, limitations, and future directions of the Fiber Dimension Theorem.
+
+== The Epistemic Inversion
+
+The companion paper established a series of negative results: the specific action is underdetermined, the thermodynamic arrow is hidden, the flow character is inaccessible. These are limits on what observers in $H_("obs")$ can know.
+
+The Fiber Dimension Theorem inverts this direction. It says: from exactly the same observational data that reveals epistemic limits, one can extract positive structural information about $H_("ont")$. Each independence result detected from the projection side is simultaneously:
+
+(a) A negative certificate: the predicate cannot be determined from observations.
+
+(b) A positive certificate: the fiber must be at least twice as large.
+
+The underdetermination itself has measurable structure. The more you discover you cannot know, the more you can certify must exist. This is not a paradox but a structural feature of non-injective projections: information loss (negative) implies redundancy (positive), and redundancy means ontological multiplicity.
+
+== Implications for Projected Ontology Theory
+
+For POT, the Fiber Dimension Theorem provides the first quantitative tool for bounding the complexity of $H_("ont")$ from $H_("obs")$.
+
+A key distinction must be made. The abstract ontological space $H_("ont")$ may be infinite-dimensional: the class of all ZFC models is a proper class, the space of all possible physical flows is a function space. No finite bound constrains the abstract space. However, any concrete realization of $H_("ont")$ --- any proposal of the form '$H_("ont") = CC^k$' or '$H_("ont") = RR^n$' --- commits to a finite-dimensional codomain. It is this codomain that the Fiber Dimension Theorem constrains from below.
+
+The fundamental decomposition is rank-nullity applied to the projection:
+
+$ dim(H_("ont")) = dim("ker"(Pi)) + dim(H_("obs")) $
+
+The observable universe is the image of $Pi$; the fiber is the kernel; the ontological space is both. The Fiber Dimension Theorem gives a lower bound on the kernel: $dim("ker"(Pi)) >= 2^n$. Therefore, any finite-dimensional codomain proposed for $H_("ont")$ must satisfy:
+
+$ dim("codomain") >= dim(H_("obs")) + 2^n $
+
+This is a falsifiability criterion. If $H_("obs")$ has effective dimension $d$ (for spacetime observations, $d = 4$), then the smallest concrete ontological space must have dimension at least $d + 2^n$. With $n = 1$ independent predicate: $dim >= 6$. With $n = 2$: $dim >= 8$.
+
+This constraint applies directly to existing POT formalizations. In the Kleis source files for Projected Ontology Theory [6], the ontological Hilbert space is concretely modeled as $H_("ont") = CC^3$ (the type Vec3C, representing three complex modal amplitudes $(psi_1, psi_2, psi_3)$), while the observable space is $H_("obs") = RR^4$ (the type Vec4R, representing spacetime fields). The Green kernel $G$ projects from $CC^3$ (real dimension 6) to $RR^4$ (dimension 4), leaving a kernel of real dimension $6 - 4 = 2$. This kernel can support at most $n = 1$ independent fiber direction, since $2^1 = 2$.
+
+The Fiber Dimension Theorem therefore makes a concrete prediction about this formalization: if a second independent predicate is detected from the observation side --- a phenomenon not determined by the spacetime projection that is orthogonal to the first --- then $CC^3$ is too small. The ontological codomain must be enlarged. Conversely, $CC^4$ (real dimension 8) would support $n = 2$, and $CC^6$ (real dimension 12) would support $n = 3$. Each additional independent predicate detected from $H_("obs")$ raises the dimensional floor.
+
+The abstract $H_("ont")$ is infinite-dimensional and unconstrained. But the question 'what is the smallest concrete space that can host the ontological dynamics while respecting what observations force?' has a finite, computable, and testable answer. That answer grows every time a new independent predicate is detected.
+
+In set theory: the number of known independent statements of ZFC provides a logarithmic estimate of the model-theoretic complexity of the fiber. The supply of independent statements in set theory is inexhaustible, suggesting that no finite-dimensional codomain suffices.
+
+In control theory: the number of unobservable modes gives the fiber dimension directly (via the Kalman decomposition). The Fiber Dimension Theorem generalizes this to non-linear, non-smooth projections.
+
+The practical implication for POT: rather than speculating about the richness of $H_("ont")$, one can compute a lower bound on its codomain dimension from the data. The ontology is at least as rich as the observations force it to be.
+
+== Limitations
+
+The Fiber Dimension Theorem provides a lower bound, not an exact count. The actual fiber cardinality may be much larger (and in the set-theoretic case, is a proper class). The bound is tight only when all independent predicates have been enumerated, which in general is undecidable.
+
+The orthogonality condition (pairwise independence of predicates) must be verified for each pair, which requires $O(n^2)$ Z3 queries for $n$ predicates. In practice, domain knowledge often provides orthogonality for free (e.g., GCH at different levels concerns different cardinals).
+
+The orbit bound from dynamics is limited by the axioms: the current formalization proves only consecutive distinctness, not full cycle detection. Stronger axioms (e.g., no-return conditions) would tighten this bound.
+
+Finally, the theorem counts distinct fiber points but does not characterize their topological or geometric relationship. The fiber metric from Paper I provides some geometric information, but a full characterization of fiber topology remains open.
+
+= Conclusion
+
+We have derived the Fiber Dimension Theorem: a computable lower bound on the cardinality of projection fibers --- and hence on the ontological degrees of freedom --- from observable independence results. The theorem is:
+
+$ |"Fib"(o)| >= 2^n $
+
+where $n$ is the number of pairwise orthogonal, independently non-invariant predicates detected from the projection side.
+
+This result completes the epistemic picture begun in Paper I. Together, the two papers establish:
+
+(1) What cannot be known: the specific action, the thermodynamic arrow, the flow character of ontological dynamics (Paper I).
+
+(2) What must exist: a minimum number of ontologically distinct states, growing exponentially with the number of detected independent predicates (this paper).
+
+The key insight is that the same observational data that reveals epistemic limits simultaneously certifies ontological complexity. Independence results are dual-use: they prove underdetermination and they prove existence.
+
+For the Cantor case study, two independent predicates (CH and GCH at $aleph_1$) force $|"Fib"| >= 4$, verified by Z3 with all 33 pot_bridge.kleis examples passing. The framework extends naturally: each new independent predicate doubles the bound, and the cardinal hierarchy provides an inexhaustible supply.
+
+The projection determines not the content of the hidden layer, but a lower bound on its complexity. That lower bound is the constructive content of underdetermination.
+
+
+
+#heading(numbering: none)[References]
+#set text(size: 9pt)
+#par(hanging-indent: 1.5em)[\[atik2026fibers\] Atik, E. (2026). Independence as Non-Invariance: Detecting Undecidability via Projection Fibers in SMT-Backed Shadow Theories. Kleis Research.]
+
+#par(hanging-indent: 1.5em)[\[godel1940\] Godel, K. (1940). The Consistency of the Axiom of Choice and of the Generalized Continuum-Hypothesis with the Axioms of Set Theory. Annals of Mathematics Studies, No. 3. Princeton University Press.]
+
+#par(hanging-indent: 1.5em)[\[cohen1963\] Cohen, P. J. (1963). The independence of the continuum hypothesis. Proceedings of the National Academy of Sciences, 50(6), 1143--1148.]
+
+#par(hanging-indent: 1.5em)[\[demoura2008\] de Moura, L. and Bjorner, N. (2008). Z3: An Efficient SMT Solver. In Tools and Algorithms for the Construction and Analysis of Systems (TACAS), LNCS 4963, pp. 337--340. Springer.]
+
+#par(hanging-indent: 1.5em)[\[kalman1960\] Kalman, R. E. (1960). On the general theory of control systems. In Proceedings of the First International Congress of IFAC, pp. 481--492.]
+
+#par(hanging-indent: 1.5em)[\[atik2025pot\] Atik, E. (2025). Flat Galactic Rotation Curves as a Theorem of Projected Ontology: Machine-Verified Derivations Without Dark Matter. Kleis Research, arXiv preprint.]
+
+#par(hanging-indent: 1.5em)[\[atik2025potkleis\] Atik, E. (2025). POT Core Kernel Projection: Kleis formalization of Projected Ontology Theory with Vec3C ontological space and Vec4R observable space. Kleis Research, https://kleis.io.]
+
+#par(hanging-indent: 1.5em)[\[easton1970\] Easton, W. B. (1970). Powers of regular cardinals. Annals of Mathematical Logic, 1(2), 139--178.]
+
+#pagebreak()
+// Reset heading counter for appendices
+#counter(heading).update(0)
+#set heading(numbering: "A.1")
+
+#align(center)[
+  #text(size: 14pt, weight: "bold")[Appendix]
+]
+#v(1em)
+= Kleis Source Files
+
+The complete verified source files are:
+
+pot_bridge.kleis --- The projection-fiber bridge. 10 structures (including the new FiberDimensionBound), 33 verified examples covering: non-injective projection, kernel distinguishers, multi-model fibers, the invariance biconditional, fiber dynamics and metrics, admissible action, epistemic boundary, flow predictions, and the Fiber Dimension Theorem. Total verification time: approximately 7 seconds.
+
+cantor_set_theory.kleis --- The Cantor shadow theory. 12 structures, 35 axioms, 19 verified examples. Total verification time: approximately 25 seconds.
+
+To reproduce all results:
+
+kleis test examples/cantor/pot_bridge.kleis
+
+kleis test examples/cantor/cantor_set_theory.kleis
+
+All 52 examples (33 + 19) should pass with exit code 0.

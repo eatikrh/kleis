@@ -804,6 +804,198 @@ example "FLOW PREDICTION THEOREM: dissipative + contractive + epistemically boun
 
 
 // ============================================================================
+// PART 11: FIBER DIMENSION — Observable Lower Bounds on Ontological DOFs
+// ============================================================================
+//
+// The previous parts established what CANNOT be known from the projection
+// side: the specific action, the thermodynamic arrow, the flow character.
+//
+// This part inverts the direction: what MUST exist, given observations?
+//
+// KEY INSIGHT: Each independent predicate detected from H_obs certifies
+// a binary split in the fiber. With n independent predicates, the fiber
+// must contain at least 2^n distinct points.
+//
+// This gives a COMPUTABLE LOWER BOUND on ontological degrees of freedom:
+//
+//   |Fib(o)| ≥ 2^n    where n = number of independent predicates
+//
+// The bound is observable because independence is detectable via the
+// invariance theorem (Part 7): run Z3 on P(m1) ∧ ¬P(m2) with
+// project(m1) = project(m2). Each SAT result is a structural certificate.
+//
+// Three sources of lower bounds:
+//
+//   (1) Predicate counting: n independent predicates → |Fib| ≥ 2^n
+//   (2) Orbit length: k distinct iterates of fiber_evolve → |Fib| ≥ k
+//   (3) Metric dimension: points with independent distances → geometric bound
+//
+// The combined bound: |Fib| ≥ max(2^n, k)
+//
+// For the Cantor instantiation:
+//   - CH is independent (Part 7)           → n ≥ 1 → |Fib| ≥ 2
+//   - GCH at ℵ₁ is independent (new)      → n ≥ 2 → |Fib| ≥ 4
+//   - fiber_evolve has 3-step orbit (Part 8) → k ≥ 3
+//   - Combined: |Fib| ≥ max(4, 3) = 4
+
+// --- A second independent predicate ---
+// In the Cantor model: GCH at ℵ₁ (whether 2^ℵ₁ = ℵ₂)
+// This is independent of the base axioms AND independent of CH.
+
+operation distinguisher2 : OntTag → Bool
+
+structure FiberDimensionBound {
+
+    // Four models realizing all truth-value combinations
+    // of two independent predicates in the same fiber
+    element quad_TT : OntTag   // CH true,  GCH true
+    element quad_TF : OntTag   // CH true,  GCH false
+    element quad_FT : OntTag   // CH false, GCH true
+    element quad_FF : OntTag   // CH false, GCH false
+
+    // All four project to the same observable
+    axiom same_fiber_TT: obs_eq(project(quad_TT), project(model_A))
+    axiom same_fiber_TF: obs_eq(project(quad_TF), project(model_A))
+    axiom same_fiber_FT: obs_eq(project(quad_FT), project(model_A))
+    axiom same_fiber_FF: obs_eq(project(quad_FF), project(model_A))
+
+    // First predicate (CH) separates T* from F*
+    axiom d1_TT: distinguisher(quad_TT)
+    axiom d1_TF: distinguisher(quad_TF)
+    axiom d1_FT: ¬distinguisher(quad_FT)
+    axiom d1_FF: ¬distinguisher(quad_FF)
+
+    // Second predicate (GCH at ℵ₁) separates *T from *F
+    axiom d2_TT: distinguisher2(quad_TT)
+    axiom d2_TF: ¬distinguisher2(quad_TF)
+    axiom d2_FT: distinguisher2(quad_FT)
+    axiom d2_FF: ¬distinguisher2(quad_FF)
+
+    // All four are pairwise distinct
+    axiom distinct_TT_TF: ¬ont_eq(quad_TT, quad_TF)
+    axiom distinct_TT_FT: ¬ont_eq(quad_TT, quad_FT)
+    axiom distinct_TT_FF: ¬ont_eq(quad_TT, quad_FF)
+    axiom distinct_TF_FT: ¬ont_eq(quad_TF, quad_FT)
+    axiom distinct_TF_FF: ¬ont_eq(quad_TF, quad_FF)
+    axiom distinct_FT_FF: ¬ont_eq(quad_FT, quad_FF)
+}
+
+
+// ============================================================================
+// VERIFIED CONSEQUENCES: Fiber Dimension Lower Bound
+// ============================================================================
+
+// --- Two independent predicates require at least four fiber points ---
+// All four truth-value combinations are realized in the same fiber.
+
+example "two independent predicates require four fiber points" {
+    assert(
+        // All in same fiber
+        obs_eq(project(quad_TT), project(quad_TF)) ∧
+        obs_eq(project(quad_TF), project(quad_FT)) ∧
+        obs_eq(project(quad_FT), project(quad_FF)) ∧
+        // All four pairwise distinct
+        ¬ont_eq(quad_TT, quad_TF) ∧
+        ¬ont_eq(quad_TT, quad_FT) ∧
+        ¬ont_eq(quad_TT, quad_FF) ∧
+        ¬ont_eq(quad_TF, quad_FT) ∧
+        ¬ont_eq(quad_TF, quad_FF) ∧
+        ¬ont_eq(quad_FT, quad_FF)
+    )
+}
+
+// --- Both predicates are independently non-invariant ---
+// Each predicate varies within the fiber (same test as Part 7).
+
+example "second predicate is also non-invariant on fibers" {
+    assert(
+        obs_eq(project(quad_TT), project(quad_TF)) ∧
+        distinguisher2(quad_TT) ∧ ¬distinguisher2(quad_TF)
+    )
+}
+
+// --- The predicates are orthogonal ---
+// Knowing one predicate's value does not determine the other.
+// Both (CH true, GCH false) and (CH true, GCH true) exist in the fiber.
+
+example "predicates are orthogonal: independent of each other" {
+    assert(
+        distinguisher(quad_TT) ∧ distinguisher(quad_TF) ∧
+        distinguisher2(quad_TT) ∧ ¬distinguisher2(quad_TF) ∧
+        obs_eq(project(quad_TT), project(quad_TF))
+    )
+}
+
+// --- Orbit bound: dynamics certifies fiber size ---
+// fiber_evolve produces distinct consecutive states within the fiber.
+// Two consecutive distinct steps guarantee |Fib| ≥ 2 from dynamics alone.
+
+example "orbit bound: consecutive distinct states from fiber evolution" {
+    assert(
+        ¬ont_eq(evolving_state, fiber_evolve(evolving_state)) ∧
+        ¬ont_eq(fiber_evolve(evolving_state),
+                fiber_evolve(fiber_evolve(evolving_state))) ∧
+        obs_eq(project(evolving_state),
+               project(fiber_evolve(evolving_state))) ∧
+        obs_eq(project(fiber_evolve(evolving_state)),
+               project(fiber_evolve(fiber_evolve(evolving_state))))
+    )
+}
+
+// --- FIBER DIMENSION THEOREM ---
+// Combines predicate counting with orbit bound:
+//   - 2 independent predicates → 4 fiber points (predicate bound)
+//   - 2 consecutive distinct states from dynamics (orbit bound)
+//   - Combined: |Fib| ≥ max(4, 2) = 4
+//
+// The projection determines not the content of the hidden layer,
+// but a lower bound on its complexity.
+
+example "FIBER DIMENSION THEOREM: observable lower bound on ontological DOFs" {
+    assert(
+        // Predicate bound: 4 distinct models from 2 independent predicates
+        ¬ont_eq(quad_TT, quad_TF) ∧
+        ¬ont_eq(quad_TT, quad_FT) ∧
+        ¬ont_eq(quad_TT, quad_FF) ∧
+        ¬ont_eq(quad_TF, quad_FT) ∧
+        // All in same fiber
+        obs_eq(project(quad_TT), project(quad_FF)) ∧
+        // Predicates vary independently
+        distinguisher(quad_TT) ∧ ¬distinguisher(quad_FT) ∧
+        distinguisher2(quad_TT) ∧ ¬distinguisher2(quad_TF) ∧
+        // Orbit bound: dynamics certifies non-trivial evolution
+        ¬ont_eq(evolving_state, fiber_evolve(evolving_state)) ∧
+        // Both bounds coexist in the same framework
+        obs_eq(project(evolving_state),
+               project(fiber_evolve(evolving_state)))
+    )
+}
+
+// --- OBSERVABLE LOWER BOUND: detection is computable from H_obs ---
+// The key: independence detection (Part 7 technique) works from the
+// projection side. Each SAT result for "P(m1) ∧ ¬P(m2) ∧ same fiber"
+// certifies one more independent predicate, doubling the lower bound.
+// No access to H_ont is required — only the projection and Z3.
+
+example "OBSERVABLE LOWER BOUND: independence detection computable from H_obs" {
+    assert(
+        // Detection of first independent predicate (CH)
+        (obs_eq(project(model_A), project(model_B)) ∧
+         distinguisher(model_A) ∧ ¬distinguisher(model_B)) ∧
+        // Detection of second independent predicate (GCH)
+        (obs_eq(project(quad_TT), project(quad_TF)) ∧
+         distinguisher2(quad_TT) ∧ ¬distinguisher2(quad_TF)) ∧
+        // Each detection certifies a structural split
+        // Combined: |Fib| ≥ 2^2 = 4
+        ¬ont_eq(quad_TT, quad_TF) ∧
+        ¬ont_eq(quad_TT, quad_FT) ∧
+        ¬ont_eq(quad_TT, quad_FF) ∧
+        ¬ont_eq(quad_TF, quad_FT)
+    )
+}
+
+
+// ============================================================================
 // CODA
 // ============================================================================
 //
@@ -841,10 +1033,19 @@ example "FLOW PREDICTION THEOREM: dissipative + contractive + epistemically boun
 // any admissible dynamics must respect — not which dynamics
 // is actual. That distinction is the content of the theory.
 //
+// But the projection is not only negative.
+// It also certifies what MUST exist:
+//   Each independent predicate detected from H_obs
+//   doubles the minimum fiber cardinality.
+//   Two independent predicates → |Fib| ≥ 4.
+//   The projection determines not the content of H_ont,
+//   but a lower bound on its complexity.
+//
 // Kleis makes this computable:
 //   Write the axioms. Run Z3. Both models are SAT.
 //   Independence detected. Fiber structure verified.
 //   Epistemic boundary proven. Flow underdetermined.
+//   Dimension bounded from below.
 //   The structure of underdetermination IS the answer.
 //
 // What Cantor needed was not more intellect.

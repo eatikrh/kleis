@@ -431,7 +431,7 @@ impl Evaluator {
             for (i, cell) in row.iter().enumerate() {
                 code.push_str(&format!("  [{}]", cell));
                 if i < num_cols - 1 {
-                    code.push_str(",");
+                    code.push(',');
                 } else {
                     code.push_str(",\n");
                 }

@@ -16,8 +16,8 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 thread_local! {
-    static REVIEW_INTENT: RefCell<String> = RefCell::new(String::new());
-    static REVIEW_PATH: RefCell<String> = RefCell::new(String::new());
+    static REVIEW_INTENT: RefCell<String> = const { RefCell::new(String::new()) };
+    static REVIEW_PATH: RefCell<String> = const { RefCell::new(String::new()) };
 }
 
 /// Set the current review intent (available to `review_intent()` built-in)
