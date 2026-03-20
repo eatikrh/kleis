@@ -27,6 +27,7 @@
 - [The REPL](./chapters/12-repl.md)
 - [Jupyter Notebook](./chapters/21-jupyter-notebook.md)
 - [Document Generation](./chapters/23-document-generation.md)
+- [Sheet Music](./chapters/30-sheet-music.md)
 - [Applications](./chapters/13-applications.md)
 - [Example Blocks](./chapters/20-example-blocks.md)
 

@@ -49,9 +49,18 @@ data TimeSig = TimeSig(ℤ, ℤ)
 // Layer 1: Events — What Happens in Time
 // =============================================================================
 
+// Articulation marks
+data Articulation = Staccato | Accent | Tenuto | Fermata | Marcato
+
+// Annotations attached to events (LilyPond post-fixes)
+data Annotation = Tie | SlurStart | SlurEnd
+                | Artic(Articulation)
+                | Dyn(Dynamic)
+
 data Event = Note(Pitch, Duration)
            | Rest(Duration)
            | Chord(List, Duration)
+           | Marked(Event, List)
 
 // =============================================================================
 // Layer 2: Structure — Hierarchical Organization
@@ -97,6 +106,21 @@ define r(dur) = Rest(dur)
 
 // Quick measure from event list
 define m(events) = Measure(events)
+
+// Annotated events: slurs, ties, dynamics, articulations
+define slur_start(e) = Marked(e, Cons(SlurStart, Nil))
+define slur_end(e) = Marked(e, Cons(SlurEnd, Nil))
+define tied(e) = Marked(e, Cons(Tie, Nil))
+define staccato(e) = Marked(e, Cons(Artic(Staccato), Nil))
+define accent(e) = Marked(e, Cons(Artic(Accent), Nil))
+define fermata(e) = Marked(e, Cons(Artic(Fermata), Nil))
+define dyn(e, d) = Marked(e, Cons(Dyn(d), Nil))
+
+// Piano score: two staves (treble + bass) sharing key and time signature
+define piano_score(title, composer, key, time, treble_measures, bass_measures) =
+    Score(ScoreMeta(title, composer, ""),
+          Cons(Staff(Treble, key, time, treble_measures),
+          Cons(Staff(Bass, key, time, bass_measures), Nil)))
 
 // =============================================================================
 // LilyPond Compilation — Note Names
@@ -154,6 +178,40 @@ define compile_pitch(p) = match p {
         concat(concat(ly_note_name(name), ly_accidental(acc)), ly_octave_marks(oct))
 }
 
+// Compile annotations to LilyPond post-fix strings
+define ly_articulation(art) = match art {
+    Staccato => "-."
+  | Accent   => "->"
+  | Tenuto   => "--"
+  | Fermata  => "\\fermata"
+  | Marcato  => "-^"
+}
+
+define ly_annotation(ann) = match ann {
+    Tie       => "~"
+  | SlurStart => "("
+  | SlurEnd   => ")"
+  | Artic(a)  => ly_articulation(a)
+  | Dyn(d)    => ly_dynamic(d)
+}
+
+define ly_dynamic(dyn) = match dyn {
+    PPP   => "\\ppp"
+  | PP    => "\\pp"
+  | Piano => "\\p"
+  | MP    => "\\mp"
+  | MF    => "\\mf"
+  | Forte => "\\f"
+  | FF    => "\\ff"
+  | FFF   => "\\fff"
+}
+
+define compile_annotations_acc(anns, acc) =
+    if eq(length(anns), 0) then acc
+    else compile_annotations_acc(tail(anns), concat(acc, ly_annotation(head(anns))))
+
+define compile_annotations(anns) = compile_annotations_acc(anns, "")
+
 define compile_event(e) = match e {
     Note(pitch, dur) =>
         concat(compile_pitch(pitch), ly_duration_base(dur))
@@ -161,6 +219,8 @@ define compile_event(e) = match e {
         concat("r", ly_duration_base(dur))
   | Chord(pitches, dur) =>
         concat(concat("<", compile_chord_pitches(pitches)), concat(">", ly_duration_base(dur)))
+  | Marked(inner, anns) =>
+        concat(compile_event(inner), compile_annotations(anns))
 }
 
 // Compile a list of pitches for chord notation: "c' e' g'"
@@ -277,15 +337,20 @@ define compile_header(meta) = match meta {
         concat(with_sub, "\n}\n")
 }
 
+// Use PianoStaff when exactly 2 staves (treble + bass), otherwise plain staves
 define compile_score(score) = match score {
     Score(meta, staves) =>
+        let body = if eq(length(staves), 2) then
+            concat("  \\new PianoStaff <<\n", concat(compile_staves(staves), "\n  >>"))
+        else
+            compile_staves(staves) in
         concat(concat(concat(concat(
             ly_version,
             "\n"),
             compile_header(meta)),
-            "\n\\score {\n  <<\n"),
-            concat(compile_staves(staves),
-            "\n  >>\n  \\layout { indent = 0 }\n  \\midi { }\n}\n"))
+            "\n\\score {\n"),
+            concat(body,
+            "\n  \\layout { indent = 0 }\n  \\midi { }\n}\n"))
 }
 
 // =============================================================================
@@ -318,9 +383,10 @@ define duration_value(dur) = match dur {
 }
 
 define event_duration(e) = match e {
-    Note(p, d)    => duration_value(d)
-  | Rest(d)       => duration_value(d)
-  | Chord(ps, d)  => duration_value(d)
+    Note(p, d)      => duration_value(d)
+  | Rest(d)         => duration_value(d)
+  | Chord(ps, d)    => duration_value(d)
+  | Marked(inner, a) => event_duration(inner)
 }
 
 // Sum durations of events in a list
@@ -416,4 +482,31 @@ example "score validation" {
     let s = solo_score("Test", "Composer", Treble, KeySig(C, "major"), TimeSig(4, 4),
         Cons(Measure(Cons(Note(P(C, Natural, 4), Whole), Nil)), Nil)) in
     assert(valid_score(s) = true)
+}
+
+example "compile slur" {
+    let e1 = slur_start(n(C, Quarter)) in
+    let e2 = slur_end(n(E, Quarter)) in
+    assert(compile_event(e1) = "c'4(")
+    assert(compile_event(e2) = "e'4)")
+}
+
+example "compile tie" {
+    let e = tied(n(D, Half)) in
+    assert(compile_event(e) = "d'2~")
+}
+
+example "compile dynamic" {
+    let e = dyn(n(C, Quarter), Forte) in
+    assert(compile_event(e) = "c'4\\f")
+}
+
+example "compile staccato" {
+    let e = staccato(n(G, Eighth)) in
+    assert(compile_event(e) = "g'8-.")
+}
+
+example "marked event duration" {
+    let e = dyn(slur_start(n(C, Quarter)), Piano) in
+    assert(event_duration(e) = 4)
 }

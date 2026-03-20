@@ -1,0 +1,202 @@
+// =============================================================================
+// Minuet in G Major — Christian Petzold (attr. J.S. Bach, BWV Anh. 114)
+// =============================================================================
+//
+// Piano arrangement demonstrating multi-staff scores, key signatures,
+// slurs, dynamics, chords, and measure completeness verification.
+//
+// Two staves: treble melody + bass accompaniment
+// Key: G major (one sharp: F#), Time: 3/4
+//
+// Pipeline:
+//   kleis test --raw-output --example "compile" minuet_in_g.kleis > minuet_in_g.ly
+//   lilypond minuet_in_g.ly
+//
+// =============================================================================
+
+import "stdlib/templates/sheet_music.kleis"
+
+// Shorthand for F# in this key
+define fis(oct, dur) = Note(P(F, Sharp, oct), dur)
+
+// =============================================================================
+// Right Hand (Treble) — 16 measures
+// =============================================================================
+
+// Measures 1-4: opening phrase with slur
+define rh1 = m(Cons(no(D, 5, Quarter),
+           Cons(slur_start(no(G, 4, Eighth)),
+           Cons(no(A, 4, Eighth),
+           Cons(no(B, 4, Eighth),
+           Cons(slur_end(no(C, 5, Eighth)), Nil))))))
+
+define rh2 = m(Cons(no(D, 5, Quarter),
+           Cons(no(G, 4, Quarter),
+           Cons(no(G, 4, Quarter), Nil))))
+
+define rh3 = m(Cons(no(E, 5, Quarter),
+           Cons(slur_start(no(C, 5, Eighth)),
+           Cons(no(D, 5, Eighth),
+           Cons(no(E, 5, Eighth),
+           Cons(slur_end(fis(5, Eighth)), Nil))))))
+
+define rh4 = m(Cons(no(G, 5, Half),
+           Cons(no(G, 4, Quarter), Nil)))
+
+// Measures 5-8: answering phrase with dynamics
+define rh5 = m(Cons(dyn(no(C, 5, Quarter), MP),
+           Cons(slur_start(no(D, 5, Eighth)),
+           Cons(no(C, 5, Eighth),
+           Cons(no(B, 4, Eighth),
+           Cons(slur_end(no(A, 4, Eighth)), Nil))))))
+
+define rh6 = m(Cons(no(B, 4, Quarter),
+           Cons(slur_start(no(C, 5, Eighth)),
+           Cons(no(B, 4, Eighth),
+           Cons(no(A, 4, Eighth),
+           Cons(slur_end(no(G, 4, Eighth)), Nil))))))
+
+define rh7 = m(Cons(fis(4, Quarter),
+           Cons(slur_start(no(G, 4, Eighth)),
+           Cons(no(A, 4, Eighth),
+           Cons(no(B, 4, Eighth),
+           Cons(slur_end(no(G, 4, Eighth)), Nil))))))
+
+define rh8 = m(Cons(no(A, 4, Dotted(Half)), Nil))
+
+// Measures 9-12: second section
+define rh9 = m(Cons(dyn(no(D, 5, Quarter), MF),
+           Cons(slur_start(no(G, 4, Eighth)),
+           Cons(no(A, 4, Eighth),
+           Cons(no(B, 4, Eighth),
+           Cons(slur_end(no(C, 5, Eighth)), Nil))))))
+
+define rh10 = m(Cons(no(D, 5, Quarter),
+            Cons(no(G, 4, Quarter),
+            Cons(no(G, 4, Quarter), Nil))))
+
+define rh11 = m(Cons(no(E, 5, Quarter),
+            Cons(slur_start(no(C, 5, Eighth)),
+            Cons(no(D, 5, Eighth),
+            Cons(no(E, 5, Eighth),
+            Cons(slur_end(fis(5, Eighth)), Nil))))))
+
+define rh12 = m(Cons(no(G, 5, Half),
+            Cons(no(G, 4, Quarter), Nil)))
+
+// Measures 13-16: closing phrase
+define rh13 = m(Cons(no(C, 5, Quarter),
+            Cons(slur_start(no(D, 5, Eighth)),
+            Cons(no(C, 5, Eighth),
+            Cons(no(B, 4, Eighth),
+            Cons(slur_end(no(A, 4, Eighth)), Nil))))))
+
+define rh14 = m(Cons(no(B, 4, Quarter),
+            Cons(slur_start(no(C, 5, Eighth)),
+            Cons(no(B, 4, Eighth),
+            Cons(no(A, 4, Eighth),
+            Cons(slur_end(no(G, 4, Eighth)), Nil))))))
+
+define rh15 = m(Cons(no(A, 4, Quarter),
+            Cons(slur_start(no(B, 4, Eighth)),
+            Cons(no(A, 4, Eighth),
+            Cons(no(G, 4, Eighth),
+            Cons(slur_end(fis(4, Eighth)), Nil))))))
+
+define rh16 = m(Cons(fermata(no(G, 4, Dotted(Half))), Nil))
+
+// =============================================================================
+// Left Hand (Bass) — 16 measures with chords and walking bass
+// =============================================================================
+
+// G major chord: G2, B2, D3
+define g_chord(dur) = Chord(Cons(P(G, Natural, 2), Cons(P(B, Natural, 2), Cons(P(D, Natural, 3), Nil))), dur)
+
+// C major chord: C3, E3, G3
+define c_chord(dur) = Chord(Cons(P(C, Natural, 3), Cons(P(E, Natural, 3), Cons(P(G, Natural, 3), Nil))), dur)
+
+// D major chord: D3, F#3, A3
+define d_chord(dur) = Chord(Cons(P(D, Natural, 3), Cons(P(F, Sharp, 3), Cons(P(A, Natural, 3), Nil))), dur)
+
+// Walking bass with quarter notes
+define lh1 = m(Cons(no(G, 3, Half), Cons(no(A, 3, Quarter), Nil)))
+define lh2 = m(Cons(no(B, 3, Quarter), Cons(no(C, 3, Quarter), Cons(no(B, 3, Quarter), Nil))))
+define lh3 = m(Cons(no(C, 3, Half), Cons(no(B, 3, Quarter), Nil)))
+define lh4 = m(Cons(no(A, 3, Quarter), Cons(no(B, 3, Quarter), Cons(no(A, 3, Quarter), Nil))))
+
+define lh5 = m(Cons(no(A, 3, Half), Cons(fis(3, Quarter), Nil)))
+define lh6 = m(Cons(no(G, 3, Half), Cons(no(B, 3, Quarter), Nil)))
+define lh7 = m(Cons(no(D, 3, Quarter), Cons(no(E, 3, Quarter), Cons(no(D, 3, Quarter), Nil))))
+define lh8 = m(Cons(fermata(no(D, 3, Dotted(Half))), Nil))
+
+define lh9  = m(Cons(no(G, 3, Half), Cons(no(A, 3, Quarter), Nil)))
+define lh10 = m(Cons(no(B, 3, Quarter), Cons(no(C, 3, Quarter), Cons(no(B, 3, Quarter), Nil))))
+define lh11 = m(Cons(no(C, 3, Half), Cons(no(B, 3, Quarter), Nil)))
+define lh12 = m(Cons(no(A, 3, Quarter), Cons(no(B, 3, Quarter), Cons(no(A, 3, Quarter), Nil))))
+
+define lh13 = m(Cons(no(A, 3, Half), Cons(fis(3, Quarter), Nil)))
+define lh14 = m(Cons(no(G, 3, Half), Cons(no(B, 3, Quarter), Nil)))
+define lh15 = m(Cons(no(C, 3, Quarter), Cons(no(D, 3, Quarter), Cons(no(D, 2, Quarter), Nil))))
+define lh16 = m(Cons(fermata(no(G, 2, Dotted(Half))), Nil))
+
+// =============================================================================
+// Assemble the Score
+// =============================================================================
+
+define treble_measures = Cons(rh1, Cons(rh2, Cons(rh3, Cons(rh4,
+                        Cons(rh5, Cons(rh6, Cons(rh7, Cons(rh8,
+                        Cons(rh9, Cons(rh10, Cons(rh11, Cons(rh12,
+                        Cons(rh13, Cons(rh14, Cons(rh15, Cons(rh16, Nil))))))))))))))))
+
+define bass_measures = Cons(lh1, Cons(lh2, Cons(lh3, Cons(lh4,
+                      Cons(lh5, Cons(lh6, Cons(lh7, Cons(lh8,
+                      Cons(lh9, Cons(lh10, Cons(lh11, Cons(lh12,
+                      Cons(lh13, Cons(lh14, Cons(lh15, Cons(lh16, Nil))))))))))))))))
+
+define minuet = piano_score(
+    "Minuet in G Major",
+    "Christian Petzold (attr. J.S. Bach)",
+    KeySig(G, "major"),
+    TimeSig(3, 4),
+    treble_measures,
+    bass_measures
+)
+
+// =============================================================================
+// Compile and Output
+// =============================================================================
+
+example "compile" {
+    let ly = compile_score(minuet) in
+    out(typst_raw(ly))
+}
+
+example "validate" {
+    assert(valid_score(minuet) = true)
+}
+
+// Verify measure completeness (3/4 = 12 sixteenths)
+example "rh measures complete" {
+    let ts = TimeSig(3, 4) in
+    let expected = measure_expected_duration(ts) in
+    assert(measure_duration(rh1) = expected)
+    assert(measure_duration(rh4) = expected)
+    assert(measure_duration(rh5) = expected)
+    assert(measure_duration(rh8) = expected)
+    assert(measure_duration(rh16) = expected)
+}
+
+example "lh measures complete" {
+    let ts = TimeSig(3, 4) in
+    let expected = measure_expected_duration(ts) in
+    assert(measure_duration(lh1) = expected)
+    assert(measure_duration(lh4) = expected)
+    assert(measure_duration(lh8) = expected)
+    assert(measure_duration(lh16) = expected)
+}
+
+example "two staves present" {
+    match minuet {
+        Score(meta, staves) => assert(length(staves) = 2)
+    }
+}
