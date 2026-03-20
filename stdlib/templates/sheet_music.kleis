@@ -41,6 +41,7 @@ data Clef = Treble | Bass | Alto | Tenor
 
 // Key signature: root note name, mode ("major" or "minor")
 data KeySig = KeySig(NoteName, String)
+            | KeySigAcc(NoteName, Accidental, String)
 
 // Time signature: beats per measure, beat unit
 data TimeSig = TimeSig(ℤ, ℤ)
@@ -61,6 +62,9 @@ data Event = Note(Pitch, Duration)
            | Rest(Duration)
            | Chord(List, Duration)
            | Marked(Event, List)
+           | Tuplet(ℤ, ℤ, List)
+           | Tempo(String)
+           | Spacer(Duration)
 
 // =============================================================================
 // Layer 2: Structure — Hierarchical Organization
@@ -68,8 +72,12 @@ data Event = Note(Pitch, Duration)
 
 data Measure = Measure(List)
 
+// A voice line: list of measures for one voice within a staff
+data VoiceLine = VoiceLine(List)
+
 // A single staff: clef, key, time signature, then measures
 data StaffContent = Staff(Clef, KeySig, TimeSig, List)
+                  | VoiceStaff(Clef, KeySig, TimeSig, List)
 
 // Dynamic markings (for future use, declared now for type completeness)
 data Dynamic = PPP | PP | Piano | MP | MF | Forte | FF | FFF
@@ -116,10 +124,25 @@ define accent(e) = Marked(e, Cons(Artic(Accent), Nil))
 define fermata(e) = Marked(e, Cons(Artic(Fermata), Nil))
 define dyn(e, d) = Marked(e, Cons(Dyn(d), Nil))
 
+// Triplet: 3 events in the time of 2
+define triplet(e1, e2, e3) = Tuplet(3, 2, Cons(e1, Cons(e2, Cons(e3, Nil))))
+
+// Tempo marking (zero-duration directive)
+define tempo_mark(text) = Tempo(text)
+
+// Spacer (invisible rest for multi-voice notation)
+define sp(dur) = Spacer(dur)
+
 // Piano score: two staves (treble + bass) sharing key and time signature
 define piano_score(title, composer, key, time, treble_measures, bass_measures) =
     Score(ScoreMeta(title, composer, ""),
           Cons(Staff(Treble, key, time, treble_measures),
+          Cons(Staff(Bass, key, time, bass_measures), Nil)))
+
+// Piano score with multi-voice treble staff
+define voice_piano_score(title, composer, key, time, treble_voices, bass_measures) =
+    Score(ScoreMeta(title, composer, ""),
+          Cons(VoiceStaff(Treble, key, time, treble_voices),
           Cons(Staff(Bass, key, time, bass_measures), Nil)))
 
 // =============================================================================
@@ -221,6 +244,15 @@ define compile_event(e) = match e {
         concat(concat("<", compile_chord_pitches(pitches)), concat(">", ly_duration_base(dur)))
   | Marked(inner, anns) =>
         concat(compile_event(inner), compile_annotations(anns))
+  | Tuplet(n, d, events) =>
+        concat(concat(concat(concat("\\tuplet ", intToStr(n)),
+               concat("/", intToStr(d))),
+               " { "),
+               concat(compile_events(events), " }"))
+  | Tempo(text) =>
+        concat(concat("\\tempo \"", text), "\"")
+  | Spacer(dur) =>
+        concat("s", ly_duration_base(dur))
 }
 
 // Compile a list of pitches for chord notation: "c' e' g'"
@@ -277,6 +309,9 @@ define ly_key_mode(mode) =
 define compile_key_sig(ks) = match ks {
     KeySig(root, mode) =>
         concat(concat("\\key ", ly_note_name(root)), concat(" ", ly_key_mode(mode)))
+  | KeySigAcc(root, acc, mode) =>
+        concat(concat(concat("\\key ", ly_note_name(root)), ly_accidental(acc)),
+               concat(" ", ly_key_mode(mode)))
 }
 
 define compile_time_sig(ts) = match ts {
@@ -290,6 +325,33 @@ define compile_clef(c) = match c {
   | Alto   => "\\clef alto"
   | Tenor  => "\\clef tenor"
 }
+
+// =============================================================================
+// LilyPond Compilation — Voice Lines (multi-voice staves)
+// =============================================================================
+
+define ly_voice_name(n) =
+    if n = 1 then "\\voiceOne"
+    else if n = 2 then "\\voiceTwo"
+    else if n = 3 then "\\voiceThree"
+    else if n = 4 then "\\voiceFour"
+    else "\\voiceOne"
+
+define compile_voice(vl, n) = match vl {
+    VoiceLine(measures) =>
+        concat(concat("    { ", ly_voice_name(n)),
+               concat(" ", concat(compile_measures(measures), " }")))
+}
+
+define compile_voices_acc(voices, acc, n) =
+    if eq(length(voices), 0) then acc
+    else
+        let v_str = compile_voice(head(voices), n) in
+        let new_acc = if eq(strlen(acc), 0) then v_str
+                      else concat(concat(acc, "\n    \\\\\n"), v_str) in
+        compile_voices_acc(tail(voices), new_acc, n + 1)
+
+define compile_voices(voices) = compile_voices_acc(voices, "", 1)
 
 // =============================================================================
 // LilyPond Compilation — Staff
@@ -307,6 +369,17 @@ define compile_staff(s) = match s {
             concat("\n    ",
             concat(compile_measures(measures),
             "\n  }")))
+  | VoiceStaff(clef, key, time, voices) =>
+        concat(concat(concat(concat(concat(concat(
+            "  \\new Staff {\n    ",
+            compile_clef(clef)),
+            "\n    "),
+            compile_key_sig(key)),
+            "\n    "),
+            compile_time_sig(time)),
+            concat("\n    <<\n",
+            concat(compile_voices(voices),
+            "\n    >>\n  }")))
 }
 
 // Compile list of staves
@@ -383,10 +456,13 @@ define duration_value(dur) = match dur {
 }
 
 define event_duration(e) = match e {
-    Note(p, d)      => duration_value(d)
-  | Rest(d)         => duration_value(d)
-  | Chord(ps, d)    => duration_value(d)
-  | Marked(inner, a) => event_duration(inner)
+    Note(p, d)        => duration_value(d)
+  | Rest(d)           => duration_value(d)
+  | Chord(ps, d)      => duration_value(d)
+  | Marked(inner, a)  => event_duration(inner)
+  | Tuplet(n, d, evs) => sum_durations(evs) * d / n
+  | Tempo(t)          => 0
+  | Spacer(d)         => duration_value(d)
 }
 
 // Sum durations of events in a list
@@ -509,4 +585,37 @@ example "compile staccato" {
 example "marked event duration" {
     let e = dyn(slur_start(n(C, Quarter)), Piano) in
     assert(event_duration(e) = 4)
+}
+
+example "compile key sig with accidental" {
+    let ks = KeySigAcc(C, Sharp, "minor") in
+    assert(compile_key_sig(ks) = "\\key cis \\minor")
+}
+
+example "compile tuplet" {
+    let t = triplet(no(G, 3, Eighth), no(C, 4, Eighth), no(E, 4, Eighth)) in
+    assert(compile_event(t) = "\\tuplet 3/2 { g8 c'8 e'8 }")
+}
+
+example "tuplet duration" {
+    let t = triplet(no(G, 3, Eighth), no(C, 4, Eighth), no(E, 4, Eighth)) in
+    assert(event_duration(t) = 4)
+}
+
+example "compile tempo" {
+    let t = tempo_mark("Adagio sostenuto") in
+    assert(compile_event(t) = "\\tempo \"Adagio sostenuto\"")
+}
+
+example "tempo zero duration" {
+    assert(event_duration(tempo_mark("Allegro")) = 0)
+}
+
+example "compile spacer" {
+    let s = sp(Whole) in
+    assert(compile_event(s) = "s1")
+}
+
+example "spacer duration" {
+    assert(event_duration(sp(Half)) = 8)
 }

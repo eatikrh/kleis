@@ -44,7 +44,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-4796f6dc.js";
+            window.path_to_searchindex_js = "../searchindex-c1f25d5f.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f618dae5.js"></script>
@@ -246,7 +246,7 @@ open my_score.pdf
 <tr><td><code>Pitch</code></td><td><code>P(NoteName, Accidental, ℤ)</code></td><td>Full pitch (octave 4 = middle C)</td></tr>
 <tr><td><code>Duration</code></td><td><code>Whole</code>, <code>Half</code>, <code>Quarter</code>, <code>Eighth</code>, <code>Sixteenth</code>, <code>Dotted(Duration)</code>, <code>Triplet(Duration)</code></td><td>Note durations</td></tr>
 <tr><td><code>Clef</code></td><td><code>Treble</code>, <code>Bass</code>, <code>Alto</code>, <code>Tenor</code></td><td>Staff clefs</td></tr>
-<tr><td><code>KeySig</code></td><td><code>KeySig(NoteName, String)</code></td><td>Key signature (root + “major”/“minor”)</td></tr>
+<tr><td><code>KeySig</code></td><td><code>KeySig(NoteName, String)</code>, <code>KeySigAcc(NoteName, Accidental, String)</code></td><td>Key signature (root + “major”/“minor”)</td></tr>
 <tr><td><code>TimeSig</code></td><td><code>TimeSig(ℤ, ℤ)</code></td><td>Time signature (beats, beat unit)</td></tr>
 </tbody>
 </table>
@@ -258,7 +258,7 @@ open my_score.pdf
 <tr><th>Type</th><th>Constructors</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>Event</code></td><td><code>Note(Pitch, Duration)</code>, <code>Rest(Duration)</code>, <code>Chord(List, Duration)</code>, <code>Marked(Event, List)</code></td><td>Things that happen in time</td></tr>
+<tr><td><code>Event</code></td><td><code>Note(Pitch, Duration)</code>, <code>Rest(Duration)</code>, <code>Chord(List, Duration)</code>, <code>Marked(Event, List)</code>, <code>Tuplet(ℤ, ℤ, List)</code>, <code>Tempo(String)</code>, <code>Spacer(Duration)</code></td><td>Things that happen in time</td></tr>
 <tr><td><code>Articulation</code></td><td><code>Staccato</code>, <code>Accent</code>, <code>Tenuto</code>, <code>Fermata</code>, <code>Marcato</code></td><td>Articulation marks</td></tr>
 <tr><td><code>Annotation</code></td><td><code>Tie</code>, <code>SlurStart</code>, <code>SlurEnd</code>, <code>Artic(Articulation)</code>, <code>Dyn(Dynamic)</code></td><td>Attachments to events</td></tr>
 <tr><td><code>Dynamic</code></td><td><code>PPP</code>, <code>PP</code>, <code>Piano</code>, <code>MP</code>, <code>MF</code>, <code>Forte</code>, <code>FF</code>, <code>FFF</code></td><td>Volume markings</td></tr>
@@ -273,7 +273,8 @@ open my_score.pdf
 </thead>
 <tbody>
 <tr><td><code>Measure</code></td><td><code>Measure(List)</code></td><td>List of events</td></tr>
-<tr><td><code>StaffContent</code></td><td><code>Staff(Clef, KeySig, TimeSig, List)</code></td><td>One staff with its measures</td></tr>
+<tr><td><code>VoiceLine</code></td><td><code>VoiceLine(List)</code></td><td>List of measures for one voice</td></tr>
+<tr><td><code>StaffContent</code></td><td><code>Staff(Clef, KeySig, TimeSig, List)</code>, <code>VoiceStaff(Clef, KeySig, TimeSig, List)</code></td><td>One staff (single-voice or multi-voice)</td></tr>
 <tr><td><code>ScoreMeta</code></td><td><code>ScoreMeta(String, String, String)</code></td><td>Title, composer, subtitle</td></tr>
 <tr><td><code>Score</code></td><td><code>Score(ScoreMeta, List)</code></td><td>Metadata + list of staves</td></tr>
 </tbody>
@@ -302,9 +303,18 @@ accent(n(C, Quarter))          // c'4-&gt;
 fermata(n(G, Dotted(Half)))    // g'2.\fermata
 dyn(n(C, Quarter), Forte)      // c'4\f
 
+// Tuplets and tempo
+triplet(e1, e2, e3)               // 3 events in the time of 2
+tempo_mark("Adagio sostenuto")    // \tempo "Adagio sostenuto"
+sp(Whole)                          // invisible rest (for multi-voice)
+
+// Key signatures with accidentals
+KeySigAcc(C, Sharp, "minor")      // \key cis \minor
+
 // Score constructors
 solo_score(title, composer, clef, key, time, measures)
 piano_score(title, composer, key, time, treble_measures, bass_measures)
+voice_piano_score(title, composer, key, time, treble_voices, bass_measures)
 </code></pre>
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
 <h3 id="solo-instrument-ode-to-joy"><a class="header" href="#solo-instrument-ode-to-joy">Solo Instrument: Ode to Joy</a></h3>
@@ -359,6 +369,54 @@ example "compile" {
 exactly two staves, it wraps them in a LilyPond <code>\new PianoStaff</code> block,
 which draws a brace connecting them.</p>
 <p>See the full example: <code>examples/music/minuet_in_g.kleis</code></p>
+<h3 id="multi-voice-piano-moonlight-sonata"><a class="header" href="#multi-voice-piano-moonlight-sonata">Multi-Voice Piano: Moonlight Sonata</a></h3>
+<p>The opening 14 measures of Beethoven’s Op. 27 No. 2 demonstrate the most
+advanced features: multi-voice staves, triplet grouping, tempo markings,
+and accidentaled key signatures.</p>
+<p><img src="../images/moonlight_sonata.png" alt="Moonlight Sonata — multi-voice piano score generated by Kleis + LilyPond"></p>
+<p><em>Beethoven’s Moonlight Sonata (measures 1–14). Treble staff with two simultaneous voices: melody (stems up) entering at measure 5, continuous triplet arpeggiation (stems down). Bass staff with sustained octave pedal tones. C# minor, cut time.</em></p>
+<p>The three-layer texture requires a <code>VoiceStaff</code> — a staff containing
+multiple <code>VoiceLine</code> objects that play simultaneously:</p>
+<pre><code class="language-kleis">import "stdlib/templates/sheet_music.kleis"
+
+// Triplet arpeggiation pattern (3 eighths in the time of 2)
+define t_csm = triplet(
+    Note(P(G, Sharp, 3), Eighth),
+    Note(P(C, Sharp, 4), Eighth),
+    Note(P(E, Natural, 4), Eighth))
+
+// Each measure has 4 triplet groups
+define acc1 = m(Cons(t_csm, Cons(t_csm, Cons(t_csm, Cons(t_csm, Nil)))))
+
+// Melody: spacer rests where voice 1 is silent, then enters pp
+define mel1 = m(Cons(tempo_mark("Adagio sostenuto"), Cons(sp(Whole), Nil)))
+define mel5 = m(Cons(sp(Half), Cons(Rest(Quarter),
+             Cons(dyn(Note(P(G,Sharp,4), Dotted(Eighth)), PP),
+             Cons(Note(P(G,Sharp,4), Sixteenth), Nil)))))
+
+// Two voices share the treble staff
+define treble_voices = Cons(VoiceLine(melody_measures),
+                      Cons(VoiceLine(accomp_measures), Nil))
+
+// Assemble: multi-voice treble + single-voice bass
+define moonlight = voice_piano_score(
+    "Sonata No. 14 'Moonlight'",
+    "Ludwig van Beethoven (Op. 27, No. 2)",
+    KeySigAcc(C, Sharp, "minor"),
+    TimeSig(2, 2),
+    treble_voices,
+    bass_measures
+)
+</code></pre>
+<p>Key features demonstrated:</p>
+<ul>
+<li><strong><code>VoiceStaff</code></strong> compiles to <code>&lt;&lt; { \voiceOne ... } \\ { \voiceTwo ... } &gt;&gt;</code> in LilyPond, giving each voice automatic stem direction</li>
+<li><strong><code>triplet(e1, e2, e3)</code></strong> compiles to <code>\tuplet 3/2 { e1 e2 e3 }</code></li>
+<li><strong><code>tempo_mark("...")</code></strong> produces <code>\tempo "..."</code> with zero duration (doesn’t affect measure completeness)</li>
+<li><strong><code>sp(dur)</code></strong> produces invisible rests (<code>s</code> in LilyPond) so voice 1 doesn’t print rests where it’s silent</li>
+<li><strong><code>KeySigAcc(C, Sharp, "minor")</code></strong> compiles to <code>\key cis \minor</code></li>
+</ul>
+<p>See the full example: <code>examples/music/moonlight_sonata.kleis</code></p>
 <h2 id="measure-completeness-verification"><a class="header" href="#measure-completeness-verification">Measure Completeness Verification</a></h2>
 <p>The template includes duration arithmetic so you can verify that measures
 add up correctly:</p>
@@ -394,6 +452,10 @@ LilyPond warns about it.</p>
 <tr><td><code>Chord([P(C,4), P(E,4), P(G,4)], Quarter)</code></td><td><code>&lt;c' e' g'&gt;4</code></td><td>C major chord</td></tr>
 <tr><td><code>slur_start(n(C, Quarter))</code></td><td><code>c'4(</code></td><td>Begin slur</td></tr>
 <tr><td><code>dyn(n(C, Quarter), Forte)</code></td><td><code>c'4\f</code></td><td>Dynamic marking</td></tr>
+<tr><td><code>triplet(e1, e2, e3)</code></td><td><code>\tuplet 3/2 { ... }</code></td><td>Triplet group</td></tr>
+<tr><td><code>tempo_mark("Adagio")</code></td><td><code>\tempo "Adagio"</code></td><td>Tempo marking</td></tr>
+<tr><td><code>sp(Whole)</code></td><td><code>s1</code></td><td>Spacer (invisible rest)</td></tr>
+<tr><td><code>KeySigAcc(C, Sharp, "minor")</code></td><td><code>\key cis \minor</code></td><td>Key with accidental</td></tr>
 </tbody>
 </table>
 </div>

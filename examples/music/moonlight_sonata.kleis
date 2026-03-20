@@ -1,0 +1,344 @@
+// =============================================================================
+// Moonlight Sonata — Ludwig van Beethoven, Op. 27 No. 2
+// First Movement: Adagio sostenuto (measures 1–14)
+// =============================================================================
+//
+// Three-layer piano texture:
+//   Voice 1 (treble, stems up):  slow melody entering at measure 5
+//   Voice 2 (treble, stems down): continuous triplet eighth-note arpeggiation
+//   Bass staff:                   sustained octave pedal tones
+//
+// Key: C# minor, Time: 2/2 (cut time)
+//
+// Source: Mutopia Project (Berners 1908 edition, public domain)
+// Creative Commons Attribution-ShareAlike 2.5
+//
+// Pipeline:
+//   kleis test --raw-output --example "compile" moonlight_sonata.kleis > moonlight_sonata.ly
+//   lilypond moonlight_sonata.ly
+//
+// =============================================================================
+
+import "stdlib/templates/sheet_music.kleis"
+
+// =============================================================================
+// Shorthand Constructors
+// =============================================================================
+
+// Triplet arpeggiation: 3 notes played in the time of 2 eighth notes
+define tri(p1, p2, p3) =
+    triplet(Note(p1, Eighth), Note(p2, Eighth), Note(p3, Eighth))
+
+// Frequently used pitches
+define gis3 = P(G, Sharp, 3)
+define cis4 = P(C, Sharp, 4)
+define e4   = P(E, Natural, 4)
+define a3   = P(A, Natural, 3)
+define d4   = P(D, Natural, 4)
+define fis4 = P(F, Sharp, 4)
+define bis3 = P(B, Sharp, 3)
+define dis4 = P(D, Sharp, 4)
+define fis3 = P(F, Sharp, 3)
+define b3   = P(B, Natural, 3)
+define g3   = P(G, Natural, 3)
+define f4   = P(F, Natural, 4)
+define c4   = P(C, Natural, 4)
+define cis3 = P(C, Sharp, 3)
+define ais3 = P(A, Sharp, 3)
+define cis5 = P(C, Sharp, 5)
+
+// Bass octave chords
+define bass_oct(name, acc, low_oct, hi_oct, dur) =
+    Chord(Cons(P(name, acc, low_oct), Cons(P(name, acc, hi_oct), Nil)), dur)
+
+// 4-group triplet measure (each beat = one triplet)
+define trip4(a, b, c, d) = m(Cons(a, Cons(b, Cons(c, Cons(d, Nil)))))
+
+// =============================================================================
+// Voice 2: Triplet Accompaniment (treble staff, stems down)
+// =============================================================================
+// Each measure has 4 triplet groups; each group = 3 eighth notes in the time of 2.
+
+// m1-2: C# minor arpeggio — G#3, C#4, E4
+define t_csm = tri(gis3, cis4, e4)
+define acc1  = trip4(t_csm, t_csm, t_csm, t_csm)
+define acc2  = acc1
+
+// m3: A3-C#4-E4, then A3-D4-F#4 (moving to A major / D area)
+define t_a1  = tri(a3, cis4, e4)
+define t_a2  = tri(a3, d4, fis4)
+define acc3  = trip4(t_a1, t_a1, t_a2, t_a2)
+
+// m4: G#3-B#3-F#4, G#3-C#4-E4, G#3-C#4-D#4, F#3-B#3-D#4
+define acc4 = trip4(
+    tri(gis3, bis3, P(F, Sharp, 4)),
+    tri(gis3, cis4, e4),
+    tri(gis3, cis4, dis4),
+    tri(fis3, bis3, dis4))
+
+// m5: E3-G#3-C#4 (bass cross), then G#3-C#4-E4 × 3
+define acc5 = trip4(
+    tri(P(E, Natural, 3), gis3, cis4),
+    t_csm, t_csm, t_csm)
+
+// m6: G#3-D#4-F#4 (B#/G# diminished area)
+define t_gdf = tri(gis3, dis4, fis4)
+define acc6  = trip4(t_gdf, t_gdf, t_gdf, t_gdf)
+
+// m7: G#3-C#4-E4, G#3-C#4-E4, A3-C#4-F#4, A3-C#4-F#4
+define t_af = tri(a3, cis4, P(F, Sharp, 4))
+define acc7 = trip4(t_csm, t_csm, t_af, t_af)
+
+// m8: G#3-B3-E4, G#3-B3-E4, A3-B3-D#4, A3-B3-D#4
+define t_gbe = tri(gis3, b3, e4)
+define t_abd = tri(a3, b3, dis4)
+define acc8  = trip4(t_gbe, t_gbe, t_abd, t_abd)
+
+// m9: G#3-B3-E4 × 4
+define acc9 = trip4(t_gbe, t_gbe, t_gbe, t_gbe)
+
+// m10: G3-B3-E4 × 4 (G natural — moving to E major territory)
+define t_gnat = tri(g3, b3, e4)
+define acc10  = trip4(t_gnat, t_gnat, t_gnat, t_gnat)
+
+// m11: G3-B3-F4 × 4 (G dominant 7th)
+define t_gbf = tri(g3, b3, f4)
+define acc11 = trip4(t_gbf, t_gbf, t_gbf, t_gbf)
+
+// m12: G3-C4-E4, G3-B3-E4, G3-C#4-E4, F#3-C#4-E4
+define acc12 = trip4(
+    tri(g3, c4, e4),
+    tri(g3, b3, e4),
+    tri(g3, cis4, e4),
+    tri(fis3, cis4, e4))
+
+// m13: F#3-B3-D4, F#3-B3-D4, G3-B3-C#4, E3-B3-C#4
+define t_fbd = tri(fis3, b3, d4)
+define acc13 = trip4(
+    t_fbd, t_fbd,
+    tri(g3, b3, cis4),
+    tri(P(E, Natural, 3), b3, cis4))
+
+// m14: F#3-B3-D4, F#3-B3-D4, F#3-A#3-C#4, F#3-A#3-C#4
+define t_fac = tri(fis3, ais3, cis4)
+define acc14 = trip4(t_fbd, t_fbd, t_fac, t_fac)
+
+// =============================================================================
+// Voice 1: Melody (treble staff, stems up)
+// =============================================================================
+// Spacer rests (invisible) in measures 1–4 where melody is silent.
+
+define gis4 = P(G, Sharp, 4)
+define a4   = P(A, Natural, 4)
+define fis4m = P(F, Sharp, 4)
+define b4   = P(B, Natural, 4)
+define e4m  = P(E, Natural, 4)
+define g4   = P(G, Natural, 4)
+
+// m1-4: silence (spacer rests fill the measure)
+// Tempo marking on measure 1 (zero-duration directive)
+define mel1 = m(Cons(tempo_mark("Adagio sostenuto"), Cons(sp(Whole), Nil)))
+define mel2 = mel1
+define mel3 = mel1
+define mel4 = mel1
+
+// m5: half rest, quarter rest, dotted-eighth + sixteenth G#4 (melody enters pp)
+define mel5 = m(Cons(sp(Half),
+             Cons(Rest(Quarter),
+             Cons(dyn(Note(gis4, Dotted(Eighth)), PP),
+             Cons(Note(gis4, Sixteenth), Nil)))))
+
+// m6: dotted-half G#4, dotted-eighth G#4, sixteenth G#4
+define mel6 = m(Cons(Note(gis4, Dotted(Half)),
+             Cons(Note(gis4, Dotted(Eighth)),
+             Cons(Note(gis4, Sixteenth), Nil))))
+
+// m7: half G#4, half A4 (phrasing slur over the pair)
+define mel7 = m(Cons(slur_start(Note(gis4, Half)),
+             Cons(slur_end(Note(a4, Half)), Nil)))
+
+// m8: half G#4, quarter F#4, quarter B4
+define mel8 = m(Cons(Note(gis4, Half),
+             Cons(Note(fis4m, Quarter),
+             Cons(Note(b4, Quarter), Nil))))
+
+// m9: quarter E4, then silence
+define mel9 = m(Cons(Note(e4m, Quarter),
+             Cons(Rest(Quarter),
+             Cons(sp(Half), Nil))))
+
+// m10: half rest, quarter rest, dotted-eighth G4, sixteenth G4
+define mel10 = m(Cons(sp(Half),
+              Cons(Rest(Quarter),
+              Cons(Note(g4, Dotted(Eighth)),
+              Cons(Note(g4, Sixteenth), Nil)))))
+
+// m11: dotted-half G4, dotted-eighth G4, sixteenth G4
+define mel11 = m(Cons(Note(g4, Dotted(Half)),
+              Cons(Note(g4, Dotted(Eighth)),
+              Cons(Note(g4, Sixteenth), Nil))))
+
+// m12: dotted-half G4, quarter F#4
+define mel12 = m(Cons(Note(g4, Dotted(Half)),
+              Cons(Note(fis4m, Quarter), Nil)))
+
+// m13: half F#4, quarter G4, quarter E4
+define mel13 = m(Cons(slur_start(Note(fis4m, Half)),
+              Cons(Note(g4, Quarter),
+              Cons(slur_end(Note(e4m, Quarter)), Nil))))
+
+// m14: half F#4, half F#4
+define mel14 = m(Cons(Note(fis4m, Half),
+              Cons(Note(fis4m, Half), Nil)))
+
+// =============================================================================
+// Bass Staff — Sustained Octaves and Pedal Tones
+// =============================================================================
+
+// m1: C#2+C#3 whole note
+define bass1 = m(Cons(bass_oct(C, Sharp, 2, 3, Whole), Nil))
+
+// m2: B1+B2 whole note
+define bass2 = m(Cons(bass_oct(B, Natural, 1, 2, Whole), Nil))
+
+// m3: A1+A2 half, F#1+F#2 half
+define bass3 = m(Cons(bass_oct(A, Natural, 1, 2, Half),
+              Cons(bass_oct(F, Sharp, 1, 2, Half), Nil)))
+
+// m4: G#1+G#2 half, G#1+G#2 half
+define bass4 = m(Cons(bass_oct(G, Sharp, 1, 2, Half),
+              Cons(bass_oct(G, Sharp, 1, 2, Half), Nil)))
+
+// m5: C#2+G#2+C#3 whole note (three-note chord)
+define bass5 = m(Cons(Chord(Cons(P(C, Sharp, 2),
+                     Cons(P(G, Sharp, 2),
+                     Cons(P(C, Sharp, 3), Nil))), Whole), Nil))
+
+// m6: B#1+G#2+B#2 whole note
+define bass6 = m(Cons(Chord(Cons(P(B, Sharp, 1),
+                     Cons(P(G, Sharp, 2),
+                     Cons(P(B, Sharp, 2), Nil))), Whole), Nil))
+
+// m7: C#2+C#3 half, F#1+F#2 half
+define bass7 = m(Cons(bass_oct(C, Sharp, 2, 3, Half),
+              Cons(bass_oct(F, Sharp, 1, 2, Half), Nil)))
+
+// m8: B1+B2 half, B1+B2 half
+define bass8 = m(Cons(bass_oct(B, Natural, 1, 2, Half),
+              Cons(bass_oct(B, Natural, 1, 2, Half), Nil)))
+
+// m9: E2+E3 whole note
+define bass9 = m(Cons(bass_oct(E, Natural, 2, 3, Whole), Nil))
+
+// m10: E2+E3 whole note
+define bass10 = bass9
+
+// m11: D2+D3 whole note
+define bass11 = m(Cons(bass_oct(D, Natural, 2, 3, Whole), Nil))
+
+// m12: C2+C3 quarter, B1+B2 quarter, A#1+A#2 half
+define bass12 = m(Cons(bass_oct(C, Natural, 2, 3, Quarter),
+               Cons(bass_oct(B, Natural, 1, 2, Quarter),
+               Cons(bass_oct(A, Sharp, 1, 2, Half), Nil))))
+
+// m13: B1+B2 half, E2 quarter, G2 quarter
+define bass13 = m(Cons(bass_oct(B, Natural, 1, 2, Half),
+               Cons(Note(P(E, Natural, 2), Quarter),
+               Cons(Note(P(G, Natural, 2), Quarter), Nil))))
+
+// m14: F#2 half, F#1+F#2 half
+define bass14 = m(Cons(Note(P(F, Sharp, 2), Half),
+               Cons(bass_oct(F, Sharp, 1, 2, Half), Nil)))
+
+// =============================================================================
+// Assemble Voice Lines
+// =============================================================================
+
+define melody_measures = Cons(mel1, Cons(mel2, Cons(mel3, Cons(mel4,
+                        Cons(mel5, Cons(mel6, Cons(mel7, Cons(mel8,
+                        Cons(mel9, Cons(mel10, Cons(mel11, Cons(mel12,
+                        Cons(mel13, Cons(mel14, Nil))))))))))))))
+
+define accomp_measures = Cons(acc1, Cons(acc2, Cons(acc3, Cons(acc4,
+                        Cons(acc5, Cons(acc6, Cons(acc7, Cons(acc8,
+                        Cons(acc9, Cons(acc10, Cons(acc11, Cons(acc12,
+                        Cons(acc13, Cons(acc14, Nil))))))))))))))
+
+define bass_measures = Cons(bass1, Cons(bass2, Cons(bass3, Cons(bass4,
+                      Cons(bass5, Cons(bass6, Cons(bass7, Cons(bass8,
+                      Cons(bass9, Cons(bass10, Cons(bass11, Cons(bass12,
+                      Cons(bass13, Cons(bass14, Nil))))))))))))))
+
+define treble_voices = Cons(VoiceLine(melody_measures),
+                      Cons(VoiceLine(accomp_measures), Nil))
+
+// =============================================================================
+// Score Assembly
+// =============================================================================
+
+define moonlight = voice_piano_score(
+    "Sonata No. 14 'Moonlight'",
+    "Ludwig van Beethoven (Op. 27, No. 2)",
+    KeySigAcc(C, Sharp, "minor"),
+    TimeSig(2, 2),
+    treble_voices,
+    bass_measures
+)
+
+// =============================================================================
+// Compile and Output
+// =============================================================================
+
+example "compile" {
+    let ly = compile_score(moonlight) in
+    out(typst_raw(ly))
+}
+
+example "validate" {
+    assert(valid_score(moonlight) = true)
+}
+
+// Verify measure completeness (2/2 = 16 sixteenths per measure)
+example "melody measures complete" {
+    let ts = TimeSig(2, 2) in
+    let expected = measure_expected_duration(ts) in
+    assert(measure_duration(mel1) = expected)
+    assert(measure_duration(mel5) = expected)
+    assert(measure_duration(mel6) = expected)
+    assert(measure_duration(mel7) = expected)
+    assert(measure_duration(mel8) = expected)
+    assert(measure_duration(mel9) = expected)
+    assert(measure_duration(mel14) = expected)
+}
+
+example "accompaniment measures complete" {
+    let ts = TimeSig(2, 2) in
+    let expected = measure_expected_duration(ts) in
+    assert(measure_duration(acc1) = expected)
+    assert(measure_duration(acc3) = expected)
+    assert(measure_duration(acc4) = expected)
+    assert(measure_duration(acc5) = expected)
+    assert(measure_duration(acc12) = expected)
+    assert(measure_duration(acc14) = expected)
+}
+
+example "bass measures complete" {
+    let ts = TimeSig(2, 2) in
+    let expected = measure_expected_duration(ts) in
+    assert(measure_duration(bass1) = expected)
+    assert(measure_duration(bass3) = expected)
+    assert(measure_duration(bass4) = expected)
+    assert(measure_duration(bass12) = expected)
+    assert(measure_duration(bass13) = expected)
+    assert(measure_duration(bass14) = expected)
+}
+
+example "treble has two voices" {
+    assert(length(treble_voices) = 2)
+}
+
+example "score has two staves" {
+    match moonlight {
+        Score(meta, staves) => assert(length(staves) = 2)
+    }
+}
