@@ -163,6 +163,8 @@ Chord recognition identifies whether three pitch classes form a recognized triad
 
 = Verification Results
 
+*Methodological note.* The seven axioms are deliberately simplified probes, not a complete theory of tonal harmony. They are chosen to be formally precise, computationally tractable, and musically interpretable --- but each one is a strict, context-free rule where real tonal analysis would apply contextual judgment. The violations we report below are therefore *expected*: they are artifacts of the axioms' strictness as much as they are properties of the Sonata. The framework's value lies not in getting 'all SAT' but in producing diagnostically useful verdicts that identify exactly *where* and *why* a strict rule fails --- information that guides the construction of richer theories.
+
 We run all seven axiom checkers against the Moonlight Sonata AST. The results, shown in Table 1, partition the axioms into two groups: those the Sonata satisfies and those it violates.
 
 #figure(
@@ -218,7 +220,9 @@ The distinction between formal verification and generative AI is precise:
 
 - A *Skolem witness* satisfies $T(a)$ exactly. Its existence is a proof that the axioms are consistent.
 
-- The *composer* selects a specific witness from the satisfiability space, guided by criteria --- taste, expressive intent, historical awareness, structural ambition --- that are not part of $T$.
+- The *composer* selects a specific witness from the satisfiability space, guided by criteria --- taste, expressive intent, historical awareness, structural ambition --- that are *not encoded in $T$*.
+
+This last point requires emphasis because it is the claim most likely to be challenged. One might argue that modern generative models also optimize over constraints (loss functions, reward models, RLHF). The distinction is not that composers use constraints and AI does not --- it is that the *criteria of selection* are outside the formal theory. A loss function is part of the model; it is encoded, differentiable, and optimizable. The composer's criteria --- why *this* voicing and not another equally valid one, why parallel fifths *here* and nowhere else --- are not derivable from $T$. They are not a hidden objective function waiting to be reverse-engineered; they are judgments made in a context that includes the entire history of Western music, the specific instrument, the dedicatee, and the emotional arc the composer intends. No extension of $T$ captures this without becoming a theory of the composer rather than a theory of music.
 
 The framework makes the composer's contribution formally visible. Everything the axioms determine is captured by the SAT/violation analysis. Everything they do *not* determine --- the choice among equally valid models --- is where the human lives. The formal system reveals this gap precisely by accounting for everything *except* the selection.
 
@@ -259,9 +263,15 @@ The invariance of this pattern is not coincidental. It reflects the universal st
 
 = Discussion
 
-Our seven-axiom theory is deliberately minimal. It demonstrates the framework without claiming to capture the full richness of tonal analysis. Several refinements are natural next steps.
+Our seven-axiom theory is deliberately minimal --- these are *probes*, not a definitive tonal grammar. Each axiom is a strict, context-free predicate: it checks a surface-level property without the contextual reasoning that a trained analyst would apply. We chose this design intentionally. A complete theory would obscure the methodological point: that even crude axioms, when machine-checked against a real score, produce musically informative verdicts. The violations we observe are *jointly* properties of the Sonata and properties of the axioms' strictness; disentangling the two is exactly the work that future refinements must do. Several such refinements are natural next steps.
 
-*Harmonic skeleton versus surface.* The arpeggio-triad violation at measure 4 arises because the axiom treats every sounding note as a chord tone. Real tonal analysis distinguishes chord tones from non-chord tones (passing tones, neighbor tones, suspensions, appoggiaturas). A harmonic reduction function that strips embellishments to reveal the underlying harmony would eliminate false positives and yield a more musically accurate picture.
+*Harmonic skeleton versus surface.* This is the most important theoretical refinement. The arpeggio-triad violation at measure 4 arises because the axiom treats every sounding note as a chord tone. Real tonal analysis distinguishes two layers:
+
+- *Harmonic skeleton*: the governing harmony at each time span (e.g., 'C$\#$ minor' for measures 1--2).
+
+- *Harmonic surface*: the actual sounding notes, which include chord tones, passing tones, neighbor tones, suspensions, and appoggiaturas.
+
+Our current axioms operate entirely at the surface layer. A formal *harmonic reduction function* --- one that classifies each note as structural or ornamental --- would separate the two layers. Several of our current violations (Axiom 3, possibly some Axiom 7 cases) are violations at the surface only; they may be SAT at the skeleton level. Formalizing this distinction is a substantial project in its own right, and we consider it the natural next paper: *Surface vs. Structural Harmony as a Formal Distinction*.
 
 *Contextual parallel motion.* The parallel-fifths detection at measure 13 checks the first sounding pitch of each measure. A refined version would weight by metric position (downbeats versus passing motion) and distinguish structural from ornamental voice leading.
 
@@ -269,7 +279,9 @@ Our seven-axiom theory is deliberately minimal. It demonstrates the framework wi
 
 *Comparative musicology.* The most compelling application of this framework is comparative: running the same axioms against Bach, Chopin, Debussy, and Schoenberg to characterize stylistic differences as formal properties. Bach should satisfy stricter counterpoint axioms; Chopin should violate harmonic-rhythm assumptions more aggressively; Schoenberg should violate tonal-cohesion axioms that all the others satisfy.
 
-*Z3-backed verification.* Currently, our axiom checkers use direct functional evaluation over concrete scores. The next level is to express axioms as universally quantified constraints and let Z3 produce Skolem witnesses for violations, enabling fully automated counterexample generation.
+*Z3-backed verification.* We must be precise about what 'verification' means in this paper. Currently, our axiom checkers are ordinary functions that traverse the concrete AST and return verdicts. They are *checked by execution*, not by SMT solving. The Kleis evaluator runs them; Z3 is not invoked. This is honest but limited: it tells us whether *this specific score* satisfies *this specific axiom*, but it cannot generate counterexamples, prove universally quantified properties, or search for Skolem witnesses automatically.
+
+The next phase is to express axioms as universally quantified SMT constraints ($forall m in "measures" . phi(m)$) and let Z3 produce Skolem witnesses for violations ($exists m . not phi(m)$). That would enable: (1) fully automated counterexample generation, (2) proof that a property holds for *all* measures without enumeration, and (3) synthesis of score fragments satisfying given constraints --- which is formal composition in the literal sense.
 
 A limitation of the current work is that we verify against a single excerpt. A robust theory requires testing against a corpus. However, even a single case study suffices for our philosophical claim: the framework demonstrates that compositional style is formally characterizable as a satisfiability profile, and that the composer's contribution is the specific witness, not the constraint system.
 
@@ -279,7 +291,7 @@ We have presented a framework in which a musical score is a model, a music theor
 
 The central claim is philosophical but precisely stated: the beauty is in the Skolems. The axioms constrain the space of possible compositions. The solver can verify any candidate. But the choice of which witness to instantiate --- which notes, which voicings, which harmonic trajectory --- is the irreducibly human act. Formal systems do not compose; they constrain. The composer navigates.
 
-This is the opposite of generative AI. A generative model produces outputs by sampling from a statistical distribution, approximating what is likely given training data. A composer selects a specific Skolem witness from a satisfiability space, guided by intent that no axiom system captures. The formal framework makes this distinction precise by accounting for everything *except* the selection --- thereby revealing exactly where the human contribution lives.
+This is the opposite of generative AI. A generative model produces outputs by sampling from a statistical distribution, approximating what is likely given training data. A composer selects a specific Skolem witness from a satisfiability space, guided by criteria that are not encoded in the theory $T$. This is not a hidden loss function; it is judgment exercised in a context no formalization captures without becoming a theory of the composer rather than a theory of music. The formal framework makes this distinction precise by accounting for everything *except* the selection --- thereby revealing exactly where the human contribution lives.
 
 The same axiom--model--witness pattern appears across chess, set theory, and music, running on the same verification substrate. This universality suggests that the pattern is not an analogy but a structural invariant of knowledge production itself: notation, constraints, verification, and the irreducible choice of instantiation.
 
