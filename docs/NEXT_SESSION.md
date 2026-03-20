@@ -1,10 +1,196 @@
 # Next Session Notes
 
-**Last Updated:** March 18, 2026 (session — Projection Fibers Paper + POT Theorems)
+**Last Updated:** March 20, 2026 (session — Musical Score Notation + Moonlight Sonata AST)
 
 ---
 
-## Current Session (Mar 18, 2026): Independence Paper + Epistemic Boundary + Flow Predictions
+## Current Session (Mar 20, 2026): Sheet Music Template + Moonlight Sonata
+
+### What We Did
+
+1. Extended `sheet_music.kleis` template with multi-voice staves, tuplets, tempo markings,
+   accidentaled key signatures, and spacer rests
+2. Encoded 14 measures of Beethoven's Moonlight Sonata (Op. 27 No. 2, first movement)
+   as a formal AST with three-layer texture: melody + triplet arpeggiation + bass
+3. Generated publication-quality sheet music via LilyPond (PDF + MIDI)
+4. Updated manual chapter with new features and Moonlight Sonata example
+5. All work on `feature/music-notation` branch, pushed to both remotes
+
+#### Files Created/Modified
+
+| File | What |
+|------|------|
+| `stdlib/templates/sheet_music.kleis` | Extended with 5 new types + compilation (24 tests) |
+| `examples/music/moonlight_sonata.kleis` | Moonlight Sonata, 14 measures, 3 voices (7 tests) |
+| `examples/music/moonlight_sonata.ly` | Generated LilyPond source |
+| `examples/music/moonlight_sonata.pdf` | Generated sheet music |
+| `examples/music/moonlight_sonata.midi` | Generated MIDI |
+| `docs/manual/src/chapters/30-sheet-music.md` | Updated with new features + Moonlight example |
+| `docs/manual/src/images/moonlight_sonata.png` | Screenshot for manual |
+
+#### Template Extensions (sheet_music.kleis)
+
+| New Type/Variant | Purpose |
+|-----------------|---------|
+| `KeySigAcc(NoteName, Accidental, String)` | Key signatures with sharped/flatted roots (C# minor, Bb major) |
+| `Tuplet(n, d, events)` | Tuplet grouping — compiles to `\tuplet 3/2 { ... }` |
+| `Tempo(String)` | Zero-duration tempo marking directive |
+| `Spacer(Duration)` | Invisible rest for multi-voice notation |
+| `VoiceLine(List)` | List of measures for one voice within a staff |
+| `VoiceStaff(Clef, KeySig, TimeSig, List)` | Multi-voice staff — compiles to `<< { \voiceOne } \\ { \voiceTwo } >>` |
+
+New convenience constructors: `triplet()`, `tempo_mark()`, `sp()`, `voice_piano_score()`
+
+#### Key Insight: The Score is an AST
+
+The Moonlight Sonata now exists as a typed, verifiable, transformable formal object.
+It is not the PDF, not the MIDI, not any performance. It is the invariant structure
+from which all of those are derived. Same substrate as Einstein's field equations —
+different domain, identical architecture.
+
+### Next Steps: Music Theory Verification + arXiv Paper
+
+The following roadmap connects the current AST to a publishable result:
+
+#### Phase 2a: Music Theory Axioms
+
+Formalize voice-leading and harmonic rules as Kleis structures with Z3 verification:
+
+```kleis
+structure Counterpoint {
+    axiom no_parallel_fifths :
+        forall v1 v2 m . consecutive_interval(v1, m) = 7
+                       /\ consecutive_interval(v2, m) = 7
+                       -> violation(v1, v2, m)
+
+    axiom stepwise_resolution :
+        forall v m . is_dissonance(v, m) -> resolves_by_step(v, m)
+}
+
+structure HarmonicAnalysis {
+    operation chord_function : Chord -> ChordFunction
+    axiom dominant_resolves : forall m . chord_function(m) = V -> ...
+}
+```
+
+**Prerequisite functions needed:**
+- `interval(pitch1, pitch2)` — semitone distance
+- `consecutive_interval(voice, measure)` — interval between adjacent notes in a voice
+- `extract_beat(voice, measure, beat)` — get the event at a specific beat
+- `is_dissonance(voice, measure)` — check if an interval is dissonant
+- `chord_at(score, measure)` — vertical slice at a time point
+
+These are pure Kleis functions over the existing AST. No Rust changes needed.
+
+#### Phase 2b: Verify the Moonlight Sonata Against Theory
+
+Run the axioms against the actual Moonlight Sonata AST:
+
+```kleis
+example "no parallel fifths in Moonlight mm. 1-14" {
+    assert(satisfies(moonlight, no_parallel_fifths) = true)
+}
+
+example "leading tone resolves up" {
+    assert(satisfies(moonlight, leading_tone_resolution) = true)
+}
+```
+
+When Beethoven deviates from a rule — and he does, that's what makes him
+Beethoven — the Skolem witness identifies **exactly which measure, which voice
+pair, and which interval** breaks the convention.
+
+#### Phase 3: Typst Music Renderer (required for paper)
+
+The arXiv paper about the Moonlight Sonata proofs **requires inline musical
+notation in Typst**. This is not optional — you cannot have a Typst-compiled
+paper with notation in a separate LilyPond PDF.
+
+**The forcing function:** The research workflow itself demands Phase 3.
+
+```
+Score AST --> Z3 proofs --> arXiv paper --> needs inline notation
+     ^                                          |
+     +------------ must be Typst <--------------+
+```
+
+Implement `compile_score_typst(score)` that emits Typst markup for musical
+notation. The same AST that feeds LilyPond also feeds the paper renderer.
+
+**The single-file vision:**
+
+```kleis
+import "stdlib/templates/arxiv_paper.kleis"
+import "stdlib/templates/sheet_music.kleis"
+
+// The score (AST)
+define moonlight = voice_piano_score(...)
+
+// The theory (axioms)
+structure Counterpoint { ... }
+
+// The proof (Z3)
+example "no parallel fifths" { ... }
+
+// The paper (Typst) -- with inline notation
+define paper = ArxivPaper(
+    "Formal Verification of Voice-Leading in Beethoven Op. 27 No. 2",
+    sections: [
+        Section("The Score as Formal Object",
+            concat("Consider measures 5-8:\n",
+                   compile_score_typst(extract_measures(moonlight, 5, 8)),
+                   "\nWe prove that this passage satisfies...")),
+        ...
+    ]
+)
+```
+
+One file. One substrate. The score, the theory, the proofs, and the paper —
+all in Kleis. The notation renders inline because `compile_score_typst`
+produces Typst markup that flows into the document.
+
+#### Typst Music Renderer Strategy
+
+Options (in order of pragmatism):
+
+1. **SVG embedding** — render notation to SVG via LilyPond, embed in Typst
+   as inline images. Quick but keeps the LilyPond dependency.
+
+2. **Typst native glyphs** — use Typst's `text()` with a music font
+   (Bravura, SMuFL) to place individual glyphs. Staff lines as `line()`
+   elements. Full control, no dependency, but significant work.
+
+3. **Typst music package** — contribute to or fork the `staves` Typst package,
+   extending it from single-voice to full score rendering. Community benefit.
+
+Option 2 is the architecturally clean one: the engraving constraints from
+Phase 2 (ADR-033) would directly drive glyph placement, making the renderer
+itself formally verifiable.
+
+### Branch Status
+
+- **Branch:** `feature/music-notation`
+- **Pushed to:** `origin` (eatikrh/kleis) + `fork` (engingithub/kleis)
+- **All quality gates passed:** fmt, clippy, tests, manual validation, sitemap
+
+### Existing Examples on This Branch
+
+| Example | Features Demonstrated |
+|---------|---------------------|
+| `examples/music/ode_to_joy.kleis` | Single voice, C major, 4/4, basic notes |
+| `examples/music/minuet_in_g.kleis` | Two-staff piano, G major, 3/4, slurs, dynamics, fermata |
+| `examples/music/moonlight_sonata.kleis` | Multi-voice, C# minor, 2/2, triplets, tempo, spacers |
+
+### ADR Reference
+
+- **ADR-033:** Musical Score Notation via LilyPond
+  - Phase 1 (complete): LilyPond rendering backend
+  - Phase 2 (next): Axiomatic engraving + music theory verification
+  - Phase 3 (future): Native Typst rendering
+
+---
+
+## Previous Session (Mar 18, 2026): Independence Paper + Epistemic Boundary + Flow Predictions
 
 ### What We Did
 
