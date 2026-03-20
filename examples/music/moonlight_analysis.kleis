@@ -1,0 +1,134 @@
+// =============================================================================
+// Moonlight Sonata — Tonal Harmony Verification
+// =============================================================================
+//
+// Phase 2b: Run the TonalHarmony theory against Beethoven's
+// Moonlight Sonata (Op. 27 No. 2, first movement, measures 1–14).
+//
+// Seven axiom checks:
+//   1. Tonic Opening — first arpeggiation ∈ C# minor
+//   2. Bass Smooth Motion — bass leaps ≤ one octave
+//   3. Arpeggio Triad Consistency — each triplet ∈ recognized triad
+//   4. Melody–Harmony Consonance — melody pitch ∈ accompaniment chord
+//   5. No Parallel Octaves — outer voices
+//   6. No Parallel Fifths — outer voices
+//   7. Harmonic Rhythm — uniform harmony within measures
+//
+// =============================================================================
+
+import "moonlight_sonata.kleis"
+import "stdlib/theories/tonal_harmony.kleis"
+
+// =============================================================================
+// Axiom 1: Tonic Opening
+// =============================================================================
+// C# minor pitch classes: C#=1, E=4, G#=8
+// Measure 1 arpeggiation: G#3-C#4-E4 → PCs {8, 1, 4}
+
+example "axiom 1: tonic opening" {
+    let tonic = Cons(1, Cons(4, Cons(8, Nil))) in
+    let result = check_tonic_opening(accomp_measures, tonic) in
+    out("Axiom 1 (Tonic Opening):")
+    out(result)
+    assert(result = true)
+}
+
+// =============================================================================
+// Axiom 2: Bass Smooth Motion
+// =============================================================================
+// Max allowed leap: 12 semitones (one octave).
+// Returns -1 if all smooth, or the first violating measure index.
+
+example "axiom 2: bass smooth motion" {
+    let result = check_bass_smooth(bass_measures, 12) in
+    out("Axiom 2 (Bass Smooth, max leap = 12):")
+    out(result)
+    assert(eq(result, 0 - 1))
+}
+
+// =============================================================================
+// Axiom 3: Arpeggio Triad Consistency
+// =============================================================================
+// Each triplet group should form a recognized triad.
+// Returns -1 if all triads, or the first violating measure index.
+
+example "axiom 3: arpeggio triads" {
+    let result = check_arpeggio_triads(accomp_measures) in
+    out("Axiom 3 (Arpeggio Triads):")
+    out(result)
+}
+
+// =============================================================================
+// Axiom 4: Melody–Harmony Consonance
+// =============================================================================
+// When melody sounds, its pitch class should belong to the
+// accompaniment chord's pitch classes. Measures 1–4 are silent
+// (spacer rests) and are skipped automatically.
+
+example "axiom 4: melody-harmony consonance" {
+    let result = check_melody_consonance(melody_measures, accomp_measures) in
+    out("Axiom 4 (Melody-Harmony Consonance):")
+    out(result)
+}
+
+// =============================================================================
+// Axiom 5: No Parallel Octaves
+// =============================================================================
+// Check melody vs bass for parallel octaves (interval class 0).
+// Returns -1 if none found.
+
+example "axiom 5: no parallel octaves" {
+    let result = check_no_parallels(melody_measures, bass_measures, 0) in
+    out("Axiom 5 (No Parallel Octaves):")
+    out(result)
+    assert(eq(result, 0 - 1))
+}
+
+// =============================================================================
+// Axiom 6: No Parallel Fifths
+// =============================================================================
+// Check melody vs bass for parallel fifths (interval class 7).
+// Returns -1 if none found.
+
+example "axiom 6: no parallel fifths" {
+    let result = check_no_parallels(melody_measures, bass_measures, 7) in
+    out("Axiom 6 (No Parallel Fifths):")
+    out(result)
+    out("(Expected: violation at m13 — outer voices move in parallel fifths)")
+}
+
+// =============================================================================
+// Axiom 7: Harmonic Rhythm
+// =============================================================================
+// Returns list of measure indices where harmony changes mid-measure.
+// Beethoven intentionally varies harmony within some measures.
+
+example "axiom 7: harmonic rhythm" {
+    let violations = check_harmonic_rhythm(accomp_measures) in
+    out("Axiom 7 (Harmonic Rhythm) — measures with mid-bar change:")
+    out(violations)
+}
+
+// =============================================================================
+// Pitch Arithmetic Spot-Checks on the Sonata
+// =============================================================================
+
+example "bass m1 is C#" {
+    let p = first_pitch(bass1) in
+    out("Bass m1 first pitch MIDI:")
+    out(pitch_to_midi(p))
+    assert(pitch_class(p) = 1)
+}
+
+example "accomp m1 pitch classes" {
+    let pcs = triplet_pitch_classes(acc1) in
+    out("Accomp m1 PCs:")
+    out(pcs)
+}
+
+example "melody m5 first pitch" {
+    let p = first_pitch(mel5) in
+    out("Melody m5 first sounding pitch MIDI:")
+    out(pitch_to_midi(p))
+    assert(pitch_class(p) = 8)
+}

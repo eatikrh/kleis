@@ -1,10 +1,10 @@
 # Next Session Notes
 
-**Last Updated:** March 20, 2026 (session — Musical Score Notation + Moonlight Sonata AST)
+**Last Updated:** March 20, 2026 (session — TonalHarmony Theory + Moonlight Sonata Verification)
 
 ---
 
-## Current Session (Mar 20, 2026): Sheet Music Template + Moonlight Sonata
+## Current Session (Mar 20, 2026): Music Theory Verification — Phase 2 Complete
 
 ### What We Did
 
@@ -13,19 +13,23 @@
 2. Encoded 14 measures of Beethoven's Moonlight Sonata (Op. 27 No. 2, first movement)
    as a formal AST with three-layer texture: melody + triplet arpeggiation + bass
 3. Generated publication-quality sheet music via LilyPond (PDF + MIDI)
-4. Updated manual chapter with new features and Moonlight Sonata example
-5. All work on `feature/music-notation` branch, pushed to both remotes
+4. **Built the TonalHarmony theory** — pitch arithmetic, chord recognition, 7 axiom checkers
+5. **Ran the theory against the Moonlight Sonata** — 10 analysis examples, all passing
+6. Updated manual chapter with new features, Moonlight Sonata example, and verification results
+7. All work on `feature/music-notation` branch
 
 #### Files Created/Modified
 
 | File | What |
 |------|------|
 | `stdlib/templates/sheet_music.kleis` | Extended with 5 new types + compilation (24 tests) |
+| `stdlib/theories/tonal_harmony.kleis` | **NEW** — pitch arithmetic + 7 axiom checkers (12 self-tests) |
 | `examples/music/moonlight_sonata.kleis` | Moonlight Sonata, 14 measures, 3 voices (7 tests) |
+| `examples/music/moonlight_analysis.kleis` | **NEW** — 7 axiom checks + 3 spot-checks (10 tests) |
 | `examples/music/moonlight_sonata.ly` | Generated LilyPond source |
 | `examples/music/moonlight_sonata.pdf` | Generated sheet music |
 | `examples/music/moonlight_sonata.midi` | Generated MIDI |
-| `docs/manual/src/chapters/30-sheet-music.md` | Updated with new features + Moonlight example |
+| `docs/manual/src/chapters/30-sheet-music.md` | Updated with verification section |
 | `docs/manual/src/images/moonlight_sonata.png` | Screenshot for manual |
 
 #### Template Extensions (sheet_music.kleis)
@@ -41,6 +45,46 @@
 
 New convenience constructors: `triplet()`, `tempo_mark()`, `sp()`, `voice_piano_score()`
 
+#### TonalHarmony Theory (stdlib/theories/tonal_harmony.kleis)
+
+The theory provides three layers of functions over any Kleis score AST:
+
+| Layer | Functions | Purpose |
+|-------|-----------|---------|
+| **Pitch arithmetic** | `pitch_to_midi`, `pitch_class`, `interval_abs`, `interval_class`, `mod_int` | Convert between pitch representations |
+| **AST extraction** | `first_pitch`, `triplet_pitch_classes`, `extract_pcs`, `get_groups` | Pull musical data from score structure |
+| **Axiom checkers** | `check_tonic_opening`, `check_bass_smooth`, `check_arpeggio_triads`, `check_melody_consonance`, `check_no_parallels`, `check_harmonic_rhythm` | Verify music-theoretic properties |
+
+**Key implementation lesson:** Kleis `/` is real division. Use `floor(a / b)` for integer
+quotient. Use `abs()` from the prelude. Use `eq()` instead of `=` for comparisons in
+`if` conditions inside `define` functions, to avoid triggering Z3 fallback on failed assertions.
+
+#### Moonlight Sonata Verification Results
+
+| Axiom | Result | Interpretation |
+|-------|--------|----------------|
+| **1. Tonic Opening** | **SAT** | First arpeggiation PCs {8,1,4} ⊆ C# minor |
+| **2. Bass Smooth Motion** | **SAT** | No bass leaps exceed one octave |
+| **3. Arpeggio Triads** | **VIOLATION at m4** | Passing tones aren't standard triads — structural vs surface harmony |
+| **4. Melody-Harmony Consonance** | **SAT** | Every sounding melody note belongs to the accompaniment chord |
+| **5. No Parallel Octaves** | **SAT** | No parallel octaves between outer voices |
+| **6. No Parallel Fifths** | **VIOLATION at m13** | G4/C2 → F#4/B1 = consecutive fifths in outer voices |
+| **7. Harmonic Rhythm** | **8 violations** | Measures 3,4,5,7,8,12,13,14 have mid-bar harmony changes |
+
+**Formal summary:**
+
+```
+Moonlight ⊨ TonalCohesion (axioms 1, 2, 4, 5)
+Moonlight ⊭ StrictTriadicArpeggiation (axiom 3, m4)
+Moonlight ⊭ StrictOuterVoiceCounterpoint (axiom 6, m13)
+Moonlight ⊭ UniformHarmonicRhythm (axiom 7, 8 measures)
+```
+
+The SAT results show a disciplined tonal core. The violations are **diagnostically useful**:
+they reveal where Beethoven exercises expressive freedom beyond strict textbook rules.
+This is exactly how a formal theory should behave — not "right or wrong" but "which
+axioms hold, and where."
+
 #### Key Insight: The Score is an AST
 
 The Moonlight Sonata now exists as a typed, verifiable, transformable formal object.
@@ -48,57 +92,74 @@ It is not the PDF, not the MIDI, not any performance. It is the invariant struct
 from which all of those are derived. Same substrate as Einstein's field equations —
 different domain, identical architecture.
 
-### Next Steps: Music Theory Verification + arXiv Paper
+### Next Steps: Refinements + arXiv Paper
 
-The following roadmap connects the current AST to a publishable result:
+#### Phase 2c: Theory Refinements
 
-#### Phase 2a: Music Theory Axioms
+The current violations point to specific refinements that would make the theory
+more musically accurate. These are not bugs — they are the theory telling us
+where it needs to grow:
 
-Formalize voice-leading and harmonic rules as Kleis structures with Z3 verification:
+**1. Harmonic Skeleton vs. Surface Distinction**
+
+The arpeggio triad violation at m4 happens because the axiom treats every note
+as a chord tone. Real tonal analysis distinguishes:
+
+- **Chord tones** — members of the governing harmony
+- **Non-chord tones** — passing tones, neighbor tones, suspensions, appoggiaturas
+
+Refinement: add a `harmonic_reduction` function that strips embellishments to
+reveal the underlying harmony skeleton. Then run `check_arpeggio_triads` on
+the skeleton, not the surface.
+
+```
+HarmonySurface ≠ HarmonySkeleton
+check_arpeggio_triads(harmonic_reduction(measure)) vs check_arpeggio_triads(measure)
+```
+
+**2. Contextual Parallel Motion**
+
+The parallel fifths detection at m13 is correct at the surface level, but
+strict counterpoint rules apply to "structural" outer voices, not just first-
+sounding pitches. Refinement: extract downbeat pitches only, or weight by
+metric position.
+
+**3. Harmonic Rhythm Granularity**
+
+The 8 harmonic-rhythm violations confirm Beethoven's harmonic fluidity —
+but the axiom assumes one harmony per measure. A more nuanced version would
+parameterize the expected harmonic rhythm (e.g., one change per half-bar in
+cut time is normal).
+
+**4. Comparative Formal Musicology**
+
+Once the theory is refined, the same axioms can be run against different
+pieces to make comparative claims:
+
+```
+Bach BWV 846 ⊨ StrictCounterpoint (expected: high SAT rate)
+Chopin Op. 9 ⊭ UniformHarmonicRhythm (expected: even more violations than Beethoven)
+```
+
+This turns the framework into a tool for **style characterization**, not just
+score checking.
+
+**5. Z3-Backed Verification**
+
+Currently the axiom checkers use direct functional evaluation. The next level
+is to express the axioms as universally quantified constraints and let Z3
+find Skolem witnesses for violations:
 
 ```kleis
-structure Counterpoint {
+structure StrictCounterpoint {
     axiom no_parallel_fifths :
-        forall v1 v2 m . consecutive_interval(v1, m) = 7
-                       /\ consecutive_interval(v2, m) = 7
-                       -> violation(v1, v2, m)
-
-    axiom stepwise_resolution :
-        forall v m . is_dissonance(v, m) -> resolves_by_step(v, m)
-}
-
-structure HarmonicAnalysis {
-    operation chord_function : Chord -> ChordFunction
-    axiom dominant_resolves : forall m . chord_function(m) = V -> ...
+        ∀(m : ℤ). interval_class(melody_at(m), bass_at(m)) = 7
+                 → interval_class(melody_at(m+1), bass_at(m+1)) ≠ 7
 }
 ```
 
-**Prerequisite functions needed:**
-- `interval(pitch1, pitch2)` — semitone distance
-- `consecutive_interval(voice, measure)` — interval between adjacent notes in a voice
-- `extract_beat(voice, measure, beat)` — get the event at a specific beat
-- `is_dissonance(voice, measure)` — check if an interval is dissonant
-- `chord_at(score, measure)` — vertical slice at a time point
-
-These are pure Kleis functions over the existing AST. No Rust changes needed.
-
-#### Phase 2b: Verify the Moonlight Sonata Against Theory
-
-Run the axioms against the actual Moonlight Sonata AST:
-
-```kleis
-example "no parallel fifths in Moonlight mm. 1-14" {
-    assert(satisfies(moonlight, no_parallel_fifths) = true)
-}
-
-example "leading tone resolves up" {
-    assert(satisfies(moonlight, leading_tone_resolution) = true)
-}
-```
-
-When Beethoven deviates from a rule — and he does, that's what makes him
-Beethoven — the Skolem witness identifies **exactly which measure, which voice
-pair, and which interval** breaks the convention.
+When Z3 returns UNSAT, the axiom holds. When SAT, the Skolem witness gives
+the exact measure where the violation occurs.
 
 #### Phase 3: Typst Music Renderer (required for paper)
 

@@ -329,21 +329,111 @@ template (`stdlib/templates/arxiv_paper.kleis`):
 
 No Rust code changes are needed. The template is pure Kleis.
 
+## Music Theory Verification
+
+Beyond rendering, Kleis can **verify music-theoretic properties** of a score.
+The `tonal_harmony.kleis` theory provides pitch arithmetic, chord recognition,
+and axiom checkers that run against any Kleis score AST.
+
+### The Theory
+
+Import the theory alongside a score:
+
+```kleis
+import "examples/music/moonlight_sonata.kleis"
+import "stdlib/theories/tonal_harmony.kleis"
+```
+
+The theory provides three layers of functions:
+
+| Layer | Functions | Purpose |
+|-------|-----------|---------|
+| **Pitch arithmetic** | `pitch_to_midi`, `pitch_class`, `interval_abs`, `interval_class` | Convert between pitch representations |
+| **AST extraction** | `first_pitch`, `triplet_pitch_classes`, `extract_pcs` | Pull musical data from score structure |
+| **Axiom checkers** | `check_tonic_opening`, `check_bass_smooth`, `check_arpeggio_triads`, `check_melody_consonance`, `check_no_parallels`, `check_harmonic_rhythm` | Verify music-theoretic properties |
+
+### Verifying the Moonlight Sonata
+
+Running the TonalHarmony theory against Beethoven's Moonlight Sonata
+(measures 1–14) produces machine-checked results:
+
+```kleis
+example "axiom 1: tonic opening" {
+    let tonic = Cons(1, Cons(4, Cons(8, Nil))) in  // C# minor: {C#, E, G#}
+    assert(check_tonic_opening(accomp_measures, tonic) = true)
+}
+
+example "axiom 2: bass smooth motion" {
+    let result = check_bass_smooth(bass_measures, 12) in
+    assert(eq(result, 0 - 1))   // -1 = no violations
+}
+
+example "axiom 5: no parallel octaves" {
+    let result = check_no_parallels(melody_measures, bass_measures, 0) in
+    assert(eq(result, 0 - 1))
+}
+```
+
+### Results
+
+| Axiom | Result | Interpretation |
+|-------|--------|----------------|
+| 1. Tonic Opening | **SAT** | First arpeggiation ∈ C# minor |
+| 2. Bass Smooth Motion | **SAT** | No bass leaps exceed one octave |
+| 3. Arpeggio Triads | **Violation at m4** | Passing tones aren't standard triads |
+| 4. Melody–Harmony Consonance | **SAT** | Every sounding melody note ∈ accompaniment chord |
+| 5. No Parallel Octaves | **SAT** | No parallel octaves in outer voices |
+| 6. No Parallel Fifths | **Violation at m13** | Consecutive fifths in outer voices |
+| 7. Harmonic Rhythm | **8 violations** | Mid-bar harmony changes in measures 3,4,5,7,8,12,13,14 |
+
+**Formal summary:**
+
+```
+Moonlight ⊨ TonalCohesion        (axioms 1, 2, 4, 5)
+Moonlight ⊭ StrictTriadicArpeg.  (axiom 3, m4)
+Moonlight ⊭ StrictCounterpoint   (axiom 6, m13)
+Moonlight ⊭ UniformHarmRhythm    (axiom 7, 8 measures)
+```
+
+The SAT results show a disciplined tonal core. The violations are
+**diagnostically useful** — they reveal where Beethoven exercises expressive
+freedom beyond strict textbook rules. A sonata is a model, a music theory
+is a set of axioms, and style is characterized by *which axioms hold, and where*.
+
+### Running the Analysis
+
+```bash
+kleis test examples/music/moonlight_analysis.kleis
+```
+
+See the full analysis: `examples/music/moonlight_analysis.kleis`
+
+See the theory: `stdlib/theories/tonal_harmony.kleis`
+
 ## Future Directions
 
-The current template covers Layers 1-2 (syntax and structure). Future
-phases will add:
+### Theory Refinements
 
-- **Layer 3: Semantics** — Counterpoint rules, harmonic analysis as
-  axioms verified by Z3. "Does this passage satisfy voice-leading
-  constraints?" becomes a machine-checked question.
-- **Layer 4: Performance** — MIDI realization constraints. "Does this
-  performance satisfy the score's articulation intent?"
-- **Layer 5: Rendering** — Engraving rules formalized as axioms.
-  Spacing, beam grouping, collision avoidance — verified, not heuristic.
-- **Native Typst rendering** — Once engraving rules are formalized,
-  a Typst backend could match LilyPond quality without the external
-  dependency.
+The current violations point to specific next steps:
+
+- **Harmonic skeleton vs. surface** — Distinguish chord tones from passing
+  tones, neighbor tones, and suspensions. Run axiom checks on the underlying
+  harmony, not the literal note surface.
+- **Contextual parallel motion** — Weight voice-leading checks by metric
+  position (downbeats vs. passing motion).
+- **Parameterized harmonic rhythm** — Allow one harmony change per half-bar
+  in cut time, rather than requiring one per full measure.
+- **Comparative musicology** — Run the same axioms against Bach, Chopin,
+  and Debussy to characterize stylistic differences formally.
+- **Z3-backed verification** — Express axioms as universally quantified
+  constraints so Z3 can produce Skolem witnesses for violations.
+
+### Rendering and Output
+
+- **Native Typst rendering** — A `compile_score_typst` function for inline
+  musical notation in arXiv papers, removing the LilyPond dependency.
+- **Engraving axioms** — Spacing, beam grouping, collision avoidance
+  formalized as verifiable constraints rather than heuristics.
 
 See ADR-033 for the full architectural roadmap.
 

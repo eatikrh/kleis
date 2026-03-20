@@ -1,0 +1,362 @@
+// =============================================================================
+// Tonal Harmony Theory — Formal Music Analysis via Kleis
+// =============================================================================
+//
+// Provides pitch arithmetic, interval computation, and axiom-checking
+// functions for analyzing musical scores against tonal harmony rules.
+//
+// This theory is score-independent: import it alongside any Kleis score
+// AST to verify music-theoretic properties.
+//
+// See: ADR-033 (Musical Score Notation), Phase 2a
+// =============================================================================
+
+import "stdlib/templates/sheet_music.kleis"
+import "stdlib/func_core.kleis"
+
+// =============================================================================
+// Integer Utilities
+// =============================================================================
+
+define abs_int(x) = abs(x)
+
+define mod_int(a, b) = a - floor(a / b) * b
+
+// =============================================================================
+// Pitch Arithmetic
+// =============================================================================
+
+define note_semitone(name) = match name {
+    C => 0 | D => 2 | E => 4 | F => 5 | G => 7 | A => 9 | B => 11
+}
+
+define acc_offset(acc) = match acc {
+    Natural => 0 | Sharp => 1 | Flat => 0 - 1
+}
+
+// Absolute semitone number (C0 = 0, C4 = 48, A4 = 57)
+define pitch_to_midi(p) = match p {
+    P(name, acc, oct) => note_semitone(name) + acc_offset(acc) + oct * 12
+}
+
+// Pitch class (0–11, C=0, C#=1, D=2, ..., B=11)
+define pitch_class(p) = mod_int(pitch_to_midi(p), 12)
+
+// Semitone interval (unsigned distance)
+define interval_abs(p1, p2) = abs_int(pitch_to_midi(p1) - pitch_to_midi(p2))
+
+// Interval class (mod 12, so octave=0, fifth=7, etc.)
+define interval_class(p1, p2) = mod_int(interval_abs(p1, p2), 12)
+
+// Sentinel pitch for "no pitch found"
+define no_pitch = P(C, Natural, 0)
+define is_no_pitch(p) = eq(pitch_to_midi(p), 0)
+
+// =============================================================================
+// Pitch Extraction from AST
+// =============================================================================
+
+define first_pitch(m) = match m {
+    Measure(events) => fp_events(events)
+}
+
+define fp_events(evs) =
+    if eq(length(evs), 0) then no_pitch
+    else fp_dispatch(head(evs), tail(evs))
+
+define fp_dispatch(e, rest) = match e {
+    Note(p, d)        => p
+  | Chord(ps, d)      => head(ps)
+  | Marked(inner, a)  => fp_dispatch(inner, rest)
+  | Tuplet(n, d, evs) => fp_dispatch(head(evs), rest)
+  | Spacer(d)         => fp_events(rest)
+  | Rest(d)           => fp_events(rest)
+  | Tempo(t)          => fp_events(rest)
+}
+
+// Extract pitch classes from the first triplet group of an accompaniment measure
+define triplet_pitch_classes(m) = match m {
+    Measure(events) => tpc_from(head(events))
+}
+
+define tpc_from(e) = match e {
+    Tuplet(n, d, evs) => extract_pcs(evs)
+  | Marked(inner, a)  => tpc_from(inner)
+  | Tempo(t)          => Nil
+  | Spacer(d)         => Nil
+  | Note(p, d)        => Cons(pitch_class(p), Nil)
+  | Rest(d)           => Nil
+  | Chord(ps, d)      => pcs_from_pitches(ps)
+}
+
+define extract_pcs(evs) =
+    if eq(length(evs), 0) then Nil
+    else Cons(pc_of_event(head(evs)), extract_pcs(tail(evs)))
+
+define pc_of_event(e) = match e {
+    Note(p, d)        => pitch_class(p)
+  | Chord(ps, d)      => pitch_class(head(ps))
+  | Marked(inner, a)  => pc_of_event(inner)
+  | Tuplet(n, d, es)  => pc_of_event(head(es))
+  | Rest(d)           => 0
+  | Spacer(d)         => 0
+  | Tempo(t)          => 0
+}
+
+define pcs_from_pitches(ps) =
+    if eq(length(ps), 0) then Nil
+    else Cons(pitch_class(head(ps)), pcs_from_pitches(tail(ps)))
+
+// Extract all triplet group events from an accompaniment measure
+define get_groups(m) = match m {
+    Measure(events) => events
+}
+
+// =============================================================================
+// Chord Recognition
+// =============================================================================
+
+define pc_member(pc, pcs) =
+    if eq(length(pcs), 0) then false
+    else if eq(mod_int(pc, 12), mod_int(head(pcs), 12)) then true
+    else pc_member(pc, tail(pcs))
+
+define all_members(pcs, target) =
+    if eq(length(pcs), 0) then true
+    else
+        if pc_member(head(pcs), target) then all_members(tail(pcs), target)
+        else false
+
+// Check if three pitch classes form a recognized triad (any inversion)
+define is_recognized_triad(pc1, pc2, pc3) =
+    if check_triad_root(pc1, pc2, pc3) then true
+    else if check_triad_root(pc2, pc3, pc1) then true
+    else check_triad_root(pc3, pc1, pc2)
+
+define check_triad_root(root, mid, top) =
+    let i1 = mod_int(mid - root, 12) in
+    let i2 = mod_int(top - root, 12) in
+    if eq(i1, 4) then
+        if eq(i2, 7) then true        // Major: {0,4,7}
+        else if eq(i2, 8) then true   // Augmented: {0,4,8}
+        else if eq(i2, 10) then true  // Dom7 partial: {0,4,10}
+        else false
+    else if eq(i1, 3) then
+        if eq(i2, 7) then true        // Minor: {0,3,7}
+        else if eq(i2, 6) then true   // Diminished: {0,3,6}
+        else if eq(i2, 10) then true  // Minor7 partial: {0,3,10}
+        else false
+    else false
+
+// =============================================================================
+// Axiom 1: Tonic Opening
+// =============================================================================
+
+define check_tonic_opening(accomp_measures, tonic_pcs) =
+    let pcs = triplet_pitch_classes(head(accomp_measures)) in
+    all_members(pcs, tonic_pcs)
+
+// =============================================================================
+// Axiom 2: Bass Smooth Motion
+// =============================================================================
+// Returns first violating measure index, or -1 if all smooth.
+
+define check_bass_smooth(bass_measures, max_dist) =
+    bass_smooth_acc(tail(bass_measures), first_pitch(head(bass_measures)), 1, max_dist)
+
+define bass_smooth_acc(measures, prev_p, idx, max_d) =
+    if eq(length(measures), 0) then 0 - 1
+    else
+        let curr_p = first_pitch(head(measures)) in
+        let dist = interval_abs(prev_p, curr_p) in
+        if dist > max_d then idx
+        else bass_smooth_acc(tail(measures), curr_p, idx + 1, max_d)
+
+// =============================================================================
+// Axiom 3: Arpeggio Triad Consistency
+// =============================================================================
+// Returns first violating measure index, or -1.
+
+define check_arpeggio_triads(accomp_measures) =
+    arp_triads_acc(accomp_measures, 0)
+
+define arp_triads_acc(measures, idx) =
+    if eq(length(measures), 0) then 0 - 1
+    else
+        if all_groups_triad(get_groups(head(measures))) then
+            arp_triads_acc(tail(measures), idx + 1)
+        else idx
+
+define all_groups_triad(groups) =
+    if eq(length(groups), 0) then true
+    else
+        if group_is_triad(head(groups)) then all_groups_triad(tail(groups))
+        else false
+
+define group_is_triad(e) = match e {
+    Tuplet(n, d, evs) =>
+        let pcs = extract_pcs(evs) in
+        if eq(length(pcs), 3) then
+            is_recognized_triad(head(pcs), list_get(pcs, 1), list_get(pcs, 2))
+        else false
+  | Note(p, dur)    => true
+  | Chord(ps, dur)  => true
+  | Marked(inner, a) => group_is_triad(inner)
+  | Rest(d)         => true
+  | Spacer(d)       => true
+  | Tempo(t)        => true
+}
+
+// =============================================================================
+// Axiom 4: Melody-Harmony Consonance
+// =============================================================================
+// Returns first violating measure index, or -1.
+
+define check_melody_consonance(mel_measures, accomp_measures) =
+    mel_cons_acc(mel_measures, accomp_measures, 0)
+
+define mel_cons_acc(mels, accs, idx) =
+    if eq(length(mels), 0) then 0 - 1
+    else
+        let mel_p = first_pitch(head(mels)) in
+        if is_no_pitch(mel_p) then
+            mel_cons_acc(tail(mels), tail(accs), idx + 1)
+        else
+            let chord_pcs = triplet_pitch_classes(head(accs)) in
+            let mel_pc = pitch_class(mel_p) in
+            if pc_member(mel_pc, chord_pcs) then
+                mel_cons_acc(tail(mels), tail(accs), idx + 1)
+            else idx
+
+// =============================================================================
+// Axiom 5 & 6: No Parallel Octaves / Fifths
+// =============================================================================
+// target_ic = 0 for octaves, 7 for fifths.
+// Returns first violating measure index, or -1.
+
+define check_no_parallels(mel_measures, bass_measures, target_ic) =
+    par_acc(mel_measures, bass_measures, no_pitch, no_pitch, 0, target_ic)
+
+define par_acc(mels, basses, prev_mel, prev_bass, idx, target_ic) =
+    if eq(length(mels), 0) then 0 - 1
+    else
+        let mel_p = first_pitch(head(mels)) in
+        let bass_p = first_pitch(head(basses)) in
+        if is_no_pitch(mel_p) then
+            par_acc(tail(mels), tail(basses), mel_p, bass_p, idx + 1, target_ic)
+        else if is_no_pitch(prev_mel) then
+            par_acc(tail(mels), tail(basses), mel_p, bass_p, idx + 1, target_ic)
+        else
+            let ic_prev = interval_class(prev_mel, prev_bass) in
+            let ic_curr = interval_class(mel_p, bass_p) in
+            if eq(ic_prev, target_ic) then
+                if eq(ic_curr, target_ic) then idx
+                else par_acc(tail(mels), tail(basses), mel_p, bass_p, idx + 1, target_ic)
+            else par_acc(tail(mels), tail(basses), mel_p, bass_p, idx + 1, target_ic)
+
+// =============================================================================
+// Axiom 7: Harmonic Rhythm Consistency
+// =============================================================================
+// Returns list of measure indices where harmony changes mid-measure.
+
+define check_harmonic_rhythm(accomp_measures) =
+    hr_acc(accomp_measures, 0, Nil)
+
+define hr_acc(measures, idx, violations) =
+    if eq(length(measures), 0) then violations
+    else
+        if uniform_harmony(get_groups(head(measures))) then
+            hr_acc(tail(measures), idx + 1, violations)
+        else
+            hr_acc(tail(measures), idx + 1, append(violations, Cons(idx, Nil)))
+
+define uniform_harmony(groups) =
+    if eq(length(groups), 0) then true
+    else if eq(length(groups), 1) then true
+    else
+        let ref_pcs = group_pcs(head(groups)) in
+        all_match_ref(tail(groups), ref_pcs)
+
+define all_match_ref(groups, ref_pcs) =
+    if eq(length(groups), 0) then true
+    else
+        let curr_pcs = group_pcs(head(groups)) in
+        if pcs_equal(ref_pcs, curr_pcs) then all_match_ref(tail(groups), ref_pcs)
+        else false
+
+define group_pcs(e) = match e {
+    Tuplet(n, d, evs) => extract_pcs(evs)
+  | Note(p, dur)      => Cons(pitch_class(p), Nil)
+  | Chord(ps, dur)    => pcs_from_pitches(ps)
+  | Marked(inner, a)  => group_pcs(inner)
+  | Rest(d)           => Nil
+  | Spacer(d)         => Nil
+  | Tempo(t)          => Nil
+}
+
+define pcs_equal(a, b) =
+    if eq(length(a), 0) then
+        if eq(length(b), 0) then true
+        else false
+    else if eq(length(b), 0) then false
+    else if eq(head(a), head(b)) then pcs_equal(tail(a), tail(b))
+    else false
+
+// =============================================================================
+// Self-Tests — verify the theory functions
+// =============================================================================
+
+example "pitch_to_midi C4" {
+    assert(pitch_to_midi(P(C, Natural, 4)) = 48)
+}
+
+example "pitch_to_midi C#4" {
+    assert(pitch_to_midi(P(C, Sharp, 4)) = 49)
+}
+
+example "pitch_to_midi G#3" {
+    assert(pitch_to_midi(P(G, Sharp, 3)) = 44)
+}
+
+example "pitch_class C#" {
+    assert(pitch_class(P(C, Sharp, 4)) = 1)
+    assert(pitch_class(P(C, Sharp, 2)) = 1)
+}
+
+example "interval G#3 to C#4" {
+    assert(interval_abs(P(G, Sharp, 3), P(C, Sharp, 4)) = 5)
+}
+
+example "interval_class octave" {
+    assert(interval_class(P(C, Natural, 3), P(C, Natural, 5)) = 0)
+}
+
+example "interval_class fifth" {
+    assert(interval_class(P(C, Natural, 4), P(G, Natural, 4)) = 7)
+}
+
+example "mod_int" {
+    assert(mod_int(14, 12) = 2)
+    assert(mod_int(12, 12) = 0)
+    assert(mod_int(7, 12) = 7)
+}
+
+example "C# minor triad recognized" {
+    assert(is_recognized_triad(1, 4, 8) = true)
+}
+
+example "G major triad recognized" {
+    assert(is_recognized_triad(7, 11, 2) = true)
+}
+
+example "B diminished recognized" {
+    assert(is_recognized_triad(11, 2, 5) = true)
+}
+
+example "pc_member" {
+    let pcs = Cons(8, Cons(1, Cons(4, Nil))) in
+    assert(pc_member(1, pcs) = true)
+    assert(pc_member(8, pcs) = true)
+    assert(pc_member(4, pcs) = true)
+    assert(pc_member(5, pcs) = false)
+}
