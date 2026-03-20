@@ -112,11 +112,11 @@ define sec_theory = ArxivSection("A Minimal Theory of Tonal Harmony",
 
 The theory rests on a layer of pitch arithmetic:
 
-- $\"pitch\\_to\\_midi\"(p)$: absolute semitone number (C0 = 0, middle C = 48).
+- $\"pitch_to_midi\"(p)$: absolute semitone number (C0 = 0, middle C = 48).
 
-- $\"pitch\\_class\"(p) = \"mod\\_int\"(\"pitch\\_to\\_midi\"(p), 12)$: the pitch class modulo octave equivalence, where $\"mod\\_int\"(a, b) = a - \"floor\"(a slash b) times b$.
+- $\"pitch_class\"(p) = \"mod_int\"(\"pitch_to_midi\"(p), 12)$: the pitch class modulo octave equivalence, where $\"mod_int\"(a, b) = a - \"floor\"(a slash b) times b$.
 
-- $\"interval\\_class\"(p_1, p_2)$: the interval between two pitches reduced to the range 0--11 (so an octave is 0, a fifth is 7).
+- $\"interval_class\"(p_1, p_2)$: the interval between two pitches reduced to the range 0--11 (so an octave is 0, a fifth is 7).
 
 Chord recognition identifies whether three pitch classes form a recognized triad in any inversion (major, minor, diminished, augmented, or seventh-chord fragments), checking all three rotations.")
 

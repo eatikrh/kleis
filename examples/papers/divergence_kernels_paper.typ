@@ -149,13 +149,13 @@ The ontology $cal(L)$ consists of states, military acts, norms (Permitted/Prohib
 
 Both theories share Article 2(4) of the UN Charter (force is prohibited unless authorized or in lawful self-defense), the definitions of necessity and proportionality, and the Security Council authorization mechanism. The only structural difference is one disjunct in the self-defense precondition:
 
-$ T_2 : "lawful\_self\_defense"(a) arrow.l.long "necessary"(a) and "proportional"(a) and ("armed\_attack"(...) or "imminent\_attack"(...)) $
+$ T_2 : "lawful_self_defense"(a) arrow.l.long "necessary"(a) and "proportional"(a) and ("armed_attack"(...) or "imminent_attack"(...)) $
 
-$ T_1 : "lawful\_self\_defense"(a) arrow.l.long "necessary"(a) and "proportional"(a) and "armed\_attack"(...) $
+$ T_1 : "lawful_self_defense"(a) arrow.l.long "necessary"(a) and "proportional"(a) and "armed_attack"(...) $
 
 Given a case where no armed attack has occurred but evidence supports imminence, $T_1$ yields Prohibited and $T_2$ yields Permitted. The pivot predicate is:
 
-$ Delta(T_1, T_2) = { "imminent\_attack"("target", "attacker") "satisfiable" } $
+$ Delta(T_1, T_2) = { "imminent_attack"("target", "attacker") "satisfiable" } $
 
 In our Kleis formalization, both doctrines coexist in a single file via a `Doctrine` type parameter that isolates their axioms. Z3 verifies that under a `NoEvidence` profile, both doctrines converge (both yield Prohibited). Under an `EvidenceSupported` profile, they diverge. The entire disagreement between two competing interpretations of international law collapses to a single predicate about the satisfiability of an imminence claim.
 
@@ -171,7 +171,7 @@ The ontology $cal(L)$ consists of pitches, durations, measures, voices, and scor
 
 Beethoven's Moonlight Sonata (Op. 27 No. 2, measures 1--14), formalized as a typed AST in Kleis, satisfies $T_2$ but not $T_1$. The divergence kernel contains three generators:
 
-$ Delta(T_1, T_2) supset.eq { "parallel\_fifths\_prohibited", "strict\_triadic\_arpeggiation", "uniform\_harmonic\_rhythm" } $
+$ Delta(T_1, T_2) supset.eq { "parallel_fifths_prohibited", "strict_triadic_arpeggiation", "uniform_harmonic_rhythm" } $
 
 The violations are localized: parallel fifths at measure 13, non-triadic arpeggiation at measure 4, mid-bar harmonic changes in 8 of 14 measures. Each violation is machine-identified by functional evaluation over the concrete AST.
 
@@ -189,7 +189,7 @@ The divergence in chess appears not between theories but between *proof strategi
 
 We discovered that Z3's E-matching engine cannot verify the checkmate from raw axioms alone. It requires *proof scaffolding*: explicit Skolem witnesses for the existential quantifiers in `attacks_square`, explicit `in_check` lemmas for each escape square, and explicit king-tracking through nested `apply_move` calls. Different scaffolding strategies are different proof theories over the same position, and they diverge on which lemmas are needed:
 
-$ Delta("scaffold\_1", "scaffold\_2") = { "which intermediate lemmas are supplied" } $
+$ Delta("scaffold"_1, "scaffold"_2) = { "which intermediate lemmas are supplied" } $
 
 The selector here is the prover --- human or machine. The choice is strategic: which lemmas flatten the quantifier chains most efficiently?
 
@@ -342,9 +342,9 @@ $ Delta(T_1, T_2) = { phi in "Sent"(cal(L)) | phi "depends on the value of" frak
 
 The generator is the single sentence $frak(c) = aleph_1$.
 
-*International law.* Let $T_"base"$ consist of Article 2(4), necessity, proportionality, and Security Council authorization. Let $T_1 = T_"base" union "StrictArticle51"$ and $T_2 = T_"base" union "AnticipatoryArticle51"$. The only structural difference is the disjunct $or "imminent\_attack"(...)$ in $T_2$'s self-defense precondition. The generator is:
+*International law.* Let $T_"base"$ consist of Article 2(4), necessity, proportionality, and Security Council authorization. Let $T_1 = T_"base" union "StrictArticle51"$ and $T_2 = T_"base" union "AnticipatoryArticle51"$. The only structural difference is the disjunct $or "imminent_attack"(...)$ in $T_2$'s self-defense precondition. The generator is:
 
-$ "imminent\_attack"("target"(a), "attacker"(a)) "being satisfiable for some" a $
+$ "imminent_attack"("target"(a), "attacker"(a)) "being satisfiable for some" a $
 
 *Music.* Let $T$ be the seven-axiom TonalHarmony theory. Let $T_"Bach" = T$ (all seven axioms enforced) and $T_"Beethoven" = {"axioms 1, 2, 4, 5"}$ (tonal cohesion only). The generators of $Delta(T_"Bach", T_"Beethoven")$ are:
 
