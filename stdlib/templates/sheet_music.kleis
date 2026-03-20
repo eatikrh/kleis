@@ -1,0 +1,419 @@
+// =============================================================================
+// Sheet Music Template — LilyPond Backend
+// =============================================================================
+//
+// Defines musical notation data types and compiles them to LilyPond source.
+// Same pattern as arxiv_paper.kleis: structured data → compile → external tool.
+//
+// Pipeline:
+//   Score -> compile_score -> .ly -> lilypond -> .pdf
+//
+// See: ADR-033 (Musical Score Notation)
+// =============================================================================
+
+import "stdlib/prelude.kleis"
+
+// =============================================================================
+// Template Metadata
+// =============================================================================
+
+define template_name = "Sheet Music"
+define template_version = "1.0"
+define template_type = "music"
+
+// =============================================================================
+// Layer 1: Syntax — Symbolic Tokens
+// =============================================================================
+
+data NoteName = C | D | E | F | G | A | B
+
+data Accidental = Natural | Sharp | Flat
+
+// Pitch: note name, accidental, octave (4 = middle C octave)
+data Pitch = P(NoteName, Accidental, ℤ)
+
+// Duration values (American naming)
+data Duration = Whole | Half | Quarter | Eighth | Sixteenth
+              | Dotted(Duration)
+              | Triplet(Duration)
+
+data Clef = Treble | Bass | Alto | Tenor
+
+// Key signature: root note name, mode ("major" or "minor")
+data KeySig = KeySig(NoteName, String)
+
+// Time signature: beats per measure, beat unit
+data TimeSig = TimeSig(ℤ, ℤ)
+
+// =============================================================================
+// Layer 1: Events — What Happens in Time
+// =============================================================================
+
+data Event = Note(Pitch, Duration)
+           | Rest(Duration)
+           | Chord(List, Duration)
+
+// =============================================================================
+// Layer 2: Structure — Hierarchical Organization
+// =============================================================================
+
+data Measure = Measure(List)
+
+// A single staff: clef, key, time signature, then measures
+data StaffContent = Staff(Clef, KeySig, TimeSig, List)
+
+// Dynamic markings (for future use, declared now for type completeness)
+data Dynamic = PPP | PP | Piano | MP | MF | Forte | FF | FFF
+
+// Score metadata
+data ScoreMeta = ScoreMeta(String, String, String)  // title, composer, subtitle
+
+// Top-level score: metadata + list of staves
+data Score = Score(ScoreMeta, List)
+
+// =============================================================================
+// Convenience Constructors
+// =============================================================================
+
+// Single-staff score (most common for solo instrument)
+define solo_score(title, composer, clef, key, time, measures) =
+    Score(ScoreMeta(title, composer, ""),
+          Cons(Staff(clef, key, time, measures), Nil))
+
+// Quick note: natural pitch at octave 4
+define n(name, dur) = Note(P(name, Natural, 4), dur)
+
+// Quick note with octave
+define no(name, oct, dur) = Note(P(name, Natural, oct), dur)
+
+// Quick sharp note
+define ns(name, oct, dur) = Note(P(name, Sharp, oct), dur)
+
+// Quick flat note
+define nb(name, oct, dur) = Note(P(name, Flat, oct), dur)
+
+// Quick rest
+define r(dur) = Rest(dur)
+
+// Quick measure from event list
+define m(events) = Measure(events)
+
+// =============================================================================
+// LilyPond Compilation — Note Names
+// =============================================================================
+
+define ly_note_name(name) = match name {
+    C => "c"
+  | D => "d"
+  | E => "e"
+  | F => "f"
+  | G => "g"
+  | A => "a"
+  | B => "b"
+}
+
+define ly_accidental(acc) = match acc {
+    Natural => ""
+  | Sharp   => "is"
+  | Flat    => "es"
+}
+
+// LilyPond octave: 4 = c' (middle C), 5 = c'', 3 = c, 2 = c, 1 = c,,
+// LilyPond convention: c (no mark) = octave 3, c' = 4, c'' = 5, c, = 2, c,, = 1
+define ly_octave_marks(oct) =
+    if oct = 5 then "''"
+    else if oct = 4 then "'"
+    else if oct = 3 then ""
+    else if oct = 6 then "'''"
+    else if oct = 7 then "''''"
+    else if oct = 2 then ","
+    else if oct = 1 then ",,"
+    else if oct = 0 then ",,,"
+    else ""
+
+// =============================================================================
+// LilyPond Compilation — Durations
+// =============================================================================
+
+define ly_duration_base(dur) = match dur {
+    Whole     => "1"
+  | Half      => "2"
+  | Quarter   => "4"
+  | Eighth    => "8"
+  | Sixteenth => "16"
+  | Dotted(inner) => concat(ly_duration_base(inner), ".")
+  | Triplet(inner) => ly_duration_base(inner)
+}
+
+// =============================================================================
+// LilyPond Compilation — Pitch and Events
+// =============================================================================
+
+define compile_pitch(p) = match p {
+    P(name, acc, oct) =>
+        concat(concat(ly_note_name(name), ly_accidental(acc)), ly_octave_marks(oct))
+}
+
+define compile_event(e) = match e {
+    Note(pitch, dur) =>
+        concat(compile_pitch(pitch), ly_duration_base(dur))
+  | Rest(dur) =>
+        concat("r", ly_duration_base(dur))
+  | Chord(pitches, dur) =>
+        concat(concat("<", compile_chord_pitches(pitches)), concat(">", ly_duration_base(dur)))
+}
+
+// Compile a list of pitches for chord notation: "c' e' g'"
+define compile_chord_pitches(ps) =
+    compile_chord_pitches_acc(ps, "")
+
+define compile_chord_pitches_acc(ps, acc) =
+    if eq(length(ps), 0) then acc
+    else
+        let p_str = compile_pitch(head(ps)) in
+        let new_acc = if eq(strlen(acc), 0) then p_str
+                      else concat(concat(acc, " "), p_str) in
+        compile_chord_pitches_acc(tail(ps), new_acc)
+
+// =============================================================================
+// LilyPond Compilation — Measures and Structure
+// =============================================================================
+
+// Compile events in a measure (space-separated)
+define compile_events_acc(events, acc) =
+    if eq(length(events), 0) then acc
+    else
+        let e_str = compile_event(head(events)) in
+        let new_acc = if eq(strlen(acc), 0) then e_str
+                      else concat(concat(acc, " "), e_str) in
+        compile_events_acc(tail(events), new_acc)
+
+define compile_events(events) = compile_events_acc(events, "")
+
+define compile_measure(m) = match m {
+    Measure(events) => compile_events(events)
+}
+
+// Compile measures separated by barlines
+define compile_measures_acc(measures, acc) =
+    if eq(length(measures), 0) then acc
+    else
+        let m_str = compile_measure(head(measures)) in
+        let new_acc = if eq(strlen(acc), 0) then m_str
+                      else concat(concat(acc, " |\n    "), m_str) in
+        compile_measures_acc(tail(measures), new_acc)
+
+define compile_measures(measures) = compile_measures_acc(measures, "")
+
+// =============================================================================
+// LilyPond Compilation — Key and Time Signatures
+// =============================================================================
+
+define ly_key_mode(mode) =
+    if eq(mode, "major") then "\\major"
+    else if eq(mode, "minor") then "\\minor"
+    else "\\major"
+
+define compile_key_sig(ks) = match ks {
+    KeySig(root, mode) =>
+        concat(concat("\\key ", ly_note_name(root)), concat(" ", ly_key_mode(mode)))
+}
+
+define compile_time_sig(ts) = match ts {
+    TimeSig(num, den) =>
+        concat(concat("\\time ", intToStr(num)), concat("/", intToStr(den)))
+}
+
+define compile_clef(c) = match c {
+    Treble => "\\clef treble"
+  | Bass   => "\\clef bass"
+  | Alto   => "\\clef alto"
+  | Tenor  => "\\clef tenor"
+}
+
+// =============================================================================
+// LilyPond Compilation — Staff
+// =============================================================================
+
+define compile_staff(s) = match s {
+    Staff(clef, key, time, measures) =>
+        concat(concat(concat(concat(concat(concat(
+            "  \\new Staff {\n    ",
+            compile_clef(clef)),
+            "\n    "),
+            compile_key_sig(key)),
+            "\n    "),
+            compile_time_sig(time)),
+            concat("\n    ",
+            concat(compile_measures(measures),
+            "\n  }")))
+}
+
+// Compile list of staves
+define compile_staves_acc(staves, acc) =
+    if eq(length(staves), 0) then acc
+    else
+        let s_str = compile_staff(head(staves)) in
+        let new_acc = if eq(strlen(acc), 0) then s_str
+                      else concat(concat(acc, "\n"), s_str) in
+        compile_staves_acc(tail(staves), new_acc)
+
+define compile_staves(staves) = compile_staves_acc(staves, "")
+
+// =============================================================================
+// LilyPond Compilation — Full Score
+// =============================================================================
+
+define ly_version = "\\version \"2.24.0\"\n"
+
+define compile_header(meta) = match meta {
+    ScoreMeta(title, composer, subtitle) =>
+        let base = concat(concat(concat(
+            "\\header {\n  title = \"", title),
+            "\"\n  composer = \""), concat(composer, "\"")) in
+        let with_sub = if eq(strlen(subtitle), 0) then base
+                       else concat(concat(concat(base,
+                            "\n  subtitle = \""), subtitle), "\"") in
+        concat(with_sub, "\n}\n")
+}
+
+define compile_score(score) = match score {
+    Score(meta, staves) =>
+        concat(concat(concat(concat(
+            ly_version,
+            "\n"),
+            compile_header(meta)),
+            "\n\\score {\n  <<\n"),
+            concat(compile_staves(staves),
+            "\n  >>\n  \\layout { indent = 0 }\n  \\midi { }\n}\n"))
+}
+
+// =============================================================================
+// Validation
+// =============================================================================
+
+define valid_score(score) = match score {
+    Score(meta, staves) => match meta {
+        ScoreMeta(title, composer, subtitle) =>
+            if eq(strlen(title), 0) then false
+            else if eq(length(staves), 0) then false
+            else true
+    }
+}
+
+// =============================================================================
+// Duration Arithmetic (for well-formedness checking)
+// =============================================================================
+
+// Duration as a fraction of a whole note (returned as numerator with denominator = 16)
+// Whole = 16/16, Half = 8/16, Quarter = 4/16, Eighth = 2/16, Sixteenth = 1/16
+define duration_value(dur) = match dur {
+    Whole     => 16
+  | Half      => 8
+  | Quarter   => 4
+  | Eighth    => 2
+  | Sixteenth => 1
+  | Dotted(inner) => duration_value(inner) + duration_value(inner) / 2
+  | Triplet(inner) => duration_value(inner) * 2 / 3
+}
+
+define event_duration(e) = match e {
+    Note(p, d)    => duration_value(d)
+  | Rest(d)       => duration_value(d)
+  | Chord(ps, d)  => duration_value(d)
+}
+
+// Sum durations of events in a list
+define sum_durations_acc(events, acc) =
+    if eq(length(events), 0) then acc
+    else sum_durations_acc(tail(events), acc + event_duration(head(events)))
+
+define sum_durations(events) = sum_durations_acc(events, 0)
+
+// Expected duration of a measure given time signature (in sixteenths)
+// e.g., 4/4 = 4 * (16/4) = 16, 3/4 = 3 * (16/4) = 12, 6/8 = 6 * (16/8) = 12
+define measure_expected_duration(ts) = match ts {
+    TimeSig(num, den) => num * (16 / den)
+}
+
+define measure_duration(m) = match m {
+    Measure(events) => sum_durations(events)
+}
+
+// =============================================================================
+// Tests
+// =============================================================================
+
+example "compile pitch c4" {
+    let p = P(C, Natural, 4) in
+    assert(compile_pitch(p) = "c'")
+}
+
+example "compile pitch fis5" {
+    let p = P(F, Sharp, 5) in
+    assert(compile_pitch(p) = "fis''")
+}
+
+example "compile pitch bes3" {
+    let p = P(B, Flat, 3) in
+    assert(compile_pitch(p) = "bes")
+}
+
+example "compile quarter note" {
+    let e = Note(P(C, Natural, 4), Quarter) in
+    assert(compile_event(e) = "c'4")
+}
+
+example "compile dotted half" {
+    let e = Note(P(D, Natural, 4), Dotted(Half)) in
+    assert(compile_event(e) = "d'2.")
+}
+
+example "compile rest" {
+    let e = Rest(Eighth) in
+    assert(compile_event(e) = "r8")
+}
+
+example "compile chord" {
+    let e = Chord(Cons(P(C, Natural, 4), Cons(P(E, Natural, 4), Cons(P(G, Natural, 4), Nil))), Quarter) in
+    assert(compile_event(e) = "<c' e' g'>4")
+}
+
+example "compile measure" {
+    let m = Measure(Cons(Note(P(C, Natural, 4), Quarter),
+            Cons(Note(P(D, Natural, 4), Quarter),
+            Cons(Note(P(E, Natural, 4), Quarter),
+            Cons(Note(P(F, Natural, 4), Quarter), Nil))))) in
+    assert(compile_measure(m) = "c'4 d'4 e'4 f'4")
+}
+
+example "duration arithmetic" {
+    assert(duration_value(Whole) = 16)
+    assert(duration_value(Half) = 8)
+    assert(duration_value(Quarter) = 4)
+    assert(duration_value(Eighth) = 2)
+    assert(duration_value(Sixteenth) = 1)
+    assert(duration_value(Dotted(Half)) = 12)
+    assert(duration_value(Dotted(Quarter)) = 6)
+}
+
+example "measure completeness 4/4" {
+    let ts = TimeSig(4, 4) in
+    let m = Measure(Cons(Note(P(C, Natural, 4), Quarter),
+            Cons(Note(P(D, Natural, 4), Quarter),
+            Cons(Note(P(E, Natural, 4), Quarter),
+            Cons(Note(P(F, Natural, 4), Quarter), Nil))))) in
+    assert(measure_duration(m) = measure_expected_duration(ts))
+}
+
+example "measure completeness 3/4" {
+    let ts = TimeSig(3, 4) in
+    let m = Measure(Cons(Note(P(C, Natural, 4), Dotted(Half)), Nil)) in
+    assert(measure_duration(m) = measure_expected_duration(ts))
+}
+
+example "score validation" {
+    let s = solo_score("Test", "Composer", Treble, KeySig(C, "major"), TimeSig(4, 4),
+        Cons(Measure(Cons(Note(P(C, Natural, 4), Whole), Nil)), Nil)) in
+    assert(valid_score(s) = true)
+}

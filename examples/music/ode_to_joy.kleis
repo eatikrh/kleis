@@ -1,0 +1,91 @@
+// =============================================================================
+// Ode to Joy — Beethoven, Symphony No. 9, Op. 125 (Theme)
+// =============================================================================
+//
+// First example of Kleis sheet music generation.
+// Uses the sheet_music.kleis template to compile to LilyPond → PDF.
+//
+// The melody is in D major, 4/4 time, single voice.
+// 16 measures of the famous theme.
+//
+// =============================================================================
+
+import "stdlib/templates/sheet_music.kleis"
+
+// =============================================================================
+// The Theme — 16 measures
+// =============================================================================
+
+// Measures 1-4: e e f g | g f e d | c c d e | e. d d
+define m1 = m(Cons(n(E, Quarter), Cons(n(E, Quarter), Cons(n(F, Quarter), Cons(n(G, Quarter), Nil)))))
+define m2 = m(Cons(n(G, Quarter), Cons(n(F, Quarter), Cons(n(E, Quarter), Cons(n(D, Quarter), Nil)))))
+define m3 = m(Cons(n(C, Quarter), Cons(n(C, Quarter), Cons(n(D, Quarter), Cons(n(E, Quarter), Nil)))))
+define m4 = m(Cons(n(E, Dotted(Quarter)), Cons(n(D, Eighth), Cons(n(D, Half), Nil))))
+
+// Measures 5-8: e e f g | g f e d | c c d e | d. c c
+define m5 = m1
+define m6 = m2
+define m7 = m3
+define m8 = m(Cons(n(D, Dotted(Quarter)), Cons(n(C, Eighth), Cons(n(C, Half), Nil))))
+
+// Measures 9-12 (B section): d d e c | d ef e c | d ef e d | c d g(low)
+// Simplified: the B section uses eighth-note pairs on beats 3
+define m9  = m(Cons(n(D, Quarter), Cons(n(D, Quarter), Cons(n(E, Quarter), Cons(n(C, Quarter), Nil)))))
+define m10 = m(Cons(n(D, Quarter), Cons(Note(P(E, Natural, 4), Eighth), Cons(Note(P(F, Natural, 4), Eighth), Cons(n(E, Quarter), Cons(n(C, Quarter), Nil))))))
+define m11 = m(Cons(n(D, Quarter), Cons(Note(P(E, Natural, 4), Eighth), Cons(Note(P(F, Natural, 4), Eighth), Cons(n(E, Quarter), Cons(n(D, Quarter), Nil))))))
+define m12 = m(Cons(n(C, Quarter), Cons(n(D, Quarter), Cons(no(G, 3, Half), Nil))))
+
+// Measures 13-16: return of A (same as 1-4 but ending on m8)
+define m13 = m1
+define m14 = m2
+define m15 = m3
+define m16 = m8
+
+// =============================================================================
+// Assemble the Score
+// =============================================================================
+
+define ode_measures = Cons(m1, Cons(m2, Cons(m3, Cons(m4,
+                     Cons(m5, Cons(m6, Cons(m7, Cons(m8,
+                     Cons(m9, Cons(m10, Cons(m11, Cons(m12,
+                     Cons(m13, Cons(m14, Cons(m15, Cons(m16, Nil))))))))))))))))
+
+define ode_to_joy = solo_score(
+    "Ode to Joy",
+    "Ludwig van Beethoven",
+    Treble,
+    KeySig(C, "major"),
+    TimeSig(4, 4),
+    ode_measures
+)
+
+// =============================================================================
+// Compile and Output
+// =============================================================================
+
+example "compile ode to joy" {
+    let ly = compile_score(ode_to_joy) in
+    out(typst_raw(ly))
+}
+
+example "validate ode to joy" {
+    assert(valid_score(ode_to_joy) = true)
+}
+
+// Verify measure completeness for key measures
+example "measure 1 is complete" {
+    assert(measure_duration(m1) = measure_expected_duration(TimeSig(4, 4)))
+}
+
+example "measure 4 dotted rhythm is complete" {
+    // dotted quarter (6) + eighth (2) + half (8) = 16 sixteenths = 4/4
+    assert(measure_duration(m4) = measure_expected_duration(TimeSig(4, 4)))
+}
+
+example "measure 10 with eighths is complete" {
+    assert(measure_duration(m10) = measure_expected_duration(TimeSig(4, 4)))
+}
+
+example "measure 12 with low G is complete" {
+    assert(measure_duration(m12) = measure_expected_duration(TimeSig(4, 4)))
+}
