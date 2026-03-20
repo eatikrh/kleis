@@ -3,7 +3,6 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <link rel="canonical" href="https://kleis.io/docs/manual/book/chapters/28-agent-mcps">
         <title>Agent MCP Servers - The Kleis Manual</title>
 
 
@@ -18,7 +17,7 @@
         </script>
         
 
-        <meta name="description" content="Agent MCP Servers — Kleis language guide: formal verification, type inference, and Z3 theorem proving.">
+        <meta name="description" content="The official guide to the Kleis mathematical specification language">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
 
@@ -44,7 +43,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-abba8839.js";
+            window.path_to_searchindex_js = "../searchindex-72bdbc1b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-3f3d019b.js"></script>
@@ -740,6 +739,66 @@ flags needed.</p>
 <p>If <code>review_extra_files</code> is not defined, no extra files are added. The engine
 checks for its presence the same way it checks for <code>diff_file_filter</code> — by
 scanning the policy’s function list at startup.</p>
+<h3 id="intent-aware-review"><a class="header" href="#intent-aware-review">Intent-Aware Review</a></h3>
+<p>Code review without context is pattern-matching. The reviewer sees <code>.unwrap()</code>
+and flags it — but the change might be a quick prototype where <code>.unwrap()</code> is
+intentional. Or the review finds no issues — but the code doesn’t actually
+accomplish what the developer intended. Mechanical correctness is not the same
+as intent coherence.</p>
+<p>The <code>intent</code> parameter bridges this gap. Every <code>check_code</code>, <code>check_file</code>, and
+<code>diff_check_file</code> tool accepts an optional <code>intent</code> string describing what the
+code change is trying to achieve:</p>
+<pre><code>check_file: {
+    "path": "src/auth.rs",
+    "intent": "Add rate limiting to login endpoint"
+}
+</code></pre>
+<p>Intent flows through two channels:</p>
+<p><strong>1. Policy rules via <code>review_intent()</code> built-in.</strong> The intent string is
+available to Kleis policy rules through the <code>review_intent()</code> function. Rules
+can use this to adjust their behavior:</p>
+<pre><code class="language-kleis">define check_intent_coherence(source) =
+    let intent = review_intent() in
+    if eq(intent, "") then "pass"
+    else if contains(intent, "prototype") then
+        "pass"  // relax checks for prototype intent
+    else if contains(intent, "security") then
+        check_security_hardening(source)
+    else "pass"
+</code></pre>
+<p><strong>2. Advisory LLM prompt.</strong> When <code>--advise</code> is active and an intent is
+provided, the LLM system prompt includes an intent-coherence section:</p>
+<pre><code>## Change Intent
+
+The author stated this change intent:
+&gt; Add rate limiting to login endpoint
+
+In addition to the coding standards above, also check:
+- Does the code plausibly advance the stated intent?
+- Are there changes that seem unrelated to the intent (scope creep)?
+- Is the intent itself unclear or too vague to review against?
+</code></pre>
+<p>Advisory findings related to intent are reported with
+<code>"check": "INTENT-COHERENCE"</code> and <code>"severity": "info"</code>.</p>
+<h4 id="cli-usage-1"><a class="header" href="#cli-usage-1">CLI usage</a></h4>
+<pre><code class="language-bash">kleis review src/auth.rs -p policy.kleis --intent "Add rate limiting to login endpoint" --advise
+</code></pre>
+<h4 id="mcp-usage"><a class="header" href="#mcp-usage">MCP usage</a></h4>
+<p>The <code>intent</code> parameter appears in <code>check_code</code>, <code>check_file</code>, and
+<code>diff_check_file</code> tool schemas. AI agents can pass it directly:</p>
+<pre><code class="language-json">{
+    "method": "tools/call",
+    "params": {
+        "name": "check_file",
+        "arguments": {
+            "path": "src/auth.rs",
+            "intent": "Add rate limiting to login endpoint"
+        }
+    }
+}
+</code></pre>
+<p>The <code>review_path()</code> built-in is also set automatically, giving policy rules
+access to the file path being reviewed.</p>
 <h3 id="advisory-mode-llm-assisted-review"><a class="header" href="#advisory-mode-llm-assisted-review">Advisory Mode (LLM-Assisted Review)</a></h3>
 <p>Formal checks are deterministic and machine-checked — they <strong>block</strong> the pipeline
 on failure. But some code quality concerns are inherently ambiguous: naming

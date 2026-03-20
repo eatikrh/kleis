@@ -3,7 +3,6 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <link rel="canonical" href="https://kleis.io/docs/manual/book/appendix/builtin-functions">
         <title>Built-in Functions - The Kleis Manual</title>
 
 
@@ -18,7 +17,7 @@
         </script>
         
 
-        <meta name="description" content="Built-in Functions — Kleis language guide: formal verification, type inference, and Z3 theorem proving.">
+        <meta name="description" content="The official guide to the Kleis mathematical specification language">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
 
@@ -44,7 +43,7 @@
             const path_to_root = "../";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-abba8839.js";
+            window.path_to_searchindex_js = "../searchindex-72bdbc1b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-3f3d019b.js"></script>
@@ -498,6 +497,22 @@ let p = Pair(1, "a") in snd(p)  // → "a"
 </tbody>
 </table>
 </div>
+<h2 id="review-context"><a class="header" href="#review-context">Review Context</a></h2>
+<p>These zero-argument functions are available inside review policy files.
+They return the intent and file path set by the current <code>check_code</code>,
+<code>check_file</code>, or <code>diff_check_file</code> invocation.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Returns</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>review_intent()</code></td><td><code>String</code></td><td>The change intent passed by the caller (empty string if none)</td></tr>
+<tr><td><code>review_path()</code></td><td><code>String</code></td><td>The file path being reviewed (empty string if none)</td></tr>
+</tbody>
+</table>
+</div>
+<p>See <a href="../chapters/28-agent-mcps.html#intent-aware-review">Agent MCP Servers — Intent-Aware Review</a>.</p>
 <h2 id="mathematical-constants"><a class="header" href="#mathematical-constants">Mathematical Constants</a></h2>
 <div class="table-wrapper">
 <table>

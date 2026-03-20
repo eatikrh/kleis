@@ -663,6 +663,87 @@ If `review_extra_files` is not defined, no extra files are added. The engine
 checks for its presence the same way it checks for `diff_file_filter` — by
 scanning the policy's function list at startup.
 
+### Intent-Aware Review
+
+Code review without context is pattern-matching. The reviewer sees `.unwrap()`
+and flags it — but the change might be a quick prototype where `.unwrap()` is
+intentional. Or the review finds no issues — but the code doesn't actually
+accomplish what the developer intended. Mechanical correctness is not the same
+as intent coherence.
+
+The `intent` parameter bridges this gap. Every `check_code`, `check_file`, and
+`diff_check_file` tool accepts an optional `intent` string describing what the
+code change is trying to achieve:
+
+```
+check_file: {
+    "path": "src/auth.rs",
+    "intent": "Add rate limiting to login endpoint"
+}
+```
+
+Intent flows through two channels:
+
+**1. Policy rules via `review_intent()` built-in.** The intent string is
+available to Kleis policy rules through the `review_intent()` function. Rules
+can use this to adjust their behavior:
+
+```kleis
+define check_intent_coherence(source) =
+    let intent = review_intent() in
+    if eq(intent, "") then "pass"
+    else if contains(intent, "prototype") then
+        "pass"  // relax checks for prototype intent
+    else if contains(intent, "security") then
+        check_security_hardening(source)
+    else "pass"
+```
+
+**2. Advisory LLM prompt.** When `--advise` is active and an intent is
+provided, the LLM system prompt includes an intent-coherence section:
+
+```
+## Change Intent
+
+The author stated this change intent:
+> Add rate limiting to login endpoint
+
+In addition to the coding standards above, also check:
+- Does the code plausibly advance the stated intent?
+- Are there changes that seem unrelated to the intent (scope creep)?
+- Is the intent itself unclear or too vague to review against?
+```
+
+Advisory findings related to intent are reported with
+`"check": "INTENT-COHERENCE"` and `"severity": "info"`.
+
+#### CLI usage
+
+```bash
+kleis review src/auth.rs -p policy.kleis --intent "Add rate limiting to login endpoint" --advise
+```
+
+#### MCP usage
+
+The `intent` parameter appears in `check_code`, `check_file`, and
+`diff_check_file` tool schemas. AI agents can pass it directly:
+
+```json
+{
+    "method": "tools/call",
+    "params": {
+        "name": "check_file",
+        "arguments": {
+            "path": "src/auth.rs",
+            "intent": "Add rate limiting to login endpoint"
+        }
+    }
+}
+```
+
+The `review_path()` built-in is also set automatically, giving policy rules
+access to the file path being reviewed.
+
 ### Advisory Mode (LLM-Assisted Review)
 
 Formal checks are deterministic and machine-checked — they **block** the pipeline

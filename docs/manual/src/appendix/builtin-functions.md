@@ -268,6 +268,19 @@ For advanced operations (eigenvalues, SVD), see [LAPACK Functions](./lapack.md).
 | `prepend_col(A, col)` | | Add column at left |
 | `append_col(A, col)` | | Add column at right |
 
+## Review Context
+
+These zero-argument functions are available inside review policy files.
+They return the intent and file path set by the current `check_code`,
+`check_file`, or `diff_check_file` invocation.
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `review_intent()` | `String` | The change intent passed by the caller (empty string if none) |
+| `review_path()` | `String` | The file path being reviewed (empty string if none) |
+
+See [Agent MCP Servers — Intent-Aware Review](../chapters/28-agent-mcps.md#intent-aware-review).
+
 ## Mathematical Constants
 
 | Function | Unicode | Value | Description |
