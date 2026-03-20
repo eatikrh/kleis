@@ -238,6 +238,37 @@ Different composers navigate different regions of the Skolem space:
 
 This is comparative formal musicology: style is characterized by which axioms hold, and where. The theory does not reduce music to rules --- it reveals the *structure of compositional choice*.
 
+== Hard Constraints versus Soft Constraints
+
+A crucial distinction emerges when comparing domains. In chess, the axioms are *hard constraints*: an illegal move is not a move at all. A rook cannot move diagonally; a king cannot remain in check. Every Skolem witness must satisfy the entire theory $T$. The space of valid witnesses is $"SAT"(T)$, and there is no meaningful notion of 'violating an axiom' --- only legal positions exist.
+
+In music, the axioms are *soft constraints*: a composer can violate any of them. Parallel fifths are not illegal the way a diagonal rook move is illegal. They are a *choice*. Beethoven's parallel fifths at measure 13 do not remove the Sonata from the space of scores --- they place it in a different region. The Sonata is a model of $T' subset T$, where $T'$ includes tonal cohesion but excludes strict outer-voice counterpoint.
+
+This means the Skolem space in music has two levels of freedom:
+
+1. *Which axioms to obey* --- choosing a sub-theory $T' subset.eq T$. This is *style*.
+
+2. *Which witness to construct* --- choosing a specific score from $"SAT"(T')$. This is *composition*.
+
+In chess, only level 2 exists. The rules are fixed; only the strategy varies. That is why chess feels like *discovery* --- navigating a pre-given space. In music, both levels are active. The composer chooses the space *and* navigates it. That is why music feels like *creation*.
+
+Given unbounded time and memory, an SMT solver could in principle enumerate all positions satisfying the rules of chess, and all scores satisfying a given tonal theory. But in chess the enumeration is over $"SAT"(T)$ --- one fixed theory. In music the enumeration would range over $union.big_(T' subset.eq T) "SAT"(T')$ --- the union of all sub-theories. The musical space is not just larger; it is *structurally richer*, because the choice of which constraints to satisfy is itself part of the creative act.
+
+Set theory occupies an interesting middle position. The axioms of ZFC are hard constraints in the sense that a model must satisfy all of them. But independence results (the Continuum Hypothesis, the Axiom of Choice relative to ZF) show that the *full* theory is underdetermined --- there exist models satisfying different extensions. Choosing which extension to study (constructible universe versus forcing extension) is analogous to the composer choosing which sub-theory to instantiate. The mathematician, like the composer, selects a region of the Skolem space --- but at the level of axioms, not witnesses.
+
+This three-way comparison refines Table 2:
+
+#figure(
+  table(
+    columns: 4,
+    [*Domain*], [*Constraint type*], [*Level 1 (theory choice)*], [*Level 2 (witness choice)*],
+    [Chess], [Hard], [Fixed --- rules are the rules], [Strategy: which move?],
+    [Music], [Soft], [Style: which axioms to obey?], [Composition: which notes?],
+    [Set theory], [Hard + independent extensions], [Which extension of ZFC?], [Which model?],
+  ),
+  caption: [Two levels of Skolem choice across domains. Chess has only level 2; music has both; set theory has both but with hard base constraints.]
+) <tab:levels>
+
 = The Universal Pattern
 
 The axiom--model--Skolem pattern is not specific to music. We have demonstrated the same architecture in two other domains using the same Kleis verification platform.
