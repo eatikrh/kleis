@@ -111,6 +111,52 @@ Cantor + music), Discussion, Conclusion + References + 2 Appendices.
 
 **Pipeline:** `kleis test --raw-output --example compile_paper moonlight_paper.kleis > .typ && typst compile .typ`
 
+#### Future Paper: "Theory Selection and Divergence Kernels Across Domains"
+
+**Status:** Idea — not yet started. Sits *above* the Skolems paper.
+
+**Central observation:** Across all Kleis-verified domains, competing theories over a
+shared ontology diverge on a *minimal separating set* of predicates — the **Divergence
+Kernel**:
+
+```
+Δ(T₁, T₂) = { φ | T₁ ⊨ φ  and  T₂ ⊨ ¬φ }
+```
+
+In every domain we've built, this set is small and precisely identifiable:
+
+| Domain | T₁ vs T₂ | Divergence Kernel |
+|--------|-----------|-------------------|
+| Set theory | ZFC+CH vs ZFC+¬CH | { CH } |
+| Law (Art. 51) | Strict vs Anticipatory doctrine | { imminent_attack satisfiable } |
+| Music | Bach-style vs Beethoven-style | { parallel fifths tolerance, harmonic rhythm } |
+| Chess | Fixed theory — divergence at strategy level, not theory level |
+
+**Key claims:**
+
+1. Truth is a property of the pair (object, theory), not the object alone.
+2. Theory selection is an extra-formal act — the jurist's judgment, the composer's
+   taste, the mathematician's foundational commitment.
+3. In each domain, the effective disagreement localizes to a minimal set of predicates.
+4. Kleis can *compute* divergence kernels: load both theories, run the same object
+   through both, diff verdicts, trace to the flipped predicate.
+
+**Constraint types across domains:**
+
+| Domain | Constraints | Level 1 (theory choice) | Level 2 (witness choice) |
+|--------|-------------|-------------------------|--------------------------|
+| Chess | Hard (inviolable) | Fixed — rules are the rules | Strategy: which move? |
+| Music | Soft (violable) | Style: which axioms to obey? | Composition: which notes? |
+| Set theory | Hard + independent extensions | Which extension of ZFC? | Which model? |
+| Law | Hard base + doctrine selection | Which doctrine to invoke? | Which verdict? |
+
+**Relationship to Skolems paper:** The Skolems paper is about beauty in music — one
+domain, one case study, philosophical argument. The Divergence Kernel paper is about the
+*structure of disagreement* across all formal systems — four domains, mathematical
+definition, computational demonstration. Different audiences, complementary claims.
+
+**Evidence:** All four domains already implemented and verified in Kleis. No new code needed.
+
 #### Key Insight: The Score is an AST
 
 The Moonlight Sonata now exists as a typed, verifiable, transformable formal object.
