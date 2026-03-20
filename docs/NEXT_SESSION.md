@@ -1,10 +1,10 @@
 # Next Session Notes
 
-**Last Updated:** March 20, 2026 (session — TonalHarmony Theory + Moonlight Sonata Verification)
+**Last Updated:** March 20, 2026 (session — arXiv Paper: "The Beauty is in the Skolems")
 
 ---
 
-## Current Session (Mar 20, 2026): Music Theory Verification — Phase 2 Complete
+## Current Session (Mar 20, 2026): Music Theory + arXiv Paper
 
 ### What We Did
 
@@ -16,7 +16,8 @@
 4. **Built the TonalHarmony theory** — pitch arithmetic, chord recognition, 7 axiom checkers
 5. **Ran the theory against the Moonlight Sonata** — 10 analysis examples, all passing
 6. Updated manual chapter with new features, Moonlight Sonata example, and verification results
-7. All work on `feature/music-notation` branch
+7. **Wrote arXiv paper**: "The Beauty is in the Skolems: Formal Music Theory as Model Construction"
+8. All work on `feature/music-notation` branch
 
 #### Files Created/Modified
 
@@ -31,6 +32,9 @@
 | `examples/music/moonlight_sonata.midi` | Generated MIDI |
 | `docs/manual/src/chapters/30-sheet-music.md` | Updated with verification section |
 | `docs/manual/src/images/moonlight_sonata.png` | Screenshot for manual |
+| `examples/music/moonlight_paper.kleis` | **NEW** — arXiv paper (8 sections + refs + 2 appendices, 12 tests) |
+| `examples/music/moonlight_paper.typ` | Generated Typst source |
+| `examples/music/moonlight_paper.pdf` | Generated arXiv paper PDF |
 
 #### Template Extensions (sheet_music.kleis)
 
@@ -84,6 +88,28 @@ The SAT results show a disciplined tonal core. The violations are **diagnostical
 they reveal where Beethoven exercises expressive freedom beyond strict textbook rules.
 This is exactly how a formal theory should behave — not "right or wrong" but "which
 axioms hold, and where."
+
+#### arXiv Paper: "The Beauty is in the Skolems"
+
+**File:** `examples/music/moonlight_paper.kleis` (cs.LO + cs.SD cross-listing)
+
+**Central thesis:** A musical score is a model. A music theory is a set of axioms.
+Composing is constructing a Skolem witness — a specific satisfying assignment chosen
+from an infinite space of valid models. The axioms constrain; the solver verifies;
+but the choice of WHICH witness is the irreducibly human act.
+
+**Key contrast with generative AI:** A generative model samples from a statistical
+distribution, approximating regularity. A composer selects a specific Skolem from a
+satisfiability space, guided by intent that no axiom system captures. The framework
+makes the composer's contribution formally visible without making it formally determined.
+
+**Sections:** Introduction, Scores as Formal Objects, A Minimal Theory of Tonal Harmony,
+Verification Results, The Composer as Skolem Selector, The Universal Pattern (chess +
+Cantor + music), Discussion, Conclusion + References + 2 Appendices.
+
+**Machine-checked:** 12 examples (7 axiom theorems + 3 spot-checks + compile + validate).
+
+**Pipeline:** `kleis test --raw-output --example compile_paper moonlight_paper.kleis > .typ && typst compile .typ`
 
 #### Key Insight: The Score is an AST
 

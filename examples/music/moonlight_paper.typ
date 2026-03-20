@@ -1,0 +1,372 @@
+#import "@preview/lilaq:0.5.0" as lq
+#set page(
+  paper: "us-letter",
+  margin: (top: 1in, bottom: 1in, left: 1in, right: 1in),
+  numbering: "1",
+  header: align(right)[_Preprint_],
+)
+#set text(
+  font: "New Computer Modern",
+  size: 11pt,
+  lang: "en",
+)
+#set par(
+  justify: true,
+  leading: 0.65em,
+  first-line-indent: 1em,
+)
+
+// No indent after headings
+#show heading: it => {
+  it
+  par(text(size: 0pt, ""))
+}
+#set heading(numbering: "1.1")
+
+// Section headings (level 1)
+#show heading.where(level: 1): it => {
+  v(1em)
+  text(size: 12pt, weight: "bold")[#counter(heading).display() #it.body]
+  v(0.5em)
+}
+
+// Subsection headings (level 2)
+#show heading.where(level: 2): it => {
+  v(0.8em)
+  text(size: 11pt, weight: "bold")[#counter(heading).display() #it.body]
+  v(0.4em)
+}
+
+// Subsubsection headings (level 3)
+#show heading.where(level: 3): it => {
+  v(0.6em)
+  text(size: 10pt, weight: "bold", style: "italic")[#counter(heading).display() #it.body]
+  v(0.3em)
+}
+#set figure(placement: auto)
+#show figure.caption: it => {
+  text(size: 9pt)[#it]
+}
+#show link: it => text(fill: blue.darken(20%))[#underline[#it]]
+
+
+#align(center)[
+  #text(size: 17pt, weight: "bold")[The Beauty is in the Skolems: Formal Music Theory as Model Construction]
+  
+  #v(1em)
+  
+  Engin Atik#super[1]
+  
+  #v(0.5em)
+  
+  #super[1]Kleis Research, https://kleis.io
+]
+
+#v(1em)
+
+#align(center)[
+  #rect(width: 85%, stroke: none)[
+    #align(left)[
+      #text(weight: "bold")[Abstract]
+      #v(0.3em)
+      #text(size: 10pt)[We present a framework in which a musical score is a formal model, a music theory is a set of axioms, and the act of composing is the construction of a Skolem witness --- a specific satisfying assignment chosen from an infinite space of valid models. We formalize a minimal tonal harmony theory comprising seven axioms (tonic opening, smooth bass motion, triadic arpeggiation, melody--harmony consonance, prohibition of parallel octaves and fifths, and uniform harmonic rhythm) and verify them against a 14-measure encoding of Beethoven's Moonlight Sonata (Op. 27 No. 2) represented as a typed abstract syntax tree in the Kleis verification language. The results are musically interpretable: the Sonata satisfies a disciplined tonal core (four axioms) while violating stricter triadic, contrapuntal, and harmonic-rhythm constraints at specific, identifiable measures. These violations are not failures of the framework but independence results --- they reveal where Beethoven exercises expressive freedom beyond textbook rules. We argue that this perspective sharply distinguishes formal composition from generative AI: a statistical model samples from a distribution, but a composer selects a particular witness guided by intent, taste, and historical awareness. The axioms constrain the space; the solver can verify any candidate; but the choice of which Skolem witness to instantiate is the irreducibly human act. The framework makes the composer's contribution formally visible without making it formally determined. We demonstrate that this axiom--model--witness pattern is domain-independent, appearing identically in chess puzzle verification and set-theoretic independence proofs over the same Kleis substrate.]
+    ]
+  ]
+]
+
+#text(size: 9pt)[*Keywords:* formal verification, music theory, Skolem witness, model construction, tonal harmony, Beethoven, SMT solving, composition, generative AI]
+
+#v(1em)
+
+
+= Introduction
+
+What does a composer do? One answer is: a composer constructs a *model* of a music theory.
+
+A music theory, at its core, is a collection of constraints --- rules about which intervals are permitted between voices, how chords may progress, when dissonance must resolve. These constraints are axioms. A piece of music that satisfies all of them is a model: a specific structure in which every axiom holds. A piece that violates some axioms while satisfying others is a model of a weaker sub-theory, and the violations are *independence results* --- they demonstrate that the violated axioms are not consequences of the satisfied ones.
+
+In formal logic, a Skolem witness is a specific assignment of values to existentially quantified variables that makes a formula true. When we ask 'does there exist a score satisfying these seven axioms?' and exhibit a specific score, that score is a Skolem witness for the existential claim. The axioms constrain the space of possible witnesses; the specific witness chosen is the composition.
+
+This perspective leads to a precise distinction between formal composition and generative AI. A generative model (GPT, diffusion, etc.) samples from a statistical distribution learned from training data. It approximates *regularity* --- producing outputs that are statistically similar to what it has seen. A Skolem witness, by contrast, is a *specific choice* from a formally defined satisfiability space. The choice is guided not by statistical likelihood but by the composer's intent, taste, and expressive goals. The axioms define what is *permissible*; the composer decides what is *said*.
+
+We make this concrete. We define a minimal tonal harmony theory with seven axioms, encode 14 measures of Beethoven's Moonlight Sonata (Op. 27 No. 2, first movement) as a typed abstract syntax tree, and verify each axiom against the score. The results are machine-checked: four axioms are satisfied (confirming a disciplined tonal core), while three are violated at specific, identifiable measures (revealing where Beethoven exercises compositional freedom). The entire pipeline --- data types, compilation, axiom checking, and this paper --- runs on the Kleis verification platform, demonstrating that the axiom--model--Skolem pattern applies to music with the same rigor as to mathematics and logic.
+
+= Scores as Formal Objects
+
+A musical score in our framework is a typed abstract syntax tree (AST) built from algebraic data types. The core types are:
+
+- *Pitch*: a triple $P("name", "accidental", "octave")$ where name $in {C, D, E, F, G, A, B}$, accidental $in {"Natural", "Sharp", "Flat"}$, and octave is an integer (4 = middle C octave).
+
+- *Event*: an element in time --- a note $"Note"(p, d)$, a rest $"Rest"(d)$, a chord $"Chord"("pitches", d)$, a tuplet $"Tuplet"(n, d, "events")$, or annotations (dynamics, slurs, tempo markings).
+
+- *Measure*: a list of events. Duration arithmetic verifies that every measure sums to the expected number of sixteenth-note units for its time signature.
+
+- *VoiceLine*: a list of measures for one voice. Multiple voice lines can share a staff.
+
+- *Score*: metadata (title, composer) plus a list of staff contents, where each staff is either single-voice or multi-voice.
+
+This representation is *renderer-independent*. The same AST admits multiple projections:
+
+1. *Sheet music*: the AST compiles to LilyPond source, which renders to publication-quality PDF.
+
+2. *MIDI*: LilyPond simultaneously generates a MIDI realization --- a performance projection.
+
+3. *Analysis*: the axiom-checking functions in our TonalHarmony theory operate directly on the AST.
+
+These are three views of the same invariant object. The score is not the page, not the MIDI file, and not the analysis --- it is the underlying structure from which all three are derived under different mappings.
+
+== Encoding: Moonlight Sonata Op. 27 No. 2
+
+We encode the first 14 measures of Beethoven's Moonlight Sonata, covering the opening section's complete harmonic trajectory from C$\#$ minor through its relative keys and back.
+
+The texture has three layers, encoded as separate voice structures:
+
+- *Voice 1 (melody)*: enters at measure 5 with a sustained G$\#$4, preceded by spacer rests. The melody is characterized by long tones, dotted rhythms, and narrow stepwise motion.
+
+- *Voice 2 (accompaniment)*: continuous triplet eighth-note arpeggiation from measure 1. Each measure contains four triplet groups, each group arpeggiating a chord.
+
+- *Bass*: sustained octave pedal tones and chords, providing harmonic foundation.
+
+The key signature is C$\#$ minor ($"KeySigAcc"(C, "Sharp", "minor")$), the time signature is cut time ($"TimeSig"(2, 2)$), and the tempo marking is Adagio sostenuto. The encoding includes dynamics (pp), slurs, and the precise voicing of every triplet group --- 14 $times$ 4 = 56 individually specified arpeggiated chords in the accompaniment alone.
+
+We verify structural completeness: every measure in all three voices sums to exactly 16 duration units (the expected total for 2/2 time). This is checked by assertion, not by inspection.
+
+= A Minimal Theory of Tonal Harmony
+
+Our TonalHarmony theory consists of seven axiom-checking functions defined over the score AST. Each function takes the relevant voice measures as input and returns either $-1$ (no violation found --- the axiom is satisfied) or the index of the first violating measure.
+
+The theory rests on a layer of pitch arithmetic:
+
+- $"pitch\_to\_midi"(p)$: absolute semitone number (C0 = 0, middle C = 48).
+
+- $"pitch\_class"(p) = "mod\_int"("pitch\_to\_midi"(p), 12)$: the pitch class modulo octave equivalence, where $"mod\_int"(a, b) = a - "floor"(a slash b) times b$.
+
+- $"interval\_class"(p_1, p_2)$: the interval between two pitches reduced to the range 0--11 (so an octave is 0, a fifth is 7).
+
+Chord recognition identifies whether three pitch classes form a recognized triad in any inversion (major, minor, diminished, augmented, or seventh-chord fragments), checking all three rotations.
+
+== The Seven Axioms
+
+*Axiom 1 (Tonic Opening).* The pitch classes of the first accompaniment measure's arpeggiation must be members of the tonic triad. For C$\#$ minor, the tonic pitch classes are $\{1, 4, 8\}$ (C$\#$, E, G$\#$).
+
+*Axiom 2 (Bass Smooth Motion).* No consecutive bass pitches may be separated by more than 12 semitones (one octave). This enforces the gravitational quality of bass voice leading.
+
+*Axiom 3 (Arpeggio Triad Consistency).* Every triplet group in the accompaniment should form a recognized triad. This is a strict axiom: it treats every sounding note as a chord tone, with no allowance for passing tones or other non-chord embellishments.
+
+*Axiom 4 (Melody--Harmony Consonance).* When the melody sounds, its pitch class must be a member of the accompaniment chord's pitch classes. Measures where the melody is silent (spacer rests) are skipped.
+
+*Axiom 5 (No Parallel Octaves).* Consecutive measures must not have both outer voices (melody and bass) at the same interval class of 0 (octave or unison). This is a fundamental voice-leading prohibition in common-practice tonality.
+
+*Axiom 6 (No Parallel Fifths).* Same as Axiom 5 but for interval class 7 (perfect fifth). Successive perfect fifths between outer voices destroy voice independence.
+
+*Axiom 7 (Harmonic Rhythm Uniformity).* Within each accompaniment measure, all triplet groups should arpeggiate the same set of pitch classes. Violations indicate mid-bar harmonic changes.
+
+= Verification Results
+
+We run all seven axiom checkers against the Moonlight Sonata AST. The results, shown in Table 1, partition the axioms into two groups: those the Sonata satisfies and those it violates.
+
+#figure(
+  table(
+    columns: 3,
+    [*Axiom*], [*Result*], [*Interpretation*],
+    [1. Tonic Opening], [SAT], [First arpeggiation $in$ C$\#$ minor],
+    [2. Bass Smooth Motion], [SAT], [No bass leap exceeds one octave],
+    [3. Arpeggio Triads], [Violation (m. 4)], [Passing tones are not standard triads],
+    [4. Melody--Harmony Consonance], [SAT], [Every sounding melody note $in$ accompaniment chord],
+    [5. No Parallel Octaves], [SAT], [No parallel octaves in outer voices],
+    [6. No Parallel Fifths], [Violation (m. 13)], [Consecutive fifths: G4/C2 $arrow$ F$\#$4/B1],
+    [7. Harmonic Rhythm], [8 violations], [Mid-bar harmony changes in mm. 3,4,5,7,8,12,13,14],
+  ),
+  caption: [Verification of seven tonal-harmony axioms against Moonlight Sonata, measures 1--14. SAT indicates the axiom holds throughout; violations identify the first offending measure.]
+) <tab:results>
+
+Spot-checks anchor the model to the actual score: the bass in measure 1 is C$\#$2 (MIDI 25, pitch class 1), the accompaniment pitch classes in measure 1 are $\{8, 1, 4\}$ (G$\#$, C$\#$, E), and the melody's first sounding pitch in measure 5 is G$\#$4 (MIDI 56, pitch class 8). The formal model corresponds to the notes on the page.
+
+The formal summary is:
+
+$ "Moonlight" tack.r.double "TonalCohesion" quad ("axioms 1, 2, 4, 5") $
+
+$ "Moonlight" tack.r.double.not "StrictTriadicArpeggiation" quad ("axiom 3, m. 4") $
+
+$ "Moonlight" tack.r.double.not "StrictCounterpoint" quad ("axiom 6, m. 13") $
+
+$ "Moonlight" tack.r.double.not "UniformHarmonicRhythm" quad ("axiom 7, 8 measures") $
+
+
+
+== What the Violations Reveal
+
+The violations are not bugs in the framework. They are diagnostically useful.
+
+*Axiom 3 violation at measure 4.* The accompaniment in measure 4 includes the triplet groups G$\#$3--C$\#$4--D$\#$4 and F$\#$3--B$\#$3--D$\#$4, which are not standard triads. These contain passing tones and voice-leading enrichments that a strict pitch-set analysis cannot distinguish from chord tones. The violation identifies the boundary between *harmonic surface* and *harmonic skeleton* --- a distinction the current theory does not yet make.
+
+*Axiom 6 violation at measure 13.* The outer voices move from G4 over C2 (interval class 7, a perfect fifth) to F$\#$4 over B1 (also interval class 7). This is a textbook parallel-fifth violation. Beethoven does it deliberately: the passage is moving from C major through B major, and the parallel fifths reinforce the harmonic trajectory rather than weakening voice independence.
+
+*Axiom 7: eight violations.* Beethoven changes harmony within the bar in more than half the measures. The Adagio sostenuto texture is not harmonically static --- it is fluid, with the arpeggiation tracing different chords on each beat. This contradicts the axiom's expectation of one harmony per measure but confirms what listeners hear: the piece is harmonically mobile despite its hypnotic rhythmic regularity.
+
+= The Composer as Skolem Selector
+
+Given a set of axioms $T$, a Skolem witness for $exists x . T(x)$ is a specific value $a$ such that $T(a)$ holds. In our setting, $T$ is a tonal harmony theory and $x$ ranges over possible scores. Any score satisfying $T$ is a Skolem witness for the existential claim 'there exists a score satisfying $T$.'
+
+The space of witnesses is vast. Given seven axioms over 14 measures with three voices, the number of distinct scores satisfying even the strictest version of the theory is astronomically large. A solver like Z3 can, in principle, return *any* satisfying assignment. A generative AI model samples from a learned distribution, favoring statistically likely outputs. But Beethoven chose *this particular* witness --- these specific pitches, these specific voicings, this specific harmonic trajectory.
+
+That choice is the art.
+
+The distinction between formal verification and generative AI is precise:
+
+- A *generative model* approximates $P(x | "training data")$ and samples from it. Its outputs are statistically plausible.
+
+- A *Skolem witness* satisfies $T(a)$ exactly. Its existence is a proof that the axioms are consistent.
+
+- The *composer* selects a specific witness from the satisfiability space, guided by criteria --- taste, expressive intent, historical awareness, structural ambition --- that are not part of $T$.
+
+The framework makes the composer's contribution formally visible. Everything the axioms determine is captured by the SAT/violation analysis. Everything they do *not* determine --- the choice among equally valid models --- is where the human lives. The formal system reveals this gap precisely by accounting for everything *except* the selection.
+
+The violations are especially revealing. When Beethoven writes parallel fifths at measure 13, he is not making an error. He is choosing to satisfy a *different* theory --- one where tonal cohesion is preserved but strict outer-voice counterpoint is relaxed. Formally, this is an independence result: the parallel-fifths axiom is independent of the tonal-cohesion axioms, because there exist models (the Moonlight Sonata) satisfying one without the other.
+
+Different composers navigate different regions of the Skolem space:
+
+- *Bach* is a model of strict counterpoint: he satisfies axioms that Beethoven violates.
+
+- *Beethoven* is a model of tonal cohesion minus strict counterpoint: the delta between them is formally characterizable as the set of axioms one satisfies and the other does not.
+
+- *Chopin* likely violates harmonic-rhythm uniformity even more aggressively than Beethoven.
+
+This is comparative formal musicology: style is characterized by which axioms hold, and where. The theory does not reduce music to rules --- it reveals the *structure of compositional choice*.
+
+= The Universal Pattern
+
+The axiom--model--Skolem pattern is not specific to music. We have demonstrated the same architecture in two other domains using the same Kleis verification platform.
+
+*Chess.* In our SMT-based chess formalization, the rules of chess (movement, legality, check, checkmate) are axioms, a board position is a model, and the solution to a mate puzzle is a Skolem witness. We verified a back-rank mate (Rd8$\#$) through nine verified assertions. The key finding was that Z3 could not solve deep puzzles from raw axioms alone --- it needed *proof scaffolding* (intermediate lemmas that flatten chains of quantifier instantiation). Music admits the same layering: harmonic skeleton first, then voice leading, then surface elaboration.
+
+*Set-theoretic independence.* In our projection-fiber framework, ZFC axioms constrain the space of set-theoretic models. The Continuum Hypothesis is independent because there exist models both ways --- Godel's constructible universe satisfies it, Cohen's forcing extension does not. The independence is detected as non-invariance on the fibers of a projection map, verified by Z3 in under 30 seconds. The structural parallel to music is exact: Beethoven's parallel fifths at measure 13 are an independence result --- they demonstrate that the counterpoint axiom is independent of the tonal-cohesion axioms, because the Sonata satisfies one set without the other.
+
+Three domains, one substrate:
+
+#figure(
+  table(
+    columns: 4,
+    [*Domain*], [*Theory (Axioms)*], [*Model*], [*Skolem Witness*],
+    [Music], [TonalHarmony], [Score], [The specific composition],
+    [Chess], [Movement rules], [Position], [The winning move (Rd8$\#$)],
+    [Set theory], [ZFC], [Universe of sets], [Godel / Cohen models],
+  ),
+  caption: [The axiom--model--witness pattern across three domains, all implemented on the same Kleis verification platform.]
+) <tab:universal>
+
+The invariance of this pattern is not coincidental. It reflects the universal structure of knowledge production: notation defines a vocabulary, axioms constrain it, verification checks consistency, and the *specific instantiation* --- the Skolem witness --- is where domain-specific content lives. The formal system accounts for everything except what makes the result interesting. In mathematics, that is the proof strategy. In chess, it is the combinatorial insight. In music, it is the beauty.
+
+= Discussion
+
+Our seven-axiom theory is deliberately minimal. It demonstrates the framework without claiming to capture the full richness of tonal analysis. Several refinements are natural next steps.
+
+*Harmonic skeleton versus surface.* The arpeggio-triad violation at measure 4 arises because the axiom treats every sounding note as a chord tone. Real tonal analysis distinguishes chord tones from non-chord tones (passing tones, neighbor tones, suspensions, appoggiaturas). A harmonic reduction function that strips embellishments to reveal the underlying harmony would eliminate false positives and yield a more musically accurate picture.
+
+*Contextual parallel motion.* The parallel-fifths detection at measure 13 checks the first sounding pitch of each measure. A refined version would weight by metric position (downbeats versus passing motion) and distinguish structural from ornamental voice leading.
+
+*Parameterized harmonic rhythm.* The current axiom assumes one harmony per measure. In cut time, one change per half-bar is normal practice. Parameterizing the expected harmonic rhythm by time signature would turn many of the current 'violations' into expected behavior.
+
+*Comparative musicology.* The most compelling application of this framework is comparative: running the same axioms against Bach, Chopin, Debussy, and Schoenberg to characterize stylistic differences as formal properties. Bach should satisfy stricter counterpoint axioms; Chopin should violate harmonic-rhythm assumptions more aggressively; Schoenberg should violate tonal-cohesion axioms that all the others satisfy.
+
+*Z3-backed verification.* Currently, our axiom checkers use direct functional evaluation over concrete scores. The next level is to express axioms as universally quantified constraints and let Z3 produce Skolem witnesses for violations, enabling fully automated counterexample generation.
+
+A limitation of the current work is that we verify against a single excerpt. A robust theory requires testing against a corpus. However, even a single case study suffices for our philosophical claim: the framework demonstrates that compositional style is formally characterizable as a satisfiability profile, and that the composer's contribution is the specific witness, not the constraint system.
+
+= Conclusion
+
+We have presented a framework in which a musical score is a model, a music theory is a set of axioms, and the act of composing is the construction of a Skolem witness. The framework is implemented in the Kleis verification language and demonstrated on Beethoven's Moonlight Sonata, yielding machine-checked verdicts that are musically interpretable.
+
+The central claim is philosophical but precisely stated: the beauty is in the Skolems. The axioms constrain the space of possible compositions. The solver can verify any candidate. But the choice of which witness to instantiate --- which notes, which voicings, which harmonic trajectory --- is the irreducibly human act. Formal systems do not compose; they constrain. The composer navigates.
+
+This is the opposite of generative AI. A generative model produces outputs by sampling from a statistical distribution, approximating what is likely given training data. A composer selects a specific Skolem witness from a satisfiability space, guided by intent that no axiom system captures. The formal framework makes this distinction precise by accounting for everything *except* the selection --- thereby revealing exactly where the human contribution lives.
+
+The same axiom--model--witness pattern appears across chess, set theory, and music, running on the same verification substrate. This universality suggests that the pattern is not an analogy but a structural invariant of knowledge production itself: notation, constraints, verification, and the irreducible choice of instantiation.
+
+
+
+#heading(numbering: none)[References]
+#set text(size: 9pt)
+#par(hanging-indent: 1.5em)[\[atik2026chess\] Atik, E. (2026). SMT-Based Mate Verification via Proof Scaffolding in Kleis. arXiv preprint.]
+
+#par(hanging-indent: 1.5em)[\[atik2026fibers\] Atik, E. (2026). Independence as Non-Invariance: Detecting Undecidability via Projection Fibers. arXiv preprint.]
+
+#par(hanging-indent: 1.5em)[\[demoura2008z3\] de Moura, L. and Bjorner, N. (2008). Z3: An Efficient SMT Solver. TACAS 2008, LNCS 4963, pp. 337-340.]
+
+#par(hanging-indent: 1.5em)[\[fux1725gradus\] Fux, J. J. (1725). Gradus ad Parnassum. Vienna.]
+
+#par(hanging-indent: 1.5em)[\[aldwell2018harmony\] Aldwell, E. and Schachter, C. (2018). Harmony and Voice Leading, 5th ed. Cengage Learning.]
+
+#par(hanging-indent: 1.5em)[\[lilypond\] Nienhuys, H.-W. and Nieuwenhuizen, J. (2003). LilyPond, a system for automated music engraving. Proceedings of the XIV Colloquium on Musical Informatics.]
+
+#par(hanging-indent: 1.5em)[\[godel1931\] Godel, K. (1931). Uber formal unentscheidbare Satze der Principia Mathematica und verwandter Systeme I. Monatshefte fur Mathematik und Physik, 38, 173-198.]
+
+#par(hanging-indent: 1.5em)[\[bell1964\] Bell, J. S. (1964). On the Einstein Podolsky Rosen Paradox. Physics, 1(3), 195-200.]
+
+#par(hanging-indent: 1.5em)[\[mauch2019typst\] Madje, L. and Haug, M. (2022). Typst: A new markup-based typesetting system for the sciences. https://typst.app]
+
+#pagebreak()
+// Reset heading counter for appendices
+#counter(heading).update(0)
+#set heading(numbering: "A.1")
+
+#align(center)[
+  #text(size: 14pt, weight: "bold")[Appendix]
+]
+#v(1em)
+= Complete Axiom Listing
+
+The TonalHarmony theory is defined in `stdlib/theories/tonal_harmony.kleis`. The seven axiom-checking functions have the following signatures:
+
+```
+check_tonic_opening(accomp_measures, tonic_pcs) -> Bool
+check_bass_smooth(bass_measures, max_dist) -> ℤ  (-1 = SAT)
+check_arpeggio_triads(accomp_measures) -> ℤ  (-1 = SAT)
+check_melody_consonance(mel_measures, accomp_measures) -> ℤ  (-1 = SAT)
+check_no_parallels(mel_measures, bass_measures, target_ic) -> ℤ  (-1 = SAT)
+check_harmonic_rhythm(accomp_measures) -> List  (violation indices)
+```
+
+Supporting pitch arithmetic:
+
+```
+pitch_to_midi(P(name, acc, oct)) = note_semitone(name) + acc_offset(acc) + oct * 12
+pitch_class(p) = mod_int(pitch_to_midi(p), 12)
+mod_int(a, b) = a - floor(a / b) * b
+interval_abs(p1, p2) = abs(pitch_to_midi(p1) - pitch_to_midi(p2))
+interval_class(p1, p2) = mod_int(interval_abs(p1, p2), 12)
+```
+
+Chord recognition checks all three rotations of a pitch-class triple against major, minor, diminished, augmented, dominant-seventh, and minor-seventh templates.
+
+= Moonlight Sonata AST Excerpt (Measures 1-3)
+
+The following shows the Kleis encoding for the first three measures of each voice.
+
+*Accompaniment (Voice 2):*
+```
+define t_csm = triplet(Note(P(G, Sharp, 3), Eighth),
+                       Note(P(C, Sharp, 4), Eighth),
+                       Note(P(E, Natural, 4), Eighth))
+define acc1 = m(Cons(t_csm, Cons(t_csm, Cons(t_csm, Cons(t_csm, Nil)))))
+define acc2 = acc1
+define acc3 = m(Cons(tri(A3,C#4,E4), Cons(tri(A3,C#4,E4),
+               Cons(tri(A3,D4,F#4), Cons(tri(A3,D4,F#4), Nil)))))
+```
+
+*Melody (Voice 1):*
+```
+define mel1 = m(Cons(tempo_mark("Adagio sostenuto"), Cons(sp(Whole), Nil)))
+define mel2 = mel1
+define mel3 = mel1
+```
+
+*Bass:*
+```
+define bass1 = m(Cons(Chord([P(C,Sharp,2), P(C,Sharp,3)], Whole), Nil))
+define bass2 = m(Cons(Chord([P(B,Natural,1), P(B,Natural,2)], Whole), Nil))
+define bass3 = m(Cons(Chord([P(A,Natural,1), P(A,Natural,2)], Half),
+               Cons(Chord([P(F,Sharp,1), P(F,Sharp,2)], Half), Nil)))
+```
+
+The full score (14 measures, 3 voices) is assembled from these building blocks and compiled to LilyPond for rendering. The AST is the invariant object; the PDF and MIDI are projections.
