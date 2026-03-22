@@ -27,14 +27,14 @@ OUTPUT_FILE = REPO_ROOT / "sitemap.xml"
 
 # Priority settings (checked in order; first match wins)
 PRIORITY_MAP = [
-    ("/docs/manual/book/index.html", 0.9),
+    ("/docs/manual/book/", 0.9),
     ("chapters/", 0.8),
     ("appendix/", 0.6),
 ]
 
 # Pages to exclude (duplicates of other entries)
 EXCLUDE_URLS = {
-    "/docs/manual/book/introduction.html",  # identical to index.html
+    "/docs/manual/book/introduction",  # identical to index
 }
 
 # Additional resources not discovered from SUMMARY.md (PDFs, data files, etc.)
@@ -78,13 +78,14 @@ def parse_summary() -> List[Tuple[str, str]]:
         title = match.group(1)
         md_path = match.group(2)
         
-        # Convert .md path to expected HTML URL
-        # ./chapters/01-starting-out.md → /docs/manual/book/chapters/01-starting-out.html
-        html_path = md_path.replace('.md', '.html')
-        # Remove leading ./ if present
-        if html_path.startswith('./'):
-            html_path = html_path[2:]
-        url = f"/docs/manual/book/{html_path}"
+        # Convert .md path to clean URL (no .html extension).
+        # Cloudflare Pages 308-redirects .html → clean URL, so sitemap
+        # must use the final URL to avoid Google "Page with redirect" errors.
+        # ./chapters/01-starting-out.md → /docs/manual/book/chapters/01-starting-out
+        clean_path = md_path.replace('.md', '')
+        if clean_path.startswith('./'):
+            clean_path = clean_path[2:]
+        url = f"/docs/manual/book/{clean_path}"
         
         pages.append((md_path, url))
     
@@ -99,8 +100,8 @@ def get_static_pages() -> List[Tuple[str, str]]:
     if (REPO_ROOT / "index.html").exists():
         pages.append(("index.html", "/"))
     
-    # Manual index
-    pages.append(("docs/manual/src/SUMMARY.md", "/docs/manual/book/index.html"))
+    # Manual index (clean URL = directory root)
+    pages.append(("docs/manual/src/SUMMARY.md", "/docs/manual/book/"))
     
     return pages
 
