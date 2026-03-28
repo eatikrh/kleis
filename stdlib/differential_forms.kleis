@@ -137,29 +137,64 @@ implements ExteriorDerivative(p, dim) {
 /* Hodge Star (Hodge Dual)
  * 
  * The Hodge star ⋆ maps p-forms to (n-p)-forms on an n-dimensional
- * oriented Riemannian (or pseudo-Riemannian) manifold.
+ * oriented pseudo-Riemannian manifold with metric signature s.
  * 
  * ⋆ : Ωᵖ(M) → Ωⁿ⁻ᵖ(M)
  * 
- * Properties:
- *   - ⋆⋆ = ±id (sign depends on dimension and signature)
- *   - For Riemannian: ⋆⋆ = (-1)^{p(n-p)}
- *   - For Lorentzian: ⋆⋆ = (-1)^{p(n-p)+1}
- *   - α ∧ ⋆β = ⟨α, β⟩ vol (defines inner product)
+ * The general involutivity formula is:
+ *   ⋆⋆ α = (-1)^{p(n-p) + s} α
+ * where s is the number of negative entries in the metric signature.
+ * 
+ *   Riemannian (s=0):  ⋆⋆ = (-1)^{p(n-p)}
+ *   Lorentzian (s=1):  ⋆⋆ = (-1)^{p(n-p)+1}
+ * 
+ * For the electromagnetic 2-form F in 4D Lorentzian spacetime:
+ *   p=2, n=4, s=1 → ⋆⋆F = (-1)^{4+1} F = -F
+ * This sign is essential for correct energy-momentum tensor traces.
+ * 
+ * Other properties:
+ *   - α ∧ ⋆β = ⟨α, β⟩ vol (defines inner product on forms)
  * 
  * Applications:
  *   - Maxwell's equations: dF = 0, d⋆F = ⋆J
  *   - Laplacian: Δ = ⋆d⋆d + d⋆d⋆ (Hodge Laplacian)
+ *   - Poynting theorem: energy-momentum conservation via ⋆ and d
  */
-structure HodgeStar(p: Nat, dim: Nat) {
+structure HodgeStar(p: Nat, dim: Nat, s: Nat) {
     operation star : DifferentialForm(p, dim) → DifferentialForm(dim - p, dim)
     
-    // Involutivity (Riemannian case)
+    // General involutivity: ⋆⋆ α = (-1)^{p(n-p) + s} α
+    // s = number of negative signature entries (0 for Riemannian, 1 for Lorentzian)
     axiom hodge_involutive : ∀ α : DifferentialForm(p, dim) .
+        star(star(α)) = scale(power(negate(1), plus(times(p, minus(dim, p)), s)), α)
+}
+
+// Riemannian specialization (s=0): ⋆⋆ = (-1)^{p(n-p)}
+structure RiemannianHodge(p: Nat, dim: Nat) {
+    operation star : DifferentialForm(p, dim) → DifferentialForm(dim - p, dim)
+    
+    axiom hodge_riemannian : ∀ α : DifferentialForm(p, dim) .
         star(star(α)) = scale(power(negate(1), times(p, minus(dim, p))), α)
 }
 
-implements HodgeStar(p, dim) {
+// Lorentzian specialization (s=1): ⋆⋆ = (-1)^{p(n-p)+1}
+// Required for Maxwell's equations in Minkowski spacetime (-,+,+,+)
+structure LorentzianHodge(p: Nat, dim: Nat) {
+    operation star : DifferentialForm(p, dim) → DifferentialForm(dim - p, dim)
+    
+    axiom hodge_lorentzian : ∀ α : DifferentialForm(p, dim) .
+        star(star(α)) = scale(power(negate(1), plus(times(p, minus(dim, p)), 1)), α)
+}
+
+implements HodgeStar(p, dim, s) {
+    operation star = builtin_hodge_star
+}
+
+implements RiemannianHodge(p, dim) {
+    operation star = builtin_hodge_star
+}
+
+implements LorentzianHodge(p, dim) {
     operation star = builtin_hodge_star
 }
 
@@ -305,6 +340,11 @@ implements DeRhamCohomology(p, dim) {
  *   d⋆F = ⋆J               (inhomogeneous: Gauss's law, Ampère's law)
  * 
  * Gauge invariance: F = dA is invariant under A ↦ A + dχ
+ * This is a geometric tautology: d²=0 makes it a logical necessity.
+ * 
+ * The Hodge star here is LORENTZIAN (s=1, signature -,+,+,+).
+ * For the 2-form F in 4D: ⋆⋆F = -F (not +F).
+ * This sign is essential for correct energy-momentum traces.
  */
 structure ElectromagneticForm(dim: Nat) {
     // Field strength (Faraday) 2-form
@@ -316,11 +356,40 @@ structure ElectromagneticForm(dim: Nat) {
     // Current density 3-form (on 4D spacetime)
     element J : DifferentialForm(3, 4)
     
-    // F = dA (field strength from potential)
+    // Hodge star (Lorentzian, s=1 for Minkowski spacetime)
+    operation star : DifferentialForm(2, dim) → DifferentialForm(dim - 2, dim)
+    
+    // --- Independent Axioms (minimal set) ---
+    
+    // Definition: field strength is the exterior derivative of the potential
     axiom field_from_potential : F = d(A)
     
-    // Homogeneous Maxwell: dF = 0 (automatic from d²=0 when F=dA)
-    axiom maxwell_homogeneous : d(F) = zero
+    // Inhomogeneous Maxwell: d⋆F = ⋆J
+    // Encodes: Gauss's law (∇·E = ρ/ε₀) + Ampère's law (∇×B = μ₀J + μ₀ε₀∂E/∂t)
+    // The ⋆ is the Lorentzian Hodge star (s=1, signature -,+,+,+).
+    // This is the irreducible physical content — the one axiom that connects
+    // the geometry (F) to the source (J).
+    axiom maxwell_inhomogeneous : d(star(F)) = star(J)
+    
+    // --- Derivable Theorems (NOT axioms — derived in the paper) ---
+    //
+    // Theorem (Homogeneous Maxwell): dF = 0
+    //   Proof: dF = d(dA) = d²A = 0  (by d_squared_zero)
+    //   Encodes: ∇·B = 0 (no monopoles) + Faraday's law
+    //   The "no monopoles" claim follows from De Rham cohomology:
+    //   F exact → F closed → dF = 0. If H²(M) = 0, monopoles are
+    //   topologically forbidden.
+    //
+    // Theorem (Gauge Invariance): A ↦ A + dχ leaves F unchanged
+    //   Proof: d(A + dχ) = dA + d(dχ) = dA + 0 = F  (by d_squared_zero)
+    //   The potential A is a projection degree of freedom;
+    //   only the field F has ontological weight.
+    //
+    // Theorem (Charge Conservation): d(⋆J) = 0, i.e., ∂_μ J^μ = 0
+    //   Proof: d(⋆J) = d(d⋆F) = d²(⋆F) = 0  (by d_squared_zero)
+    //   Charge conservation is a two-step consequence of d²=0.
+    //   Noether perspective: gauge symmetry (U(1)) → conserved current J.
+    //   Charge is the Noether invariant of the gauge symmetry.
 }
 
 // ============================================

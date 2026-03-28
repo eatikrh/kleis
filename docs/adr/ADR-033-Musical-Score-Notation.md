@@ -1,7 +1,7 @@
 # ADR-033: Musical Score Notation via LilyPond
 
-**Status:** Proposed  
-**Date:** 2026-03-14  
+**Status:** Phase 1 Complete, Phase 1.5 Planned  
+**Date:** 2026-03-14 (updated 2026-03-22)  
 **Related:** ADR-012 (Document Authoring), ADR-023 (Kleist Template Externalization), ADR-018 (Universal Formalism)
 
 ---
@@ -104,6 +104,33 @@ constraints. This is the same projection structure as POT:
 
 Each projection loses information; the fiber contains what is lost.
 
+**Why not just use LilyPond's `.ly` syntax directly?** LilyPond's input
+language is excellent for quickly writing sheet music by hand — it is
+optimized for that single purpose. But `.ly` is a rendering-oriented
+format. You cannot run Z3 against a `.ly` file. You cannot ask "does
+this score satisfy counterpoint rules?" in LilyPond syntax. You cannot
+project from `.ly` to MIDI with verified fidelity, or embed the same
+score object in an arXiv paper alongside its formal analysis.
+
+Kleis data types make the score representation universal: the same
+`Score` AST compiles to LilyPond for engraving, generates MIDI for
+performance, submits to Z3 for verification, and embeds in Typst for
+publication — all from one `.kleis` file. The `.ly` syntax is a
+compilation target, not the source of truth.
+
+**Beyond Western music:** Because theories are separate from the score
+representation, Kleis naturally supports non-Western music systems.
+The current `TonalHarmony` theory assumes 12-tone equal temperament
+and triadic harmony — that is one theory, not the theory. Arabic
+maqam, Indian raga, Javanese gamelan, Turkish makam, Chinese pentatonic
+traditions — each has its own rules for melodic movement, intervallic
+structure, ornamentation, and modulation. In Kleis, these are simply
+different `structure` definitions over the same `Score` AST. A raga's
+ascending/descending phrase rules become axioms; a maqam's microtonal
+intervals become pitch definitions; gamelan's interlocking rhythmic
+patterns become structural constraints. The substrate is universal;
+the theory is what varies.
+
 ### Phase 1 (This ADR): Layers 1-2 + LilyPond Rendering
 
 Phase 1 defines data types for syntax and structure (Layers 1-2), compiles
@@ -144,53 +171,221 @@ data Score = Score(ScoreMeta, List)
 - Pitch within instrument range
 - Valid time signature (denominator is power of 2)
 
-### Phase 2 (Future): Axiomatic Engraving
+### Phase 1.5 (Next): In-Process LilyPond via `render_score_svg()`
 
-Formalize LilyPond's engraving heuristics as Kleis axioms:
+Phase 1 produces `.ly` files that require manual LilyPond invocation.
+Phase 1.5 makes this transparent: a Kleis built-in function
+`render_score_svg(score)` handles the full pipeline internally and
+returns an SVG string that can be embedded directly in Typst documents.
 
-- Beam grouping rules (meter-dependent)
-- Stem direction (voice/register-based)
-- Spacing proportional to rhythmic density
-- Collision avoidance between glyphs
-- Accidental placement legibility
+```
+Score AST -> render_score_svg(score) -> SVG string -> #image.decode() in Typst
+```
 
-Instead of heuristic C++ code deciding layout, Z3-verified constraints
-produce provably correct engravings. The unique contribution: ask
-"does this rendering satisfy all engraving rules?" and get a
-machine-checked answer.
+This preserves the "single source of truth" philosophy: one `.kleis` file
+contains the score definition, the analysis text, and the rendering call.
+The user never touches `.ly` files or invokes LilyPond manually.
+
+**Implementation:** The built-in spawns LilyPond as a subprocess
+(`lilypond -dbackend=svg`), writing a temp `.ly` file and reading the
+resulting SVG. This is gated behind a `lilypond` feature flag in
+`Cargo.toml`, following the same pattern as `axiom-verification` for Z3.
+
+See "LilyPond Integration Investigation" below for the architectural
+rationale behind this approach.
+
+### Phase 2 (Future): Axiomatic Engraving (Subset)
+
+Formalize a **subset** of LilyPond's engraving heuristics as Kleis axioms.
+
+Investigation of LilyPond's source (see below) revealed that the full
+engraving system is far more complex than initially assumed:
+
+- **Beam quanting** (`beam-quanting.cc`): discrete optimization over
+  stem-length/slope combinations with 13+ penalty functions
+- **Slur scoring** (`slur-scoring.cc`): Bezier curve fitting with
+  collision avoidance against notes, stems, and other slurs
+- **Spacing** (`spacing-spanner.cc`): spring-network model balancing
+  rhythmic proportionality against readability
+- **Line breaking** (`page-breaking.cc`): global optimization across
+  entire score, not just local measure fitting
+
+A realistic Phase 2 targets **tractable subsets**:
+
+- Stem direction rules (register-based, voice-based)
+- Basic beam grouping (meter-dependent, no quanting)
+- Accidental placement ordering
+- Rest positioning
+
+The goal is not to replace LilyPond's optimizer but to express
+**verifiable properties** about engravings: "does this rendering satisfy
+these specific rules?" checked by Z3.
 
 ### Phase 3 (Future): Native Typst Rendering
 
-Once engraving rules are formalized (Phase 2), build a Typst rendering
-backend that matches LilyPond quality. This eliminates the external
-dependency:
+Build a publication-quality music engraving backend in Rust that outputs
+Typst markup directly, eliminating the LilyPond dependency entirely.
 
 ```
 Score -> compile_score_typst -> .typ -> typst compile -> .pdf
 ```
 
-The formalized constraints from Phase 2 drive layout decisions.
-The entire pipeline lives in one ecosystem.
+The goal is full rendering capability: multi-staff, multi-voice,
+orchestral scores, cross-staff beaming, tuplets, lyrics, figured bass —
+everything LilyPond handles today.
 
-### Semantic Layer (Future): Counterpoint and Harmony
+**Target audience:** Anyone doing music theory in Kleis — formalizing
+counterpoint axioms, verifying compositions against tonal harmony,
+writing arXiv papers about Skolem witnesses — is a serious musician,
+musicologist, or theorist working with complex scores. The rendering
+backend must meet that standard. Kleis has been tested across dozens of serious domains: general
+relativity and Einstein field equations, Cartan differential geometry,
+set theory (Continuum Hypothesis independence), international law
+(UN Charter Article 51), chess verification, Petri nets (mutex,
+colored nets), control systems (LQG controllers), AI/ML verification
+(neural network properties, safe RL), hardware verification (ALU,
+bitvector proofs), quantum mechanics, category theory, Lagrangian
+mechanics, dimensional analysis, network protocol verification,
+security analysis, business process modeling, symbolic differentiation,
+and a complete LISP interpreter in 560 lines of pure Kleis. It is
+not untested software, and its users are not looking for toy output.
 
-Layers 3-4 enable formal verification of musical properties:
+LilyPond's 107k lines of C++ represent 20+ years of engraving
+refinement. That is context, not a ceiling. The Kleis approach has a
+structural advantage: Phase 2's formalized engraving axioms provide a
+specification that a Rust implementation can be verified against. Where
+LilyPond relies on accumulated heuristics, Kleis can derive layout from
+declarative constraints checked by Z3.
 
-```kleis
-structure Counterpoint {
-    axiom no_parallel_fifths : ...
-    axiom no_parallel_octaves : ...
-    axiom stepwise_resolution : ...
-}
+**Incremental delivery:**
 
-structure HarmonicAnalysis {
-    operation chord_function : Chord -> ChordFunction
-    axiom cadence_resolution : ...
-}
-```
+The rendering backend grows incrementally, with the Phase 1.5 subprocess
+pipeline serving as the fallback for any notation not yet handled natively.
+As each engraving capability is added and verified, it displaces the
+corresponding LilyPond dependency.
 
-This goes beyond notation into music theory verification — "does this
-passage satisfy the rules of four-voice counterpoint?" checked by Z3.
+- SMuFL-compliant glyph rendering via OpenType music fonts
+- Note/rest placement, stem direction, beam grouping
+- Multi-staff and multi-voice layout
+- Slurs, ties, dynamics, articulations
+- Spacing, line breaking, page layout
+- Complex notation (tuplets, cross-staff, ossia, cues)
+
+Each capability is added with axiom-backed correctness, not heuristic
+approximation. The engraving rules from Phase 2 are both the
+specification and the verification layer.
+
+---
+
+## LilyPond Integration Investigation (2026-03-14)
+
+### Motivation
+
+The Phase 1 pipeline requires users to manually invoke LilyPond on
+generated `.ly` files. For Kleis documents that mix analysis text with
+sheet music (e.g., the "Beauty is in the Skolems" paper), this breaks
+the single-file philosophy. The goal: `render_score_svg(score)` as a
+built-in that returns SVG for inline Typst embedding.
+
+### Investigation: LilyPond as a Linked Library
+
+We investigated the LilyPond source tree (v2.27.0-dev, checked out at
+`/Users/eatik_1/git/cee/lilypond/`) to assess compiling it as a
+linkable library, following the pattern used for Z3 in Kleis.
+
+**Findings:**
+
+| Property | LilyPond | Z3 (for comparison) |
+|----------|----------|---------------------|
+| Architecture | Monolithic CLI | Library + CLI wrapper |
+| C/C++ LOC | ~107k (lily/) | ~500k but with stable C API |
+| Embedding API | None | `z3.h` — designed for embedding |
+| Runtime deps | Guile 3.0 Scheme, bdw-gc, Pango, Cairo, FreeType, FontConfig, GLib, libpng, zlib, TeX/MF fonts | libz3 only |
+| Build system | StepMake (custom autotools), requires working binary for Scheme bytecode | CMake, self-contained |
+| Process model | `scm_boot_guile()` takes over thread | Standard library init/shutdown |
+
+**Key obstacles to library embedding:**
+
+1. **Guile Scheme runtime**: LilyPond's entry is `scm_boot_guile()`
+   which takes over the calling thread. Guile's garbage collector
+   (bdw-gc) would coexist with Rust's allocator — fragile and untested.
+2. **No library API**: `main.cc` mixes CLI parsing, path setup, Guile
+   init, and FreeType init in one flow. No `liblily.so` target exists.
+3. **Build-time self-dependency**: the `scm/` directory byte-compiles
+   Scheme modules using the just-built `lilypond` binary.
+4. **Global state**: rendering depends on datadir/libdir paths, locale,
+   and font configuration set during `main()` initialization.
+5. **Dependency explosion**: linking LilyPond in-process would pull 10+
+   system libraries into the Kleis binary.
+
+### Three Strategies Evaluated
+
+**Strategy A — In-process subprocess (chosen):**
+Kleis built-in spawns `lilypond -dbackend=svg` via `std::process::Command`,
+reads the SVG output, returns it as a string value. Feature-gated under
+`#[cfg(feature = "lilypond")]` with graceful fallback if LilyPond is not
+installed.
+
+- Effort: ~2-3 days
+- Preserves single-file workflow (subprocess is an implementation detail)
+- Full engraving quality
+- Follows existing pattern (Kleis already shells out for Typst)
+
+**Strategy B — C ABI wrapper library (rejected):**
+Factor `main.cc`, create `liblily_embed.{a,so}` with init/render/free API,
+vendored Rust bindings via bindgen.
+
+- Effort: 4-8 weeks minimum
+- Requires maintaining a LilyPond fork
+- Guile-in-process is architecturally fragile
+- No upstream support or interest
+
+**Strategy C — Pure Rust rewrite (rejected for now):**
+Reimplement engraving algorithms in Rust, output Typst directly.
+
+- Effort: 6-12+ months
+- Would modernize (no Guile, memory-safe, modern build)
+- But 20+ years of engraving refinement cannot be replicated quickly
+- Premature without understanding "good enough" thresholds
+
+### Decision
+
+**Use Strategy A.** The subprocess is hidden behind `render_score_svg()`.
+From the user's perspective, it is a pure function: Score AST in, SVG out.
+
+The Z3 integration provides the template for the feature flag and build
+script patterns: optional dependency, `scripts/build-kleis.sh` detection,
+`--no-default-features` fallback.
+
+If subprocess latency becomes a bottleneck (many scores per document),
+Strategy B can be revisited. Strategy C remains the long-term Phase 3
+vision, starting with simple notation and growing incrementally.
+
+### Semantic Layer: Counterpoint and Harmony (Partially Complete)
+
+Layers 3-4 enable formal verification of musical properties. A working
+`TonalHarmony` theory (`stdlib/theories/tonal_harmony.kleis`) with 7
+axiom checkers has been verified against the Moonlight Sonata AST:
+
+| Axiom | Result | Interpretation |
+|-------|--------|----------------|
+| Tonic opening | SAT | C# minor tonic confirmed |
+| Bass smooth motion | SAT | Stepwise bass line |
+| Melody-harmony consonance | SAT | No arbitrary dissonance |
+| No parallel octaves | SAT | Contrapuntal discipline |
+| Arpeggio triads | UNSAT (m4) | Passing tones beyond strict triadic model |
+| No parallel fifths | UNSAT (m13) | Localized departure from strict counterpoint |
+| Harmonic rhythm | UNSAT (m1) | Harmonic fluidity within measures |
+
+The violations are diagnostically useful — they identify exactly where
+and why a strict rule fails, guiding construction of richer theories.
+
+**Planned refinements:**
+
+- Harmonic skeleton vs. surface distinction (non-chord tone classification)
+- Full SMT-backed `forall`-quantified constraints (currently concrete evaluation)
+- Comparative analysis across composers (Bach, Chopin, Beethoven)
+- Richer counterpoint theory (species counterpoint, four-voice rules)
 
 ---
 
@@ -200,15 +395,31 @@ passage satisfy the rules of four-voice counterpoint?" checked by Z3.
 stdlib/templates/
   sheet_music.kleis          # Template: types + LilyPond compiler
 
+stdlib/theories/
+  tonal_harmony.kleis        # TonalHarmony theory: 7 axiom checkers
+
 examples/music/
-  ode_to_joy.kleis           # Demo: Beethoven excerpt
-  counterpoint_demo.kleis    # Future: two-voice verification
+  ode_to_joy.kleis           # Demo: Beethoven Ode to Joy
+  minuet_in_g.kleis          # Demo: Bach Minuet in G (multi-voice)
+  moonlight_sonata.kleis     # Full AST: Beethoven Op. 27 No. 2, mvt. 1
+  moonlight_analysis.kleis   # TonalHarmony verification against Moonlight
+  moonlight_paper.kleis      # arXiv paper: "The Beauty is in the Skolems"
+
+examples/papers/
+  divergence_kernels_paper.kleis  # arXiv paper: cross-domain theory selection
+
+src/evaluator/
+  music.rs                   # Phase 1.5: render_score_svg() built-in
 ```
 
 ## Dependencies
 
 - **LilyPond** (>= 2.24): `brew install lilypond` on macOS
-- No Rust code changes required for Phase 1 (pure Kleis template)
+- Phase 1: No Rust code changes required (pure Kleis template)
+- Phase 1.5: Rust changes in `src/evaluator/music.rs` (new built-in),
+  gated behind `lilypond` feature flag. Follows the Z3 pattern:
+  optional crate dependency, build script detection, graceful fallback.
+  System LilyPond binary required at runtime (not compiled into Kleis).
 
 ## Planned Refinements (Post Phase 1)
 
@@ -284,14 +495,24 @@ systems for the same invariant object.
 **Positive:**
 - Demonstrates Kleis as a universal notation substrate beyond mathematics
 - Reuses the existing template/compilation infrastructure
-- Sheet music output with no Rust changes
-- Opens the path to formal music theory verification
+- Sheet music output with no Rust changes (Phase 1)
+- Formal music theory verification already working (TonalHarmony theory)
+- Two arXiv papers produced using this infrastructure
+- Phase 1.5 subprocess approach preserves single-file philosophy with
+  minimal implementation cost
 
 **Negative:**
-- External dependency on LilyPond (mitigated by Phase 3 plan)
-- LilyPond compilation is slower than Typst
-- Music notation is a deep domain; Phase 1 covers basics only
+- External runtime dependency on LilyPond (mitigated by Phase 3 plan,
+  honestly scoped to common notation subset)
+- LilyPond compilation is slower than Typst (~1-3s per score)
+- LilyPond cannot be compiled as a library without forking (investigated
+  and rejected — see investigation section above)
+- Native engraving (Phase 3) is a significant undertaking, delivered
+  incrementally with LilyPond subprocess as fallback during development
 
 **Neutral:**
 - The five-layer decomposition parallels POT's projection-fiber structure,
   suggesting a deeper theoretical connection between the two domains
+- The "Beauty is in the Skolems" paper demonstrates that the axiom-model-
+  witness pattern from set theory and chess applies identically to music,
+  validating the Kleis philosophy at Level 3

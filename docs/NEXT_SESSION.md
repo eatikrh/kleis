@@ -1,10 +1,121 @@
 # Next Session Notes
 
-**Last Updated:** March 20, 2026 (session — arXiv Paper: "The Beauty is in the Skolems")
+**Last Updated:** March 28, 2026 (session — ADR-033 update + Electrodynamics paper planning)
 
 ---
 
-## Current Session (Mar 20, 2026): Music Theory + arXiv Paper
+## Planned: arXiv Paper — "Electrodynamics as a Theorem of Projected Ontology"
+
+### Thesis
+
+Maxwell's equations are not empirical laws imposed on the universe — they are
+the unique, verified solution for any observable field projected onto a 4D
+Lorentzian manifold with the topological properties axiomatized in Kleis's stdlib.
+
+### Existing Infrastructure (already formalized)
+
+| Component | File | What's There |
+|-----------|------|-------------|
+| Field tensor | `stdlib/maxwell.kleis` | F antisymmetry, diagonal vanishing, inhomogeneous + homogeneous Maxwell, Einstein-Maxwell coupling with T_EM |
+| Exterior calculus | `stdlib/differential_forms.kleis` | Wedge product, exterior derivative (d^2=0, Leibniz), Hodge star, interior product, Cartan's Magic Formula, De Rham cohomology |
+| EM in forms | `stdlib/differential_forms.kleis` | `ElectromagneticForm`: F=dA, dF=0, d*F=*J |
+| Yang-Mills | `stdlib/differential_forms.kleis` | `YangMillsForm`: F=dA+A∧A, Bianchi identity |
+| Symplectic/Hamiltonian | `stdlib/differential_forms.kleis` | Symplectic form, Hamiltonian vector field, Poisson bracket |
+| Cartan geometry | `stdlib/cartan_geometry.kleis` | Tetrad→Connection→Curvature pipeline, Bianchi identity, Schwarzschild example, `verify_einstein` |
+| Minkowski metric | `stdlib/cosmology.kleis`, `stdlib/tensors_concrete.kleis` | Flat spacetime axioms, eta components |
+
+### Four Derivation Targets
+
+1. **Gauge invariance as geometric tautology**: F=dA + d^2=0 implies A→A+dχ
+   leaves F unchanged. One-line Z3 verification. The potential A is an auxiliary
+   projection; only F has ontological weight.
+
+2. **Poynting theorem from structural conservation**: Use CartanCalculus (Lie
+   derivative via Magic Formula) + HodgeStar + Maxwell to derive energy flux
+   as a topological identity, not an empirical law. ∂_μ T^μν = 0 is a
+   consequence of Bianchi + Einstein-Maxwell coupling.
+
+3. **Noether's theorem — charge conservation**: SymplecticForm +
+   HamiltonianMechanics machinery links gauge symmetry (U(1)) to conservation
+   of charge (∂_μ J^μ = 0). Charge is a Noether charge arising from the
+   geometry of the projection.
+
+4. **No magnetic monopoles as topological constraint**: DeRhamCohomology
+   axioms prove dF=0 is a global constraint. If H^2(M) is trivial, monopoles
+   are mathematically impossible — no physical postulate required.
+
+### Pre-Paper Fixes Required
+
+**1. Lorentzian Hodge Star (CRITICAL)**
+
+Current `HodgeStar` axiom only encodes Riemannian involutivity:
+```
+star(star(α)) = (-1)^{p(n-p)} α
+```
+For Lorentzian (-,+,+,+), it must be:
+```
+star(star(α)) = (-1)^{p(n-p)+s} α    where s = number of negative signature entries
+```
+Specifically for a 2-form in 4D Lorentzian: **F = -F, not **F = +F.
+
+Without this fix, the energy-momentum tensor and Poynting vector get wrong signs.
+
+**Fix:** Add a `signature` parameter to `HodgeStar` and define a
+`hodge_lorentzian` axiom in `differential_forms.kleis`.
+
+**2. No missing Rust builtins needed**
+
+The `builtin_hodge_star`, `builtin_exterior_derivative`, etc. referenced in
+`implements` blocks have no Rust implementations. This is fine — the paper
+works in **axiomatic mode** (Z3 symbolic reasoning), not concrete evaluation.
+This is the superior methodology: proving structural necessities that hold for
+all admissible fields, not computing specific values.
+
+### Paper Structure (Draft)
+
+**File:** `examples/ontology/revised/pot_electrodynamics_paper.kleis`
+(Joins the POT series alongside `pot_entanglement_paper.kleis` and
+`pot_flat_rotation_paper.pdf`)
+
+1. Introduction — physics as admissibility in a verified ontology
+2. The Projected Ontology Framework — Cartan geometry + POT
+3. Electromagnetic Field as a 2-Form — F=dA, gauge invariance proof
+4. Energy Conservation as Topological Identity — Poynting via Lie derivative
+5. Charge Conservation from Gauge Symmetry — Noether's theorem
+6. Topological Obstruction to Monopoles — De Rham cohomology
+7. Einstein-Maxwell Coupling — gravity and EM from same anholonomy coefficients
+8. The Yang-Mills Leap — from U(1) to SU(2)×U(1) and SU(3) using same logic
+9. Discussion — "physics is what is mathematically admissible"
+10. Conclusion
+
+### Why This Is the Bridge Paper
+
+- Connects gravitational POT papers to gauge theory direction
+- Shows same "admissibility pipeline" that flattens rotation curves also
+  dictates charge conservation and energy flow
+- Yang-Mills formalization already exists — sets stage for weak/strong force
+- All axioms already in stdlib; the paper connects existing pieces
+
+---
+
+## Planned: LilyPond Integration (Phase 1.5)
+
+### Decision (ADR-033 updated March 2026)
+
+LilyPond cannot be compiled as a library (107k LOC monolithic CLI, deep Guile
+Scheme dependency, no embedding API). Strategy: subprocess via
+`render_score_svg()` built-in, feature-gated under `lilypond`. See ADR-033
+for full investigation and three-strategy comparison.
+
+### Implementation
+
+- `src/evaluator/music.rs` — `render_score_svg(score)` built-in
+- `Cargo.toml` — `lilypond` feature flag
+- `scripts/build-kleis.sh` — LilyPond detection
+
+---
+
+## Previous Session (Mar 20, 2026): Music Theory + arXiv Paper
 
 ### What We Did
 
