@@ -39,7 +39,7 @@ define paper_affiliations = [
     Affiliation(1, "Kleis Research", "https://kleis.io")
 ]
 
-define paper_abstract = "We show that the complete structure of classical electrodynamics --- gauge invariance, the absence of magnetic monopoles, and charge conservation --- follows as a chain of one- and two-step derivations from two axioms: the definition $F = d A$ (field strength is the exterior derivative of the potential) and the inhomogeneous Maxwell equation $d star.op F = star.op J$ (relating the field to its sources via the Lorentzian Hodge star). The sole algebraic ingredient is the nilpotency of the exterior derivative, $d^2 = 0$, which is not a physical assumption but a structural property of the exterior algebra on any smooth manifold. We formalize these derivations on the Kleis verification platform, where every axiom is explicit, every theorem is machine-checked by the Z3 SMT solver, and the entire exterior calculus --- wedge product, Hodge star, interior product, Lie derivative, and de Rham cohomology --- is axiomatized in the standard library. The electromagnetic structures share the same Cartan geometry substrate used in our companion papers on flat galactic rotation curves and quantum entanglement, where the admissible kernel framework produces gravitational and quantum phenomena from the same projection operator. The present paper adds the gauge-theoretic sector: we derive that the potential $A$ is a projection degree of freedom with no ontological weight, that monopoles are topologically forbidden by the manifold's de Rham cohomology, and that charge conservation is the Noether invariant of the $U(1)$ gauge symmetry. We further show that the Einstein--Maxwell coupling emerges from the same anholonomy coefficients that govern spacetime curvature, and that the non-abelian Yang--Mills extension $F = d A + A and A$ is already formalized in the same library, setting the stage for a verified treatment of the strong and electroweak interactions. The result is a demonstration that the 'laws' of electrodynamics are not empirical regularities but theorems of the projected ontology --- the compiled output of structural constraints on a Lorentzian manifold."
+define paper_abstract = "We show that classical electrodynamics can be reduced to a single physical axiom once expressed in the exterior calculus on an oriented Lorentzian 4-manifold: all remaining structure follows from the nilpotency of the exterior derivative, $d^2 = 0$, and is formally verifiable. Given a smooth oriented 4-manifold $(M, g)$ with Lorentzian signature, the exterior algebra, and the Hodge star operator, we take two axioms --- the definition $F = d A$ (field strength as an exact 2-form) and the inhomogeneous Maxwell equation $d star.op F = star.op J$ (relating the field to sources) --- and derive the complete structure of classical electrodynamics as a chain of one- and two-step consequences. Gauge invariance ($A arrow.r A + d chi$ leaves $F$ unchanged), the homogeneous Maxwell equation ($d F = 0$, encoding Faraday's law and the absence of magnetic monopoles), and charge conservation ($d(star.op J) = 0$, the continuity equation) all follow from $d^2 = 0$ applied at most twice. We formalize these derivations on the Kleis verification platform, where every axiom --- both the mathematical background structure and the physical content --- is explicit, and every theorem is machine-checked by the Z3 SMT solver. The entire exterior calculus (wedge product, Hodge star, interior product, Lie derivative, de Rham cohomology) is axiomatized in the Kleis standard library. The electromagnetic structures share the same Cartan geometry substrate used in our companion papers on flat galactic rotation curves and quantum entanglement. The potential $A$ is a projection degree of freedom with no ontological weight; monopoles are excluded when $F$ is globally exact (trivial principal bundle); and charge conservation is the algebraic consequence of applying $d$ to $d star.op F = star.op J$, which admits a Noether interpretation as the invariant of the $U(1)$ gauge symmetry under the standard electromagnetic action. The Einstein--Maxwell coupling and the non-abelian Yang--Mills extension $F = d A + A and A$ exhibit a structural parallel with gravity in the Cartan formalism, and both are already axiomatized in the same library. The result is a demonstration that the irreducible physical content of electrodynamics is concentrated in a single equation ($d star.op F = star.op J$); everything else is mathematics."
 
 define paper_keywords = "Maxwell equations, gauge invariance, formal verification, projected ontology, exterior calculus, Noether theorem, Hodge star, differential forms, Z3 theorem prover, Cartan geometry"
 
@@ -50,9 +50,9 @@ define paper_keywords = "Maxwell equations, gauge invariance, formal verificatio
 define sec_intro = ArxivSection("Introduction",
 "What are Maxwell's equations? The standard answer is: empirical laws, discovered by Faraday and Maxwell, encoding the behavior of electric and magnetic fields. The mathematical physicist's answer is more refined: they are the unique equations governing a $U(1)$ gauge field on a Lorentzian manifold. But even this answer treats them as *given* --- the starting point of a theory, not its output.
 
-We propose a stronger claim: Maxwell's equations are *theorems*. Given a 4-dimensional Lorentzian manifold, a potential 1-form $A$, and the definition $F = d A$ of the field strength as an exact 2-form, the entire structure of classical electrodynamics follows from a single algebraic fact --- the nilpotency of the exterior derivative, $d^2 = 0$ --- plus one irreducible physical axiom: the inhomogeneous equation $d star.op F = star.op J$ relating the field to its sources.
+We propose a stronger claim: classical electrodynamics can be reduced to a *single physical axiom* once the mathematical infrastructure is made explicit. The infrastructure is: a smooth, oriented 4-dimensional manifold $M$; a Lorentzian metric $g$ with signature $(-,+,+,+)$; the exterior algebra of differential forms with exterior derivative $d$ satisfying $d^2 = 0$; and the Hodge star operator $star.op$ determined by $g$ and the orientation. None of these are physical postulates --- they are the mathematical stage on which physics is performed.
 
-From these two statements, we derive:
+On this stage, we take two axioms: the definition $F = d A$ (field strength as an exact 2-form) and one irreducible physical equation $d star.op F = star.op J$ (the inhomogeneous Maxwell equation relating the field to its sources). From these two statements alone, the entire structure of classical electrodynamics follows:
 
 1. *Gauge invariance*: $A arrow.r A + d chi$ leaves $F$ unchanged (one step from $d^2 = 0$).
 
@@ -60,9 +60,9 @@ From these two statements, we derive:
 
 3. *Charge conservation*: $d(star.op J) = 0$, i.e., $partial_mu J^mu = 0$ (two steps: apply $d$ to $d star.op F = star.op J$, use $d^2 = 0$).
 
-No additional postulates are needed. The potential is an auxiliary projection variable; the field is the only ontologically meaningful object; charge is a Noether invariant of the gauge symmetry; and monopoles are topologically forbidden by the manifold's de Rham cohomology.
+No additional physical postulates are needed. The potential is an auxiliary projection variable; the field is the only ontologically meaningful object; charge conservation is the algebraic consequence of applying $d$ to the inhomogeneous equation (admitting a Noether interpretation under the standard action); and monopoles are excluded whenever $F$ is globally exact.
 
-This paper is the third in a series on Projected Ontology Theory (POT). The first derived flat galactic rotation curves from the admissible kernel framework without dark matter. The second derived Bell inequality violation and GHZ contextuality from the same kernel structure, reinterpreting quantum entanglement as a projection artifact. The present paper adds the gauge-theoretic sector, showing that the same Cartan geometry substrate that governs gravity also determines electrodynamics. The Einstein--Maxwell coupling $G_(mu nu) + Lambda g_(mu nu) = kappa T^(\"EM\")_(mu nu)$ emerges from shared anholonomy coefficients, and the non-abelian generalization (Yang--Mills) is already formalized in the library.
+This paper is the third in a series on Projected Ontology Theory (POT). The first derived flat galactic rotation curves from the admissible kernel framework without dark matter. The second derived Bell inequality violation and GHZ contextuality from the same kernel structure, reinterpreting quantum entanglement as a projection artifact. The present paper adds the gauge-theoretic sector, showing that the same Cartan geometry substrate that governs gravity also determines electrodynamics. The Einstein--Maxwell coupling $G_(mu nu) + Lambda g_(mu nu) = kappa T^(\"EM\")_(mu nu)$ exhibits a structural parallel with the gravitational sector through shared use of the Cartan exterior calculus, and the non-abelian generalization (Yang--Mills) is already formalized in the library.
 
 Every derivation in this paper is machine-checked. The axioms are explicit, stated in the Kleis verification language, and verified by the Z3 SMT solver. The entire exterior calculus --- wedge product, Hodge star, interior product, Cartan's Magic Formula, de Rham cohomology --- is axiomatized in the Kleis standard library (`stdlib/differential_forms.kleis`). The reader can reproduce every result by running the source file.")
 
@@ -72,6 +72,23 @@ Every derivation in this paper is machine-checked. The axioms are explicit, stat
 
 define sec_framework = ArxivSection("The Projected Ontology Framework",
 "We work within the mathematical framework of Projected Ontology Theory (POT), building on the Cartan geometry pipeline axiomatized in the Kleis standard library. The reader unfamiliar with the full POT axiom set is referred to our companion papers for details; here we summarize only what is needed for the electrodynamics derivation.")
+
+define subsec_background = ArxivSubsection("Background Structure",
+"Before stating the two physical axioms, we make explicit the mathematical infrastructure they presuppose. This infrastructure is not physics --- it is the stage on which physics is performed:
+
+1. *Smooth manifold* $M$: A 4-dimensional smooth (i.e., $C^infinity$) manifold serving as the spacetime continuum. All operations below are defined on $M$.
+
+2. *Lorentzian metric* $g$: A non-degenerate symmetric bilinear form of signature $(-,+,+,+)$ on the tangent bundle $T M$. The metric determines causal structure and is required for the Hodge star.
+
+3. *Orientation*: A choice of volume form on $M$, required (together with $g$) to define the Hodge star operator $star.op$.
+
+4. *Exterior algebra*: The graded algebra of differential forms $Omega^p(M)$ for $p = 0, 1, dots, 4$, equipped with the wedge product $and$ and the exterior derivative $d : Omega^p arrow.r Omega^(p+1)$ satisfying the nilpotency $d^2 = 0$.
+
+5. *Hodge star* $star.op$: The isomorphism $star.op : Omega^p(M) arrow.r Omega^(n-p)(M)$ determined by $g$ and the orientation, with the involutivity $star.op star.op alpha = (-1)^(p(n-p) + s) alpha$ where $s$ is the number of negative eigenvalues of $g$ (here $s = 1$).
+
+Items 1--3 are geometric choices. Item 4 is a structural property of smooth manifolds (the nilpotency $d^2 = 0$ is equivalent to the symmetry of mixed partial derivatives). Item 5 is determined by items 2 and 3.
+
+The physical content enters only through the two axioms stated in Section 3. Everything derived in Sections 4--7 follows from these axioms plus the background structure above. The claim of this paper is not that electrodynamics requires *no* assumptions, but that once the mathematical stage is set, a single physical equation ($d star.op F = star.op J$) suffices to determine the rest.")
 
 define subsec_cartan = ArxivSubsection("Cartan Geometry Pipeline",
 "The Kleis standard library implements Élie Cartan's approach to differential geometry using differential forms. The computation pipeline is:
@@ -165,9 +182,11 @@ The deeper statement involves de Rham cohomology. A $p$-form $alpha$ is *closed*
 
 The second de Rham cohomology group $H^2_(\"dR\")(M)$ measures the obstruction: it is the space of closed 2-forms modulo exact 2-forms. If $H^2_(\"dR\")(M) = 0$, then *every* closed 2-form is exact, and any field strength $F$ satisfying $d F = 0$ must be expressible as $F = d A$ for some potential $A$.
 
-Magnetic monopoles, if they existed, would correspond to $F$ being closed but *not* exact --- a nontrivial element of $H^2_(\"dR\")(M)$. On $RR^4$ (or any contractible manifold), $H^2_(\"dR\") = 0$, and monopoles are topologically impossible. Their non-existence is a theorem of the manifold's topology, not a postulate of physics.
+Magnetic monopoles would correspond to $F$ being closed but *not* exact --- a nontrivial element of $H^2_(\"dR\")(M)$. On $RR^4$ (or any contractible manifold), $H^2_(\"dR\") = 0$, and every closed 2-form is exact. The non-existence of monopoles is then a theorem, not a postulate.
 
-In a manifold with nontrivial $H^2$ (e.g., $RR^3 backslash {0}$, which has a point removed), monopoles become topologically possible. The Dirac monopole lives precisely in this cohomological gap. But on the standard Minkowski spacetime of classical electrodynamics, the topology forbids them.")
+*Important caveat.* Our Axiom 1 ($F = d A$) is stronger than merely requiring $d F = 0$. It asserts that $F$ is *globally exact* --- that a global potential 1-form $A$ exists on all of $M$. In the language of fiber bundles, this amounts to working on a *trivial* $U(1)$ principal bundle. On a nontrivial bundle (e.g., over $RR^3 backslash {0}$), $F$ can be closed but not globally exact, and the Dirac monopole lives precisely in this cohomological gap.
+
+The distinction matters: our derivations hold for the trivial-bundle case, which covers standard Minkowski-spacetime electrodynamics. The generalization to nontrivial bundles --- where $A$ is a connection on a principal $U(1)$-bundle rather than a globally defined 1-form --- requires replacing the de Rham cohomology argument with characteristic classes (Chern numbers), and monopole charge becomes quantized by the Dirac condition. This generalization does not invalidate our framework; it extends it to a topologically richer setting where Axiom 1 is replaced by the weaker requirement that $F$ be closed.")
 
 // =============================================================================
 // Section 6: Energy-Momentum Conservation
@@ -209,17 +228,26 @@ $ d(star.op J) = 0 $
 
 In components, this is the continuity equation $partial_mu J^mu = 0$: charge is locally conserved.
 
-This result is not a separate law. It is a two-step consequence of the inhomogeneous Maxwell equation and $d^2 = 0$. No additional axiom is needed.
+This result is not a separate law. It is a two-step algebraic consequence of the inhomogeneous Maxwell equation and $d^2 = 0$. No additional axiom is needed.
 
-The Noether perspective deepens the result. Noether's theorem states that every continuous symmetry of the action yields a conserved current. The gauge transformation $A arrow.r A + d chi$ is a $U(1)$ symmetry (Section 4), and the associated conserved current is precisely $J^mu$. Charge conservation is therefore the *Noether invariant* of the gauge symmetry.
+Note what this derivation does *not* require: it does not invoke an action functional, a variational principle, or the Noether theorem. The conservation law $d(star.op J) = 0$ follows purely from the algebraic identity $d^2 = 0$ applied to Axiom 2.
 
-The logical chain is:
+*The Noether interpretation.* The algebraic derivation above has a physical reading through Noether's theorem, which provides deeper context. The standard electromagnetic action is:
 
-$ d^2 = 0 arrow.r.double \"gauge invariance\" arrow.r.double U(1) \"symmetry\" arrow.r.double \"conserved current\" J^mu arrow.r.double partial_mu J^mu = 0 $
+$ S = integral (1/2 F and star.op F + A and star.op J) $
 
-Charge is not an arbitrary 'stuff' assigned to particles. It is a geometric quantity forced into existence by the structure of the exterior algebra. If you have a potential 1-form $A$ on a smooth manifold, and you define $F = d A$, then gauge symmetry is automatic, and a conserved current must exist. The source term $J$ in $d star.op F = star.op J$ is not a free choice --- it is constrained by $d(star.op J) = 0$.
+The gauge transformation $A arrow.r A + d chi$ is a $U(1)$ symmetry of this action (Section 4), and Noether's theorem associates a conserved current to every continuous symmetry. The conserved current associated with gauge invariance is precisely $J^mu$. Charge conservation is therefore the *Noether invariant* of the $U(1)$ gauge symmetry.
 
-This is the closing argument of the paper: two axioms and the nilpotency of $d$ yield the complete classical electrodynamics. The field equations, the gauge symmetry, the topological structure, and the conservation laws are all derivable. Nothing is added by hand.")
+The two perspectives are complementary:
+
+- *Algebraic*: $d(star.op J) = 0$ follows from $d^2 = 0$ in two steps. No action needed.
+- *Variational*: $partial_mu J^mu = 0$ is the Noether current of the $U(1)$ gauge symmetry of the action $S$.
+
+The algebraic derivation is logically prior (it requires fewer assumptions), but the Noether interpretation explains *why* this conservation law exists: it is the shadow of gauge symmetry.
+
+Charge is not an arbitrary 'stuff' assigned to particles. It is a geometric quantity forced into existence by the structure of the exterior algebra. The source term $J$ in $d star.op F = star.op J$ is not a free choice --- it is constrained by $d(star.op J) = 0$.
+
+This is the closing argument of the paper: two axioms, the background structure of the Lorentzian manifold, and the nilpotency of $d$ yield the complete classical electrodynamics. The field equations, the gauge symmetry, the topological structure, and the conservation laws are all derivable. The only irreducible physical content is concentrated in a single equation: $d star.op F = star.op J$.")
 
 // =============================================================================
 // Section 8: Einstein-Maxwell Coupling
@@ -234,15 +262,17 @@ where $G_(mu nu)$ is the Einstein tensor, $Lambda$ the cosmological constant, $k
 
 In the Kleis standard library, this equation is axiomatized in the `EinsteinMaxwell` structure, which also enforces the symmetry properties: $F_(mu nu) = -F_(nu mu)$ (antisymmetry of the field tensor), $T^(\"EM\")_(mu nu) = T^(\"EM\")_(nu mu)$ (symmetry of the stress-energy tensor), and $g_(mu nu) = g_(nu mu)$ (symmetry of the metric).
 
-The coupling is deeper than the equation suggests. In the Cartan formalism, both gravity and electromagnetism arise from the *same* mathematical structures:
+The coupling has a structural parallel in the Cartan formalism. Both gravity and electromagnetism are built from the *same* mathematical operations:
 
 - *Gravity*: the curvature 2-form $R^a_b = d omega^a_b + omega^a_c and omega^c_b$ is a matrix of 2-forms built from the connection $omega$ via the exterior derivative $d$ and wedge product $and$.
 
 - *Electromagnetism*: the field strength 2-form $F = d A$ is a single 2-form built from the potential $A$ via the same exterior derivative $d$.
 
-The connection $omega^a_b$ and the potential $A$ are both 1-forms. The curvature $R^a_b$ and the field strength $F$ are both 2-forms. The Bianchi identity $d R + omega and R - R and omega = 0$ and the homogeneous Maxwell equation $d F = 0$ are both consequences of $d^2 = 0$. The anholonomy coefficients that determine the gravitational connection also constrain the electromagnetic field through the coupled Einstein--Maxwell equation.
+The connection $omega^a_b$ and the potential $A$ are both 1-forms. The curvature $R^a_b$ and the field strength $F$ are both 2-forms. The Bianchi identity $d R + omega and R - R and omega = 0$ and the homogeneous Maxwell equation $d F = 0$ are both consequences of $d^2 = 0$.
 
-This is the structural bridge between our companion papers: the same Cartan geometry substrate that produces flat galactic rotation curves (from the gravitational sector of the admissible kernel) and Bell inequality violation (from the measurement sector) also determines classical electrodynamics. The admissibility pipeline is the same; only the sector changes.")
+We emphasize that this is a *structural parallel*, not a derivation of electrodynamics from gravity or vice versa. The Einstein--Maxwell equation couples the two sectors, but the coupling is an additional axiom (relating $G_(mu nu)$ to $T^(\"EM\")_(mu nu)$), not a consequence of the exterior calculus alone. What *is* a consequence of the shared algebraic structure is that the conservation law $nabla_mu T^(mu nu)_(\"EM\") = 0$ follows from the Bianchi identity $nabla_mu G^(mu nu) = 0$ once the coupling is assumed.
+
+This structural parallel connects to our companion papers: the same Cartan geometry infrastructure (exterior derivative, wedge product, curvature forms) underlies both the gravitational sector (rotation curves, lensing) and the electromagnetic sector. The operations are shared; the physical content is sector-specific.")
 
 // =============================================================================
 // Section 9: The Yang-Mills Leap
@@ -278,7 +308,7 @@ This observation sets the stage for a verified treatment of the Standard Model g
 // =============================================================================
 
 define sec_discussion = ArxivSection("Discussion and Conclusion",
-"We have shown that classical electrodynamics --- in its entirety --- follows from two axioms and the nilpotency of the exterior derivative. The derivation chain is short:
+"We have shown that, given the background structure of a smooth oriented Lorentzian 4-manifold with its exterior algebra and Hodge star, the complete structure of classical electrodynamics follows from two axioms and the nilpotency $d^2 = 0$. The derivation chain is short:
 
 #table(
   columns: (auto, auto, auto),
@@ -292,11 +322,13 @@ define sec_discussion = ArxivSection("Discussion and Conclusion",
   [Poynting / energy conservation], [Bianchi identity $+$ Einstein--Maxwell], [Structural],
 )
 
-The irreducible physical content is concentrated in a single equation: $d star.op F = star.op J$. This is the *only* axiom that connects the geometry (the field $F$) to the physical world (the source $J$). Everything else is mathematics.
+The irreducible physical content is concentrated in a single equation: $d star.op F = star.op J$. This is the *only* axiom that connects the geometry (the field $F$) to the physical world (the source $J$). Everything else is either mathematical infrastructure (manifold, metric, exterior algebra) or a derivable consequence thereof.
 
 Several features of this result merit comment.
 
 *The role of $d^2 = 0$.* The nilpotency of the exterior derivative is not a physical assumption. It is a structural property of the exterior algebra on any smooth manifold, equivalent to the symmetry of mixed partial derivatives (Schwarz's theorem). Every derivation in this paper reduces, ultimately, to this single identity. Gauge invariance, the homogeneous Maxwell equation, and charge conservation are all shadows of $d^2 = 0$ projected through different algebraic paths.
+
+*What is and is not claimed.* The formulation of electrodynamics in terms of differential forms is well known; the key references are Flanders, Misner--Thorne--Wheeler, Frankel, and Nakahara. Our contribution is not the mathematics, which is standard, but: (a) the isolation of a *minimal* axiom set and a complete *dependency graph* showing which results follow from which axioms in how many steps; (b) the *machine verification* of every derivation, making the axiom dependencies checkable rather than informal; and (c) the embedding of this verified structure into the Projected Ontology framework alongside gravity and quantum entanglement.
 
 *Comparison with the standard presentation.* Textbooks typically present Maxwell's equations as four independent laws (Gauss, Gauss for magnetism, Faraday, Ampère--Maxwell), then derive gauge invariance and charge conservation as consequences. Our presentation inverts this: we start with the definition $F = d A$ and the single inhomogeneous equation $d star.op F = star.op J$, and derive everything else. The 'four laws' are a redundant encoding of two independent statements.
 
@@ -306,7 +338,7 @@ Several features of this result merit comment.
 
 *Toward verified unified field theory.* The Yang--Mills generalization $F = d A + A and A$ is already axiomatized. The formal structure is identical to gravity (connection, curvature, Bianchi identity). The gauge group determines the physics; the mathematics is universal. A verified treatment of the Standard Model gauge sector --- $S U(3) times S U(2) times U(1)$ --- is within reach using the same derivation patterns and the same verification infrastructure.
 
-We conclude with a philosophical observation. In the Projected Ontology framework, the 'laws of nature' are not empirical regularities observed in data and codified in equations. They are *theorems* --- logical necessities of the mathematical structures that the ontology selects. The universe does not 'obey' Maxwell's equations; rather, any consistent projection of a $U(1)$ gauge field onto a Lorentzian manifold *must* satisfy them. The equations are the compiled output of the structure.")
+We conclude with a philosophical observation. In the Projected Ontology framework, the distinction between 'law' and 'theorem' depends on whether a statement carries irreducible physical content or follows from mathematical structure. For electrodynamics, the inventory is clear: one physical equation ($d star.op F = star.op J$), one definitional axiom ($F = d A$), and a background manifold. Everything else --- gauge invariance, the homogeneous Maxwell equation, charge conservation, the absence of monopoles on trivial bundles --- is theorem. The universe does not 'obey' four independent Maxwell equations; it satisfies one physical constraint on a Lorentzian manifold, and the rest is the compiled output of the exterior algebra.")
 
 // =============================================================================
 // References
@@ -478,7 +510,7 @@ example "Summary: 2 axioms, 3 derived theorems" {
 
 define all_elements = [
     sec_intro,
-    sec_framework, subsec_cartan, subsec_exterior,
+    sec_framework, subsec_background, subsec_cartan, subsec_exterior,
     sec_em_form, subsec_axioms,
     sec_gauge,
     sec_monopoles,
