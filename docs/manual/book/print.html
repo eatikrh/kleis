@@ -45,7 +45,7 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-c1f25d5f.js";
+            window.path_to_searchindex_js = "searchindex-c3392209.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f618dae5.js"></script>
@@ -4416,20 +4416,100 @@ template (<code>stdlib/templates/arxiv_paper.kleis</code>):</p>
 <li><strong>External tool</strong> renders to PDF</li>
 </ol>
 <p>No Rust code changes are needed. The template is pure Kleis.</p>
+<h2 id="music-theory-verification"><a class="header" href="#music-theory-verification">Music Theory Verification</a></h2>
+<p>Beyond rendering, Kleis can <strong>verify music-theoretic properties</strong> of a score.
+The <code>tonal_harmony.kleis</code> theory provides pitch arithmetic, chord recognition,
+and axiom checkers that run against any Kleis score AST.</p>
+<h3 id="the-theory"><a class="header" href="#the-theory">The Theory</a></h3>
+<p>Import the theory alongside a score:</p>
+<pre><code class="language-kleis">import "examples/music/moonlight_sonata.kleis"
+import "stdlib/theories/tonal_harmony.kleis"
+</code></pre>
+<p>The theory provides three layers of functions:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Layer</th><th>Functions</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Pitch arithmetic</strong></td><td><code>pitch_to_midi</code>, <code>pitch_class</code>, <code>interval_abs</code>, <code>interval_class</code></td><td>Convert between pitch representations</td></tr>
+<tr><td><strong>AST extraction</strong></td><td><code>first_pitch</code>, <code>triplet_pitch_classes</code>, <code>extract_pcs</code></td><td>Pull musical data from score structure</td></tr>
+<tr><td><strong>Axiom checkers</strong></td><td><code>check_tonic_opening</code>, <code>check_bass_smooth</code>, <code>check_arpeggio_triads</code>, <code>check_melody_consonance</code>, <code>check_no_parallels</code>, <code>check_harmonic_rhythm</code></td><td>Verify music-theoretic properties</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="verifying-the-moonlight-sonata"><a class="header" href="#verifying-the-moonlight-sonata">Verifying the Moonlight Sonata</a></h3>
+<p>Running the TonalHarmony theory against Beethoven’s Moonlight Sonata
+(measures 1–14) produces machine-checked results:</p>
+<pre><code class="language-kleis">example "axiom 1: tonic opening" {
+    let tonic = Cons(1, Cons(4, Cons(8, Nil))) in  // C# minor: {C#, E, G#}
+    assert(check_tonic_opening(accomp_measures, tonic) = true)
+}
+
+example "axiom 2: bass smooth motion" {
+    let result = check_bass_smooth(bass_measures, 12) in
+    assert(eq(result, 0 - 1))   // -1 = no violations
+}
+
+example "axiom 5: no parallel octaves" {
+    let result = check_no_parallels(melody_measures, bass_measures, 0) in
+    assert(eq(result, 0 - 1))
+}
+</code></pre>
+<h3 id="results"><a class="header" href="#results">Results</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Axiom</th><th>Result</th><th>Interpretation</th></tr>
+</thead>
+<tbody>
+<tr><td>1. Tonic Opening</td><td><strong>SAT</strong></td><td>First arpeggiation ∈ C# minor</td></tr>
+<tr><td>2. Bass Smooth Motion</td><td><strong>SAT</strong></td><td>No bass leaps exceed one octave</td></tr>
+<tr><td>3. Arpeggio Triads</td><td><strong>Violation at m4</strong></td><td>Passing tones aren’t standard triads</td></tr>
+<tr><td>4. Melody–Harmony Consonance</td><td><strong>SAT</strong></td><td>Every sounding melody note ∈ accompaniment chord</td></tr>
+<tr><td>5. No Parallel Octaves</td><td><strong>SAT</strong></td><td>No parallel octaves in outer voices</td></tr>
+<tr><td>6. No Parallel Fifths</td><td><strong>Violation at m13</strong></td><td>Consecutive fifths in outer voices</td></tr>
+<tr><td>7. Harmonic Rhythm</td><td><strong>8 violations</strong></td><td>Mid-bar harmony changes in measures 3,4,5,7,8,12,13,14</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Formal summary:</strong></p>
+<pre><code>Moonlight ⊨ TonalCohesion        (axioms 1, 2, 4, 5)
+Moonlight ⊭ StrictTriadicArpeg.  (axiom 3, m4)
+Moonlight ⊭ StrictCounterpoint   (axiom 6, m13)
+Moonlight ⊭ UniformHarmRhythm    (axiom 7, 8 measures)
+</code></pre>
+<p>The SAT results show a disciplined tonal core. The violations are
+<strong>diagnostically useful</strong> — they reveal where Beethoven exercises expressive
+freedom beyond strict textbook rules. A sonata is a model, a music theory
+is a set of axioms, and style is characterized by <em>which axioms hold, and where</em>.</p>
+<h3 id="running-the-analysis"><a class="header" href="#running-the-analysis">Running the Analysis</a></h3>
+<pre><code class="language-bash">kleis test examples/music/moonlight_analysis.kleis
+</code></pre>
+<p>See the full analysis: <code>examples/music/moonlight_analysis.kleis</code></p>
+<p>See the theory: <code>stdlib/theories/tonal_harmony.kleis</code></p>
 <h2 id="future-directions"><a class="header" href="#future-directions">Future Directions</a></h2>
-<p>The current template covers Layers 1-2 (syntax and structure). Future
-phases will add:</p>
+<h3 id="theory-refinements"><a class="header" href="#theory-refinements">Theory Refinements</a></h3>
+<p>The current violations point to specific next steps:</p>
 <ul>
-<li><strong>Layer 3: Semantics</strong> — Counterpoint rules, harmonic analysis as
-axioms verified by Z3. “Does this passage satisfy voice-leading
-constraints?” becomes a machine-checked question.</li>
-<li><strong>Layer 4: Performance</strong> — MIDI realization constraints. “Does this
-performance satisfy the score’s articulation intent?”</li>
-<li><strong>Layer 5: Rendering</strong> — Engraving rules formalized as axioms.
-Spacing, beam grouping, collision avoidance — verified, not heuristic.</li>
-<li><strong>Native Typst rendering</strong> — Once engraving rules are formalized,
-a Typst backend could match LilyPond quality without the external
-dependency.</li>
+<li><strong>Harmonic skeleton vs. surface</strong> — Distinguish chord tones from passing
+tones, neighbor tones, and suspensions. Run axiom checks on the underlying
+harmony, not the literal note surface.</li>
+<li><strong>Contextual parallel motion</strong> — Weight voice-leading checks by metric
+position (downbeats vs. passing motion).</li>
+<li><strong>Parameterized harmonic rhythm</strong> — Allow one harmony change per half-bar
+in cut time, rather than requiring one per full measure.</li>
+<li><strong>Comparative musicology</strong> — Run the same axioms against Bach, Chopin,
+and Debussy to characterize stylistic differences formally.</li>
+<li><strong>Z3-backed verification</strong> — Express axioms as universally quantified
+constraints so Z3 can produce Skolem witnesses for violations.</li>
+</ul>
+<h3 id="rendering-and-output"><a class="header" href="#rendering-and-output">Rendering and Output</a></h3>
+<ul>
+<li><strong>Native Typst rendering</strong> — A <code>compile_score_typst</code> function for inline
+musical notation in arXiv papers, removing the LilyPond dependency.</li>
+<li><strong>Engraving axioms</strong> — Spacing, beam grouping, collision avoidance
+formalized as verifiable constraints rather than heuristics.</li>
 </ul>
 <p>See ADR-033 for the full architectural roadmap.</p>
 <hr>
@@ -13304,7 +13384,7 @@ define wedge(a, b) =
 define schwarzschild_curvature(M) = 
     compute_riemann(schwarzschild_tetrad(M))
 </code></pre>
-<h3 id="results"><a class="header" href="#results">Results</a></h3>
+<h3 id="results-1"><a class="header" href="#results-1">Results</a></h3>
 <div class="table-wrapper">
 <table>
 <thead>
