@@ -1,100 +1,78 @@
 # Next Session Notes
 
-**Last Updated:** March 28, 2026 (session — ADR-033 update + Electrodynamics paper planning)
+**Last Updated:** March 28, 2026 (session — POT Electrodynamics paper completed with kernel integration)
 
 ---
 
-## Planned: arXiv Paper — "Electrodynamics as a Theorem of Projected Ontology"
-
-### Thesis
-
-Maxwell's equations are not empirical laws imposed on the universe — they are
-the unique, verified solution for any observable field projected onto a 4D
-Lorentzian manifold with the topological properties axiomatized in Kleis's stdlib.
-
-### Existing Infrastructure (already formalized)
-
-| Component | File | What's There |
-|-----------|------|-------------|
-| Field tensor | `stdlib/maxwell.kleis` | F antisymmetry, diagonal vanishing, inhomogeneous + homogeneous Maxwell, Einstein-Maxwell coupling with T_EM |
-| Exterior calculus | `stdlib/differential_forms.kleis` | Wedge product, exterior derivative (d^2=0, Leibniz), Hodge star, interior product, Cartan's Magic Formula, De Rham cohomology |
-| EM in forms | `stdlib/differential_forms.kleis` | `ElectromagneticForm`: F=dA, dF=0, d*F=*J |
-| Yang-Mills | `stdlib/differential_forms.kleis` | `YangMillsForm`: F=dA+A∧A, Bianchi identity |
-| Symplectic/Hamiltonian | `stdlib/differential_forms.kleis` | Symplectic form, Hamiltonian vector field, Poisson bracket |
-| Cartan geometry | `stdlib/cartan_geometry.kleis` | Tetrad→Connection→Curvature pipeline, Bianchi identity, Schwarzschild example, `verify_einstein` |
-| Minkowski metric | `stdlib/cosmology.kleis`, `stdlib/tensors_concrete.kleis` | Flat spacetime axioms, eta components |
-
-### Four Derivation Targets
-
-1. **Gauge invariance as geometric tautology**: F=dA + d^2=0 implies A→A+dχ
-   leaves F unchanged. One-line Z3 verification. The potential A is an auxiliary
-   projection; only F has ontological weight.
-
-2. **Poynting theorem from structural conservation**: Use CartanCalculus (Lie
-   derivative via Magic Formula) + HodgeStar + Maxwell to derive energy flux
-   as a topological identity, not an empirical law. ∂_μ T^μν = 0 is a
-   consequence of Bianchi + Einstein-Maxwell coupling.
-
-3. **Noether's theorem — charge conservation**: SymplecticForm +
-   HamiltonianMechanics machinery links gauge symmetry (U(1)) to conservation
-   of charge (∂_μ J^μ = 0). Charge is a Noether charge arising from the
-   geometry of the projection.
-
-4. **No magnetic monopoles as topological constraint**: DeRhamCohomology
-   axioms prove dF=0 is a global constraint. If H^2(M) is trivial, monopoles
-   are mathematically impossible — no physical postulate required.
-
-### Pre-Paper Fixes Required
-
-**1. Lorentzian Hodge Star (CRITICAL)**
-
-Current `HodgeStar` axiom only encodes Riemannian involutivity:
-```
-star(star(α)) = (-1)^{p(n-p)} α
-```
-For Lorentzian (-,+,+,+), it must be:
-```
-star(star(α)) = (-1)^{p(n-p)+s} α    where s = number of negative signature entries
-```
-Specifically for a 2-form in 4D Lorentzian: **F = -F, not **F = +F.
-
-Without this fix, the energy-momentum tensor and Poynting vector get wrong signs.
-
-**Fix:** Add a `signature` parameter to `HodgeStar` and define a
-`hodge_lorentzian` axiom in `differential_forms.kleis`.
-
-**2. No missing Rust builtins needed**
-
-The `builtin_hodge_star`, `builtin_exterior_derivative`, etc. referenced in
-`implements` blocks have no Rust implementations. This is fine — the paper
-works in **axiomatic mode** (Z3 symbolic reasoning), not concrete evaluation.
-This is the superior methodology: proving structural necessities that hold for
-all admissible fields, not computing specific values.
-
-### Paper Structure (Draft)
+## COMPLETED: "Electrodynamics as a Theorem of Projected Ontology"
 
 **File:** `examples/ontology/revised/pot_electrodynamics_paper.kleis`
-(Joins the POT series alongside `pot_entanglement_paper.kleis` and
-`pot_flat_rotation_paper.pdf`)
+**PDF:** `examples/ontology/revised/pot_electrodynamics_paper.pdf` (15 pages)
+**Branch:** `feature/pot-electrodynamics` (pushed to origin + fork)
+**Status:** All 14 verification examples pass. Reviewed by ChatGPT and Gemini — assessed as "accept with minor revisions" level.
 
-1. Introduction — physics as admissibility in a verified ontology
-2. The Projected Ontology Framework — Cartan geometry + POT
-3. Electromagnetic Field as a 2-Form — F=dA, gauge invariance proof
-4. Energy Conservation as Topological Identity — Poynting via Lie derivative
-5. Charge Conservation from Gauge Symmetry — Noether's theorem
-6. Topological Obstruction to Monopoles — De Rham cohomology
-7. Einstein-Maxwell Coupling — gravity and EM from same anholonomy coefficients
-8. The Yang-Mills Leap — from U(1) to SU(2)×U(1) and SU(3) using same logic
-9. Discussion — "physics is what is mathematically admissible"
-10. Conclusion
+### What the paper achieves
 
-### Why This Is the Bridge Paper
+- Derives complete differential-form structure of classical electrodynamics from 2 axioms + d²=0
+- Identifies exterior derivative d : Ω¹→Ω² as an admissible kernel in the formal POT sense
+- Gauge equivalence = projective equivalence, gauge orbits = kernel nullspace, d²=0 = kernel nilpotency
+- Classification result: electrodynamics is the unique gauge sector with an admissible projection kernel (U(1) abelian ⟹ linear; Yang-Mills A∧A breaks admissibility)
+- Physical justification for admissibility: superposition, stable equivalence classes, composability
+- Does NOT assume GR — only a Lorentzian manifold (kinematic stage, not gravitational dynamics)
+- All derivations machine-checked by Z3
 
-- Connects gravitational POT papers to gauge theory direction
-- Shows same "admissibility pipeline" that flattens rotation curves also
-  dictates charge conservation and energy flow
-- Yang-Mills formalization already exists — sets stage for weak/strong force
-- All axioms already in stdlib; the paper connects existing pieces
+### Pre-paper fixes that were completed
+
+- Lorentzian Hodge star: generalized with signature parameter s in `stdlib/differential_forms.kleis`
+- ElectromagneticForm: minimized to 2 independent axioms (F=dA, d⋆F=⋆J)
+- Import of `theories/pot_admissible_kernels_v2.kleis` for kernel formalism
+
+---
+
+## POT Verified Unified Field Theory (VUFT) Series
+
+The papers form a series, each adding a sector to the kernel framework:
+
+| Volume | Title | Kernel | Status |
+|--------|-------|--------|--------|
+| I | Flat Galactic Rotation Curves from Projected Ontology | Gravitational (logarithmic Green's function, slow-decay coherence) | Published |
+| II | Quantum Entanglement as a Projection Artifact | Measurement (spinor projections, detector angle) | Published |
+| III | Electrodynamics as a Theorem of Projected Ontology | Gauge (d\|_Ω¹, admissible, nilpotent) | Complete |
+| IV | *(next paper — see candidates below)* | | Planned |
+
+Each volume is independently verifiable via `kleis test`. The substrate (stdlib) is shared.
+
+---
+
+## Next Paper Candidates (Volume IV)
+
+### Option A: Yang-Mills Confinement and the Admissibility Boundary
+
+**Thesis:** The quadratic term A∧A in Yang-Mills breaks kernel admissibility. Characterize the *degree* of non-admissibility for SU(2), SU(3) and investigate whether it correlates with confinement scale. The strong force is confined precisely because its projection kernel is maximally non-admissible.
+
+**Infrastructure needed:** `YangMillsForm` already in stdlib. Would need to formalize a measure of "non-admissibility" (how badly linearity fails) and connect it to physical confinement.
+
+**Risk:** High conceptual ambition. The connection between non-linearity and confinement is suggestive but needs rigorous formalization.
+
+### Option B: Aharonov-Bohm as Kernel Non-Surjectivity
+
+**Thesis:** On topologically nontrivial manifolds (R³ \ {0}), the EM kernel d is not surjective onto closed 2-forms. The gap (H²_dR ≠ 0) produces physically observable effects (A-B phase) even where F=0. The potential A has physical consequences precisely because the kernel's image is smaller than the space of closed forms.
+
+**Infrastructure needed:** `DeRhamCohomology` already axiomatized. Would need to formalize the A-B setup (multiply-connected region, path integral of A around solenoid) and show the phase is a cohomological invariant.
+
+**Risk:** Moderate. Well-understood physics, clean kernel interpretation. Shorter paper.
+
+### Option C: The Standard Model Gauge Sector — SU(3) × SU(2) × U(1)
+
+**Thesis:** Extend the kernel classification to the full Standard Model gauge group. U(1) is the unique admissible sector. SU(2) × U(1) electroweak theory is partially admissible (the U(1) hypercharge factor). SU(3) is fully non-admissible.
+
+**Infrastructure needed:** Electroweak mixing (Weinberg angle), symmetry breaking. More ambitious than A or B.
+
+**Risk:** Very high. Requires careful treatment of spontaneous symmetry breaking within the kernel framework.
+
+### Recommendation
+
+**Option B (Aharonov-Bohm)** is the cleanest next step — it directly extends the monopole discussion in the electrodynamics paper, uses existing stdlib, and produces a sharp result (observable physics from kernel non-surjectivity). Option A (Yang-Mills confinement) is the bigger prize but needs more foundational work.
 
 ---
 
