@@ -1,0 +1,55 @@
+// NS + Riemann-Liouville Test B: Fractional Gronwall Bound
+//
+// The RL formula turns dΩ/dt ≤ C·Ω^{3/2} into a fractional ODE:
+//   D^{1/2}_t Ω ≤ C · Ω^{3/2}
+//
+// Fractional Gronwall at the critical exponent (α=1/2, p=3/2=1+α):
+//   Ω(t) ≤ Ω₀ · E_{1/2}(C√Ω₀ · √t)
+//
+// where E_{1/2} is the Mittag-Leffler function.
+// E_{1/2}(z) ~ exp(z²) for large z — exponential, NOT finite-time blow-up.
+//
+// Axiom: Ω is bounded on [0,T] by some finite M(T, Ω₀, ν).
+// This is what the fractional Gronwall GIVES us that the integer version doesn't.
+//
+// Test: does adding Ω ≤ M still allow H32 to be large?
+
+structure NS_FracGronwall {
+    element E : ℝ
+    element Omega : ℝ
+    element H32 : ℝ
+    element P : ℝ
+    element S : ℝ
+    element nu : ℝ
+    element dE_dt : ℝ
+    element dOmega_dt : ℝ
+    element M : ℝ
+
+    axiom nu_pos : nu > 0
+    axiom E_pos : E > 0
+    axiom Omega_pos : Omega > 0
+    axiom H32_pos : H32 > 0
+    axiom P_pos : P > 0
+    axiom S_nonneg : S ≥ 0
+    axiom M_pos : M > 0
+
+    axiom interpolation : times(H32, H32) ≤ times(Omega, P)
+    axiom energy_eq : dE_dt = negate(times(times(2, nu), Omega))
+    axiom enstrophy_eq : dOmega_dt = plus(S, negate(times(times(2, nu), P)))
+    axiom stretching : S ≤ times(H32, Omega)
+    axiom norm_low : Omega ≤ H32
+    axiom norm_high : H32 ≤ P
+    axiom poincare : P ≥ Omega
+    axiom energy_bounded : E ≤ 1
+
+    // Fractional Gronwall: Ω bounded by Mittag-Leffler
+    axiom frac_gronwall : Omega ≤ M
+
+    // Test: blow-up scenario
+    axiom large_H32 : H32 > 100
+    axiom growth : dOmega_dt > 0
+}
+
+example "Frac Gronwall: H32 large + growth still SAT?" {
+    assert(dOmega_dt > 0)
+}

@@ -1,0 +1,42 @@
+// NS + Nonlocal Pressure Cancellation
+//
+// HYPOTHESIS: Pressure coupling induces a cancellation in stretching.
+// Instead of S ≤ ||∇v||_∞ · Ω ~ Ω^{3/2}·P^{1/2}, pressure reduces
+// the effective bound to S ≤ C·Ω^{3/2} (removing P-dependence).
+//
+// ANALYTIC PREDICTION (ν = 1):
+//   Growth: S > 2ν·P = 2P.
+//   Pressure: S ≤ Ω^{3/2} (encoded as S² ≤ Ω³).
+//   So Ω³ > 4P². With P ≥ Ω: Ω³ > 4Ω², i.e., Ω > 4.
+//   This is satisfiable. → SAT expected.
+//
+// Conclusion: Pressure cancellation alone is insufficient.
+// It removes the P^{1/2} factor but leaves Ω^{3/2} uncontrolled.
+
+structure NS_Pressure {
+    element Omega : ℝ
+    element P : ℝ
+    element S : ℝ
+    element dOmega_dt : ℝ
+
+    axiom Omega_pos : Omega > 0
+    axiom P_pos : P > 0
+    axiom S_nonneg : S ≥ 0
+
+    // enstrophy equation with ν = 1
+    axiom enstrophy_eq : dOmega_dt = plus(S, negate(times(2, P)))
+
+    axiom poincare : P ≥ Omega
+
+    // PRESSURE AXIOM: S² ≤ Ω³ (nonlocal cancellation removes P)
+    axiom pressure_cancel : times(S, S) ≤ times(Omega, times(Omega, Omega))
+
+    axiom large_omega : Omega > 10
+
+    // TEST: growth with pressure cancellation (expect SAT)
+    axiom growth : dOmega_dt > 0
+}
+
+example "Pressure S²≤Ω³ with ν=1: growth? (expect SAT)" {
+    assert(dOmega_dt > 0)
+}

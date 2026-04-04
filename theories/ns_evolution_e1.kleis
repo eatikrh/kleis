@@ -1,0 +1,62 @@
+// E1: Single-instant evolution constraint — does it prevent growth?
+//
+// QUESTION: If we add dα₁/dt ≤ -(κ-η)Ωα₁ at a single instant,
+// does enstrophy growth become impossible?
+//
+// ANSWER: No. The evolution constraint restricts the *rate of change*
+// of α₁, not its current value. At this instant, α₁ can still be
+// whatever Z3 needs for growth. The constraint on dα₁/dt is
+// decoupled from the growth condition dΩ/dt > 0.
+//
+// This test establishes that the naive promotion from axiom to
+// evolution inequality is insufficient — we need the barrier
+// formulation (Test E2).
+//
+// Expect: SAT
+
+structure NS_Evolution_SingleInstant {
+    element Omega : ℝ
+    element P : ℝ
+    element S : ℝ
+    element dOmega_dt : ℝ
+    element lam1 : ℝ
+    element lam2 : ℝ
+    element lam3 : ℝ
+    element alpha1 : ℝ
+    element alpha2 : ℝ
+    element alpha3 : ℝ
+    element dAlpha1_dt : ℝ
+    element R1 : ℝ
+
+    axiom Omega_pos : Omega > 0
+    axiom P_pos : P > 0
+    axiom S_nonneg : S ≥ 0
+
+    axiom alpha1_nonneg : alpha1 ≥ 0
+    axiom alpha2_nonneg : alpha2 ≥ 0
+    axiom alpha3_nonneg : alpha3 ≥ 0
+    axiom alpha_sum : plus(alpha1, plus(alpha2, alpha3)) = 1
+
+    axiom eigen_order : lam1 ≥ lam2
+    axiom eigen_order2 : lam2 ≥ lam3
+    axiom trace_free : plus(lam1, plus(lam2, lam3)) = 0
+
+    axiom decomposed_stretching : S = times(Omega, plus(times(lam1, alpha1), plus(times(lam2, alpha2), times(lam3, alpha3))))
+    axiom lam1_bound : times(lam1, lam1) ≤ times(Omega, P)
+
+    axiom poincare : P ≥ Omega
+    axiom enstrophy_eq : dOmega_dt = plus(S, negate(times(2, P)))
+    axiom large_omega : Omega > 10
+
+    // EVOLUTION CONSTRAINT: dα₁/dt ≤ -κΩα₁ + R₁
+    // κ = 0.1, R₁ ≤ ηΩα₁ with η = 0.05 (net depletion rate 0.05)
+    axiom evolution : dAlpha1_dt ≤ plus(negate(times(times(0.1, Omega), alpha1)), R1)
+    axiom regen_bound : R1 ≤ times(times(0.05, Omega), alpha1)
+    axiom regen_nonneg : R1 ≥ 0
+
+    axiom growth : dOmega_dt > 0
+}
+
+example "E1: evolution at single instant + growth (expect SAT)" {
+    assert(dOmega_dt > 0)
+}

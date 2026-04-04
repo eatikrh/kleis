@@ -1,0 +1,86 @@
+// Near-critical ODE exploration: a+b = 2.2
+// dΩ/dt = Ω^{1.1} - 2νΩ
+// Equilibrium: Ω^{0.1} = 2ν → Ω_eq = (2ν)^{10}
+// For ν=1: Ω_eq = 2^{10} = 1024 (unstable)
+//
+// Blow-up IS finite-time but very slow:
+//   From Ω₀ = 2000: blow-up at t ≈ 13.7
+//   From Ω₀ = 10000: blow-up at t ≈ 7.95
+// Compare: a+b=4 blows up at t ≈ 0.0005, a+b=3 at t ≈ 0.02
+
+define nu_val = 1.0
+define get_t(pt) = nth(pt, 0)
+define get_om(pt) = nth(nth(pt, 1), 0)
+
+example "near-critical blowup time" {
+    let f_near = lambda t y .
+        let om = nth(y, 0) in
+        [minus(pow(om, 1.1), times(times(2, nu_val), om))]
+    in
+
+    // Stop well before blow-up to capture the trajectory
+    let traj_2000 = ode45(f_near, [2000], [0, 13.0], 0.1) in
+
+    let final_val = nth(traj_2000, minus(length(traj_2000), 1)) in
+    let t_final = get_t(final_val) in
+    let om_final = get_om(final_val) in
+
+    out("Near-critical (a+b=2.2) from Omega_0 = 2000, nu = 1:")
+    out("  t_final =")
+    out(t_final)
+    out("  Omega_final =")
+    out(om_final)
+
+    let t_vals = list_map(lambda p . get_t(p), traj_2000) in
+    let om_vals = list_map(lambda p . get_om(p), traj_2000) in
+
+    diagram(
+        plot(t_vals, om_vals, color = "green", label = "a+b=2.2 from 2000"),
+        title = "Near-critical blow-up: a+b=2.2 (blows up at t ~ 13.7)",
+        xlabel = "t",
+        ylabel = "Omega(t)",
+        width = 16,
+        height = 10
+    )
+}
+
+example "blow-up time comparison" {
+    let f_near = lambda t y .
+        let om = nth(y, 0) in
+        [minus(pow(om, 1.1), times(times(2, nu_val), om))]
+    in
+
+    // From Omega_0 = 10000: blow-up at t ~ 7.95
+    let traj_10k = ode45(f_near, [10000], [0, 7.0], 0.05) in
+
+    let final_val = nth(traj_10k, minus(length(traj_10k), 1)) in
+    out("Near-critical from Omega_0 = 10000:")
+    out("  Omega at t=7:")
+    out(get_om(final_val))
+
+    let t_vals = list_map(lambda p . get_t(p), traj_10k) in
+    let om_vals = list_map(lambda p . get_om(p), traj_10k) in
+
+    diagram(
+        plot(t_vals, om_vals, color = "red", label = "a+b=2.2 from 10000"),
+        title = "Near-critical blow-up from Omega_0 = 10000",
+        xlabel = "t",
+        ylabel = "Omega(t)",
+        width = 16,
+        height = 10
+    )
+}
+
+example "alignment no blowup" {
+    let f_align = lambda t y .
+        let om = nth(y, 0) in
+        [minus(om, times(times(2, nu_val), om))]
+    in
+
+    let traj_align = ode45(f_align, [2000], [0, 15.0], 0.1) in
+
+    let final_val = nth(traj_align, minus(length(traj_align), 1)) in
+    out("Alignment (a+b=2) from Omega_0 = 2000:")
+    out("  Omega at t=15:")
+    out(get_om(final_val))
+}

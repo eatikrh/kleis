@@ -1,0 +1,84 @@
+// ============================================================================
+// NS on 𝕋³ with ∇·v = 0: Millennium Problem boundary conditions
+//
+// What does incompressibility on the torus give us?
+//
+// 1. STRAIN-ENSTROPHY IDENTITY (from ∫|∇v|² = ∫|ω|² on 𝕋³ + ∇·v = 0):
+//    ∫|S|² = Ω/2
+//    The strain norm is LOCKED to half the enstrophy.
+//
+// 2. TRACE-FREE STRAIN (from ∇·v = 0 → S_ii = 0):
+//    Eigenvalues: λ₁ + λ₂ + λ₃ = 0
+//    Max eigenvalue: λ_max ≤ √(2/3)·||S||_F at each point
+//    If ω aligns equally with all eigenvectors: stretching = 0
+//
+// 3. SPECTRAL GAP (from 𝕋³ = [0,2π]³):
+//    k_min = 1, k_max = ∞ (but truncated in Galerkin)
+//    Poincaré: P ≥ Ω (sharp on 𝕋³ with k_min = 1)
+//
+// 4. SMOOTH INITIAL DATA (v₀ ∈ C^∞):
+//    All Sobolev norms finite at t = 0
+//    E(0) < ∞, Ω(0) < ∞, H32(0) < ∞, P(0) < ∞
+//
+// 5. ENERGY MONOTONICITY: E(t) ≤ E(0) for all t ≥ 0
+// ============================================================================
+
+
+structure NS_Torus3 {
+    element E : ℝ
+    element Omega : ℝ
+    element H32 : ℝ
+    element P : ℝ
+    element S : ℝ
+    element nu : ℝ
+    element dE_dt : ℝ
+    element dOmega_dt : ℝ
+    element grad_v_inf : ℝ
+    element strain_sq : ℝ    // ∫|S_ij|² dx on 𝕋³
+
+    axiom nu_pos : nu > 0
+    axiom E_pos : E > 0
+    axiom Omega_pos : Omega > 0
+    axiom H32_pos : H32 > 0
+    axiom P_pos : P > 0
+    axiom S_nonneg : S ≥ 0
+    axiom grad_nonneg : grad_v_inf ≥ 0
+    axiom strain_pos : strain_sq > 0
+
+    // === STANDARD NS AXIOMS ===
+    axiom interpolation : times(H32, H32) ≤ times(Omega, P)
+    axiom sobolev : grad_v_inf ≤ H32
+    axiom energy_eq : dE_dt = negate(times(times(2, nu), Omega))
+    axiom enstrophy_eq : dOmega_dt = plus(S, negate(times(times(2, nu), P)))
+    axiom stretching : S ≤ times(grad_v_inf, Omega)
+    axiom norm_low : Omega ≤ H32
+    axiom norm_high : H32 ≤ P
+    axiom poincare : P ≥ Omega
+    axiom energy_bounded : E ≤ 1
+
+    // === NEW: 𝕋³ + ∇·v = 0 AXIOMS ===
+
+    // Strain-enstrophy identity: ∫|S|² = Ω/2
+    // (from: |∇v|² = |S|² + |ω|²/2, and ∫|∇v|² = ∫|ω|² = Ω on 𝕋³)
+    axiom strain_enstrophy : times(2, strain_sq) = Omega
+
+    // Trace-free bound on pointwise strain:
+    // λ_max ≤ √(2/3)·||S||_F pointwise.
+    // Global version: S ≤ ∫|ω|²·λ_max ≤ Ω · ||S||_∞
+    // But ||S||_∞ ≤ ||∇v||_∞ = grad_v_inf (already have)
+
+    // Spectral gap (𝕋³ with k_min = 1):
+    // Ω ≥ E (Poincaré for energy → enstrophy)
+    axiom poincare_energy : Omega ≥ E
+
+    // Smooth initial data: H32 was finite at t=0
+    // We're looking at an arbitrary later time, but E(t) ≤ E(0) = 1
+
+    // BLOW-UP TEST
+    axiom large_H32 : H32 > 100
+    axiom growth : dOmega_dt > 0
+}
+
+example "𝕋³ + ∇·v=0: blow-up still consistent?" {
+    assert(dOmega_dt > 0)
+}

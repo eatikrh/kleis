@@ -1,0 +1,50 @@
+// D9: Biaxial strain ONLY (no alignment depletion)
+// λ₂ ≤ 0 but α₁ unconstrained
+//
+// With λ₂ ≤ 0: only λ₁ stretches. So σ_eff ≤ λ₁·α₁ ≤ λ₁ (worst case α₁=1)
+// S ≤ Ω·λ₁ ≤ Ω·√(Ω·P) → S² ≤ Ω³·P (a+b = 4, no improvement!)
+//
+// Expect: SAT (biaxial strain alone is insufficient)
+
+structure NS_Depletion_BiaxialOnly {
+    element Omega : ℝ
+    element P : ℝ
+    element S : ℝ
+    element dOmega_dt : ℝ
+    element lam1 : ℝ
+    element lam2 : ℝ
+    element lam3 : ℝ
+    element alpha1 : ℝ
+    element alpha2 : ℝ
+    element alpha3 : ℝ
+
+    axiom Omega_pos : Omega > 0
+    axiom P_pos : P > 0
+    axiom S_nonneg : S ≥ 0
+
+    axiom alpha1_nonneg : alpha1 ≥ 0
+    axiom alpha2_nonneg : alpha2 ≥ 0
+    axiom alpha3_nonneg : alpha3 ≥ 0
+    axiom alpha_sum : plus(alpha1, plus(alpha2, alpha3)) = 1
+
+    axiom eigen_order : lam1 ≥ lam2
+    axiom eigen_order2 : lam2 ≥ lam3
+    axiom trace_free : plus(lam1, plus(lam2, lam3)) = 0
+
+    axiom decomposed_stretching : S = times(Omega, plus(times(lam1, alpha1), plus(times(lam2, alpha2), times(lam3, alpha3))))
+
+    axiom lam1_bound : times(lam1, lam1) ≤ times(Omega, P)
+
+    // NO alignment depletion (α₁ unconstrained)
+    // Biaxial strain ONLY
+    axiom biaxial : lam2 ≤ 0
+
+    axiom poincare : P ≥ Omega
+    axiom enstrophy_eq : dOmega_dt = plus(S, negate(times(2, P)))
+    axiom large_omega : Omega > 10
+    axiom growth : dOmega_dt > 0
+}
+
+example "D9: λ₂≤0 alone + growth (expect SAT — insufficient)" {
+    assert(dOmega_dt > 0)
+}

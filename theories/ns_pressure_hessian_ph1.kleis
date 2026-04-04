@@ -1,0 +1,41 @@
+// PH1: Sign lemma — W² contribution is always depleting
+//
+// R_e^{W²} = -|ω|² α₁ α₂ / (2(λ₁-λ₂))  [j=2 term only for simplicity]
+//
+// Claim: R_e^{W²} ≥ 0 contradicts the constraints.
+// Expect: UNSAT (i.e., R_e^{W²} is always negative)
+
+import "stdlib/prelude.kleis"
+
+structure W2_Sign_Lemma {
+    element alpha1 : ℝ
+    element alpha2 : ℝ
+    element lambda1 : ℝ
+    element lambda2 : ℝ
+    element omega_sq : ℝ
+    element gap : ℝ
+    element numerator : ℝ
+    element Re_W : ℝ
+
+    axiom positive_alpha1 : alpha1 > 0
+    axiom positive_alpha2 : alpha2 > 0
+    axiom alpha_bound : plus(alpha1, alpha2) ≤ 1
+    axiom eigenvalue_ordering : lambda1 > lambda2
+    axiom positive_enstrophy : omega_sq > 0
+
+    axiom gap_def : gap = minus(lambda1, lambda2)
+    axiom gap_pos : gap > 0
+    axiom num_def : numerator = times(omega_sq, times(alpha1, alpha2))
+    axiom num_pos : numerator > 0
+
+    // R_e^{W²} = -numerator / (2·gap)
+    // Equivalently: R_e^{W²} · 2 · gap = -numerator
+    axiom ReW_relation : times(Re_W, times(2, gap)) = negate(numerator)
+
+    // Claim: R_e^{W²} ≥ 0
+    axiom claim_nonneg : Re_W ≥ 0
+}
+
+example "PH1: W² eigenframe rotation is always depleting (expect UNSAT)" {
+    assert(Re_W ≥ 0)
+}

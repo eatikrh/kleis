@@ -1,0 +1,90 @@
+// =============================================================================
+// Burgers Vortex: Source Term g(r) and Sign Structure
+// =============================================================================
+//
+// The Burgers vortex is an exact steady-state solution of Navier-Stokes:
+//   v_r = -γr/2,  v_θ = (Γ/2πr)(1 - e^(-r²/σ²)),  v_z = γz
+//   σ² = 4ν/γ  (core radius),  ω₀ = Γγ/(4πν) = Γ/(πσ²)  (peak vorticity)
+//   Re = Γ/(2πν)  (vortex Reynolds number)
+//
+// Source term for pressure Hessian:
+//   g(r) = |S|² - (1/2)|ω|²
+//
+// In dimensionless form (η = r²/σ²):
+//   g/ω₀² = 6/Re² + h(η)²/(2η²) - (1/2)e^(-2η)
+//   where h(η) = (η+1)e^(-η) - 1
+//
+// Key result: g < 0 inside the tube (enstrophy dominates)
+//             g > 0 outside the tube (shear strain dominates)
+//
+// =============================================================================
+
+define Re = 100.0
+define gamma_over_omega0 = divide(2, Re)
+
+// h(η) = (η+1)e^(-η) - 1  (controls the swirl shear S_rθ)
+define h(eta) = minus(times(plus(eta, 1), exp(negate(eta))), 1)
+
+// S_rθ/ω₀ = (1/2)|h(η)|/η  (at η > 0)
+define S_rtheta_norm(eta) = divide(abs(h(eta)), times(2, eta))
+
+// Dimensionless source: g/ω₀²
+// = 6/Re² + h²/(2η²) - (1/2)e^{-2η}
+define g_norm(eta) =
+    plus(plus(divide(6, times(Re, Re)),
+              divide(times(h(eta), h(eta)), times(2, times(eta, eta)))),
+         negate(divide(exp(times(negate(2), eta)), 2)))
+
+// Evaluate at representative radii
+define eta_vals = [0.01, 0.1, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0, 5.0]
+
+example "BV1: source term g(η) sign structure" {
+    let results = list_map(lambda eta .
+        format("  η={:.2}  r/σ={:.3}  g/ω₀²={:.5}  sign={}",
+            eta, sqrt(eta), g_norm(eta),
+            if less(g_norm(eta), 0) then "NEGATIVE (enstrophy)" else "POSITIVE (strain)"),
+        eta_vals) in
+    out("Burgers vortex source term g = |S|² - (1/2)|ω|²:");
+    list_map(lambda s . out(s), results);
+    out("")
+}
+
+// Crossover: find η where g changes sign
+// From analytical calculation: crossover ≈ η = 1.2-1.4
+example "BV2: crossover region" {
+    let g_1p2 = g_norm(1.2) in
+    let g_1p3 = g_norm(1.3) in
+    let g_1p4 = g_norm(1.4) in
+    out(format("g(η=1.2)/ω₀² = {:.6}  ({})", g_1p2, if less(g_1p2, 0) then "neg" else "pos"));
+    out(format("g(η=1.3)/ω₀² = {:.6}  ({})", g_1p3, if less(g_1p3, 0) then "neg" else "pos"));
+    out(format("g(η=1.4)/ω₀² = {:.6}  ({})", g_1p4, if less(g_1p4, 0) then "neg" else "pos"))
+}
+
+// Peak vorticity vs background strain
+example "BV3: scale comparison" {
+    let ratio = divide(1, times(gamma_over_omega0, gamma_over_omega0)) in
+    out(format("Re = {}, γ/ω₀ = {:.4}, (ω₀/γ)² = {:.0}", Re, gamma_over_omega0, ratio));
+    out(format("g(0)/ω₀² ≈ -1/2 = {:.4}", negate(0.5)));
+    out(format("g(∞)/ω₀² ≈ 6/Re² = {:.6}", divide(6, times(Re, Re))));
+    out("Peak enstrophy exceeds background strain by factor ~(ω₀/γ)² = (Re/2)²")
+}
+
+// Symmetry argument for Q = 0
+example "BV4: axisymmetric Q = 0 verification (structural)" {
+    out("THEOREM: Q = e₂·H_tf·e₁ = 0 in any axisymmetric flow with axial vorticity.");
+    out("");
+    out("Proof: For axisymmetric flow about ẑ, the pressure p(r,z) depends only on r and z.");
+    out("The Hessian H_ij is diagonal in cylindrical coordinates: H_rθ = H_θz = 0.");
+    out("The trace-free part inherits this symmetry: (H_tf)_rθ = (H_tf)_θz = 0.");
+    out("");
+    out("Case 1 (center, r=0): Strain eigenvalues λ₁=γ (ẑ), λ₂=λ₃=-γ/2 (degenerate).");
+    out("  ω = ω₀ẑ = e₁ direction. α₁=1, α₂=0. R_e^(H) = 0 regardless of Q.");
+    out("");
+    out("Case 2 (r~σ, high Re): Swirl lifts degeneracy. λ₁=-γ/2+|S_rθ| (in r-θ plane),");
+    out("  λ₂=γ (ẑ), λ₃=-γ/2-|S_rθ|. Eigenvectors: e₁∝r̂±θ̂, e₂=ẑ, e₃∝r̂∓θ̂.");
+    out("  Q = ẑ·H_tf·(r̂±θ̂)/√2 = [(H_tf)_rz ± (H_tf)_θz]/√2 = 0. □");
+    out("");
+    out("COROLLARY: The pressure Hessian does NOT generate depletion in the");
+    out("  pure Burgers vortex. Sign of Q in turbulence must arise from");
+    out("  DEVIATIONS from axisymmetry: tube bending, ellipticity, or interactions.")
+}

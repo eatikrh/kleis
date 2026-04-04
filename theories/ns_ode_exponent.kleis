@@ -1,0 +1,77 @@
+// =============================================================================
+// Numerical demonstration: the exponent threshold in enstrophy dynamics
+// =============================================================================
+//
+// We simulate the enstrophy ODE under different stretching closures:
+//
+//   dOmega/dt = S(Omega) - 2*nu*P(Omega)
+//
+// With the minimal Poincare closure P = Omega, the stretching bound
+// S^2 <= Omega^a * P^b = Omega^{a+b} gives S <= Omega^{(a+b)/2}.
+//
+//   Standard (a+b=4): dOmega/dt = Omega^2 - 2*nu*Omega  -> blow-up
+//   Half-gap (a+b=3): dOmega/dt = Omega^{3/2} - 2*nu*Omega -> blow-up (slower)
+//   Alignment (a+b=2): dOmega/dt = Omega - 2*nu*Omega     -> decay (nu >= 1/2)
+
+define nu_val = 1.0
+define omega_init = 10.0
+
+define get_t(pt) = nth(pt, 0)
+define get_om(pt) = nth(nth(pt, 1), 0)
+
+example "exponent threshold simulation" {
+    // Standard closure: a+b = 4, S = Omega^2
+    let f_std = lambda t y .
+        let om = nth(y, 0) in
+        [minus(times(om, om), times(times(2, nu_val), om))]
+    in
+
+    // Half-gap closure: a+b = 3, S = Omega^{3/2}
+    let f_half = lambda t y .
+        let om = nth(y, 0) in
+        [minus(times(sqrt(om), om), times(times(2, nu_val), om))]
+    in
+
+    // Alignment closure: a+b = 2, S = Omega
+    let f_align = lambda t y .
+        let om = nth(y, 0) in
+        [minus(om, times(times(2, nu_val), om))]
+    in
+
+    let traj_std = ode45(f_std, [omega_init], [0, 0.1], 0.001) in
+    let traj_half = ode45(f_half, [omega_init], [0, 0.5], 0.001) in
+    let traj_align = ode45(f_align, [omega_init], [0, 2.0], 0.01) in
+
+    let t_std = list_map(lambda p . get_t(p), traj_std) in
+    let om_std = list_map(lambda p . get_om(p), traj_std) in
+
+    let t_half = list_map(lambda p . get_t(p), traj_half) in
+    let om_half = list_map(lambda p . get_om(p), traj_half) in
+
+    let t_align = list_map(lambda p . get_t(p), traj_align) in
+    let om_align = list_map(lambda p . get_om(p), traj_align) in
+
+    let final_std = nth(om_std, minus(length(om_std), 1)) in
+    let final_half = nth(om_half, minus(length(om_half), 1)) in
+    let final_align = nth(om_align, minus(length(om_align), 1)) in
+
+    out("Enstrophy dynamics under different closures (nu = 1, Omega_0 = 10):")
+    out("")
+    out("Standard (a+b=4) at t=0.1:  Omega =")
+    out(final_std)
+    out("Half-gap (a+b=3) at t=0.5:  Omega =")
+    out(final_half)
+    out("Alignment (a+b=2) at t=2.0: Omega =")
+    out(final_align)
+
+    diagram(
+        plot(t_align, om_align, color = "blue", label = "a+b=2 (alignment)"),
+        plot(t_half, om_half, color = "orange", label = "a+b=3 (half-gap)"),
+        plot(t_std, om_std, color = "red", label = "a+b=4 (standard)"),
+        title = "Enstrophy dynamics: exponent threshold (nu=1)",
+        xlabel = "t",
+        ylabel = "Omega(t)",
+        width = 16,
+        height = 10
+    )
+}

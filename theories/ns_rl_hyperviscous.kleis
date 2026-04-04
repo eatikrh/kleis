@@ -1,0 +1,57 @@
+// NS + Riemann-Liouville Test D: Hyperviscous Control (α = 5/4)
+//
+// Lions (1969): with -ν(-Δ)^{5/4}, solutions are globally smooth.
+//
+// THE MECHANISM (why α=5/4 closes the gap):
+//
+//   Standard NS (α=1):
+//     Dissipation provides P (H² norm).
+//     Sobolev needs H^{3/2} for ||∇v||_∞.
+//     H^{3/2} sits BETWEEN Ω (H¹) and P (H²) — NOT controlled!
+//
+//   Hyperviscous (α=5/4):
+//     Dissipation provides P54 (H^{5/2} norm).
+//     Sobolev: H^{5/2} ↪ L^∞(∇v) in 3D (since 5/2 > 3/2 = d/2).
+//     So ||∇v||²_∞ ≤ C · P54. Dissipation CONTROLS the stretching.
+//
+// The axiom that differs:
+//   α=1:   grad_v_inf ≤ H32 (H32 not controlled by dissipation)
+//   α=5/4: grad_v_inf² ≤ P54 (P54 IS the dissipation!)
+//
+// This lets us absorb S into 2ν·P54 via Young's inequality.
+
+structure NS_Hyper_Lions {
+    element Omega : ℝ
+    element P54 : ℝ
+    element S : ℝ
+    element grad_v_inf : ℝ
+    element dOmega_dt : ℝ
+
+    axiom Omega_pos : Omega > 0
+    axiom P54_pos : P54 > 0
+    axiom S_nonneg : S ≥ 0
+    axiom grad_nonneg : grad_v_inf ≥ 0
+
+    // enstrophy eq with ν=1: dΩ/dt = S - 2·P54
+    axiom enstrophy_eq : dOmega_dt = plus(S, negate(times(2, P54)))
+
+    // Stretching bound
+    axiom stretching : S ≤ times(grad_v_inf, Omega)
+
+    // THE KEY AXIOM (α=5/4): Sobolev from H^{5/2} → L^∞(∇v)
+    // grad_v_inf² ≤ P54
+    axiom sobolev_hyper : times(grad_v_inf, grad_v_inf) ≤ P54
+
+    // Hyperviscous Poincaré: P54 ≥ Ω²
+    axiom hyper_poincare : P54 ≥ times(Omega, Omega)
+
+    // Large enstrophy
+    axiom large_omega : Omega > 10
+
+    // TEST: can growth happen? (expect UNSAT)
+    axiom growth : dOmega_dt > 0
+}
+
+example "Hyper α=5/4 with Sobolev: growth possible? (expect UNSAT)" {
+    assert(dOmega_dt > 0)
+}

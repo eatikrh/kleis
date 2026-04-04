@@ -1,0 +1,86 @@
+// =============================================================================
+// Depletion Boundedness Theorem — Formal Verification
+// =============================================================================
+//
+// THEOREM: Let (Ω(t), α₁(t)) satisfy:
+//   dΩ/dt = Ω²α₁ - 2νΩ
+//   dα₁/dt = -κα₁Ω
+// with Ω(0) = Ω₀ > 0, α₁(0) = α₀ > 0, ν > 0, κ > 0. Then:
+//
+//   1. Ω(t) ≤ Ω₀ · exp(α₀/κ) for all t ≥ 0
+//   2. Ω(t) → 0 as t → ∞
+//   3. There is no finite-time blow-up
+//
+// PROOF (analytic):
+//   ln(Ω(t)/Ω₀) = ∫₀ᵗ (Ωα₁ - 2ν) ds
+//
+//   ∫₀ᵗ Ωα₁ ds = α₀ ∫₀ᵗ Ω exp(-κ∫₀ˢΩ dr) ds
+//                = α₀ ∫₀ᵗ F'(s) exp(-κF(s)) ds     [F(s) = ∫₀ˢΩ dr]
+//                = (α₀/κ)(1 - exp(-κF(t)))
+//                ≤ α₀/κ
+//
+//   Therefore: ln(Ω(t)/Ω₀) ≤ α₀/κ - 2νt
+//   Hence:     Ω(t) ≤ Ω₀ · exp(α₀/κ - 2νt) → 0
+//
+// This means: ANY positive depletion rate prevents finite-time blow-up.
+// The transient peak Ω_max ≤ Ω₀·exp(α₀/κ) grows exponentially in 1/κ.
+//
+// CONNECTION TO Z3 RESULTS:
+//   D7 proved: α₁·Ω ≤ 1 AND λ₂ ≤ 0 → blow-up impossible (UNSAT)
+//   This theorem proves: with biaxial (λ₂ ≤ 0) and dynamic depletion
+//   (dα₁/dt = -κα₁Ω, any κ > 0), blow-up is always prevented.
+//
+// =============================================================================
+
+// Verify: the ODE model with dynamic depletion gives bounded Ω
+
+define nu = 1.0
+define get_t(pt) = nth(pt, 0)
+define get_om(pt) = nth(nth(pt, 1), 0)
+define get_alpha(pt) = nth(nth(pt, 1), 1)
+
+define make_depl_ode(kappa) = lambda t y .
+    let om = nth(y, 0) in
+    let a1 = nth(y, 1) in
+    [minus(times(times(om, om), a1), times(times(2, nu), om)),
+     negate(times(times(kappa, a1), om))]
+
+// Test 1: Verify Ω_max bound for κ=0.5
+// Predicted: Ω_max ≤ 50·exp(0.8/0.5) = 50·exp(1.6) ≈ 247
+define traj_05 = ode45(make_depl_ode(0.5), [50, 0.8], [0, 5.0], 0.01)
+
+// Test 2: Verify Ω_max bound for κ=0.1
+// Predicted: Ω_max ≤ 50·exp(0.8/0.1) = 50·exp(8) ≈ 149,000
+define traj_01 = ode45(make_depl_ode(0.1), [50, 0.8], [0, 5.0], 0.01)
+
+// Test 3: Verify asymptotic decay (t large enough)
+define traj_decay = ode45(make_depl_ode(0.5), [50, 0.8], [0, 10.0], 0.01)
+
+// Test 4: Different initial conditions — Ω₀ = 1000, α₀ = 0.9, κ = 0.5
+// Predicted: Ω_max ≤ 1000·exp(0.9/0.5) = 1000·exp(1.8) ≈ 6050
+define traj_large = ode45(make_depl_ode(0.5), [1000, 0.9], [0, 5.0], 0.01)
+
+example "Depletion boundedness: κ=0.5, Ω₀=50" {
+    let last = nth(traj_05, minus(length(traj_05), 1)) in
+    out(last)
+
+    // Find maximum Ω in trajectory
+    let oms = list_map(lambda p . get_om(p), traj_05) in
+    let max_om = list_foldl(lambda acc x . if greater_than(x, acc) then x else acc, 0, oms) in
+    out(max_om)
+}
+
+example "Depletion boundedness: κ=0.1, Ω₀=50" {
+    let last = nth(traj_01, minus(length(traj_01), 1)) in
+    out(last)
+}
+
+example "Asymptotic decay: κ=0.5 to t=10" {
+    let last = nth(traj_decay, minus(length(traj_decay), 1)) in
+    out(last)
+}
+
+example "Large initial: Ω₀=1000, κ=0.5" {
+    let last = nth(traj_large, minus(length(traj_large), 1)) in
+    out(last)
+}

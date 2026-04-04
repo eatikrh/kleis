@@ -1,0 +1,29 @@
+// =============================================================================
+// Depletion Tests — What Geometric Control Actually Closes the Gap?
+// =============================================================================
+//
+// FINDING FROM ns_alignment_weights.kleis:
+//   Bounding α₁ alone is INSUFFICIENT. Even with α₁ ≤ 1/Ω (strong depletion),
+//   Z3 finds blow-up scenarios. Why? Because the intermediate eigenvalue λ₂ can
+//   be positive, and vorticity aligned with e₂ still gets stretched.
+//
+// ANALYSIS:
+//   S = Ω · σ_eff  where σ_eff = λ₁α₁ + λ₂α₂ + λ₃α₃
+//   Worst case:    σ_eff ≤ λ₁ ≤ √(Ω·P)   →  S² ≤ Ω³·P  (a+b=4)
+//   Intermediate:  σ_eff ≤ λ₂ ≤ √(Ω·P)   →  S² ≤ Ω³·P  (same!)
+//
+//   So controlling α₁ but not σ_eff doesn't reduce the exponent sum.
+//   The real question: what bound on σ_eff closes the gap?
+//
+// Paper 1 showed: S² ≤ Ω·P (i.e., σ_eff² ≤ 1/Ω) gives UNSAT.
+// That's a+b = 2. We need to find what geometric conditions imply it.
+//
+// TESTS ARE IN SEPARATE FILES (Kleis loads all structures per file):
+//   ns_depletion_d1.kleis — σ_eff² ≤ P/Ω (a+b=2, expect UNSAT)
+//   ns_depletion_d2.kleis — σ_eff² ≤ P   (a+b=3, expect SAT)
+//   ns_depletion_d3.kleis — σ_eff² ≤ P/√Ω (a+b=5/2, expect ?)
+//   ns_depletion_d4.kleis — combined α₁+biaxial (expect UNSAT?)
+//   ns_depletion_d5.kleis — isotropic (expect UNSAT)
+//   ns_depletion_d6.kleis — exponent scan a+b = 2.5, 2.25, 2.1, 2.0
+//
+// Run all: for f in theories/ns_depletion_d*.kleis; do kleis test "$f"; done

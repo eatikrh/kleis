@@ -1,0 +1,51 @@
+// ============================================================================
+// Cauchy-Green in 2D: Control test
+//
+// In 2D, the deformation tensor has det(C) = 1 with TWO eigenvalues:
+//   λ₁ · λ₂ = 1
+//
+// Vorticity is a SCALAR in 2D (ω = ∂v₁/∂x₂ - ∂v₂/∂x₁)
+// and is TRANSPORTED (not stretched):
+//   Dω/Dt = ν·Δω (no stretching term!)
+//
+// Cauchy's formula in 2D: ω(t) = ω(0) (vorticity magnitude preserved)
+//
+// The metric can stretch (λ₁ → ∞, λ₂ → 0) but vorticity
+// doesn't grow because there's no vortex stretching.
+// The metric deformation is "invisible" to the scalar vorticity.
+//
+// In 3D: ω is a VECTOR, and the metric stretching AMPLIFIES
+// the component of ω aligned with the stretching direction.
+// This is the fundamental difference.
+// ============================================================================
+
+structure CauchyGreen_2D {
+    element lambda1 : ℝ
+    element lambda2 : ℝ
+    element omega : ℝ      // scalar vorticity in 2D
+    element Omega : ℝ
+    element P : ℝ
+    element nu : ℝ
+    element dOmega_dt : ℝ
+
+    axiom l1_pos : lambda1 > 0
+    axiom l2_pos : lambda2 > 0
+
+    // 2D incompressibility: λ₁ · λ₂ = 1
+    axiom volume_2d : times(lambda1, lambda2) = 1
+
+    // 2D: no stretching (S = 0)
+    axiom no_stretching : dOmega_dt = negate(times(times(2, nu), P))
+
+    axiom nu_pos : nu > 0
+    axiom Omega_pos : Omega > 0
+    axiom P_pos : P > 0
+    axiom poincare : P ≥ Omega
+
+    // TEST: can enstrophy grow? (expect UNSAT)
+    axiom growth : dOmega_dt > 0
+}
+
+example "2D Cauchy-Green: growth possible? (expect UNSAT)" {
+    assert(dOmega_dt > 0)
+}

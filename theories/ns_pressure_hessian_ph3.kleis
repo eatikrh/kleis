@@ -1,0 +1,40 @@
+// PH3: With depleting H_tf (c_H ≥ 1) plus W² depletion, net alignment impossible
+//
+// Using auxiliary variables to help Z3 with nonlinear arithmetic.
+// R_ξ = 2λ₁ u where u = α₁(1-α₁) and √u ≤ 1/2
+// R_e^{W²} = -(λ₁/2)·u  [scalar model, δ=1]
+// R_e^{H} ≤ -λ₁·√u      [c_H = 1]
+//
+// Net = λ₁[2u - u/2 - √u] = λ₁[(3/2)u - √u]
+//     = λ₁·√u·[(3/2)√u - 1]
+// Since √u ≤ 1/2: (3/2)(1/2) - 1 = -1/4 < 0
+// So net ≤ 0 for all valid α₁.
+// Expect: UNSAT
+
+import "stdlib/prelude.kleis"
+
+structure Depleting_PH_Scalar {
+    element lambda1 : ℝ
+    element u : ℝ
+    element su : ℝ
+    element R_xi : ℝ
+    element Re_W : ℝ
+    element Re_H : ℝ
+
+    axiom pos_lambda : lambda1 > 0
+    axiom pos_u : u > 0
+    axiom bound_u : u ≤ 0.25
+    axiom su_def : times(su, su) = u
+    axiom su_pos : su > 0
+    axiom su_bound : su ≤ 0.5
+
+    axiom Rxi_def : R_xi = times(times(2, lambda1), u)
+    axiom ReW_def : Re_W = negate(times(times(0.5, lambda1), u))
+    axiom ReH_bound : Re_H ≤ negate(times(lambda1, su))
+
+    axiom growth : plus(plus(R_xi, Re_W), Re_H) ≥ 0
+}
+
+example "PH3: Depleting H_tf c_H=1 + W² in scalar model (expect UNSAT)" {
+    assert(plus(plus(R_xi, Re_W), Re_H) ≥ 0)
+}

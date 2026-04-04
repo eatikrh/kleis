@@ -1,0 +1,90 @@
+// =============================================================================
+// ODE: Explicit Rξ and Re in the α₁ Evolution
+// =============================================================================
+//
+// DERIVED FROM NS KINEMATICS:
+//   dα₁/dt = Rξ + Re
+//   Rξ = 2α₁(λ₁ - σ_eff) ≈ 2Ω·α₁·(1-α₁)  [biaxial, λ₁ ~ Ω]
+//   Rξ > 0 ALWAYS — inviscid vorticity rotation drives alignment toward e₁
+//   Re must be negative and dominant for net depletion
+//
+// System: dΩ/dt = Ω²α₁ - 2νΩ, dα₁/dt = 2Ωα₁(1-α₁) + Re
+//
+// Critical eigenframe depletion coefficient c*:
+//   Re = -cΩα₁ yields net dα₁/dt = Ωα₁[2(1-α₁) - c]
+//   c > 2 → dα₁/dt < 0 always → bounded
+//   c < 2 → equilibrium α₁* = 1 - c/2 > 0 → blow-up
+
+define nu = 1.0
+define Omega0 = 50.0
+define alpha0 = 0.8
+
+define get_t(pt) = nth(pt, 0)
+define get_om(pt) = nth(nth(pt, 1), 0)
+define get_alpha(pt) = nth(nth(pt, 1), 1)
+
+// G1: Re = 0 (no eigenframe rotation, pure alignment source)
+// dα₁/dt = 2Ωα₁(1-α₁) → α₁ → 1 → blow-up
+define traj_g1 = ode45(
+    lambda t y .
+        let om = nth(y, 0) in let a1 = nth(y, 1) in
+        [minus(times(times(om, om), a1), times(times(2, nu), om)),
+         times(times(2, om), times(a1, minus(1, a1)))],
+    [Omega0, alpha0], [0, 0.015], 0.00005)
+
+// G2: Re = -3Ωα₁ (strong eigenframe depletion, c=3 > 2)
+// dα₁/dt = Ωα₁[2(1-α₁) - 3] = Ωα₁[-1 - 2α₁] < 0 always → bounded
+define traj_g2 = ode45(
+    lambda t y .
+        let om = nth(y, 0) in let a1 = nth(y, 1) in
+        [minus(times(times(om, om), a1), times(times(2, nu), om)),
+         plus(times(times(2, om), times(a1, minus(1, a1))),
+              negate(times(times(3, om), a1)))],
+    [Omega0, alpha0], [0, 5.0], 0.01)
+
+// G3: Re = -1.5Ωα₁ (weak eigenframe depletion, c=1.5 < 2)
+// dα₁/dt = Ωα₁[0.5 - 2α₁], equilibrium α₁* = 0.25 → blow-up
+define traj_g3 = ode45(
+    lambda t y .
+        let om = nth(y, 0) in let a1 = nth(y, 1) in
+        [minus(times(times(om, om), a1), times(times(2, nu), om)),
+         plus(times(times(2, om), times(a1, minus(1, a1))),
+              negate(times(times(1.5, om), a1)))],
+    [Omega0, alpha0], [0, 0.035], 0.0001)
+
+// G4: Re = -2Ωα₁ (critical c=2)
+// dα₁/dt = 2Ωα₁(1-α₁) - 2Ωα₁ = -2Ωα₁² → nonlinear depletion
+define traj_g4 = ode45(
+    lambda t y .
+        let om = nth(y, 0) in let a1 = nth(y, 1) in
+        [minus(times(times(om, om), a1), times(times(2, nu), om)),
+         plus(times(times(2, om), times(a1, minus(1, a1))),
+              negate(times(times(2, om), a1)))],
+    [Omega0, alpha0], [0, 5.0], 0.01)
+
+// G5: Re = -3√Ω·α₁ (sub-linear eigenframe)
+// For large Ω: Rξ ~ 2Ωα₁ >> |Re| ~ 3√Ω·α₁ → blow-up
+define traj_g5 = ode45(
+    lambda t y .
+        let om = nth(y, 0) in let a1 = nth(y, 1) in
+        [minus(times(times(om, om), a1), times(times(2, nu), om)),
+         plus(times(times(2, om), times(a1, minus(1, a1))),
+              negate(times(times(3, sqrt(om)), a1)))],
+    [Omega0, alpha0], [0, 0.015], 0.00005)
+
+example "Rξ + Re decomposition" {
+    let g1_last = nth(traj_g1, minus(length(traj_g1), 1)) in
+    out("G1 Re=0:       t=" + to_string(get_t(g1_last)) + " Om=" + to_string(get_om(g1_last)) + " a1=" + to_string(get_alpha(g1_last)))
+
+    let g2_last = nth(traj_g2, minus(length(traj_g2), 1)) in
+    out("G2 c=3:        t=" + to_string(get_t(g2_last)) + " Om=" + to_string(get_om(g2_last)) + " a1=" + to_string(get_alpha(g2_last)))
+
+    let g3_last = nth(traj_g3, minus(length(traj_g3), 1)) in
+    out("G3 c=1.5:      t=" + to_string(get_t(g3_last)) + " Om=" + to_string(get_om(g3_last)) + " a1=" + to_string(get_alpha(g3_last)))
+
+    let g4_last = nth(traj_g4, minus(length(traj_g4), 1)) in
+    out("G4 c=2 crit:   t=" + to_string(get_t(g4_last)) + " Om=" + to_string(get_om(g4_last)) + " a1=" + to_string(get_alpha(g4_last)))
+
+    let g5_last = nth(traj_g5, minus(length(traj_g5), 1)) in
+    out("G5 sublinear:  t=" + to_string(get_t(g5_last)) + " Om=" + to_string(get_om(g5_last)) + " a1=" + to_string(get_alpha(g5_last)))
+}

@@ -1,0 +1,81 @@
+// =============================================================================
+// ODE Simulation: Evolution Constraints with Regeneration Sources
+// =============================================================================
+//
+// System (biaxial closure, λ₁ ~ Ω, P ~ Ω):
+//   dΩ/dt = Ω²·α₁ - 2ν·Ω
+//   dα₁/dt = -κ·Ω·α₁ + R₁(Ω, α₁)
+//
+// KEY QUESTION: Which regeneration sources are compatible with regularity?
+//
+// Cases:
+//   F1: R₁ = 0 (pure depletion) → bounded
+//   F2: R₁ = η·Ω·α₁ (proportional, η < κ) → bounded (same theorem)
+//   F3: R₁ = r·Ω·(1-α₁) (alignment diffusion) → BLOW-UP
+//   F4: R₁ = r·√Ω·(1-α₁) (sub-linear diffusion) → bounded
+//
+// Use κ = 0.5 and Ω₀ = 50 for manageable numerics.
+
+define nu = 1.0
+define Omega0 = 50.0
+define alpha0 = 0.8
+define kappa = 0.5
+
+define get_t(pt) = nth(pt, 0)
+define get_om(pt) = nth(nth(pt, 1), 0)
+define get_alpha(pt) = nth(nth(pt, 1), 1)
+
+// F1: Pure depletion (κ = 0.5, no regeneration)
+// Ω_max ≈ Ω₀·exp(α₀/κ) = 50·exp(1.6) ≈ 248
+define ode_pure = lambda t y .
+    let om = nth(y, 0) in let a1 = nth(y, 1) in
+    [minus(times(times(om, om), a1), times(times(2, nu), om)),
+     negate(times(times(kappa, a1), om))]
+
+define traj_f1 = ode45(ode_pure, [Omega0, alpha0], [0, 5.0], 0.01)
+
+// F2: Proportional regeneration R₁ = η·Ω·α₁, η = 0.2
+// κ_net = 0.5 - 0.2 = 0.3, Ω_max ≈ 50·exp(0.8/0.3) ≈ 720
+define eta = 0.2
+define ode_proportional = lambda t y .
+    let om = nth(y, 0) in let a1 = nth(y, 1) in
+    [minus(times(times(om, om), a1), times(times(2, nu), om)),
+     plus(negate(times(times(kappa, a1), om)), times(times(eta, om), a1))]
+
+define traj_f2 = ode45(ode_proportional, [Omega0, alpha0], [0, 5.0], 0.01)
+
+// F3: Alignment diffusion R₁ = r·Ω·(1-α₁), r = 0.05
+// Equilibrium: α₁* = r/(κ+r) = 0.05/0.55 ≈ 0.091
+// At equilibrium: dΩ/dt ≈ 0.091·Ω² - 2Ω → blow-up when Ω > 22
+// Since Ω₀ = 50 > 22, blow-up is immediate
+define r_diff = 0.05
+define ode_diffusion = lambda t y .
+    let om = nth(y, 0) in let a1 = nth(y, 1) in
+    [minus(times(times(om, om), a1), times(times(2, nu), om)),
+     plus(negate(times(times(kappa, a1), om)), times(times(r_diff, om), minus(1, a1)))]
+
+define traj_f3 = ode45(ode_diffusion, [Omega0, alpha0], [0, 0.025], 0.00005)
+
+// F4: Sub-linear diffusion R₁ = r·√Ω·(1-α₁), r = 0.05
+// R₁/(κΩα₁) = r(1-α₁)/(κα₁√Ω) → 0 as Ω → ∞
+// So depletion dominates at high Ω → bounded
+define ode_sublinear = lambda t y .
+    let om = nth(y, 0) in let a1 = nth(y, 1) in
+    [minus(times(times(om, om), a1), times(times(2, nu), om)),
+     plus(negate(times(times(kappa, a1), om)), times(times(r_diff, sqrt(om)), minus(1, a1)))]
+
+define traj_f4 = ode45(ode_sublinear, [Omega0, alpha0], [0, 5.0], 0.01)
+
+example "Evolution with regeneration sources" {
+    let f1_last = nth(traj_f1, minus(length(traj_f1), 1)) in
+    out("F1 pure:     t=" + to_string(get_t(f1_last)) + " Om=" + to_string(get_om(f1_last)) + " a1=" + to_string(get_alpha(f1_last)))
+
+    let f2_last = nth(traj_f2, minus(length(traj_f2), 1)) in
+    out("F2 proport:  t=" + to_string(get_t(f2_last)) + " Om=" + to_string(get_om(f2_last)) + " a1=" + to_string(get_alpha(f2_last)))
+
+    let f3_last = nth(traj_f3, minus(length(traj_f3), 1)) in
+    out("F3 diffuse:  t=" + to_string(get_t(f3_last)) + " Om=" + to_string(get_om(f3_last)) + " a1=" + to_string(get_alpha(f3_last)))
+
+    let f4_last = nth(traj_f4, minus(length(traj_f4), 1)) in
+    out("F4 sublin:   t=" + to_string(get_t(f4_last)) + " Om=" + to_string(get_om(f4_last)) + " a1=" + to_string(get_alpha(f4_last)))
+}

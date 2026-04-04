@@ -1,0 +1,92 @@
+// =============================================================================
+// Restricted Euler Control Case
+// =============================================================================
+//
+// Demonstrates that Q = 0 (restricted Euler / no anisotropic pressure Hessian)
+// is insufficient to prevent blow-up, even with W² eigenframe depletion.
+//
+// Uses the paper's reduced ODE model:
+//   dΩ/dt = Ω²·α₁ - 2ν·Ω
+//   dα₁/dt = 2Ω·α₁·(1-α₁) - c·Ω·α₁
+//
+// Mapping to the three-component model:
+//   Restricted Euler has Re = Re^(W²) only (no pressure Hessian).
+//   Re^(W²) ~ -Ω·α₁·(1-α₁)/(2δ), effectively c ~ (1-α₁)/(2δ) ≈ 0.25-0.5
+//   Far below critical threshold c* = 2.
+//
+// =============================================================================
+
+define nu = 1.0
+define Omega0 = 50.0
+define alpha0 = 0.8
+
+define get_t(pt) = nth(pt, 0)
+define get_om(pt) = nth(nth(pt, 1), 0)
+define get_alpha(pt) = nth(nth(pt, 1), 1)
+
+// RE0: No eigenframe rotation at all (c = 0)
+// Baseline: pure Rξ drives alignment → rapid blow-up
+define traj_none = ode45(
+    lambda t y .
+        let om = nth(y, 0) in let a1 = nth(y, 1) in
+        [minus(times(times(om, om), a1), times(times(2, nu), om)),
+         times(times(2, om), times(a1, minus(1, a1)))],
+    [Omega0, alpha0], [0, 0.008], 0.00002)
+
+// RE1: Restricted Euler (c = 0.5, approximate W²-only depletion)
+// W² provides ~25% cancellation but far from threshold c* = 2
+define traj_re = ode45(
+    lambda t y .
+        let om = nth(y, 0) in let a1 = nth(y, 1) in
+        [minus(times(times(om, om), a1), times(times(2, nu), om)),
+         plus(times(times(2, om), times(a1, minus(1, a1))),
+              negate(times(times(0.5, om), a1)))],
+    [Omega0, alpha0], [0, 0.015], 0.00005)
+
+// RE2: With pressure Hessian (c = 2, critical threshold)
+define traj_critical = ode45(
+    lambda t y .
+        let om = nth(y, 0) in let a1 = nth(y, 1) in
+        [minus(times(times(om, om), a1), times(times(2, nu), om)),
+         plus(times(times(2, om), times(a1, minus(1, a1))),
+              negate(times(times(2, om), a1)))],
+    [Omega0, alpha0], [0, 5.0], 0.01)
+
+// RE3: Above threshold (c = 3)
+define traj_above = ode45(
+    lambda t y .
+        let om = nth(y, 0) in let a1 = nth(y, 1) in
+        [minus(times(times(om, om), a1), times(times(2, nu), om)),
+         plus(times(times(2, om), times(a1, minus(1, a1))),
+              negate(times(times(3, om), a1)))],
+    [Omega0, alpha0], [0, 5.0], 0.01)
+
+example "RE0: no rotation (c=0) — rapid blow-up" {
+    let oms = list_map(lambda p . get_om(p), traj_none) in
+    let final_om = nth(oms, minus(length(oms), 1)) in
+    out(format("Ω: {} → {} (×{:.1}), t_max = 0.008", Omega0, final_om, divide(final_om, Omega0)))
+}
+
+example "RE1: restricted Euler (c=0.5, W² only) — blow-up" {
+    let oms = list_map(lambda p . get_om(p), traj_re) in
+    let alphas = list_map(lambda p . get_alpha(p), traj_re) in
+    let final_om = nth(oms, minus(length(oms), 1)) in
+    let final_a = nth(alphas, minus(length(alphas), 1)) in
+    out(format("Ω: {} → {} (×{:.1}), α₁: {} → {:.3}", Omega0, final_om, divide(final_om, Omega0), alpha0, final_a))
+}
+
+example "RE2: critical threshold (c=2) — boundary" {
+    let oms = list_map(lambda p . get_om(p), traj_critical) in
+    let alphas = list_map(lambda p . get_alpha(p), traj_critical) in
+    let final_om = nth(oms, minus(length(oms), 1)) in
+    let final_a = nth(alphas, minus(length(alphas), 1)) in
+    out(format("Ω: {} → {:.3}, α₁: {} → {:.3}", Omega0, final_om, alpha0, final_a))
+}
+
+example "RE3: supercritical (c=3) — bounded" {
+    let oms = list_map(lambda p . get_om(p), traj_above) in
+    let alphas = list_map(lambda p . get_alpha(p), traj_above) in
+    let final_om = nth(oms, minus(length(oms), 1)) in
+    let final_a = nth(alphas, minus(length(alphas), 1)) in
+    out(format("Ω: {} → {:.3}, α₁: {} → {:.3}", Omega0, final_om, alpha0, final_a))
+}

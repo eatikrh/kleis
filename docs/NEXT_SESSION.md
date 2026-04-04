@@ -1,6 +1,145 @@
 # Next Session Notes
 
-**Last Updated:** April 2, 2026 (session — Volume IV: Yang-Mills Confinement paper completed)
+**Last Updated:** April 4, 2026 (session — Paper frozen as reduction paper. z-Translation Vanishing Theorem, elliptical perturbation P₂(r).)
+
+---
+
+## PAPER 1 STATUS: COMPLETE (reduction paper, ready for preprint)
+
+**File:** `examples/mathematics/ns_geometric_depletion_paper.kleis`
+**PDF:** `examples/mathematics/ns_geometric_depletion_paper.pdf`
+**Theory files:**
+- `theories/ns_burgers_vortex.kleis` (4 tests, all pass) — source term g(r)
+- `theories/ns_elliptical_perturbation.kleis` (3 tests, all pass) — P₂(r) and z-Translation Vanishing
+- `theories/ns_restricted_euler.kleis` — ODE control cases
+- `theories/ns_pressure_hessian_ph*.kleis` — Z3 threshold verification
+- `theories/ns_alignment_weights.kleis` — Z3 alignment tests
+**Status:** All tests pass. PDF compiles cleanly. Synthesis chain: 16 steps.
+
+### Paper 1 message (one sentence)
+
+The paper reduces Navier-Stokes regularity, within a geometric-alignment framework, to the time-averaged sign of a single scalar observable Q = e₂·H_tf·e₁, and proves via two vanishing theorems that this sign cannot originate from any z-translationally symmetric flow geometry.
+
+### Paper 1 complete intellectual arc
+
+1. Scalar methods fail (exponent-sum obstruction from Paper 0)
+2. Static geometric cure identified (α₁Ω ≤ C + biaxial strain)
+3. Dynamic depletion generates the static bound (Depletion Boundedness Theorem)
+4. Regeneration classified (sub-dominance criterion)
+5. Kinematic competition law: R_ξ vs R_e
+6. Thresholds quantified: c* = 2 (linear), c* = 1 (geometric), c_H* = 3/4 (effective)
+7. W² partial depletion proved sign-definite (Z3-verified, Alignment Deficit Lemma)
+8. Q = e₂·H_tf·e₁ isolated as the single load-bearing observable
+9. Restricted Euler control case: Q = 0 ⟹ blow-up (confirms H_tf essential)
+10. Conditional regularity theorem (Hypotheses G, D, S)
+11. Burgers vortex source: g(r) sign structure computed
+12. **z-Translation Vanishing Theorem**: Q = 0 for ANY z-symmetric flow
+13. Elliptical perturbation: P̃₂(r) solved exactly, restoring but Q = 0
+14. Sign of Q localized to z-dependent 3D geometry
+
+### z-Translation Vanishing Theorem (key new result)
+
+Q = 0 for any flow v(x,y,z) = v_⊥(x,y) + γz·ẑ, regardless of in-plane structure.
+Proof: block-diagonal velocity gradient → block-diagonal S and H → H_xz = H_yz = 0 → Q = 0.
+This subsumes the Axisymmetric Vanishing and eliminates ALL cross-sectional perturbations.
+
+### Elliptical perturbation P₂(r)
+
+Closed-form solution: P̃₂(u) = (2u²+1)e^{-2u²}/8 - (1-e^{-2u²})/(16u²)
+- Positive in core (u < 0.93): pressure RESISTS deformation
+- Negative outside: pressure relaxes
+- BUT Q = 0 by z-Translation Vanishing
+- Value: confirms restoring mechanism exists, but is in-plane only
+
+---
+
+## PAPER 2: Bent vortex tube (NEXT PROJECT, separate paper)
+
+### Objective
+
+Compute Q for a weakly curved vortex tube at order O(κσ). This is the first model where:
+- ∂_z v_⊥ ≠ 0
+- H_xz or H_yz can be nonzero
+- Q can be nonzero
+- The sign is physically interpretable
+
+### Approach
+
+1. Local Frenet frame around a filament with small curvature κ
+2. Biot-Savart perturbation at O(κσ): dipolar m=1 with z-dependence
+3. Solve the corresponding 3D Poisson correction
+4. Project onto strain eigenframe → extract Q
+5. Determine sign in the core
+
+### Key question
+
+Does Q < 0 for a bent tube? If yes: first model-based derivation of the sign mechanism.
+If Q = 0 again: another vanishing theorem (more exclusion).
+Either outcome is publishable.
+
+---
+
+## COMPLETED: Restricted Euler control case, routes to Q, explicit limitations
+
+**File:** `examples/mathematics/ns_geometric_depletion_paper.kleis`
+**PDF:** `examples/mathematics/ns_geometric_depletion_paper.pdf`
+**Theory:** `theories/ns_restricted_euler.kleis` (4 ODE tests, all pass)
+**Status:** All tests pass. PDF compiles cleanly.
+
+### What changed
+
+1. **Restricted Euler control case (§8.10)**: Proved that Q=0 (restricted Euler, no anisotropic pressure Hessian) leads to blow-up via the Alignment Deficit Lemma. Since dα₁/dt = (2 - 1/(2δ))λ₁α₁(1-α₁) > 0 unconditionally, alignment grows and blow-up follows. ODE verification confirms: RE1 (c_H=0) blows up, RE2 (c=2) decays, RE3 (c=3) bounded. This proves the anisotropic pressure Hessian is *structurally essential*, not merely helpful.
+
+2. **Analytical routes to Q (§8.11)**: Three approaches outlined:
+   - (A) Vortex-tube coherence: spatial structure → sign bias via Riesz kernel
+   - (B) Spectral decomposition: angular correlation in Fourier space
+   - (C) Perturbation from restricted Euler: nonlocal correction must delay blow-up
+
+3. **Explicit limitations (§8.12 + Conclusion)**: All four weaknesses from ChatGPT's critique are now acknowledged in the paper:
+   - (i) R_e = O(Ω) scaling is assumed, not derived
+   - (ii) Sign of Q is required, not explained
+   - (iii) Eigenvalue-gap control is an assumption
+   - (iv) ODE-to-PDE gap is not bridged
+
+4. **Synthesis chain**: Extended to 13 steps (added Step 12: restricted Euler control case).
+
+5. **Conclusion findings**: Updated to 9 items (added finding 7: restricted Euler).
+
+### Next steps (from ChatGPT's suggested directions)
+
+- **Compute Q for a vortex tube model** (Burgers vortex or axisymmetric tube)
+- **Prove a weak inequality for Riesz projections** (harmonic analysis route)
+- **DNS measurement design**: E[Q | Ω > Ω*] in high-enstrophy biaxial regions
+- **Conditional theorem paper**: "Reduction of NS regularity to a sign condition on Q"
+
+---
+
+## COMPLETED: Paper sharpening — Alignment Deficit Lemma, Q observable, Final Reduced Problem
+
+**File:** `examples/mathematics/ns_geometric_depletion_paper.kleis`
+**PDF:** `examples/mathematics/ns_geometric_depletion_paper.pdf`
+**Status:** All tests pass. PDF compiles cleanly.
+
+### What changed
+
+1. **Alignment Deficit Lemma (§8.6)**: The informal "approximately one quarter" statement was promoted to a formal lemma with explicit constants. The W² cancellation fraction is $1/(4\delta)$ where $\delta = (\lambda_1-\lambda_2)/\lambda_1$ is the eigenvalue gap ratio. The critical pressure Hessian coefficient as a function of gap ratio: $c_H^*(\delta) = 1 - 1/(4\delta)$.
+
+2. **Table 1**: Added a table showing $c_H^*(\delta)$ for $\delta \in \{2, 1, 1/2, 1/3, 1/4\}$ with interpretations. Key insight: narrower eigenvalue gaps amplify W² depletion, reducing the burden on the pressure Hessian.
+
+3. **Q observable (§8.7)**: The pressure-Hessian projection $Q = e_2 \cdot H_\text{tf} e_1$ is now a named primary observable with its own subsection. Includes:
+   - Explicit Riesz-transform representation through Poisson equation
+   - Physical interpretation (nonlocal character, spatial coherence of vortical structures)
+   - Exact relation to $R_e^{(H)}$
+
+4. **Final Reduced Problem (boxed)**: Sharpened from a qualitative statement to an explicit mathematical condition:
+   - $\limsup_{\Omega \to \infty} \langle Q \rangle < 0$ with magnitude $\geq c_H^*(\delta)$ in the effective scaling
+   - References explicit threshold formula $c_H^*(\delta) = 1 - 1/(4\delta)$
+
+5. **Abstract**: Updated to mention Alignment Deficit Lemma, Q observable, and the lim sup formulation.
+
+6. **Synthesis chain**: Extended to 12 steps (added Step 11 for Q observable).
+
+7. **Conclusion findings**: Updated items (6)–(8) to reference the Alignment Deficit Lemma, Q observable, and sharpened conditional regularity.
 
 ---
 
@@ -2617,6 +2756,301 @@ The cos/sin addition formulas encode the Lie algebra structure of SU(2). They're
 - [x] Keep NEXT_SESSION.md focused on active work + last 2-3 sessions
 - [x] Extract future/roadmap items to `docs/ROADMAP.md`
 - [x] Archive POT physics notes to `docs/archive/pot-physics-notes.md`
+
+### TODO: Additional Kleis Publication Templates
+
+Create Kleis template wrappers (like `stdlib/templates/arxiv_paper.kleis`) for major publication venues. Each wraps an existing Typst package so the same `.kleis` paper source can target different journals by changing one import line.
+
+**Priority targets (high-value, Typst packages already exist):**
+
+- [ ] **AMS** (`unequivocal-ams`) — American Mathematical Society style; natural for pure math papers
+- [ ] **Springer Nature** (`stellar-springer-nature`) — Nature, Nature Physics, etc.; two-column, 200-word summary format
+- [ ] **IEEE** (`charged-ieee`) — IEEE conferences/journals; relevant for control systems / engineering papers
+- [ ] **APS / RevTeX** (`revtyp`) — Physical Review style; relevant for physics applications
+
+**Secondary targets (nice to have):**
+
+- [ ] **Elsevier** (`elspub`) — large journal family (Applied Mathematics, Physics Letters, etc.)
+- [ ] **NeurIPS** (`bloated-neurips`) — ML/AI conference; if Kleis enters that space
+- [ ] **LNCS** (`fine-lncs`) — Springer Lecture Notes in Computer Science
+- [ ] **IOP** (`ioppub`) — Journal of Physics family
+
+**Architecture:** Each template defines the same semantic types (`Section`, `Table`, `Diagram`, `Reference`) mapped to venue-specific Typst output. Paper content stays identical across templates.
+
+---
+
+### TODO: Paper 2 — Geometric Depletion of Vortex Stretching in 3D Navier-Stokes
+
+**Working title:** Geometric Depletion of Vortex Stretching in 3D Navier-Stokes
+**Subtitle:** An Orientation-Dynamics Framework Beyond Scalar Sobolev Closure
+**Goal:** Identify and analyze a geometric mechanism — via vorticity-strain alignment — that can supply the missing exponent reduction beyond Kato-Ponce.
+
+**Relationship to Paper 1** (`ns_smoothness_paper.kleis`):
+- Paper 1 proves scalar insufficiency and defines the threshold a+b=2 (global basin collapse)
+- Paper 2 proposes the geometric mechanism to reach a+b=2
+
+#### Key identity
+
+The stretching integral decomposes as:
+
+```
+S = ∫ |ω|² Σᵢ λᵢ αᵢ dx
+```
+
+where αᵢ = (ξ · eᵢ)² are alignment weights (Σαᵢ = 1), λᵢ are strain eigenvalues (Σλᵢ = 0), and ξ = ω/|ω|. Scalar methods assume worst-case α₁ ≈ 1; geometry may force α₁ ≪ 1.
+
+#### Key observables
+
+- `A(t) = ∫ |ω|² α₁ dx` — "bad alignment" (energy aligned with most stretching direction)
+- `B(t) = ∫ |ω|² α₂ dx` — "neutral alignment" (energy aligned with intermediate direction)
+- `Ω = ∫ |ω|² dx` — total enstrophy
+
+#### Main conjecture (Geometric Depletion of Bad Alignment)
+
+As gradients intensify, A(t) ≪ Ω(t), or quantitatively: A(t) ≤ C · Ωᵃ Pᵇ with a+b ≤ 2.
+
+#### Section outline
+
+1. **Introduction** — State problem, reference Paper 1 threshold, position this paper
+2. **Reformulation in geometric variables** — Define ξ, S, eᵢ, λᵢ, αᵢ; derive key identity
+3. **Orientation dynamics** — Evolution equation for ξ and αᵢ (set stage, don't overexpand)
+4. **Key observables** — Define A(t), B(t); interpretation
+5. **Structural lemma** — Decomposition bound: S ≤ λ₁A + λ₂B + λ₃(Ω−A−B)
+6. **Target inequality** — If A(t) controlled subcritically → effective exponent reduction
+7. **Main conjecture** — Geometric depletion of bad alignment
+8. **Heuristic evidence** — Incompressibility, neutral direction, empirical observations (controlled)
+9. **Connection to scalar framework** — Why scalar closure fails (collapses αᵢ to worst case)
+10. **Conditional theorem** — If depletion holds with a+b ≤ 2 → blow-up excluded
+11. **Discussion / Outlook** — Remaining: prove alignment law from NS; directions: Lagrangian, strain-frame, pressure
+
+#### First lemmas to prove
+
+- **Lemma A** (easy): S ≤ λ₁A + |λ₃|(Ω−A) — uses eigenvalue ordering
+- **Lemma B** (deeper): S ≤ λ₁A + C‖∇v‖∞(Ω−A) — connects geometry to known norms
+- **Lemma C** (conditional): If A ≤ εΩ then S ≤ C(ε)‖∇v‖∞Ω with improved scaling
+
+#### Pre-work: computational analysis (COMPLETED 2026-04-04)
+
+All computational analysis has been performed in Kleis with Z3 + ODE:
+
+- [x] `theories/ns_alignment_weights.kleis` — Formalized αᵢ, λᵢ in Z3 (4 structures, all pass)
+- [x] `theories/ns_depletion_d{1..9}.kleis` — 9 isolated Z3 depletion tests
+- [x] `theories/ns_ode_alignment.kleis` — Coupled enstrophy-alignment ODE simulation
+- [x] `theories/ns_ode_critical_kappa.kleis` — Critical κ scan
+- [x] `theories/ns_depletion_theorem.kleis` — Depletion boundedness theorem verification
+- [x] Analysis and synthesis (see below)
+
+#### Analysis results
+
+**Finding 1: Bounding α₁ alone is INSUFFICIENT** (ns_alignment_weights.kleis)
+
+All 4 tests (AW1-AW4) return SAT, including AW3 (strong depletion α₁ ≤ 1/Ω).
+Even if vorticity avoids the most stretching direction (e₁), the intermediate eigenvalue λ₂
+can be positive, and vorticity aligned with e₂ still gets stretched. The λ₂ term in
+σ_eff = λ₁α₁ + λ₂α₂ + λ₃α₃ can dominate when α₁ is small.
+
+**Finding 2: Phase transition is SHARP at a+b = 2** (ns_depletion_d6{a,b,c,d}.kleis)
+
+| a+b | S² bound | Z3 result | Meaning |
+|-----|----------|-----------|---------|
+| 3.0 | S² ≤ Ω²·P | SAT | Kato-Ponce: blow-up possible |
+| 2.5 | S² ≤ Ω^1.5·P | SAT | Still allows blow-up |
+| 2.25 | S² ≤ Ω^1.25·P | SAT | Still allows blow-up |
+| 2.1 | S² ≤ Ω^1.1·P | SAT | Barely above: still allows blow-up |
+| **2.0** | **S² ≤ Ω·P** | **UNSAT** | **Growth impossible** |
+
+**Finding 3: Gap closure requires BOTH conditions** (ns_depletion_d7,d8,d9.kleis)
+
+| Conditions | Z3 result | Interpretation |
+|-----------|-----------|---------------|
+| α₁ ≤ 1/Ω **AND** λ₂ ≤ 0 | **UNSAT** | Both together close the gap |
+| α₁ ≤ 1/Ω alone | SAT | Scale depletion alone insufficient |
+| λ₂ ≤ 0 alone | SAT | Biaxial strain alone insufficient |
+
+The two required conditions:
+1. **Scale-dependent alignment depletion**: α₁ ≤ C/Ω — vorticity's alignment with the stretching direction decays as enstrophy grows
+2. **Biaxial strain**: λ₂ ≤ 0 — the intermediate eigenvalue is non-positive (no stretching through e₂)
+
+**Finding 4: Depletion Boundedness Theorem** (analytical + verified in ns_depletion_theorem.kleis)
+
+**Theorem**: For the coupled system dΩ/dt = Ω²α₁ - 2νΩ, dα₁/dt = -κα₁Ω with κ > 0:
+1. Ω(t) ≤ Ω₀ · exp(α₀/κ) for all t ≥ 0
+2. Ω(t) → 0 as t → ∞
+3. There is no finite-time blow-up
+
+**Proof**: The total stretching integral satisfies ∫₀^∞ Ωα₁ dt ≤ α₀/κ < ∞ (by substitution F = ∫Ω dt). Therefore ln(Ω(t)/Ω₀) ≤ α₀/κ - 2νt → -∞.
+
+This means: ANY positive depletion rate prevents blow-up. The stretching "budget" α₀/κ is finite regardless of trajectory. Dissipation eventually wins.
+
+Numerical verification:
+- κ=0.5, Ω₀=50: peak Ω=215.8 (bound: 247.6), final Ω=0.011 at t=5
+- κ=0.1, Ω₀=50: final Ω=6.78 at t=5 (still decaying)
+- κ=0.5, t=10: Ω=5.7×10⁻⁷ (asymptotic decay confirmed)
+- Ω₀=1000, κ=0.5: final Ω=0.276 at t=5 (even extreme IC decays)
+
+**Finding 5: Physical interpretation**
+
+The gap closure mechanism requires vorticity to simultaneously:
+- Avoid alignment with the most stretching eigenvector (α₁ → 0 as Ω → ∞)
+- Be in a biaxially-dominated strain field (λ₂ ≤ 0)
+
+This corresponds to the empirically observed tendency of vorticity to align with the intermediate eigenvector e₂ of the strain rate tensor (Constantin, Ashurst-Kerstein). When strain is biaxial, e₂ has λ₂ ≤ 0, so alignment with e₂ produces no stretching.
+
+The critical remaining question for Paper 2: **Does the Navier-Stokes dynamics itself produce these conditions?** Specifically:
+1. Does the NS evolution equation for ξ = ω/|ω| drive α₁ → 0 as gradients intensify?
+2. Does incompressibility (Σλᵢ = 0) favor biaxial strain (λ₂ ≤ 0) in the high-enstrophy regime?
+
+If both are confirmed, the geometric depletion conjecture (A(t) ≤ C·Ω^a·P^b with a+b ≤ 2) follows.
+
+---
+
+### SESSION 2026-04-04b: Evolution Constraints and Rξ/Re Decomposition
+
+**Paper 2 caveats added** (per ChatGPT review):
+- Softened "undecidable" to "within a broad class of formalized scalar inequalities"
+- Added §1.1 "Methodological scope and limitations" (SAT ≠ realizability, finite axiom system, ODE theorem is about reduced model)
+- Qualified Depletion Boundedness Theorem as "within the reduced scalar ODE model"
+- PDF recompiled: `examples/mathematics/ns_geometric_depletion_paper.pdf`
+
+**Evolution constraint tests (E1-E7):**
+
+| Test | Description | Result |
+|------|-------------|--------|
+| E1 | Evolution dα₁/dt ≤ -(κ-η)Ωα₁, single instant, growth | SAT |
+| E2 | Barrier A=α₁Ω, dA/dt≥0 + dΩ/dt>0, no biaxial | SAT |
+| E3 | Barrier with biaxial λ₂≤0 | SAT |
+| E4 | Cross-term regeneration + biaxial barrier | SAT |
+| E5 | κ_net=1.5, biaxial, barrier | SAT |
+| E6 | κ_net=0.8, biaxial, barrier | SAT |
+| E7 | κ_net=1.0, biaxial, barrier | SAT |
+
+**Key finding: Single-instant Z3 cannot capture trajectory-level barriers.** All barrier tests SAT because P is free (P ≥ Ω). At optimal P ≈ Ω³/16, stretching α₁²Ω³/8 exceeds κ_net·Ω²α₁ whenever α₁Ω ≥ 8κ_net. No finite κ_net creates an instantaneous barrier. The Depletion Boundedness Theorem is fundamentally a trajectory-level (integral) result: ∫Ωα₁ dt ≤ α₀/κ.
+
+**Regeneration classification (F1-F4, ODE):**
+
+| Case | Regeneration R₁ | Ω at t=5 | Outcome |
+|------|-----------------|----------|---------|
+| F1 | 0 (pure depletion) | 0.011 | Bounded |
+| F2 | 0.2·Ω·α₁ (proportional) | 0.033 | Bounded |
+| F3 | 0.05·Ω·(1-α₁) (diffusion) | ∞ (blow-up at t≈0.025) | **Blow-up** |
+| F4 | 0.05·√Ω·(1-α₁) (sub-linear) | 0.153 | Bounded |
+
+**Critical insight:** Only sub-dominant regeneration is compatible with regularity. R₁/(κΩα₁) → 0 as Ω → ∞ required. Equilibrium-sustaining regeneration (R₁ ∝ Ω(1-α₁)) creates positive α₁* and blow-up.
+
+**Rξ/Re decomposition (G1-G5, ODE):**
+
+Derived from NS kinematics: dα₁/dt = Rξ + Re where
+- Rξ = 2α₁(λ₁ - σ_eff) ≈ 2Ωα₁(1-α₁) **[exact, always positive]**
+- Re = 2(ξ·e₁)(ξ·De₁/Dt) **[eigenframe rotation, sign from pressure Hessian]**
+
+| Case | Re | c | t_final | Ω_final | α₁_final | Outcome |
+|------|-----|---|---------|---------|----------|---------|
+| G1 | 0 | 0 | 0.015 | 145 | 0.977 | Blow-up |
+| G2 | -3Ωα₁ | 3 | 5.0 | 0.004 | 10⁻⁸ | Bounded |
+| G3 | -1.5Ωα₁ | 1.5 | 0.035 | 191 | 0.284 | Blow-up |
+| G4 | -2Ωα₁ | 2 | 5.0 | 0.049 | 0.002 | Bounded |
+| G5 | -3√Ω·α₁ | — | 0.015 | 120 | 0.832 | Blow-up |
+
+**Critical coefficient with linear scaling: c* = 2.** (G-series)
+
+**Geometric scaling lowers threshold:**
+
+With the derived Re ~ -cΩ√(α₁α₂) from the eigenframe rotation formula:
+- e_j·De₁/Dt = M₁ⱼ/(λ₁-λ_j) where M₁ⱼ = e_j·(DS/Dt)e₁
+- |M₁ⱼ| ~ O(Ω²), λ₁-λ₂ ~ O(Ω), so |De₁/Dt| ~ O(Ω)
+- |Re| ~ 2Ω√(α₁α₂)
+
+Equilibrium analysis: dα₁/dt = Ω√(α₁(1-α₁))[2√(α₁(1-α₁)) - c]. Since max √(α₁(1-α₁)) = 1/2:
+- **c > 1: no equilibrium, α₁ → 0, bounded**
+- **c ≤ 1: equilibrium exists, blow-up**
+- **Critical coefficient with geometric scaling: c* = 1**
+
+The magnitude condition |Re| ≥ |Rξ| reduces to: **α₂ ≥ α₁(1-α₁)²** — remarkably mild, generically satisfied when vorticity has any component along e₂.
+
+**Files created this session:**
+- `theories/ns_evolution_e{1..7}.kleis` — Evolution constraint Z3 tests
+- `theories/ns_ode_evolution.kleis` — ODE with regeneration sources
+- `theories/ns_ode_rxi_re.kleis` — ODE with Rξ/Re decomposition
+- `theories/ns_ode_derived_re.kleis` — ODE with derived geometric scaling (numerically stiff, ode45 insufficient)
+
+### CURRENT STATUS: Refined Open Problem
+
+**Within the reduced geometric-alignment program, the remaining hard issue is overwhelmingly a sign question for the eigenframe-rotation term, assuming the scaling estimate and eigenvalue-gap control survive rigorous treatment.**
+
+The full reduction chain:
+
+1. Scalar Sobolev framework insufficient (Paper 1, Z3-verified)
+2. Static geometric conditions α₁Ω ≤ C + λ₂ ≤ 0 close the gap (Paper 2, D7 UNSAT)
+3. Dynamic depletion generates the static bound via trajectory budget ∫Ωα₁ dt ≤ α₀/κ
+4. Only sub-dominant regeneration is compatible with regularity
+5. Exact kinematic alignment source: Rξ = 2Ωα₁(1-α₁) > 0 (unavoidable)
+6. Eigenframe rotation Re must provide cancellation with c ≥ c*
+7. Geometric √(α₁α₂) scaling lowers c* from 2 to 1
+8. Magnitude condition α₂ ≥ α₁(1-α₁)² is generically mild
+9. **Sign of Re: the load-bearing open question**
+
+The precise open problem: *Does the NS pressure-Hessian/strain-transport dynamics rotate the leading strain eigenframe in the depleting direction with sufficient persistence and without eigenvalue-gap degeneracy failure?*
+
+### SESSION 2026-04-04c: W² Sign Correction and Conditional Regularity
+
+**Critical sign correction in §8.2**: The W² (vorticity-induced) contribution to eigenframe rotation was incorrectly described as "alignment-enhancing." Explicit computation shows:
+
+R_e^{W²} = -|ω|²α₁α₂/(2(λ₁-λ₂)) < 0 **always** (sign-definite, depleting)
+
+This is a structural finding: the vorticity tensor rotates the strain eigenframe AWAY from vorticity, providing partial depletion. In the restricted Euler model (H_tf = 0), blow-up occurs because R_ξ > |R_e^{W²}|, not because W² enhances alignment.
+
+**Effective threshold with W² included**: The W² term cancels ~25% of R_ξ. The pressure Hessian alone needs coefficient c_H ≥ 3/4 (down from c ≥ 1 for total R_e).
+
+**Z3 verification (PH1-PH5):**
+
+| Test | Description | Result |
+|------|-------------|--------|
+| PH1 | R_e^{W²} ≥ 0 (sign lemma) | **UNSAT** (W² always depleting) |
+| PH2 | No H_tf constraint, net growth? | **SAT** (H_tf unconstrained → growth possible) |
+| PH3 | c_H = 1 + W² depletion → net growth? | **UNSAT** (sufficient depletion) |
+| PH4 | c_H = 3/4 (critical) → net growth? | **SAT** (marginal, = 0 at boundary) |
+| PH5 | c_H = 0.8 > 3/4 → net growth? | **UNSAT** (strictly above threshold) |
+
+**Conditional regularity theorem added (§8.7):**
+Under three hypotheses:
+- (G) Gap control: eigenvalue-gap transitions don't accumulate alignment
+- (D) Averaged depletion: ∫(R_e^{H} + R_e^{W}) dt ≤ -(1+ε)∫R_ξ dt on high-Ω intervals
+- (S) Sub-dominance: regeneration is sub-dominant
+
+⟹ Regularity (α₁Ω controlled, a+b=2 achieved dynamically)
+
+**Files created:**
+- `theories/ns_pressure_hessian_ph{1..5}.kleis` — Z3 pressure Hessian sign tests
+
+**Paper updated:** 18 pages, all new material in §8.2 (corrected), §8.6-8.7 (new), §9-10 (updated).
+
+### NEXT STEPS: Pressure Hessian Analysis
+
+The next theorem-shaped target is to:
+
+1. **Write down the strain evolution explicitly:**
+   DS/Dt = -(S² + W²/4) - H_tf + ν∇²S (where H_tf = trace-free pressure Hessian)
+
+2. **Isolate the off-diagonal component M₁₂ = e₂·(DS/Dt)e₁:**
+   - S² contribution: e₂·S²e₁ = 0 (diagonal in eigenframe — no contribution!)
+   - W² contribution: e₂·W²e₁ = -(ω·e₂)(ω·e₁) = -√α₁√α₂|ω|² (uses Wᵢⱼ = -εᵢⱼₖωₖ)
+   - H_tf contribution: e₂·H_tf·e₁ (nonlocal, from Poisson equation ∇²p = ½|ω|²-|S|²)
+
+3. **Determine the sign of M₁₂/(λ₁-λ₂):**
+   - The W² term gives a POSITIVE contribution to e₂·De₁/Dt (drives alignment UP)
+   - The pressure Hessian H_tf must overcome this — it is the true source of depletion
+   - This connects to the "restricted Euler" vs "full Euler" distinction (Vieillefosse 1982)
+
+4. **Handle eigenvalue-gap degeneracy:**
+   - When λ₁ ≈ λ₂: |De₁/Dt| can diverge, but α₁ and α₂ become interchangeable
+   - Need to show that gap collapse events don't accumulate harmful sign
+
+5. **Candidate formalization in Kleis:**
+   - Encode the W² contribution as a Z3 axiom (exact)
+   - Encode the H_tf contribution as a bounded unknown
+   - Test whether known pressure Hessian bounds (e.g., Ohkitani-Kishiba) force Re < 0
+
+---
 
 ### kleis-review — Context-Aware Parsing for Reduced False Positives
 
