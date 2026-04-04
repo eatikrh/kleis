@@ -1,0 +1,241 @@
+// =============================================================================
+// Bent Vortex Tube: Source Perturbation and O(κ²) Net Q
+// =============================================================================
+//
+// At O(κ), the source g = |S|² - |ω|²/2 gets two m=1 perturbations:
+//   Δg = κ[g_c(ρ) cosφ + g_s(ρ) sinφ]
+// where:
+//   g_c(ρ) = ρ(ω₀²e^{-2η} - γ²)  [dominant: from vorticity stretching]
+//   g_s(ρ) = -2γv_θ(ρ)             [subdominant: from axial strain change]
+//
+// Each mode satisfies an m=1 radial Poisson ODE:
+//   p'' + p'/ρ - p/ρ² = g(ρ)
+//
+// Solved via shooting with ode45.
+//
+// The O(κ²) net Q comes from the product of m=1 eigenframe perturbation
+// (from ΔS_xz) with m=1 Hessian perturbation (from Δp). The m=0 component
+// of this product gives the cross-section-averaged net Q.
+// =============================================================================
+
+define pi = 3.14159265358979
+define re_bv = 100
+define gamma_bv = 1.0
+define sigma_bv = 1.0
+define omega0 = times(re_bv, gamma_bv)
+define h_fd = 0.001
+
+define v_theta(rho) =
+    let eta = divide(times(rho, rho), times(sigma_bv, sigma_bv)) in
+    let pf = divide(times(omega0, times(sigma_bv, sigma_bv)), times(2, rho)) in
+    times(pf, minus(1, exp(negate(eta))))
+
+// Source terms (per unit κ):
+define g_c(rho) =
+    let eta = divide(times(rho, rho), times(sigma_bv, sigma_bv)) in
+    times(rho, minus(times(times(omega0, omega0), exp(times(negate(2), eta))),
+                     times(gamma_bv, gamma_bv)))
+
+define g_s(rho) = negate(times(2, times(gamma_bv, v_theta(rho))))
+
+example "BP1: source term profiles" {
+    let gc03 = g_c(0.3) in
+    let gc10 = g_c(1.0) in
+    let gc20 = g_c(2.0) in
+    let gs03 = g_s(0.3) in
+    let gs10 = g_s(1.0) in
+    let gs20 = g_s(2.0) in
+    out("Source terms for m=1 Poisson (per unit κ):");
+    out(format("  ρ=0.3σ: g_c = {:.1}, g_s = {:.1}", gc03, gs03));
+    out(format("  ρ=1.0σ: g_c = {:.1}, g_s = {:.1}", gc10, gs10));
+    out(format("  ρ=2.0σ: g_c = {:.1}, g_s = {:.1}", gc20, gs20));
+    out("g_c dominates by ω₀²/γ² ~ Re² in the core.")
+}
+
+// Solve m=1 Poisson ODE via shooting:
+// Convert: y₁ = p, y₂ = p'
+//   y₁' = y₂
+//   y₂' = -y₂/ρ + y₁/ρ² + source(ρ)
+// Regular at ρ=0: y₁ ~ Cρ, y₂ ~ C
+// Start at ρ₀ = 0.01 with y₁ = ρ₀, y₂ = 1 (C=1 normalization)
+
+define rho0 = 0.01
+define rho_max = 6.0
+define dt_ode = 0.005
+
+define traj_c = ode45(
+    lambda rho y .
+        let p = nth(y, 0) in
+        let dp = nth(y, 1) in
+        [dp,
+         plus(plus(negate(divide(dp, rho)),
+                   divide(p, times(rho, rho))),
+              g_c(rho))],
+    [rho0, 1.0], [rho0, rho_max], dt_ode)
+
+define traj_s = ode45(
+    lambda rho y .
+        let p = nth(y, 0) in
+        let dp = nth(y, 1) in
+        [dp,
+         plus(plus(negate(divide(dp, rho)),
+                   divide(p, times(rho, rho))),
+              g_s(rho))],
+    [rho0, 1.0], [rho0, rho_max], dt_ode)
+
+// Also solve the homogeneous equation (to subtract the growing solution)
+define traj_hom = ode45(
+    lambda rho y .
+        let p = nth(y, 0) in
+        let dp = nth(y, 1) in
+        [dp,
+         plus(negate(divide(dp, rho)),
+              divide(p, times(rho, rho)))],
+    [rho0, 1.0], [rho0, rho_max], dt_ode)
+
+define get_rho(pt) = nth(pt, 0)
+define get_p(pt) = nth(nth(pt, 1), 0)
+define get_dp(pt) = nth(nth(pt, 1), 1)
+
+example "BP2: ODE trajectory for cosφ pressure" {
+    let n = length(traj_c) in
+    let pt0 = nth(traj_c, 0) in
+    let pt1 = nth(traj_c, 59) in
+    let pt2 = nth(traj_c, 99) in
+    let pt3 = nth(traj_c, 199) in
+    let pt4 = nth(traj_c, 299) in
+    let pt_end = nth(traj_c, minus(n, 1)) in
+    out(format("cos φ pressure ODE trajectory ({} points):", n));
+    out(format("  ρ={:.3}: p={:.3}, p'={:.3}", get_rho(pt0), get_p(pt0), get_dp(pt0)));
+    out(format("  ρ={:.3}: p={:.3}, p'={:.3}", get_rho(pt1), get_p(pt1), get_dp(pt1)));
+    out(format("  ρ={:.3}: p={:.3}, p'={:.3}", get_rho(pt2), get_p(pt2), get_dp(pt2)));
+    out(format("  ρ={:.3}: p={:.3}, p'={:.3}", get_rho(pt3), get_p(pt3), get_dp(pt3)));
+    out(format("  ρ={:.3}: p={:.3}, p'={:.3}", get_rho(pt4), get_p(pt4), get_dp(pt4)));
+    out(format("  ρ={:.3}: p={:.3}, p'={:.3}", get_rho(pt_end), get_p(pt_end), get_dp(pt_end)))
+}
+
+example "BP3: homogeneous solution (for boundary matching)" {
+    let n = length(traj_hom) in
+    let pt1 = nth(traj_hom, 199) in
+    let pt2 = nth(traj_hom, 399) in
+    let pt_end = nth(traj_hom, minus(n, 1)) in
+    out("Homogeneous m=1 solution (should be y = ρ):");
+    out(format("  ρ={:.3}: y={:.3}, y'={:.3}", get_rho(pt1), get_p(pt1), get_dp(pt1)));
+    out(format("  ρ={:.3}: y={:.3}, y'={:.3}", get_rho(pt2), get_p(pt2), get_dp(pt2)));
+    out(format("  ρ={:.3}: y={:.3}, y'={:.3}", get_rho(pt_end), get_p(pt_end), get_dp(pt_end)));
+    out("(Should track y=ρ since IC y(0.01) = 0.01, y'(0.01) = 1)")
+}
+
+// Extract pressure and derivatives at ρ = σ (u = 1)
+// The particular solution p_c is traj_c; we need to subtract the homogeneous
+// solution to ensure decay at ∞. The normalization is:
+//   p_phys(ρ) = p_part(ρ) - C_adj × ρ
+// where C_adj is chosen so p_phys decays at ∞.
+// From the far-field: p_part(∞) → C_∞ × ρ (growth), so C_adj = C_∞.
+// C_∞ ≈ p_part(ρ_max) / ρ_max
+
+example "BP4: boundary matching and physical pressure" {
+    let n_c = length(traj_c) in
+    let pt_far_c = nth(traj_c, minus(n_c, 1)) in
+    let c_adj_c = divide(get_p(pt_far_c), get_rho(pt_far_c)) in
+    out(format("Far-field growth: p_c({:.1}) = {:.2}", get_rho(pt_far_c), get_p(pt_far_c)));
+    out(format("Adjustment coefficient C_adj = {:.4}", c_adj_c));
+    out("");
+    let n_s = length(traj_s) in
+    let pt_far_s = nth(traj_s, minus(n_s, 1)) in
+    let c_adj_s = divide(get_p(pt_far_s), get_rho(pt_far_s)) in
+    out(format("Far-field growth: p_s({:.1}) = {:.2}", get_rho(pt_far_s), get_p(pt_far_s)));
+    out(format("Adjustment coefficient C_adj_s = {:.4}", c_adj_s))
+}
+
+// Compute Hessian components at ρ = σ (index ≈ 199 for dt=0.005, ρ=1.0)
+// A = p'', B = p'/ρ - p/ρ²
+// For the physical solution: p_phys = p_part - C_adj × ρ
+// p_phys' = p_part' - C_adj
+// p_phys'' = p_part''
+
+example "BP5: Hessian from m=1 pressure at ρ=σ" {
+    let n_c = length(traj_c) in
+    let pt_far = nth(traj_c, minus(n_c, 1)) in
+    let c_adj = divide(get_p(pt_far), get_rho(pt_far)) in
+    let idx_sigma = 198 in
+    let pt_m = nth(traj_c, minus(idx_sigma, 1)) in
+    let pt_0 = nth(traj_c, idx_sigma) in
+    let pt_p = nth(traj_c, plus(idx_sigma, 1)) in
+    let rho_m = get_rho(pt_m) in
+    let rho_0 = get_rho(pt_0) in
+    let rho_p = get_rho(pt_p) in
+    let p_m = minus(get_p(pt_m), times(c_adj, rho_m)) in
+    let p_0 = minus(get_p(pt_0), times(c_adj, rho_0)) in
+    let p_p = minus(get_p(pt_p), times(c_adj, rho_p)) in
+    let dp_0 = minus(get_dp(pt_0), c_adj) in
+    let dr = minus(rho_p, rho_0) in
+    let d2p = divide(minus(plus(p_p, p_m), times(2, p_0)), times(dr, dr)) in
+    let ac = d2p in
+    let bc = minus(divide(dp_0, rho_0), divide(p_0, times(rho_0, rho_0))) in
+    out(format("At ρ={:.3} (≈σ):", rho_0));
+    out(format("  p_c(phys) = {:.2}", p_0));
+    out(format("  p_c'(phys) = {:.2}", dp_0));
+    out(format("  A_c = p_c'' = {:.2}", ac));
+    out(format("  B_c = p_c'/ρ - p_c/ρ² = {:.2}", bc));
+    out(format("  A_c + B_c = {:.2} (trace)", plus(ac, bc)));
+    out(format("  A_c + 3B_c = {:.2}", plus(ac, times(3, bc))));
+    out(format("  A_c - B_c = {:.2}", minus(ac, bc)))
+}
+
+// Eigenvalue structure (from bent_tube.kleis)
+define shear_rtheta(rho) =
+    let vt = v_theta(rho) in
+    let vtp = divide(minus(v_theta(plus(rho, h_fd)), v_theta(minus(rho, h_fd))),
+                     times(2, h_fd)) in
+    divide(minus(vtp, divide(vt, rho)), 2)
+
+define lambda1(rho) = plus(negate(divide(gamma_bv, 2)), abs(shear_rtheta(rho)))
+define lambda2_val = gamma_bv
+define lambda3(rho) = minus(negate(divide(gamma_bv, 2)), abs(shear_rtheta(rho)))
+
+example "BP6: O(κ²) net Q computation" {
+    let rho = sigma_bv in
+    let l1 = lambda1(rho) in
+    let l3 = lambda3(rho) in
+    let gap21 = minus(lambda2_val, l1) in
+    let gap23 = minus(lambda2_val, l3) in
+    let s_val = 10.0 in
+    let kappa = 0.01 in
+    let n_c = length(traj_c) in
+    let pt_far = nth(traj_c, minus(n_c, 1)) in
+    let c_adj = divide(get_p(pt_far), get_rho(pt_far)) in
+    let idx = 198 in
+    let pt_m = nth(traj_c, minus(idx, 1)) in
+    let pt_0 = nth(traj_c, idx) in
+    let pt_p = nth(traj_c, plus(idx, 1)) in
+    let rho_m = get_rho(pt_m) in
+    let rho_0 = get_rho(pt_0) in
+    let rho_p = get_rho(pt_p) in
+    let p_m = minus(get_p(pt_m), times(c_adj, rho_m)) in
+    let p_0 = minus(get_p(pt_0), times(c_adj, rho_0)) in
+    let p_p = minus(get_p(pt_p), times(c_adj, rho_p)) in
+    let dp_0 = minus(get_dp(pt_0), c_adj) in
+    let dr = minus(rho_p, rho_0) in
+    let d2p = divide(minus(plus(p_p, p_m), times(2, p_0)), times(dr, dr)) in
+    let ac = d2p in
+    let bc = minus(divide(dp_0, rho_0), divide(p_0, times(rho_0, rho_0))) in
+    let ac_3bc = plus(ac, times(3, bc)) in
+    let ac_bc = minus(ac, bc) in
+    let sum_terms = plus(divide(ac_3bc, gap21), divide(ac_bc, gap23)) in
+    let a_coeff = negate(divide(times(gamma_bv, times(s_val, kappa)), times(2, sqrt(2)))) in
+    let net_q = times(divide(times(a_coeff, kappa), 4), sum_terms) in
+    out(format("Eigenvalue gaps: λ₂-λ₁ = {:.3}, λ₂-λ₃ = {:.3}", gap21, gap23));
+    out(format("Hessian: A_c+3B_c = {:.1}, A_c-B_c = {:.1}", ac_3bc, ac_bc));
+    out(format("Term 1: (A_c+3B_c)/(λ₂-λ₁) = {:.2}", divide(ac_3bc, gap21)));
+    out(format("Term 2: (A_c-B_c)/(λ₂-λ₃) = {:.2}", divide(ac_bc, gap23)));
+    out(format("Sum = {:.2}", sum_terms));
+    out(format("Prefactor aκ/4 = {:.6}", divide(times(a_coeff, kappa), 4)));
+    out("");
+    out(format("*** ⟨Q⟩^(2) at ρ=σ = {} ***", net_q));
+    out(format("Sign: {}", if less(net_q, 0) then "NEGATIVE → depleting" else "POSITIVE → anti-depleting"));
+    out("");
+    out("Note: this is the cross-term contribution only (eigenframe tilt × pressure");
+    out("Hessian response). Additional O(κ²) terms from second-order eigenframe");
+    out("perturbation and Dean secondary flow are not included.")
+}
