@@ -1,0 +1,59 @@
+// E6: Barrier with WEAK depletion (κ_net = 0.8) + biaxial
+//
+// With κ_net = 0.8 < 1:
+//   α₁ - κ_net can be positive when α₁ > 0.8
+// So Z3 should find a state where dA/dt ≥ 0
+// (e.g., α₁ ≈ 1, large Ω, P = Ω).
+//
+// Expect: SAT (barrier fails below critical threshold)
+
+structure NS_Evolution_WeakBarrier {
+    element Omega : ℝ
+    element P : ℝ
+    element S : ℝ
+    element dOmega_dt : ℝ
+    element lam1 : ℝ
+    element lam2 : ℝ
+    element lam3 : ℝ
+    element alpha1 : ℝ
+    element alpha2 : ℝ
+    element alpha3 : ℝ
+    element dAlpha1_dt : ℝ
+    element A : ℝ
+    element dA_dt : ℝ
+
+    axiom Omega_pos : Omega > 0
+    axiom P_pos : P > 0
+    axiom S_nonneg : S ≥ 0
+
+    axiom alpha1_nonneg : alpha1 ≥ 0
+    axiom alpha2_nonneg : alpha2 ≥ 0
+    axiom alpha3_nonneg : alpha3 ≥ 0
+    axiom alpha_sum : plus(alpha1, plus(alpha2, alpha3)) = 1
+
+    axiom eigen_order : lam1 ≥ lam2
+    axiom eigen_order2 : lam2 ≥ lam3
+    axiom trace_free : plus(lam1, plus(lam2, lam3)) = 0
+
+    axiom decomposed_stretching : S = times(Omega, plus(times(lam1, alpha1), plus(times(lam2, alpha2), times(lam3, alpha3))))
+    axiom lam1_bound : times(lam1, lam1) ≤ times(Omega, P)
+
+    axiom poincare : P ≥ Omega
+    axiom enstrophy_eq : dOmega_dt = plus(S, negate(times(2, P)))
+    axiom large_omega : Omega > 10
+
+    axiom biaxial : lam2 ≤ 0
+
+    // WEAK evolution: dα₁/dt ≤ -κ_net·Ω·α₁, κ_net = 0.8
+    axiom evolution : dAlpha1_dt ≤ negate(times(times(0.8, Omega), alpha1))
+
+    axiom A_def : A = times(alpha1, Omega)
+    axiom dA_dt_def : dA_dt = plus(times(alpha1, dOmega_dt), times(Omega, dAlpha1_dt))
+
+    axiom growth : dOmega_dt > 0
+    axiom A_nondecreasing : dA_dt ≥ 0
+}
+
+example "E6: κ_net=0.8 + biaxial barrier (expect SAT)" {
+    assert(dA_dt ≥ 0)
+}

@@ -1,0 +1,612 @@
+// ============================================================================
+// NS Skolem: Computing the ½-Derivative to Close the Gap
+//
+// The gap: H¹ controlled (enstrophy), H^{3/2} needed (for L^∞ in 3D).
+//
+// Key insight: the ½-derivative lives BETWEEN enstrophy and palinstrophy.
+//
+//   H¹ norm:    Σ k² |a_k|²  = Ω  (enstrophy — controlled)
+//   H^{3/2}:    Σ k³ |a_k|²       (the missing piece)
+//   H² norm:    Σ k⁴ |a_k|²  = P  (palinstrophy — in enstrophy equation)
+//
+// Interpolation: ‖v‖²_{H^{3/2}} ≤ ‖v‖_{H¹} · ‖v‖_{H²} = √Ω · √P
+//
+// The enstrophy equation gives us P:
+//   dΩ/dt = S - 2νP  ⟹  P = (S - dΩ/dt) / (2ν)
+//
+// If we can bound S (from Sobolev: S ≤ Ω^{3/2}) and dΩ/dt, we get P.
+// Then H^{3/2} ≤ √(Ω · P) closes the gap.
+//
+// Strategy:
+//   1. Compute H^{3/2} explicitly in the 3-mode Galerkin truncation
+//   2. Use the interpolation bound
+//   3. Add this as a Skolem constraint
+//   4. Ask Z3: does the ½-derivative stay bounded?
+// ============================================================================
+
+import "../stdlib/prelude.kleis"
+
+// --- Part A: The ½-derivative in the Galerkin truncation ---
+//
+// For N modes at wavenumbers k₁ < k₂ < k₃:
+//   H¹ = k₁²a₁² + k₂²a₂² + k₃²a₃²    = Ω
+//   H^{3/2} = k₁³a₁² + k₂³a₂² + k₃³a₃²  (the gap quantity)
+//   H² = k₁⁴a₁² + k₂⁴a₂² + k₃⁴a₃²    = P
+
+example "Half-derivative-1: explicit computation in 3 modes" {
+    out("=== Computing the ½-derivative ===")
+    let a1 = 0.5 in
+    let a2 = 0.3 in
+    let a3 = 0.1 in
+    let k1 = 1.0 in
+    let k2 = 10.0 in
+    let k3 = 100.0 in
+
+    // Energy: E = Σ|a_k|²
+    let E = plus(plus(times(a1, a1), times(a2, a2)), times(a3, a3)) in
+    out("Energy E =")
+    out(E)
+    assert(E = 0.35)
+
+    // H¹ = Enstrophy: Ω = Σk²|a_k|²
+    let Omega = plus(plus(times(times(k1, k1), times(a1, a1)),
+                          times(times(k2, k2), times(a2, a2))),
+                     times(times(k3, k3), times(a3, a3))) in
+    out("Enstrophy Ω (H¹) =")
+    out(Omega)
+    assert(Omega = 109.25)
+
+    // H^{3/2} = Σk³|a_k|²  — THE MISSING QUANTITY
+    let H32 = plus(plus(times(times(k1, times(k1, k1)), times(a1, a1)),
+                        times(times(k2, times(k2, k2)), times(a2, a2))),
+                   times(times(k3, times(k3, k3)), times(a3, a3))) in
+    out("H^{3/2} norm =")
+    out(H32)
+    assert(H32 = 10090.25)
+
+    // H² = Palinstrophy: P = Σk⁴|a_k|²
+    let P = plus(plus(times(times(k1, times(k1, times(k1, k1))), times(a1, a1)),
+                      times(times(k2, times(k2, times(k2, k2))), times(a2, a2))),
+                 times(times(k3, times(k3, times(k3, k3))), times(a3, a3))) in
+    out("Palinstrophy P (H²) =")
+    out(P)
+    assert(P = 1000900.25)
+
+    // Interpolation check: H^{3/2}² ≤ Ω · P ?
+    let H32_sq = times(H32, H32) in
+    let interp_bound = times(Omega, P) in
+    out("H^{3/2}² =")
+    out(H32_sq)
+    out("Ω · P =")
+    out(interp_bound)
+    out("Interpolation holds (H^{3/2}² ≤ Ω·P)?")
+    out(H32_sq ≤ interp_bound)
+
+    out("")
+    out("=== KEY OBSERVATION ===")
+    out("H^{3/2} is computable from the mode amplitudes.")
+    out("It's NOT a mystery — it's a finite sum in Galerkin.")
+    out("The question is whether NS dynamics bound it.")
+}
+
+
+// --- Part B: Can the enstrophy equation bound P? ---
+//
+// dΩ/dt = S - 2νP
+// ⟹ P = (S - dΩ/dt) / (2ν)
+//
+// From Sobolev: S ≤ C·Ω^{3/2}
+// If Ω is bounded (say Ω ≤ M), then:
+//   P ≤ (C·M^{3/2} + |dΩ/dt|) / (2ν)
+//
+// But bounding dΩ/dt requires bounding P... circular!
+//
+// HOWEVER: integrating the enstrophy equation:
+//   ∫₀ᵀ 2νP dt = ∫₀ᵀ S dt - [Ω(T) - Ω(0)]
+//   ≤ ∫₀ᵀ C·Ω^{3/2} dt + Ω(0)
+//
+// And from the energy identity:
+//   ∫₀ᵀ Ω dt ≤ E₀/(2ν)
+//
+// By Hölder: ∫ Ω^{3/2} dt ≤ (∫ Ω dt)^{1/2} · (∫ Ω² dt)^{1/2}
+//   ← but we need ∫Ω² dt, which requires H² control... still circular
+//
+// The DIRECT approach: compute P at each Galerkin step.
+
+example "Half-derivative-2: P from the enstrophy equation" {
+    out("=== Computing P from enstrophy equation ===")
+    let nu = 0.01 in
+    let Omega = 100.0 in
+
+    // Sobolev bound on stretching: S ≤ Ω^{3/2}
+    let S_max = times(Omega, sqrt(Omega)) in
+    out("Max stretching S ≤ Ω^{3/2} =")
+    out(S_max)
+    assert(S_max = 1000.0)
+
+    // If enstrophy is at equilibrium (dΩ/dt = 0):
+    // S = 2νP  ⟹  P = S/(2ν)
+    let P_equil = S_max / (2.0 * nu) in
+    out("Equilibrium palinstrophy P = S/(2ν) =")
+    out(P_equil)
+    assert(P_equil = 50000.0)
+
+    // H^{3/2} bound at equilibrium:
+    // H^{3/2}² ≤ Ω · P = 100 · 50000 = 5000000
+    // H^{3/2} ≤ √5000000 ≈ 2236
+    let H32_bound_sq = times(Omega, P_equil) in
+    let H32_bound = sqrt(H32_bound_sq) in
+    out("H^{3/2} bound (interpolation) ≤")
+    out(H32_bound)
+
+    // Agmon's inequality: ‖v‖_{L^∞} ≤ C · Ω^{1/4} · P^{1/4}
+    let v_max_bound = times(sqrt(sqrt(Omega)), sqrt(sqrt(P_equil))) in
+    out("L^∞ velocity bound (Agmon) ≤")
+    out(v_max_bound)
+
+    out("")
+    out("=== AT EQUILIBRIUM (dΩ/dt = 0): everything is bounded ===")
+    out("If the flow reaches a steady state, H^{3/2} is controlled.")
+    out("The question: can dΩ/dt be large enough to push P → ∞?")
+}
+
+
+// --- Part C: The Gronwall approach ---
+//
+// From dΩ/dt = S - 2νP and S² ≤ Ω³:
+//   dΩ/dt ≤ Ω^{3/2} - 2νP
+//
+// From the interpolation and Poincaré:
+//   P ≥ k_min² · Ω
+//
+// So: dΩ/dt ≤ Ω^{3/2} - 2νΩ = Ω(Ω^{1/2} - 2ν)
+//
+// Now define y(t) = 1/√Ω(t). Then:
+//   dy/dt = -(1/2) Ω^{-3/2} dΩ/dt
+//         ≥ -(1/2) Ω^{-3/2} [Ω^{3/2} - 2νΩ]
+//         = -(1/2) + ν/√Ω
+//         = -(1/2) + ν·y
+//
+// This is a LINEAR ODE: dy/dt ≥ νy - 1/2
+//
+// Solution: y(t) ≥ [y(0) - 1/(2ν)] e^{νt} + 1/(2ν)
+//
+// If y(0) > 1/(2ν), i.e., Ω(0) < 4ν², then y(t) > 1/(2ν) for all t,
+// meaning Ω(t) < 4ν² for all t. SMOOTHNESS!
+//
+// If y(0) < 1/(2ν), i.e., Ω(0) > 4ν², then y(t) → 0 is possible,
+// meaning Ω → ∞ is possible. BLOW-UP CANDIDATE.
+//
+// BUT: the Gronwall bound uses S ≤ Ω^{3/2} which is SHARP.
+// A tighter Sobolev constant might close the gap.
+
+example "Half-derivative-3: Gronwall bound on enstrophy" {
+    out("=== Gronwall Approach: y = 1/√Ω ===")
+    let nu = 0.01 in
+
+    // Critical enstrophy: Ω_crit = 1/(4ν²) = 1/0.0004 = 2500
+    let Omega_crit = 1.0 / (4.0 * nu * nu) in
+    out("Critical enstrophy (Gronwall): Ω_crit = 1/(4ν²) =")
+    out(Omega_crit)
+    assert(Omega_crit = 2500.0)
+
+    // If Ω(0) < 2500: guaranteed smooth!
+    // y(0) = 1/√Ω(0) > 1/√2500 = 1/50 = 0.02 = 1/(2ν)
+    let y_crit = 1.0 / (2.0 * nu) in
+    out("Critical y = 1/(2ν) =")
+    out(y_crit)
+    assert(y_crit = 50.0)
+
+    // Example: Ω(0) = 1000 < 2500 → SMOOTH
+    let Omega_0 = 1000.0 in
+    let y_0 = 1.0 / sqrt(Omega_0) in
+    out("")
+    out("Case 1: Ω(0) = 1000 < Ω_crit")
+    out("y(0) = 1/√1000 =")
+    out(y_0)
+    out("y(0) > y_crit?")
+    out(y_0 > 1.0 / (2.0 * nu))
+
+    // y(t) ≥ [y(0) - 1/(2ν)] e^{νt} + 1/(2ν)
+    // At t = 10: y(10) ≥ [y_0 - 50] · e^{0.1} + 50
+    let y_at_10 = (y_0 - y_crit) * exp(nu * 10.0) + y_crit in
+    out("y(10) ≥")
+    out(y_at_10)
+    let Omega_at_10_bound = 1.0 / (y_at_10 * y_at_10) in
+    out("Ω(10) ≤ 1/y(10)² =")
+    out(Omega_at_10_bound)
+
+    // Example: Ω(0) = 5000 > 2500 → blow-up possible
+    let Omega_0_large = 5000.0 in
+    let y_0_large = 1.0 / sqrt(Omega_0_large) in
+    out("")
+    out("Case 2: Ω(0) = 5000 > Ω_crit")
+    out("y(0) = 1/√5000 =")
+    out(y_0_large)
+    out("y(0) > y_crit?")
+    out(y_0_large > 1.0 / (2.0 * nu))
+    out("Gronwall bound does NOT guarantee smoothness here.")
+
+    // Time to potential blow-up: y(T*) = 0
+    // [y_0 - 1/(2ν)] e^{νT*} + 1/(2ν) = 0
+    // e^{νT*} = -1/(2ν) / [y_0 - 1/(2ν)]
+    //          = 1/(2ν) / [1/(2ν) - y_0]
+    //          = 50 / (50 - 0.01414) = 50/49.986 ≈ 1.00028
+    // νT* = ln(1.00028) ≈ 0.00028
+    // T* ≈ 0.028
+    out("If Gronwall is tight, blow-up could occur around T* ≈")
+    let ratio = y_crit / (y_crit - y_0_large) in
+    out(ratio)
+    out("(This is negative, meaning the linear bound diverges — )")
+    out("(the actual solution may be bounded by nonlinear effects)")
+}
+
+
+// --- Part D: DIRECT COMPUTATION of the ½-derivative bound ---
+//
+// Instead of bounding abstractly, COMPUTE H^{3/2} at each Galerkin
+// step and check if it stays bounded under NS dynamics.
+//
+// Three-step evolution with H^{3/2} tracking:
+
+structure HalfDerivativeEvolution {
+    // Mode amplitudes at three times
+    element a1_0 : ℝ
+    element a2_0 : ℝ
+    element a3_0 : ℝ
+    element a1_1 : ℝ
+    element a2_1 : ℝ
+    element a3_1 : ℝ
+    element a1_2 : ℝ
+    element a2_2 : ℝ
+    element a3_2 : ℝ
+
+    // Fixed wavenumbers
+    element k1 : ℝ
+    element k2 : ℝ
+    element k3 : ℝ
+
+    element nu : ℝ
+    element dt : ℝ
+
+    // Norms at each step
+    element E_0 : ℝ     // Energy at t=0
+    element E_1 : ℝ
+    element E_2 : ℝ
+    element Omega_0 : ℝ  // Enstrophy at t=0
+    element Omega_1 : ℝ
+    element Omega_2 : ℝ
+    element H32_0 : ℝ    // H^{3/2} at t=0
+    element H32_1 : ℝ
+    element H32_2 : ℝ
+    element P_0 : ℝ      // Palinstrophy at t=0
+    element P_1 : ℝ
+    element P_2 : ℝ
+
+    // --- Positivity ---
+    axiom nu_pos : nu > 0
+    axiom dt_pos : dt > 0
+    axiom k1_pos : k1 > 0
+    axiom k_order1 : k2 > k1
+    axiom k_order2 : k3 > k2
+
+    // --- Norm definitions ---
+    // Energy: E = Σ|a_k|²
+    axiom E0_def : E_0 = plus(plus(times(a1_0, a1_0), times(a2_0, a2_0)), times(a3_0, a3_0))
+    axiom E1_def : E_1 = plus(plus(times(a1_1, a1_1), times(a2_1, a2_1)), times(a3_1, a3_1))
+    axiom E2_def : E_2 = plus(plus(times(a1_2, a1_2), times(a2_2, a2_2)), times(a3_2, a3_2))
+
+    // Enstrophy: Ω = Σk²|a_k|²
+    axiom Om0_def : Omega_0 = plus(plus(times(times(k1, k1), times(a1_0, a1_0)),
+                                        times(times(k2, k2), times(a2_0, a2_0))),
+                                   times(times(k3, k3), times(a3_0, a3_0)))
+    axiom Om1_def : Omega_1 = plus(plus(times(times(k1, k1), times(a1_1, a1_1)),
+                                        times(times(k2, k2), times(a2_1, a2_1))),
+                                   times(times(k3, k3), times(a3_1, a3_1)))
+    axiom Om2_def : Omega_2 = plus(plus(times(times(k1, k1), times(a1_2, a1_2)),
+                                        times(times(k2, k2), times(a2_2, a2_2))),
+                                   times(times(k3, k3), times(a3_2, a3_2)))
+
+    // H^{3/2}: Σk³|a_k|² — THE QUANTITY WE'RE TRACKING
+    axiom H32_0_def : H32_0 = plus(plus(times(times(k1, times(k1, k1)), times(a1_0, a1_0)),
+                                        times(times(k2, times(k2, k2)), times(a2_0, a2_0))),
+                                   times(times(k3, times(k3, k3)), times(a3_0, a3_0)))
+    axiom H32_1_def : H32_1 = plus(plus(times(times(k1, times(k1, k1)), times(a1_1, a1_1)),
+                                        times(times(k2, times(k2, k2)), times(a2_1, a2_1))),
+                                   times(times(k3, times(k3, k3)), times(a3_1, a3_1)))
+    axiom H32_2_def : H32_2 = plus(plus(times(times(k1, times(k1, k1)), times(a1_2, a1_2)),
+                                        times(times(k2, times(k2, k2)), times(a2_2, a2_2))),
+                                   times(times(k3, times(k3, k3)), times(a3_2, a3_2)))
+
+    // Palinstrophy: P = Σk⁴|a_k|²
+    axiom P0_def : P_0 = plus(plus(times(times(k1, times(k1, times(k1, k1))), times(a1_0, a1_0)),
+                                   times(times(k2, times(k2, times(k2, k2))), times(a2_0, a2_0))),
+                              times(times(k3, times(k3, times(k3, k3))), times(a3_0, a3_0)))
+    axiom P1_def : P_1 = plus(plus(times(times(k1, times(k1, times(k1, k1))), times(a1_1, a1_1)),
+                                   times(times(k2, times(k2, times(k2, k2))), times(a2_1, a2_1))),
+                              times(times(k3, times(k3, times(k3, k3))), times(a3_1, a3_1)))
+    axiom P2_def : P_2 = plus(plus(times(times(k1, times(k1, times(k1, k1))), times(a1_2, a1_2)),
+                                   times(times(k2, times(k2, times(k2, k2))), times(a2_2, a2_2))),
+                              times(times(k3, times(k3, times(k3, k3))), times(a3_2, a3_2)))
+
+    // --- Interpolation inequality: H^{3/2}² ≤ Ω · P ---
+    axiom interp_0 : times(H32_0, H32_0) ≤ times(Omega_0, P_0)
+    axiom interp_1 : times(H32_1, H32_1) ≤ times(Omega_1, P_1)
+    axiom interp_2 : times(H32_2, H32_2) ≤ times(Omega_2, P_2)
+
+    // --- Energy dissipation ---
+    axiom energy_diss_01 : E_1 ≤ E_0
+    axiom energy_diss_12 : E_2 ≤ E_1
+
+    // --- Initial energy bounded ---
+    axiom initial_energy : E_0 ≤ 1
+
+    // --- Can H^{3/2} blow up while energy and enstrophy are constrained? ---
+    // This is the core question: does the interpolation + energy dissipation
+    // prevent H^{3/2} from diverging?
+
+    // Blow-up attempt: H^{3/2} grows monotonically
+    axiom h32_growth_01 : H32_1 > H32_0
+    axiom h32_growth_12 : H32_2 > H32_1
+
+    // Strong growth: H^{3/2} doubles twice
+    axiom h32_doubles : H32_2 > times(4, H32_0)
+}
+
+// Z3: can H^{3/2} quadruple in 3 steps while energy ≤ 1?
+example "Half-derivative-4: can H^{3/2} blow up? (Skolem test)" {
+    assert(H32_2 > times(4, H32_0))
+}
+
+// Consistency check
+example "Half-derivative-5: axiom consistency" {
+    assert(nu > 0)
+}
+
+
+// --- Part E: Numerical H^{3/2} tracking ---
+//
+// Compute H^{3/2} along a specific cascade trajectory where
+// energy moves from low k to high k (the Kolmogorov cascade).
+
+example "Half-derivative-6: cascade trajectory H^{3/2} tracking" {
+    out("=== H^{3/2} During Energy Cascade ===")
+    let k1 = 1.0 in
+    let k2 = 10.0 in
+    let k3 = 100.0 in
+    let nu = 0.01 in
+
+    // State 1: energy at low k
+    let a1 = 1.0 in let a2 = 0.0 in let a3 = 0.0 in
+    let E1 = a1*a1 + a2*a2 + a3*a3 in
+    let Om1 = k1*k1*a1*a1 + k2*k2*a2*a2 + k3*k3*a3*a3 in
+    let H1 = k1*k1*k1*a1*a1 + k2*k2*k2*a2*a2 + k3*k3*k3*a3*a3 in
+    let P1 = k1*k1*k1*k1*a1*a1 + k2*k2*k2*k2*a2*a2 + k3*k3*k3*k3*a3*a3 in
+    out("State 1: all energy at k=1")
+    out("  E = 1, Ω = 1, H^{3/2} = 1, P = 1")
+    assert(E1 = 1.0)
+    assert(Om1 = 1.0)
+    assert(H1 = 1.0)
+    assert(P1 = 1.0)
+
+    // State 2: energy split between k=1 and k=10 (mid-cascade)
+    // Conserve energy: a1² + a2² = 1, say a1 = 0.8, a2 = 0.6
+    let b1 = 0.8 in let b2 = 0.6 in let b3 = 0.0 in
+    let E2 = b1*b1 + b2*b2 + b3*b3 in
+    let Om2 = k1*k1*b1*b1 + k2*k2*b2*b2 + k3*k3*b3*b3 in
+    let H2 = k1*k1*k1*b1*b1 + k2*k2*k2*b2*b2 + k3*k3*k3*b3*b3 in
+    let P2 = k1*k1*k1*k1*b1*b1 + k2*k2*k2*k2*b2*b2 + k3*k3*k3*k3*b3*b3 in
+    out("State 2: energy split (0.64 at k=1, 0.36 at k=10)")
+    out("  E =")
+    out(E2)
+    out("  Ω =")
+    out(Om2)
+    out("  H^{3/2} =")
+    out(H2)
+    out("  P =")
+    out(P2)
+
+    // State 3: most energy at k=10 (late cascade, before reaching k=100)
+    let c1 = 0.1 in let c2 = 0.99 in let c3 = 0.1 in
+    let E3 = c1*c1 + c2*c2 + c3*c3 in
+    let Om3 = k1*k1*c1*c1 + k2*k2*c2*c2 + k3*k3*c3*c3 in
+    let H3 = k1*k1*k1*c1*c1 + k2*k2*k2*c2*c2 + k3*k3*k3*c3*c3 in
+    let P3 = k1*k1*k1*k1*c1*c1 + k2*k2*k2*k2*c2*c2 + k3*k3*k3*k3*c3*c3 in
+    out("State 3: mostly at k=10 with some at k=100")
+    out("  E =")
+    out(E3)
+    out("  Ω =")
+    out(Om3)
+    out("  H^{3/2} =")
+    out(H3)
+    out("  P =")
+    out(P3)
+
+    // State 4: energy at k=100 (fully cascaded)
+    let d1 = 0.0 in let d2 = 0.0 in let d3 = 1.0 in
+    let E4 = d1*d1 + d2*d2 + d3*d3 in
+    let Om4 = k1*k1*d1*d1 + k2*k2*d2*d2 + k3*k3*d3*d3 in
+    let H4 = k1*k1*k1*d1*d1 + k2*k2*k2*d2*d2 + k3*k3*k3*d3*d3 in
+    let P4 = k1*k1*k1*k1*d1*d1 + k2*k2*k2*k2*d2*d2 + k3*k3*k3*k3*d3*d3 in
+    out("State 4: all energy at k=100 (fully cascaded)")
+    out("  E =")
+    out(E4)
+    out("  Ω =")
+    out(Om4)
+    out("  H^{3/2} =")
+    out(H4)
+    out("  P =")
+    out(P4)
+
+    // The key: energy dissipation during the cascade
+    // At state 4: dE/dt = -2νΩ = -2·0.01·10000 = -200
+    let dE_dt_4 = negate(times(times(2, nu), Om4)) in
+    out("")
+    out("=== ENERGY DISSIPATION AT EACH STATE ===")
+    out("State 1: dE/dt = -2νΩ =")
+    out(negate(times(times(2, nu), Om1)))
+    out("State 2: dE/dt =")
+    out(negate(times(times(2, nu), Om2)))
+    out("State 3: dE/dt =")
+    out(negate(times(times(2, nu), Om3)))
+    out("State 4: dE/dt =")
+    out(dE_dt_4)
+
+    out("")
+    out("=== THE ½-DERIVATIVE AMPLIFICATION ===")
+    out("As energy cascades from k=1 to k=100:")
+    out("  E stays ≤ 1 (dissipation removes it)")
+    out("  Ω goes from 1 to 10000 (×10000)")
+    out("  H^{3/2} goes from 1 to 1000000 (×10^6)")
+    out("  P goes from 1 to 10^8 (×10^8)")
+    out("")
+    out("Each 'derivative level' amplifies by k more:")
+    out("  H^s amplification = k^{2s} when energy moves from k=1 to k=K")
+    out("  H¹: k², H^{3/2}: k³, H²: k⁴")
+    out("")
+    out("BUT: energy dissipation also scales with k².")
+    out("At state 4, energy drains at rate 200/s — exhausted in 0.005s.")
+    out("The flow CANNOT stay at k=100 with E=1.")
+    out("Viscosity kills the cascade before H^{3/2} diverges.")
+}
+
+
+// --- Part F: The viscous time-integrated H^{3/2} bound ---
+//
+// From dE/dt = -2νΩ:   ∫₀ᵀ Ω dt ≤ E₀/(2ν)
+//
+// Can we get a similar bound for ∫₀ᵀ H^{3/2} dt?
+//
+// From the interpolation: H^{3/2}² ≤ Ω · P
+// So: H^{3/2} ≤ √(Ω · P) = √Ω · √P
+//
+// ∫ H^{3/2} dt ≤ ∫ √Ω · √P dt
+//   ≤ (∫ Ω dt)^{1/2} · (∫ P dt)^{1/2}   (Cauchy-Schwarz in time)
+//
+// We know: ∫ Ω dt ≤ E₀/(2ν)
+// We need: ∫ P dt
+//
+// From dΩ/dt = S - 2νP:
+//   ∫₀ᵀ 2νP dt = ∫₀ᵀ S dt - [Ω(T) - Ω(0)]
+//   ≤ ∫₀ᵀ S dt + Ω(0)
+//
+// From Sobolev: S ≤ Ω^{3/2}
+//   ∫ S dt ≤ ∫ Ω^{3/2} dt
+//
+// By Hölder with exponents (2, 2):
+//   ∫ Ω^{3/2} dt = ∫ Ω · Ω^{1/2} dt
+//   ≤ (∫ Ω² dt)^{1/2} · T^{1/2}
+//
+// ... This leads back to needing ∫ Ω² dt.
+//
+// ALTERNATIVE: Use the energy identity more directly.
+// From dE/dt = -2νΩ: Ω = -dE/dt / (2ν)
+// So: ∫ Ω^{3/2} dt = ∫ [-dE/dt / (2ν)]^{3/2} dt
+//   = (2ν)^{-3/2} · ∫ (-dE/dt)^{3/2} dt
+//
+// By Jensen's inequality (convexity of x^{3/2}):
+//   ∫ (-dE/dt)^{3/2} dt ≤ T^{-1/2} · [∫ (-dE/dt) dt]^{3/2}
+//                        = T^{-1/2} · [E(0) - E(T)]^{3/2}
+//                        ≤ T^{-1/2} · E₀^{3/2}
+//
+// NO — Jensen goes the wrong way for concave. x^{3/2} is convex, so
+// Jensen gives: (1/T ∫ f dt)^{3/2} ≤ 1/T ∫ f^{3/2} dt
+// i.e., ∫ f^{3/2} dt ≥ T · (∫f dt / T)^{3/2}
+// This is a LOWER bound, not useful.
+//
+// The honest conclusion: without additional NS-specific structure,
+// the ½-derivative bound requires pointwise control of P,
+// which requires pointwise control of Ω, which is the open problem.
+
+example "Half-derivative-7: time-integrated bound attempt" {
+    out("=== Time-Integrated H^{3/2} Bound ===")
+    let nu = 0.01 in
+    let E_0 = 1.0 in
+    let Omega_0 = 100.0 in
+
+    // ∫Ω dt ≤ E₀/(2ν)
+    let int_Omega_bound = E_0 / (2.0 * nu) in
+    out("∫Ω dt ≤ E₀/(2ν) =")
+    out(int_Omega_bound)
+    assert(int_Omega_bound = 50.0)
+
+    // If ∫P dt were bounded, we'd get ∫H^{3/2} dt bounded:
+    // ∫H^{3/2} dt ≤ √(∫Ω dt) · √(∫P dt) = √50 · √(∫P dt)
+    out("∫H^{3/2} dt ≤ √(∫Ω dt) · √(∫P dt)")
+    out("           = √50 · √(∫P dt)")
+    out("           = 7.07 · √(∫P dt)")
+
+    // From enstrophy equation integrated:
+    // 2ν · ∫P dt = ∫S dt + Ω(0) - Ω(T)
+    //            ≤ ∫Ω^{3/2} dt + Ω(0)
+    //            ≤ ??? + 100
+
+    out("")
+    out("=== THE CIRCULARITY ===")
+    out("To bound ∫P dt, we need ∫Ω^{3/2} dt.")
+    out("To bound ∫Ω^{3/2} dt, we need pointwise Ω bounds.")
+    out("To bound Ω pointwise, we need... H^{3/2} control.")
+    out("This is the ½-derivative gap in circular form.")
+    out("")
+    out("=== WHAT BREAKS THE CIRCLE? ===")
+    out("For NS in a FINITE Galerkin truncation: the circle breaks")
+    out("because k_max is finite, so P ≤ k_max² · Ω ≤ k_max² · k_max² · E")
+    out("Everything is bounded! The gap only appears at k_max → ∞.")
+    out("")
+    out("This is why Z3 found SAT for finite truncations but")
+    out("TIMEOUT for the abstract axiom system: the finite system")
+    out("IS smooth, but the limit is undecidable from these axioms alone.")
+}
+
+example "Half-derivative-8: finite Galerkin — everything is bounded" {
+    out("=== In Finite Galerkin: the Gap Doesn't Exist ===")
+    let k_max = 100.0 in
+    let E_0 = 1.0 in
+    let nu = 0.01 in
+
+    // In a finite truncation with k_max:
+    // Ω ≤ k_max² · E ≤ k_max² · E₀
+    let Omega_max = k_max * k_max * E_0 in
+    out("Ω_max = k_max² · E₀ =")
+    out(Omega_max)
+    assert(Omega_max = 10000.0)
+
+    // H^{3/2} ≤ k_max³ · E ≤ k_max³ · E₀
+    let H32_max = k_max * k_max * k_max * E_0 in
+    out("H^{3/2}_max = k_max³ · E₀ =")
+    out(H32_max)
+    assert(H32_max = 1000000.0)
+
+    // P ≤ k_max⁴ · E ≤ k_max⁴ · E₀
+    let P_max = k_max * k_max * k_max * k_max * E_0 in
+    out("P_max = k_max⁴ · E₀ =")
+    out(P_max)
+    assert(P_max = 100000000.0)
+
+    // L^∞ bound (Agmon): ‖v‖_{L^∞} ≤ C · Ω^{1/4} · P^{1/4}
+    let v_max = sqrt(sqrt(Omega_max)) * sqrt(sqrt(P_max)) in
+    out("L^∞ velocity bound (Agmon) ≤")
+    out(v_max)
+
+    // Energy drain time at max enstrophy:
+    let drain_time = E_0 / (2.0 * nu * Omega_max) in
+    out("Energy drain time at max enstrophy =")
+    out(drain_time)
+    assert(drain_time = 0.005)
+
+    out("")
+    out("=== THE FINITE GALERKIN TRUTH ===")
+    out("For ANY finite k_max, ALL norms are bounded by k_max^{2s} · E₀.")
+    out("Finite Galerkin NS is globally smooth. ALWAYS.")
+    out("")
+    out("The Millennium Problem is about the LIMIT k_max → ∞.")
+    out("As k_max → ∞:")
+    out("  Ω_max → ∞ (possible)")
+    out("  H^{3/2}_max → ∞ (possible)")
+    out("  P_max → ∞ (possible)")
+    out("  Drain time → 0 (viscosity kills it faster)")
+    out("")
+    out("The race: k_max → ∞ makes norms larger,")
+    out("but viscosity dissipation (∝ k²) also gets stronger.")
+    out("Who wins? That's the ½ derivative.")
+}

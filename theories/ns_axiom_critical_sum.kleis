@@ -1,0 +1,34 @@
+// Critical exponent test: S⁴ ≤ Ω³·P (corresponds to S² ≤ Ω^{3/2}·P^{1/2})
+//
+// This has a = 3/2, b = 1/2, a+b = 2 (at the critical threshold).
+// The exponent distribution differs from alignment (a=1, b=1) but the
+// total sum is the same. If a+b is all that matters, this should also
+// be UNSAT for ν = 1.
+//
+// Analytic: S⁴ > 16ν⁴·P⁴, and S⁴ ≤ Ω³·P.
+// So Ω³·P > 16ν⁴·P⁴ → Ω³ > 16ν⁴·P³ ≥ 16ν⁴·Ω³ → 1 > 16ν⁴.
+// With ν = 1: 1 > 16 is false. UNSAT.
+
+structure NS_CriticalSum {
+    element Omega : ℝ
+    element P : ℝ
+    element S : ℝ
+    element dOmega_dt : ℝ
+
+    axiom Omega_pos : Omega > 0
+    axiom P_pos : P > 0
+    axiom S_nonneg : S ≥ 0
+
+    axiom enstrophy_eq : dOmega_dt = plus(S, negate(times(2, P)))
+    axiom poincare : P ≥ Omega
+
+    // CRITICAL SUM: S⁴ ≤ Ω³·P (a+b = 2 in the squared sense)
+    axiom critical : times(times(S, S), times(S, S)) ≤ times(times(Omega, times(Omega, Omega)), P)
+
+    axiom large_omega : Omega > 10
+    axiom growth : dOmega_dt > 0
+}
+
+example "S⁴≤Ω³P (a+b=2): growth? (expect UNSAT)" {
+    assert(dOmega_dt > 0)
+}

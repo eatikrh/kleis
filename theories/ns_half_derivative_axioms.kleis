@@ -1,0 +1,66 @@
+// ============================================================================
+// NS Smoothness: Axiomatic Half-Derivative — Results Summary
+//
+// Instead of numerically computing H^{3/2}, we axiomatize D^{1/2}
+// and let Z3 reason about whether NS structural constraints permit
+// or forbid blow-up.
+//
+// Half-derivative axioms:
+//   Interpolation: H32² ≤ Ω · P           (D^{1/2} ∘ D^{1/2} = D¹)
+//   Sobolev:       ||∇v||_∞ ≤ C · H32     (embedding in 3D)
+//   Norm ordering: Ω ≤ H32 ≤ P            (k² ≤ k³ ≤ k⁴)
+//
+// NS structural equations:
+//   dE/dt = -2νΩ        (energy dissipation)
+//   dΩ/dt = S - 2νP     (enstrophy evolution)
+//   0 ≤ S ≤ ||∇v||_∞·Ω (stretching bound)
+//   P ≥ Ω               (Poincaré)
+//   E ≤ 1               (bounded energy)
+//
+// RESULTS (Z3, each in isolated context):
+//
+//   T1: Base axioms consistent                     → SAT ✓
+//   T2: H32 > 100 with bounded energy              → SAT ✓ (gap is REAL)
+//   T3: H32 > 100 AND enstrophy growing             → SAT ✓ (blow-up PERMITTED)
+//   T4: 2D: S=0 AND enstrophy growing               → UNSAT ✓ (2D is smooth)
+//   T5: Saturated stretching + growth                → SAT ✓ (worst case is consistent)
+//
+// INTERPRETATION:
+//
+//   The half-derivative axioms DO NOT prevent blow-up.
+//   Z3 finds models where all axioms hold, H32 is arbitrarily large,
+//   and enstrophy is growing — the blow-up scenario is structurally
+//   consistent.
+//
+//   The 2D control (S=0) correctly gives UNSAT: without stretching,
+//   dΩ/dt = -2νP < 0, so enstrophy must decrease. This confirms the
+//   axioms are correctly capturing the physics.
+//
+//   The 3D case allows blow-up because:
+//     S ≤ H32 · Ω ≤ P · Ω  (stretching can be as large as P · Ω)
+//     2νP grows linearly in P
+//     P · Ω grows faster (quadratically if Ω ~ P)
+//   So for large enough Ω, stretching overwhelms dissipation.
+//
+//   This is the ½-derivative gap, now AXIOMATICALLY VERIFIED:
+//   the structural axioms of D^{1/2} combined with NS equations
+//   are INSUFFICIENT to prove smoothness.
+//
+// COMPARISON WITH SPECTRAL COMB:
+//
+//   Spectral Comb: assert(Re ≠ 1/2) → UNSAT. Antisymmetry FORCES Re = 1/2.
+//   NS:            assert(H32 > 100 ∧ dΩ/dt > 0) → SAT. Axioms PERMIT blow-up.
+//
+//   The antisymmetry axiom is STRONG ENOUGH to close the gap.
+//   The half-derivative axioms are NOT STRONG ENOUGH.
+//   The missing ingredient: a structural property of NS solutions that
+//   is not captured by interpolation + Sobolev + energy dissipation.
+//
+// FILES:
+//   ns_hd_consistent.kleis  — T1: base axiom consistency
+//   ns_hd_large.kleis       — T2: H32 > 100 (gap test)
+//   ns_hd_blowup.kleis      — T3: blow-up scenario
+//   ns_hd_2d.kleis           — T4: 2D control (expects UNSAT)
+//   ns_hd_saturated.kleis   — T5: saturated stretching
+//
+// ============================================================================

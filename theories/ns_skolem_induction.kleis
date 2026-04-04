@@ -1,0 +1,478 @@
+// ============================================================================
+// NS Smoothness: Induction + Contraction (Spectral Comb Method)
+//
+// Applying the two key techniques from the Spectral Comb RH paper:
+//
+//   1. INDUCTION: Prove smoothness for N=1 (base), then N→N+1 (step)
+//      Pattern: spectral_comb_paper.kleis Section 14 (k-induction)
+//
+//   2. CONTRACTION: Write NS as a fixed-point equation, show the
+//      iteration map is a contraction via Neumann series
+//      Pattern: uniqueness_bridge.kleis (||J_F - I|| < 1)
+//
+// Following contraction_proof.kleis: compute numerically with lists
+// and fold, verify key bounds with a minimal Z3 structure.
+//
+// ============================================================================
+
+import "../stdlib/prelude.kleis"
+
+
+// ==========================================================================
+// PART A: GALERKIN INDUCTION — Base Case
+// ==========================================================================
+//
+// In the Spectral Comb:
+//   Base:  2×2 antisymmetric → Re = 1/2        (Z3)
+//   Step:  2N → 2(N+1) preserves antisymmetry   (Lean 4)
+//
+// For NS Galerkin:
+//   Base:  N=1 mode: da₁/dt = -νk₁²a₁ → exponential decay
+//   Step:  N modes smooth → N+1 modes smooth?
+
+example "1. Induction base: N=1 exponential decay" {
+    let k1 = 1.0 in
+    let nu = 0.01 in
+    let a1_0 = 1.0 in
+
+    let decay_rate = nu * k1 * k1 in
+    let half_life = ln(2.0) / decay_rate in
+    let a1_at_100 = a1_0 * exp(negate(decay_rate) * 100.0) in
+
+    out("=== INDUCTION BASE: N=1 ===")
+    out("Decay rate νk₁² =")
+    out(decay_rate)
+    out("Half-life =")
+    out(half_life)
+    out("a₁(100) =")
+    out(a1_at_100)
+    out("N=1: pure exponential decay. Trivially smooth.")
+    assert(decay_rate = 0.01)
+}
+
+
+// ==========================================================================
+// PART B: REYNOLDS NUMBER SWEEP — using lists and fold
+// ==========================================================================
+//
+// The NS analogue of ||J_F - I||_F from the Spectral Comb.
+//
+// At wavenumber k, the linearized NS operator has:
+//   diagonal: -νk² (damping)
+//   off-diagonal: coupling ~ v·k (advection)
+//
+// The "Neumann ratio" is Re(k) = v/(νk).
+// If Re(k) < 1: damping dominates → mode is stable (Neumann converges)
+// If Re(k) > 1: coupling dominates → mode is turbulent
+//
+// Compare: Spectral Comb had r = ε/Δγ, and ||J_F - I|| ~ r² < 1 for ALL N.
+
+define wavenumbers(n_modes) =
+    list_map(lambda i . i + 1.0, linspace(0, n_modes - 1, n_modes))
+
+define reynolds_numbers(k_list, nu, v) =
+    list_map(lambda k . v / (nu * k), k_list)
+
+define damping_rates(k_list, nu) =
+    list_map(lambda k . nu * k * k, k_list)
+
+define coupling_rates(k_list, v) =
+    list_map(lambda k . v * k, k_list)
+
+define count_turbulent(re_list) =
+    list_fold(lambda acc re . if re > 1.0 then acc + 1.0 else acc,
+              0.0, re_list)
+
+define count_stable(re_list) =
+    list_fold(lambda acc re . if re < 1.0 then acc + 1.0 else acc,
+              0.0, re_list)
+
+define find_k_crit(k_list, re_list) =
+    list_fold(lambda acc i .
+        let idx = floor(i) in
+        let re = nth(re_list, idx) in
+        let k = nth(k_list, idx) in
+        if re < 1.0 then
+            if acc = 0.0 then k else acc
+        else acc,
+        0.0,
+        linspace(0, length(k_list) - 1, length(k_list)))
+
+example "2. Reynolds sweep: identify turbulent vs stable modes" {
+    let nu = 0.01 in
+    let E = 1.0 in
+    let v = sqrt(2.0 * E) in
+    let n_modes = 200 in
+
+    let ks = wavenumbers(n_modes) in
+    let res = reynolds_numbers(ks, nu, v) in
+    let damps = damping_rates(ks, nu) in
+    let coups = coupling_rates(ks, v) in
+
+    out("=== REYNOLDS NUMBER SWEEP (200 modes) ===")
+    out("ν =")
+    out(nu)
+    out("v_rms = √(2E) =")
+    out(v)
+    out("")
+
+    // Show first few and last few
+    out("Mode 1:   k=1,   Re(k) =")
+    out(nth(res, 0))
+    out("Mode 10:  k=10,  Re(k) =")
+    out(nth(res, 9))
+    out("Mode 50:  k=50,  Re(k) =")
+    out(nth(res, 49))
+    out("Mode 100: k=100, Re(k) =")
+    out(nth(res, 99))
+    out("Mode 142: k=142, Re(k) =")
+    out(nth(res, 141))
+    out("Mode 143: k=143, Re(k) =")
+    out(nth(res, 142))
+    out("Mode 200: k=200, Re(k) =")
+    out(nth(res, 199))
+
+    out("")
+    let n_turb = count_turbulent(res) in
+    let n_stab = count_stable(res) in
+    out("Turbulent modes (Re > 1):")
+    out(n_turb)
+    out("Stable modes (Re < 1):")
+    out(n_stab)
+
+    let kc = find_k_crit(ks, res) in
+    out("Critical wavenumber k_crit (first mode with Re < 1):")
+    out(kc)
+
+    out("")
+    out("Compare Spectral Comb: ||J_F - I|| < 0.01 for ALL modes.")
+    out("NS: Re(k) < 1 only above k_crit. Below: turbulent.")
+}
+
+
+// ==========================================================================
+// PART C: DAMPING vs COUPLING — tabulate like contraction_proof.kleis
+// ==========================================================================
+//
+// Build the damping/coupling table for each mode, analogous to the
+// ||J_F - I||_F computation in contraction_proof.kleis Example 2.
+
+define damping_coupling_ratio(k_list, nu, v) =
+    list_map(lambda k . (nu * k) / v, k_list)
+
+example "3. Damping/coupling table (Neumann ratio per mode)" {
+    let nu = 0.01 in
+    let v = sqrt(2.0) in
+
+    out("=== DAMPING/COUPLING RATIO: νk/v (Neumann ratio) ===")
+    out("Contraction requires ratio > 1 (damping dominates)")
+    out("")
+
+    // Compute for specific wavenumbers like contraction_proof does for N=3,5,10
+    let test_ks = [1.0, 5.0, 10.0, 50.0, 100.0, 141.0, 142.0, 200.0, 500.0, 1000.0] in
+    let ratios = damping_coupling_ratio(test_ks, nu, v) in
+
+    out("k       | νk/v    | Status")
+    out("--------|---------|--------")
+
+    out("k=1     νk/v =")
+    out(nth(ratios, 0))
+    out("k=5     νk/v =")
+    out(nth(ratios, 1))
+    out("k=10    νk/v =")
+    out(nth(ratios, 2))
+    out("k=50    νk/v =")
+    out(nth(ratios, 3))
+    out("k=100   νk/v =")
+    out(nth(ratios, 4))
+    out("k=141   νk/v =")
+    out(nth(ratios, 5))
+    out("k=142   νk/v =")
+    out(nth(ratios, 6))
+    out("k=200   νk/v =")
+    out(nth(ratios, 7))
+    out("k=500   νk/v =")
+    out(nth(ratios, 8))
+    out("k=1000  νk/v =")
+    out(nth(ratios, 9))
+
+    out("")
+    out("In the Spectral Comb:")
+    out("  r = ε/Δγ < 0.08 for ALL N. Neumann converges everywhere.")
+    out("In NS:")
+    out("  νk/v > 1 only for k > v/ν ≈ 141. First 141 modes diverge.")
+}
+
+
+// ==========================================================================
+// PART D: BUILD THE NS LINEARIZED OPERATOR — LAPACK eigenvalues
+// ==========================================================================
+//
+// Following contraction_proof.kleis: build the actual matrix, compute
+// eigenvalues with LAPACK, check stability.
+//
+// The NS linearized operator at Galerkin truncation N:
+//   L_{ij} = -νk_i²·δ_{ij} + coupling_ij
+//
+// For a model problem (Burgers-like): coupling_ij ~ v·k_i when triads exist
+// We use a tridiagonal approximation: mode k couples to k±1.
+
+define build_ns_linearized(n_modes, nu, v) =
+    let n = n_modes in
+    // Diagonal: -νk²
+    let m0 = set_diag(zeros(n, n),
+        list_map(lambda i .
+            let k = i + 1.0 in
+            negate(nu * k * k),
+            linspace(0, n - 1, n))) in
+    // Off-diagonal: coupling ~ v·k (tridiagonal, nearest-neighbor triads)
+    list_fold(lambda acc i .
+        let j = floor(i) in
+        let k = j + 1.0 in
+        let coupling = v * k / (n * 1.0) in
+        let a = if j + 1 < n then set_element(acc, j, j + 1, coupling) else acc in
+        if j + 1 < n then set_element(a, j + 1, j, negate(coupling)) else a,
+        m0,
+        linspace(0, n - 2, n - 1))
+
+example "4. NS linearized operator eigenvalues (LAPACK)" {
+    let nu = 0.01 in
+    let v = 1.0 in
+
+    out("=== NS LINEARIZED OPERATOR: EIGENVALUE ANALYSIS ===")
+
+    // N = 5 (small, for LAPACK)
+    let n5 = 5 in
+    let L5 = build_ns_linearized(n5, nu, v) in
+    out("Linearized operator L (N=5):")
+    out(L5)
+    let eigs5 = nth(eig(L5), 0) in
+    out("Eigenvalues:")
+    out(eigs5)
+
+    // All eigenvalues should have negative real part → stable
+    let re_parts = list_map(lambda i . re(nth(eigs5, floor(i))),
+                            linspace(0, n5 - 1, n5)) in
+    out("Real parts of eigenvalues:")
+    out(re_parts)
+    let max_re = list_fold(lambda acc r . if r > acc then r else acc,
+                           negate(1000.0), re_parts) in
+    out("Max Re(λ) =")
+    out(max_re)
+    out("All eigenvalues stable (Re < 0)?")
+    out(max_re < 0.0)
+
+    out("")
+
+    // N = 10
+    let n10 = 10 in
+    let L10 = build_ns_linearized(n10, nu, v) in
+    let eigs10 = nth(eig(L10), 0) in
+    let re10 = list_map(lambda i . re(nth(eigs10, floor(i))),
+                        linspace(0, n10 - 1, n10)) in
+    let max_re10 = list_fold(lambda acc r . if r > acc then r else acc,
+                             negate(1000.0), re10) in
+    out("N=10: Max Re(λ) =")
+    out(max_re10)
+    out("Stable?")
+    out(max_re10 < 0.0)
+
+    // N = 20
+    let n20 = 20 in
+    let L20 = build_ns_linearized(n20, nu, v) in
+    let eigs20 = nth(eig(L20), 0) in
+    let re20 = list_map(lambda i . re(nth(eigs20, floor(i))),
+                        linspace(0, n20 - 1, n20)) in
+    let max_re20 = list_fold(lambda acc r . if r > acc then r else acc,
+                             negate(1000.0), re20) in
+    out("N=20: Max Re(λ) =")
+    out(max_re20)
+    out("Stable?")
+    out(max_re20 < 0.0)
+
+    out("")
+    out("All eigenvalues have Re < 0: the linearized NS operator is")
+    out("STABLE at every Galerkin truncation. This is the Stokes stability.")
+    out("The question is whether NONLINEAR interactions break this.")
+}
+
+
+// ==========================================================================
+// PART E: SPECTRAL GAP ANALYSIS — Neumann bound per N
+// ==========================================================================
+//
+// Following contraction_proof.kleis Example 6 (Neumann per-N bound):
+//
+// For NS, define the "Neumann ratio" at truncation N:
+//   r(N) = max_{k ≤ N} [ coupling(k) / damping(k) ] = max [ v/(νk) ] = v/(ν·1) = v/ν
+//
+// This is the GLOBAL Reynolds number — constant in N!
+// Compare: Spectral Comb had r(N) = ε/Δγ ~ 1/N → 0.
+//
+// The Neumann series for I - J converges when ||J - (-νK²)|| < ||νK²||.
+// But the coupling at k=1 is v, the damping at k=1 is ν.
+// So the ratio v/ν = Re is the Reynolds number — and it does NOT → 0.
+
+example "5. Spectral gap: NS vs Spectral Comb scaling" {
+    let nu = 0.01 in
+    let v = sqrt(2.0) in
+    let pi = 3.14159265358979 in
+
+    out("=== SPECTRAL GAP: SCALING COMPARISON ===")
+    out("")
+    out("N   | Comb r=ε/Δγ     | NS max[v/(νk)] | Comb bound   | NS bound")
+    out("----|-----------------|----------------|-------------|----------")
+
+    // Compute the Spectral Comb bounds using the actual formula from contraction_proof
+    // Comb: r ~ 2π/(mean·Δγ), bound ~ √(3N) · 2r²/(1-r)
+    // NS: max Re(k) = v/ν (constant!), no N-dependence at mode k=1
+
+    let ns_bound = v / nu in
+
+    // Comb: r ~ log²(N)/(πN), bound ~ √(3N)·2r²/(1-r)
+    // NS: max Re = v/ν = constant
+
+    // N = 3
+    let r3 = (log(3.0) * log(3.0)) / (pi * 3.0) in
+    let b3 = sqrt(9.0) * 2.0 * r3 * r3 / (1.0 - r3) in
+    out("N=3:   Comb r=")
+    out(r3)
+    out("       Comb bound=")
+    out(b3)
+
+    // N = 10
+    let r10 = (log(10.0) * log(10.0)) / (pi * 10.0) in
+    let b10 = sqrt(30.0) * 2.0 * r10 * r10 / (1.0 - r10) in
+    out("N=10:  Comb r=")
+    out(r10)
+    out("       Comb bound=")
+    out(b10)
+
+    // N = 100
+    let r100 = (log(100.0) * log(100.0)) / (pi * 100.0) in
+    let b100 = sqrt(300.0) * 2.0 * r100 * r100 / (1.0 - r100) in
+    out("N=100: Comb r=")
+    out(r100)
+    out("       Comb bound=")
+    out(b100)
+
+    // N = 1000
+    let r1000 = (log(1000.0) * log(1000.0)) / (pi * 1000.0) in
+    let b1000 = sqrt(3000.0) * 2.0 * r1000 * r1000 / (1.0 - r1000) in
+    out("N=1000: Comb r=")
+    out(r1000)
+    out("        Comb bound=")
+    out(b1000)
+
+    out("")
+    out("NS: max Re(k=1) = v/ν =")
+    out(ns_bound)
+    out("This is CONSTANT — does not decrease with N!")
+
+    out("")
+    out("=== THE ASYMPTOTIC DIVERGENCE ===")
+    out("")
+    out("Spectral Comb: r ~ log²(N)/(πN) → 0. Bound → 0. ✓")
+    out("NS:            max Re = v/ν = constant. Bound does NOT → 0. ✗")
+    out("")
+    out("The Spectral Comb perturbation VANISHES as N → ∞.")
+    out("The NS perturbation at the LOWEST mode stays CONSTANT.")
+    out("This is the structural difference.")
+}
+
+
+// ==========================================================================
+// PART F: THE ANALOGY TABLE — Where It Breaks
+// ==========================================================================
+
+example "6. The structural analogy: Spectral Comb vs NS" {
+    out("=== STRUCTURAL ANALOGY ===")
+    out("")
+    out("SPECTRAL COMB (RH):                     NAVIER-STOKES:")
+    out("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    out("Operator: H = dI + A                    Operator: ∂/∂t = ν∇² - (v·∇)")
+    out("Invariant: Aᵀ = -A (antisymmetry)       Invariant: E(t) ≤ E(0) (energy)")
+    out("Theorem: antisym → Re(μ) = d            Theorem: ??? → H^{3/2} bounded")
+    out("Base: 2×2 → Re = 1/2                    Base: N=1 → exp decay")
+    out("Step: block ext preserves antisym        Step: mode ext preserves energy")
+    out("  (Lean 4: BlockExtension.lean)            (energy identity: trivial)")
+    out("Contraction: ||J_F - I|| < 1 ∀N≥3       Contraction: Re(k) < 1 for k > v/ν")
+    out("  (r → 0 as N → ∞)                        (Re(k=1) = v/ν = CONSTANT)")
+    out("Limit: Banach + Gershgorin               Limit: ???")
+    out("Result: Re = 1/2 for all zeros ✓         Result: smooth? OPEN")
+    out("")
+    out("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    out("WHERE IT BREAKS:")
+    out("")
+    out("1. INVARIANT: Energy (L²) is too weak. Need H^{3/2} control.")
+    out("   Antisymmetry controls ALL eigenvalues algebraically.")
+    out("   Energy only controls the L² norm — it says nothing about")
+    out("   derivatives. The ½-derivative gap lives here.")
+    out("")
+    out("2. CONTRACTION: Spectral Comb: r → 0 (coupling vanishes).")
+    out("   NS: Re(k=1) = v/ν = constant (coupling PERSISTS).")
+    out("   The low modes never become perturbative.")
+    out("")
+    out("3. LIMIT: Spectral Comb: Banach gives unique fixed point.")
+    out("   NS: finite Galerkin is always smooth (ODE → Picard-Lindelöf).")
+    out("   But the N → ∞ limit is NOT controlled because the uniform")
+    out("   bound on solutions requires the MISSING invariant.")
+    out("")
+    out("=== WHAT WOULD CLOSE IT ===")
+    out("")
+    out("Find an invariant I(v) such that:")
+    out("  (a) I is preserved under N → N+1    ← like antisymmetry")
+    out("  (b) I ⟹ ||v||_{H^{3/2}} < ∞        ← like Re = d")
+    out("  (c) I persists as N → ∞              ← like Banach convergence")
+    out("")
+    out("Energy E satisfies (a) and (c) but fails (b).")
+    out("Enstrophy Ω satisfies (b) but fails (a):")
+    out("  stretching term S ~ Ω^{3/2}, not Ω.")
+    out("")
+    out("The ½-derivative gap = the exponent 3/2 vs 1 in the stretching bound.")
+    out("In 2D: S = 0, gap = 0 → solvable. In 3D: S ~ Ω^{3/2}, gap = ½ → open.")
+}
+
+
+// ==========================================================================
+// PART G: THE LEAN 4 ROADMAP — What NS Needs
+// ==========================================================================
+
+example "7. Lean 4 roadmap for NS (vs Spectral Comb)" {
+    out("=== FROM LEAN 4 (SPECTRAL COMB) TO NS ===")
+    out("")
+    out("SPECTRAL COMB — LEAN 4 PROOFS (DONE):")
+    out("  Basic.lean:            IsSkewSymmetric definition + properties")
+    out("  BlockExtension.lean:   Block extension preserves skew-symmetry")
+    out("  StructureTheorem.lean: Re(μ) = d for dI + A (A skew-symmetric)")
+    out("  Main.lean:             Inductive step + base + d=1/2 corollary")
+    out("  Convergence.lean:      2×2 block eigenvalues: d ± iγ")
+    out("  BanachConvergence.lean: r/q → 0 ⟹ unique fixed point")
+    out("")
+    out("NS — LEAN 4 PROOFS (NEEDED):")
+    out("  GalerkinBase.lean:      N=1 mode: exponential decay (trivial)")
+    out("  GalerkinExtension.lean: N → N+1 preserves ??? invariant")
+    out("  SmoothnessTheorem.lean: ??? ⟹ H^{3/2} bounded")
+    out("  Main.lean:              Base + step ⟹ ∀N: smooth")
+    out("  Convergence.lean:       Galerkin → PDE solution (standard)")
+    out("  Contraction.lean:       damping dominates for k > v/ν")
+    out("")
+    out("The ??? = a structural invariant that:")
+    out("  - IS preserved by Galerkin extension (like antisymmetry)")
+    out("  - IMPLIES H^{3/2} control (like Re = d)")
+    out("  - SURVIVES N → ∞ (like Banach convergence)")
+    out("")
+    out("Known candidates that FAIL:")
+    out("  Energy (L²):      preserved, but too weak (no derivative control)")
+    out("  Enstrophy (H¹):   NOT preserved (stretching grows as Ω^{3/2})")
+    out("  Helicity (∫v·ω):  preserved in inviscid, but no H^{3/2} control")
+    out("  Beale-Kato-Majda: ∫||ω||_∞ dt bounded ⟹ smooth, but proving")
+    out("                    the bound requires... the ½-derivative control.")
+    out("")
+    out("=== THE MILLENNIUM PRIZE IN ONE SENTENCE ===")
+    out("")
+    out("Find the NS analogue of antisymmetry: a structural property of")
+    out("the Navier-Stokes evolution that (a) persists at every Galerkin")
+    out("level, (b) controls ½ more derivative than energy gives you,")
+    out("and (c) survives the infinite-dimensional limit.")
+}

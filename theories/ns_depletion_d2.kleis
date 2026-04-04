@@ -1,0 +1,30 @@
+// D2: Effective stretching rate at Kato-Ponce level
+// σ_eff² ≤ P  ⟹  S² = Ω²·σ_eff² ≤ Ω²·P  (a+b = 3)
+// Expect: SAT (Kato-Ponce level, known insufficient)
+
+structure NS_Depletion_KatoPonce {
+    element Omega : ℝ
+    element P : ℝ
+    element S : ℝ
+    element dOmega_dt : ℝ
+    element sigma_eff : ℝ
+
+    axiom Omega_pos : Omega > 0
+    axiom P_pos : P > 0
+    axiom S_nonneg : S ≥ 0
+    axiom sigma_nonneg : sigma_eff ≥ 0
+
+    axiom stretching_def : S = times(Omega, sigma_eff)
+
+    // σ_eff² ≤ P  ⟹  S² = Ω²·P (a+b = 3)
+    axiom sigma_bound : times(sigma_eff, sigma_eff) ≤ P
+
+    axiom poincare : P ≥ Omega
+    axiom enstrophy_eq : dOmega_dt = plus(S, negate(times(2, P)))
+    axiom large_omega : Omega > 10
+    axiom growth : dOmega_dt > 0
+}
+
+example "D2: σ_eff² ≤ P → S² ≤ Ω²·P (a+b=3, expect SAT)" {
+    assert(dOmega_dt > 0)
+}

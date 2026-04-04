@@ -1,0 +1,64 @@
+// ============================================================================
+// NS Skolem Negation Test 1: Instantaneous Blow-Up
+//
+// Following the Spectral Comb atik_level3_nonantisym.kleis pattern:
+// Encode NS structural axioms + blow-up conditions in one structure.
+// If Z3 finds AXIOM INCONSISTENCY → blow-up is structurally impossible.
+// If Z3 finds SAT → blow-up is compatible with these constraints.
+//
+// Test: can enstrophy grow at a single instant while respecting
+// energy dissipation, Sobolev bound, and Poincaré inequality?
+// ============================================================================
+
+import "../stdlib/prelude.kleis"
+
+structure InstantaneousBlowUp {
+    element E : ℝ            // energy
+    element Omega : ℝ        // enstrophy
+    element P : ℝ            // palinstrophy
+    element S : ℝ            // stretching magnitude
+    element nu : ℝ           // viscosity
+    element dOmega_dt : ℝ    // enstrophy rate
+    element dE_dt : ℝ        // energy rate
+
+    // --- NS STRUCTURAL AXIOMS ---
+
+    axiom nu_positive : nu > 0
+    axiom E_positive : E > 0
+    axiom Omega_positive : Omega > 0
+    axiom P_positive : P > 0
+    axiom S_nonneg : S ≥ 0
+
+    // A1: Energy dissipation (exact identity)
+    axiom energy_dissipation : dE_dt = negate(times(times(2, nu), Omega))
+
+    // A2: Enstrophy evolution (exact)
+    axiom enstrophy_evolution :
+        dOmega_dt = plus(S, negate(times(times(2, nu), P)))
+
+    // A3: Poincaré inequality: P ≥ k_min² · Ω (k_min = 1)
+    axiom poincare : P ≥ Omega
+
+    // A4: Sobolev bound on stretching (3D): S² ≤ C² · Ω³ (C = 1)
+    axiom sobolev : times(S, S) ≤ times(Omega, times(Omega, Omega))
+
+    // A5: Energy bounded
+    axiom energy_bounded : E ≤ 1
+
+    // --- BLOW-UP CONDITION ---
+
+    // Enstrophy must be growing (necessary for blow-up)
+    axiom enstrophy_growing : dOmega_dt > 0
+}
+
+// If SAT: instantaneous enstrophy growth is compatible with NS.
+// If UNSAT: the structural axioms prevent enstrophy from ever growing.
+example "Instantaneous blow-up test (expect SAT or UNSAT)" {
+    assert(dOmega_dt > 0)
+}
+
+// Diagnostic: what if we weaken — just check axiom consistency
+// without the blow-up assertion?
+example "Axiom consistency without blow-up (expect SAT)" {
+    assert(Omega > 0)
+}

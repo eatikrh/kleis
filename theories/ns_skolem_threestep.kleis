@@ -1,0 +1,97 @@
+// ============================================================================
+// NS Skolem Negation Test 2: Three-Step Galerkin Blow-Up
+//
+// Following the Spectral Comb pattern: encode discretized NS evolution
+// over 3 timesteps. Ask Z3: can enstrophy amplify by 10×, 100×, 10000×?
+//
+// The Skolem witness (if SAT) is: specific values of Ω₀, Ω₁, Ω₂, E₀,
+// ν, Δt, stretching, and palinstrophy that achieve the amplification
+// while respecting all structural constraints.
+//
+// If UNSAT: this amplification factor is structurally impossible.
+// ============================================================================
+
+import "../stdlib/prelude.kleis"
+
+structure ThreeStepBlowUp {
+    // Enstrophy at three successive times
+    element Omega_0 : ℝ
+    element Omega_1 : ℝ
+    element Omega_2 : ℝ
+
+    // Energy at three successive times
+    element E_0 : ℝ
+    element E_1 : ℝ
+    element E_2 : ℝ
+
+    element nu : ℝ
+    element dt : ℝ
+
+    // Stretching at each step
+    element S_0 : ℝ
+    element S_1 : ℝ
+
+    // Palinstrophy at each step
+    element P_0 : ℝ
+    element P_1 : ℝ
+    element P_2 : ℝ
+
+    // --- Positivity ---
+    axiom nu_pos : nu > 0
+    axiom dt_pos : dt > 0
+    axiom E0_pos : E_0 > 0
+    axiom Omega0_pos : Omega_0 > 0
+    axiom Omega1_pos : Omega_1 > 0
+    axiom Omega2_pos : Omega_2 > 0
+    axiom P0_pos : P_0 > 0
+    axiom P1_pos : P_1 > 0
+    axiom P2_pos : P_2 > 0
+
+    // --- NS STRUCTURAL AXIOMS ---
+
+    // Energy dissipation (forward Euler)
+    axiom energy_01 :
+        E_1 = plus(E_0, times(negate(times(times(2, nu), Omega_0)), dt))
+    axiom energy_12 :
+        E_2 = plus(E_1, times(negate(times(times(2, nu), Omega_1)), dt))
+
+    // Energy stays non-negative
+    axiom E1_nonneg : E_1 ≥ 0
+    axiom E2_nonneg : E_2 ≥ 0
+
+    // Enstrophy evolution (forward Euler)
+    axiom enstrophy_01 :
+        Omega_1 = plus(Omega_0,
+            times(plus(S_0, negate(times(times(2, nu), P_0))), dt))
+    axiom enstrophy_12 :
+        Omega_2 = plus(Omega_1,
+            times(plus(S_1, negate(times(times(2, nu), P_1))), dt))
+
+    // Poincaré: P ≥ Ω
+    axiom poincare_0 : P_0 ≥ Omega_0
+    axiom poincare_1 : P_1 ≥ Omega_1
+    axiom poincare_2 : P_2 ≥ Omega_2
+
+    // Sobolev: S² ≤ Ω³
+    axiom sobolev_0 : times(S_0, S_0) ≤ times(Omega_0, times(Omega_0, Omega_0))
+    axiom sobolev_1 : times(S_1, S_1) ≤ times(Omega_1, times(Omega_1, Omega_1))
+
+    // Initial energy bounded
+    axiom initial_energy : E_0 ≤ 1
+
+    // Monotone growth
+    axiom growth_01 : Omega_1 > Omega_0
+    axiom growth_12 : Omega_2 > Omega_1
+
+    // Blow-up criterion: 10× amplification
+    axiom amplification : Omega_2 > times(10, Omega_0)
+}
+
+// Z3: is 10× enstrophy amplification in 3 steps compatible with NS?
+example "Three-step 10x amplification (Skolem test)" {
+    assert(Omega_2 > times(10, Omega_0))
+}
+
+example "Axiom consistency check" {
+    assert(Omega_0 > 0)
+}

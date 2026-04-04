@@ -1,0 +1,80 @@
+// ============================================================================
+// NS on 𝕋³: Pressure identity from incompressibility
+//
+// On 𝕋³ with ∇·v = 0, pressure satisfies:
+//   Δp = -|S|² + |ω|²/2
+//
+// Integrating over 𝕋³: ∫Δp = 0 → ∫|S|² = (1/2)∫|ω|² = Ω/2
+// (same as strain-enstrophy, this is redundant)
+//
+// But the POINTWISE pressure identity constrains Q-criterion:
+//   Q = (|ω|²/2 - |S|²)/2 = Δp / 2
+//   Q > 0 in vortex cores (rotation dominates)
+//   Q < 0 in straining regions (strain dominates)
+//
+// Additional constraint: the stretching term S = ∫ω·S·ω
+// involves ONLY the part of S that is ALIGNED with ω.
+// The trace-free condition forces:
+//   If ω aligns with all eigenvectors equally → S = 0
+//   Stretching requires SELECTIVE alignment
+//
+// Most aggressive encoding: use Constantin-Fefferman (1993):
+//   If the vorticity DIRECTION ξ = ω/|ω| varies slowly where |ω| large,
+//   then no blow-up. Encode as: S ≤ C · Ω (linear, not Ω^{3/2})
+// ============================================================================
+
+
+structure NS_Torus_Pressure {
+    element E : ℝ
+    element Omega : ℝ
+    element H32 : ℝ
+    element P : ℝ
+    element S : ℝ
+    element nu : ℝ
+    element dOmega_dt : ℝ
+    element grad_v_inf : ℝ
+    element strain_sq : ℝ
+
+    axiom nu_pos : nu > 0
+    axiom E_pos : E > 0
+    axiom Omega_pos : Omega > 0
+    axiom H32_pos : H32 > 0
+    axiom P_pos : P > 0
+    axiom S_nonneg : S ≥ 0
+    axiom grad_nonneg : grad_v_inf ≥ 0
+    axiom strain_pos : strain_sq > 0
+
+    // Standard NS
+    axiom interpolation : times(H32, H32) ≤ times(Omega, P)
+    axiom sobolev : grad_v_inf ≤ H32
+    axiom enstrophy_eq : dOmega_dt = plus(S, negate(times(times(2, nu), P)))
+    axiom stretching : S ≤ times(grad_v_inf, Omega)
+    axiom norm_low : Omega ≤ H32
+    axiom norm_high : H32 ≤ P
+    axiom poincare : P ≥ Omega
+    axiom energy_bounded : E ≤ 1
+
+    // 𝕋³ incompressibility
+    axiom strain_enstrophy : times(2, strain_sq) = Omega
+    axiom poincare_energy : Omega ≥ E
+
+    // Stretching refined by trace-free + alignment:
+    // S = ∫ω_i S_ij ω_j ≤ ∫|ω|² · λ_max
+    // λ_max ≤ √(2/3)·|S|_F pointwise
+    // Globally: S ≤ √(2/3) · ||ω||_{L^4}² · ||S||_{L^2}
+    // ||S||² = Ω/2, so ||S||_{L²} = √(Ω/2)
+    // ||ω||_{L^4}² ≤ C · ||ω|| · ||∇ω|| = C · √Ω · √P (Ladyzhenskaya)
+    // So: S ≤ √(2/3) · C · √Ω · √P · √(Ω/2)
+    //     S ≤ C' · Ω · √(P/Ω) · √(1/3) ... this collapses to ~ Ω·√P
+    //
+    // Encode: S² ≤ C · Ω² · P (tighter than S ≤ grad_v_inf · Ω)
+    axiom trace_free_stretching : times(S, S) ≤ times(Omega, times(Omega, P))
+
+    // BLOW-UP TEST
+    axiom large_H32 : H32 > 100
+    axiom growth : dOmega_dt > 0
+}
+
+example "𝕋³ + pressure + trace-free: blow-up still consistent?" {
+    assert(dOmega_dt > 0)
+}

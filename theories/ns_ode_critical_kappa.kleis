@@ -1,0 +1,58 @@
+// =============================================================================
+// Finding the critical depletion rate κ*
+// =============================================================================
+//
+// System: dΩ/dt = Ω²·α₁ - 2ν·Ω
+//         dα₁/dt = -κ·α₁·Ω
+// with Ω₀ = 50, α₀ = 0.8, ν = 1
+//
+// Strategy: use a fixed short time horizon (t=0.015) to see whether Ω
+// is growing or shrinking. At blow-up, Ω is much larger than Ω₀.
+// At decay, Ω is below Ω₀ or only slightly above.
+
+define nu = 1.0
+define Omega0 = 50.0
+define alpha0 = 0.8
+define get_t(pt) = nth(pt, 0)
+define get_om(pt) = nth(nth(pt, 1), 0)
+define get_alpha(pt) = nth(nth(pt, 1), 1)
+
+define make_ode(kappa) = lambda t y .
+    let om = nth(y, 0) in
+    let a1 = nth(y, 1) in
+    [minus(times(times(om, om), a1), times(times(2, nu), om)),
+     negate(times(times(kappa, a1), om))]
+
+// Fixed short integration to t=0.015 (before any blow-up)
+define traj_k002 = ode45(make_ode(0.02), [Omega0, alpha0], [0, 0.015], 0.0001)
+define traj_k003 = ode45(make_ode(0.03), [Omega0, alpha0], [0, 0.015], 0.0001)
+define traj_k004 = ode45(make_ode(0.04), [Omega0, alpha0], [0, 0.015], 0.0001)
+define traj_k005 = ode45(make_ode(0.05), [Omega0, alpha0], [0, 0.015], 0.0001)
+define traj_k006 = ode45(make_ode(0.06), [Omega0, alpha0], [0, 0.015], 0.0001)
+define traj_k007 = ode45(make_ode(0.07), [Omega0, alpha0], [0, 0.015], 0.0001)
+define traj_k008 = ode45(make_ode(0.08), [Omega0, alpha0], [0, 0.015], 0.0001)
+define traj_k009 = ode45(make_ode(0.09), [Omega0, alpha0], [0, 0.015], 0.0001)
+define traj_k010 = ode45(make_ode(0.10), [Omega0, alpha0], [0, 0.015], 0.0001)
+
+// Extended runs for cases that don't blow up
+// κ=0.05 and above: try longer time
+define traj_k005_long = ode45(make_ode(0.05), [Omega0, alpha0], [0, 1.0], 0.001)
+define traj_k006_long = ode45(make_ode(0.06), [Omega0, alpha0], [0, 1.0], 0.001)
+define traj_k010_long = ode45(make_ode(0.10), [Omega0, alpha0], [0, 3.0], 0.01)
+
+example "Critical kappa scan (short horizon)" {
+    out("=== Ω at t=0.015 for various κ (Ω₀=50) ===")
+    out(nth(traj_k002, minus(length(traj_k002), 1)))
+    out(nth(traj_k003, minus(length(traj_k003), 1)))
+    out(nth(traj_k004, minus(length(traj_k004), 1)))
+    out(nth(traj_k005, minus(length(traj_k005), 1)))
+    out(nth(traj_k006, minus(length(traj_k006), 1)))
+    out(nth(traj_k007, minus(length(traj_k007), 1)))
+    out(nth(traj_k008, minus(length(traj_k008), 1)))
+    out(nth(traj_k009, minus(length(traj_k009), 1)))
+    out(nth(traj_k010, minus(length(traj_k010), 1)))
+    out("=== Extended runs ===")
+    out(nth(traj_k005_long, minus(length(traj_k005_long), 1)))
+    out(nth(traj_k006_long, minus(length(traj_k006_long), 1)))
+    out(nth(traj_k010_long, minus(length(traj_k010_long), 1)))
+}

@@ -1,0 +1,24 @@
+// Hyperviscous base axioms (no growth) — consistency check
+
+structure NS_Hyper_Base {
+    element Omega : ℝ
+    element P54 : ℝ
+    element S : ℝ
+    element grad_v_inf : ℝ
+    element dOmega_dt : ℝ
+
+    axiom Omega_pos : Omega > 0
+    axiom P54_pos : P54 > 0
+    axiom S_nonneg : S ≥ 0
+    axiom grad_nonneg : grad_v_inf ≥ 0
+
+    axiom enstrophy_eq : dOmega_dt = plus(S, negate(times(2, P54)))
+    axiom stretching : S ≤ times(grad_v_inf, Omega)
+    axiom sobolev_hyper : times(grad_v_inf, grad_v_inf) ≤ P54
+    axiom hyper_poincare : P54 ≥ times(Omega, Omega)
+    axiom large_omega : Omega > 10
+}
+
+example "Hyper base axioms consistent (no growth)?" {
+    assert(Omega > 10)
+}

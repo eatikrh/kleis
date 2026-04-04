@@ -1,0 +1,75 @@
+// ============================================================================
+// NS: Metric Curvature and Vortex Topology
+//
+// The Cauchy-Green tensor C is a Riemannian metric on the material manifold.
+// Its Ricci curvature R_ij is related to how nearby fluid trajectories diverge.
+//
+// KEY INSIGHT: Vortex stretching = curvature of the material metric.
+//
+// The rate of stretching of a material line element δl:
+//   d|δl|²/dt = 2·S_ij·δl_i·δl_j / |δl|²
+//
+// For vorticity (which IS a material line element in inviscid flow):
+//   d|ω|/dt = S_ij·ξ_i·ξ_j · |ω|  (where ξ = ω/|ω|)
+//
+// The strain eigenvalue projected onto the vorticity direction:
+//   σ_ω = S_ij·ξ_i·ξ_j = λ₁cos²α + λ₂cos²β + λ₃cos²γ
+//
+// With trace-free constraint (λ₁ + λ₂ + λ₃ = 0):
+//   If ω aligns with λ₁ (max stretch): σ_ω = λ₁ → large positive
+//   If ω aligns with λ₂ (intermediate): σ_ω = λ₂ → moderate
+//   If ω aligns with λ₃ (compression): σ_ω = λ₃ → negative (decay!)
+//   If ω aligns equally with all: σ_ω = (λ₁+λ₂+λ₃)/3 = 0 → no stretching
+//
+// Simulations show: ω preferentially aligns with the INTERMEDIATE
+// eigenvector (cos²β ≈ 1), making σ_ω ≈ λ₂ (moderate, not maximal).
+//
+// Can we test: if σ_ω = λ₂ (intermediate alignment), is blow-up prevented?
+// ============================================================================
+
+
+structure NS_VortexAlignment {
+    element Omega : ℝ
+    element P : ℝ
+    element S : ℝ
+    element nu : ℝ
+    element dOmega_dt : ℝ
+
+    // Strain eigenvalues (trace-free)
+    element lambda1 : ℝ   // maximal
+    element lambda2 : ℝ   // intermediate
+    element lambda3 : ℝ   // compressive
+
+    axiom nu_pos : nu > 0
+    axiom Omega_pos : Omega > 0
+    axiom P_pos : P > 0
+    axiom S_nonneg : S ≥ 0
+
+    // Trace-free: λ₁ + λ₂ + λ₃ = 0
+    axiom trace_free : plus(lambda1, plus(lambda2, lambda3)) = 0
+
+    // Ordering: λ₁ ≥ λ₂ ≥ λ₃
+    axiom order_12 : lambda1 ≥ lambda2
+    axiom order_23 : lambda2 ≥ lambda3
+
+    // NS dynamics
+    axiom enstrophy_eq : dOmega_dt = plus(S, negate(times(times(2, nu), P)))
+    axiom poincare : P ≥ Omega
+
+    // INTERMEDIATE ALIGNMENT: stretching uses λ₂, not λ₁
+    // S = σ_ω · Ω ≈ λ₂ · Ω
+    axiom alignment : S ≤ times(lambda2, Omega)
+
+    // Strain magnitude (from strain-enstrophy identity)
+    // λ₁² + λ₂² + λ₃² = 2·strain_sq = Ω (pointwise representative)
+    axiom strain_magnitude : plus(times(lambda1, lambda1), plus(times(lambda2, lambda2), times(lambda3, lambda3))) ≤ Omega
+
+    axiom large_omega : Omega > 100
+
+    // TEST: with intermediate alignment, can enstrophy grow?
+    axiom growth : dOmega_dt > 0
+}
+
+example "Intermediate alignment: growth possible?" {
+    assert(dOmega_dt > 0)
+}

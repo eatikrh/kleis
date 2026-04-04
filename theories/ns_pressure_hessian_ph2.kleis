@@ -1,0 +1,19 @@
+// PH2: Without pressure Hessian constraint, net alignment can grow
+//
+// Even with W² depletion (Re_W < 0), if Re_H is unconstrained,
+// Re_H can be large and positive, making total positive.
+// Expect: SAT
+
+import "stdlib/prelude.kleis"
+
+structure No_Pressure_Constraint {
+    element R_net_before_H : ℝ
+    element Re_H : ℝ
+
+    axiom Rnet_pos : R_net_before_H > 0
+    axiom growth : plus(R_net_before_H, Re_H) > 0
+}
+
+example "PH2: Without H_tf constraint, net alignment possible (expect SAT)" {
+    assert(plus(R_net_before_H, Re_H) > 0)
+}

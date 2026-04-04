@@ -1,0 +1,84 @@
+// =============================================================================
+// ODE: Derived Re scaling from NS eigenframe rotation
+// =============================================================================
+//
+// dα₁/dt = 2Ωα₁(1-α₁) - c·Ω·√(α₁(1-α₁))
+//        = Ω·√(α₁(1-α₁)) · [2√(α₁(1-α₁)) - c]
+//
+// Equilibrium: 2√(α₁(1-α₁)) = c → α₁(1-α₁) = c²/4
+//   Exists iff c²/4 ≤ 1/4 iff c ≤ 1
+//   c < 1: stable eq at α₁* → blow-up
+//   c > 1: no eq, α₁ → 0 → bounded (after transient peak)
+//   c = 1: marginal (α₁* = 1/2 → blow-up since 0.5·Ω² supercritical)
+//
+// CRITICAL: c* = 1
+
+define nu = 1.0
+define Omega0 = 10.0
+define alpha0 = 0.3
+
+define get_t(pt) = nth(pt, 0)
+define get_om(pt) = nth(nth(pt, 1), 0)
+define get_alpha(pt) = nth(nth(pt, 1), 1)
+
+// H1: c = 0.5 (subcritical, eq at α₁(1-α₁)=0.0625)
+define traj_h1 = ode45(
+    lambda t y .
+        let om = nth(y, 0) in let a1 = nth(y, 1) in
+        let u = times(a1, minus(1, a1)) in
+        [minus(times(times(om, om), a1), times(times(2, nu), om)),
+         times(om, plus(times(2, u), negate(times(0.5, sqrt(u)))))],
+    [Omega0, alpha0], [0, 0.1], 0.0005)
+
+// H2: c = 0.8 (subcritical, eq at α₁(1-α₁)=0.16 → α₁*=0.8 or 0.2)
+define traj_h2 = ode45(
+    lambda t y .
+        let om = nth(y, 0) in let a1 = nth(y, 1) in
+        let u = times(a1, minus(1, a1)) in
+        [minus(times(times(om, om), a1), times(times(2, nu), om)),
+         times(om, plus(times(2, u), negate(times(0.8, sqrt(u)))))],
+    [Omega0, alpha0], [0, 0.5], 0.001)
+
+// H3: c = 1.2 (supercritical) → bounded after peak
+define traj_h3 = ode45(
+    lambda t y .
+        let om = nth(y, 0) in let a1 = nth(y, 1) in
+        let u = times(a1, minus(1, a1)) in
+        [minus(times(times(om, om), a1), times(times(2, nu), om)),
+         times(om, plus(times(2, u), negate(times(1.2, sqrt(u)))))],
+    [Omega0, alpha0], [0, 5.0], 0.005)
+
+// H4: c = 2.0 (strongly supercritical) → bounded
+define traj_h4 = ode45(
+    lambda t y .
+        let om = nth(y, 0) in let a1 = nth(y, 1) in
+        let u = times(a1, minus(1, a1)) in
+        [minus(times(times(om, om), a1), times(times(2, nu), om)),
+         times(om, plus(times(2, u), negate(times(2, sqrt(u)))))],
+    [Omega0, alpha0], [0, 5.0], 0.005)
+
+// H5: c = 1.0 (critical) → α₁ → 0.5 → blow-up
+define traj_h5 = ode45(
+    lambda t y .
+        let om = nth(y, 0) in let a1 = nth(y, 1) in
+        let u = times(a1, minus(1, a1)) in
+        [minus(times(times(om, om), a1), times(times(2, nu), om)),
+         times(om, plus(times(2, u), negate(sqrt(u))))],
+    [Omega0, alpha0], [0, 0.5], 0.001)
+
+example "Derived Re with geometric scaling (Ω₀=10, α₀=0.3)" {
+    let h1_last = nth(traj_h1, minus(length(traj_h1), 1)) in
+    out("H1 c=0.5:  t=" + to_string(get_t(h1_last)) + " Om=" + to_string(get_om(h1_last)) + " a1=" + to_string(get_alpha(h1_last)))
+
+    let h2_last = nth(traj_h2, minus(length(traj_h2), 1)) in
+    out("H2 c=0.8:  t=" + to_string(get_t(h2_last)) + " Om=" + to_string(get_om(h2_last)) + " a1=" + to_string(get_alpha(h2_last)))
+
+    let h5_last = nth(traj_h5, minus(length(traj_h5), 1)) in
+    out("H5 c=1.0:  t=" + to_string(get_t(h5_last)) + " Om=" + to_string(get_om(h5_last)) + " a1=" + to_string(get_alpha(h5_last)))
+
+    let h3_last = nth(traj_h3, minus(length(traj_h3), 1)) in
+    out("H3 c=1.2:  t=" + to_string(get_t(h3_last)) + " Om=" + to_string(get_om(h3_last)) + " a1=" + to_string(get_alpha(h3_last)))
+
+    let h4_last = nth(traj_h4, minus(length(traj_h4), 1)) in
+    out("H4 c=2.0:  t=" + to_string(get_t(h4_last)) + " Om=" + to_string(get_om(h4_last)) + " a1=" + to_string(get_alpha(h4_last)))
+}

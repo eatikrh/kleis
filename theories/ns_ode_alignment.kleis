@@ -1,0 +1,170 @@
+// =============================================================================
+// ODE Simulation: Coupled Enstrophy + Alignment Dynamics
+// =============================================================================
+//
+// GOAL: Numerically verify the geometric depletion mechanism.
+//
+// From D7-D9 we know: blow-up is prevented iff BOTH:
+//   1. α₁ ≤ C/Ω  (scale-dependent depletion)
+//   2. λ₂ ≤ 0     (biaxial strain)
+//
+// We model the coupled system (biaxial, P ≈ Ω):
+//   dΩ/dt = Ω² · α₁ - 2ν·Ω       (stretching = Ω·λ₁·α₁, λ₁ ≈ Ω)
+//   dα₁/dt = -κ · α₁ · Ω          (depletion: alignment decays with enstrophy)
+//
+// We compare:
+//   A) No depletion (α₁ = 1 fixed):       dΩ/dt = Ω² - 2νΩ  → finite-time blow-up
+//   B) Constant depletion (α₁ = 0.1):     dΩ/dt = 0.1·Ω² - 2νΩ → slower blow-up
+//   C) Dynamic depletion (κ = 0.01):       coupled system → may prevent blow-up
+//   D) Strong dynamic depletion (κ = 0.1): coupled system → should prevent blow-up
+
+define nu = 1.0
+define get_t(pt) = nth(pt, 0)
+define get_om(pt) = nth(nth(pt, 1), 0)
+define get_alpha(pt) = nth(nth(pt, 1), 1)
+define Omega0 = 50.0
+define alpha0 = 0.8
+
+// --- Case A: No depletion (standard blow-up) ---
+// dΩ/dt = Ω² - 2νΩ (α₁ = 1)
+// Blow-up time ≈ 1/(Ω₀-2ν) ≈ 0.021, so cap at t=0.018
+define traj_no_depl = ode45(
+    lambda t y .
+        let om = nth(y, 0) in
+        [minus(times(om, om), times(times(2, nu), om))],
+    [Omega0],
+    [0, 0.018],
+    0.0001
+)
+
+// --- Case B: Constant depletion (α₁ = 0.1, still blows up) ---
+// dΩ/dt = 0.1·Ω² - 2νΩ
+// Blow-up time ≈ 1/(0.1·Ω₀-2ν) ≈ 0.33, so cap at t=0.25
+define traj_const_depl = ode45(
+    lambda t y .
+        let om = nth(y, 0) in
+        [minus(times(times(0.1, om), om), times(times(2, nu), om))],
+    [Omega0],
+    [0, 0.25],
+    0.001
+)
+
+// --- Case C: Weak dynamic depletion (κ = 0.01) ---
+// dΩ/dt = Ω²·α₁ - 2νΩ
+// dα₁/dt = -0.01·α₁·Ω
+// NOTE: κ=0.01 is too weak — still blows up at t≈0.026
+define traj_weak_depl = ode45(
+    lambda t y .
+        let om = nth(y, 0) in
+        let a1 = nth(y, 1) in
+        [minus(times(times(om, om), a1), times(times(2, nu), om)),
+         negate(times(times(0.01, a1), om))],
+    [Omega0, alpha0],
+    [0, 0.02],
+    0.0001
+)
+
+// --- Case D: Strong dynamic depletion (κ = 0.1) ---
+// dΩ/dt = Ω²·α₁ - 2νΩ
+// dα₁/dt = -0.1·α₁·Ω
+define traj_strong_depl = ode45(
+    lambda t y .
+        let om = nth(y, 0) in
+        let a1 = nth(y, 1) in
+        [minus(times(times(om, om), a1), times(times(2, nu), om)),
+         negate(times(times(0.1, a1), om))],
+    [Omega0, alpha0],
+    [0, 5.0],
+    0.01
+)
+
+// --- Case E: Very strong depletion (κ = 0.5) ---
+// dΩ/dt = Ω²·α₁ - 2νΩ
+// dα₁/dt = -0.5·α₁·Ω
+define traj_vstrong_depl = ode45(
+    lambda t y .
+        let om = nth(y, 0) in
+        let a1 = nth(y, 1) in
+        [minus(times(times(om, om), a1), times(times(2, nu), om)),
+         negate(times(times(0.5, a1), om))],
+    [Omega0, alpha0],
+    [0, 5.0],
+    0.01
+)
+
+// Extract time and enstrophy series
+define t_no = list_map(lambda p . get_t(p), traj_no_depl)
+define om_no = list_map(lambda p . get_om(p), traj_no_depl)
+
+define t_const = list_map(lambda p . get_t(p), traj_const_depl)
+define om_const = list_map(lambda p . get_om(p), traj_const_depl)
+
+define t_weak = list_map(lambda p . get_t(p), traj_weak_depl)
+define om_weak = list_map(lambda p . get_om(p), traj_weak_depl)
+define alpha_weak = list_map(lambda p . get_alpha(p), traj_weak_depl)
+
+define t_strong = list_map(lambda p . get_t(p), traj_strong_depl)
+define om_strong = list_map(lambda p . get_om(p), traj_strong_depl)
+define alpha_strong = list_map(lambda p . get_alpha(p), traj_strong_depl)
+
+define t_vstrong = list_map(lambda p . get_t(p), traj_vstrong_depl)
+define om_vstrong = list_map(lambda p . get_om(p), traj_vstrong_depl)
+define alpha_vstrong = list_map(lambda p . get_alpha(p), traj_vstrong_depl)
+
+example "Coupled enstrophy-alignment dynamics" {
+    // Figure 1: Enstrophy trajectories — all cases
+    let fig_enstrophy = export_typst_fragment(
+        plot(t_no, om_no, color = "red", label = "No depletion ($alpha_1 = 1$)"),
+        plot(t_const, om_const, color = "orange", label = "Constant ($alpha_1 = 0.1$)"),
+        plot(t_weak, om_weak, color = "purple", label = "Weak ($kappa = 0.01$)"),
+        plot(t_strong, om_strong, color = "blue", label = "Strong ($kappa = 0.1$)"),
+        plot(t_vstrong, om_vstrong, color = "green", label = "Very strong ($kappa = 0.5$)"),
+        title = "Enstrophy with geometric depletion ($Omega_0 = 50, nu = 1$)",
+        xlabel = "$t$",
+        ylabel = "$Omega(t)$",
+        legend_position = "right + top",
+        width = 12
+    ) in
+
+    // Figure 2: Alignment weight evolution
+    let fig_alignment = export_typst_fragment(
+        plot(t_weak, alpha_weak, color = "purple", label = "Weak ($kappa = 0.01$)"),
+        plot(t_strong, alpha_strong, color = "blue", label = "Strong ($kappa = 0.1$)"),
+        plot(t_vstrong, alpha_vstrong, color = "green", label = "Very strong ($kappa = 0.5$)"),
+        title = "Alignment weight $alpha_1 (t)$",
+        xlabel = "$t$",
+        ylabel = "$alpha_1$",
+        legend_position = "right + top",
+        width = 12
+    ) in
+
+    // Figure 3: Product Ω·α₁ — the effective stretching rate
+    let om_alpha_weak = list_zipwith(lambda a b . times(a, b), om_weak, alpha_weak) in
+    let om_alpha_strong = list_zipwith(lambda a b . times(a, b), om_strong, alpha_strong) in
+    let om_alpha_vstrong = list_zipwith(lambda a b . times(a, b), om_vstrong, alpha_vstrong) in
+
+    let fig_product = export_typst_fragment(
+        plot(t_weak, om_alpha_weak, color = "purple", label = "Weak ($kappa = 0.01$)"),
+        plot(t_strong, om_alpha_strong, color = "blue", label = "Strong ($kappa = 0.1$)"),
+        plot(t_vstrong, om_alpha_vstrong, color = "green", label = "Very strong ($kappa = 0.5$)"),
+        title = "Effective stretching $Omega dot alpha_1$",
+        xlabel = "$t$",
+        ylabel = "$Omega dot alpha_1$",
+        legend_position = "right + top",
+        width = 12
+    ) in
+
+    // --- Print trajectory endpoints ---
+    let no_last = nth(traj_no_depl, minus(length(traj_no_depl), 1)) in
+    let const_last = nth(traj_const_depl, minus(length(traj_const_depl), 1)) in
+    let weak_last = nth(traj_weak_depl, minus(length(traj_weak_depl), 1)) in
+    let strong_last = nth(traj_strong_depl, minus(length(traj_strong_depl), 1)) in
+    let vstrong_last = nth(traj_vstrong_depl, minus(length(traj_vstrong_depl), 1)) in
+
+    out("=== TRAJECTORY ENDPOINTS ===")
+    out(no_last)
+    out(const_last)
+    out(weak_last)
+    out(strong_last)
+    out(vstrong_last)
+}

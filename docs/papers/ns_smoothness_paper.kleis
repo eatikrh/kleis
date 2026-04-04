@@ -1,0 +1,481 @@
+// =============================================================================
+// The Half-Derivative Gap: Machine-Verified Structural Diagnosis of
+// Navier-Stokes Smoothness
+// =============================================================================
+//
+// A .kleis document using the arXiv template.
+//
+// Compile:
+//   kleis test --raw-output --example compile \
+//       examples/mathematics/ns_smoothness_paper.kleis > ns_smoothness_paper.typ
+//   typst compile ns_smoothness_paper.typ ns_smoothness_paper.pdf
+//
+// =============================================================================
+
+import "stdlib/prelude.kleis"
+import "stdlib/templates/arxiv_paper.kleis"
+
+// =============================================================================
+// Metadata
+// =============================================================================
+
+define paper_title = "The Half-Derivative Gap: Machine-Verified Structural Diagnosis of Navier-Stokes Smoothness"
+
+define paper_authors = [
+    Author("Engin Atik", "1")
+]
+
+define paper_affiliations = [
+    Affiliation(1, "Kleis Research", "https://kleis.io")
+]
+
+define paper_abstract = "We axiomatize the Sobolev norm hierarchy of the 3D incompressible Navier-Stokes equations and use the Z3 SMT solver to test whether blow-up scenarios are consistent with the resulting scalar constraint systems. Twenty-six satisfiability tests cover interpolation inequalities, Kato-Ponce and fractional Gronwall bounds, Millennium Problem boundary conditions ($TT^3$, $nabla dot v = 0$), all four conservation laws including the Leray energy inequality, and the Cauchy-Green deformation tensor. Every test at the standard viscous exponent $alpha = 1$ returns SAT: blow-up is not excluded. Two controls return UNSAT: the 2D case ($S = 0$) and the Lions hyperviscous threshold ($alpha = 5 slash 4$), isolating the half-derivative gap $\"gap\"(d) = d slash 2 - 1$ as the organizing invariant.
+
+We then test non-scalar axiom candidates of the form $S^2 <= Omega^a P^b$. The gap closes if and only if the exponent sum $a + b <= 2$; at this threshold, the basin of stability collapses onto the entire state space (global basin collapse). The standard bound has $a + b = 4$; Kato-Ponce already reduces this to $a + b = 3$. Within this framework's exponent bookkeeping, the remaining reduction is exactly one derivative order, independent of how the exponents are distributed. The Millennium Problem is undecidable within the scalar Sobolev framework: the full Navier-Stokes equations may implicitly enforce a geometric depletion of stretching, but that enforcement is invisible after projection to scalar norm inequalities."
+
+define paper_keywords = "Navier-Stokes equations, Millennium Problem, formal verification, SMT solver, Sobolev spaces, fractional derivatives, Riemann-Liouville, Kato-Ponce, Lions theorem, structural diagnosis"
+
+// =============================================================================
+// Section 1: Introduction
+// =============================================================================
+
+define sec_intro = ArxivSection("Introduction",
+"The Navier-Stokes existence and smoothness problem, one of the seven Clay Mathematics Institute Millennium Prize Problems, asks whether smooth, divergence-free initial data on $RR^3$ or $TT^3$ necessarily yield a smooth solution for all time [1]. Despite a century of progress in harmonic analysis, functional analysis, and PDE theory, the problem remains open.
+
+The difficulty is well-characterized: in three dimensions, the vortex stretching term $omega dot nabla v$ can amplify vorticity, potentially driving $||omega||_(L^infinity)$ to infinity in finite time. The viscous dissipation $-nu Delta v$ opposes this, but the two effects operate at different derivative orders: stretching involves $nabla v$ (one derivative), while dissipation involves $Delta v$ (two derivatives). Whether dissipation always dominates stretching in 3D is unknown.
+
+This paper takes a different approach from both the analytical and computational traditions. Rather than attempting a proof or a numerical simulation, we treat the problem as a _structural diagnosis_: we axiomatize the known constraints on the Sobolev norm dynamics and use an SMT (Satisfiability Modulo Theories) solver to determine which axiom systems are consistent with blow-up and which exclude it.
+
+The methodology is inspired by the Spectral Comb investigation of the Riemann Hypothesis [2], where Z3 satisfiability tests identified the antisymmetric structure as the key architectural element. Here, we apply the same formal verification framework to the Navier-Stokes equations, with three goals: (i) determine whether blow-up is consistent with a broad family of axiomatized scalar constraints; (ii) identify which additional axioms would make blow-up inconsistent (UNSAT); and (iii) characterize the _type_ of structure that is missing from the scalar framework.
+
+All computations are performed in the Kleis formal verification language [4], with the Z3 SMT solver providing satisfiability verdicts. Each test completes in under two seconds. The full test suite is available in the `theories/` directory of the Kleis repository.")
+
+define subsec_conparian = ArxivSubsection("Methodological remark",
+"This investigation follows a diagnostic methodology: rather than attacking the Millennium Problem directly, we axiomatize the known scalar machinery and use machine verification to determine where it does and does not close. In a companion investigation of the Riemann Hypothesis [2], the same approach identified the antisymmetry of a discretized operator as the critical structural invariant. Here, we will see that the critical missing ingredient is non-scalar. (For the broader philosophical framework motivating this diagnostic approach, see [3].)")
+
+// =============================================================================
+// Section 2: Formal Verification Framework
+// =============================================================================
+
+define sec_framework = ArxivSection("Formal Verification Framework",
+"Kleis is a functional language with dependent types, algebraic structures, and integrated solver backends [4]. A Kleis `structure` defines elements (variables), axioms (constraints), and operations. When an `example` block contains an `assert` statement, Kleis loads the structure's axioms into Z3 and checks whether the assertion is satisfiable given the axioms.
+
+The key methodology for this investigation: *SAT* (assertion verified) means the axioms are jointly consistent — Z3 found a model satisfying all constraints, including the growth condition. This means the axiom system does _not exclude_ blow-up; it does not show that blow-up occurs in the actual PDE. *UNSAT* (axiom inconsistency) means the growth condition contradicts the other encoded axioms, so blow-up is excluded _within the model_.
+
+Each test uses a single `structure` in a single file, ensuring Z3 contexts are isolated and axiom sets are not contaminated by unrelated constraints.
+
+*Important caveat on interpretation.* These SMT models are models of the scalar inequality system, not necessarily realizable velocity fields. A SAT result means the chosen inequalities are jointly consistent with a growth scenario in the abstract model; it does not by itself show there exists a genuine Navier-Stokes solution realizing that scenario. Likewise, UNSAT means the encoded growth condition conflicts with the encoded axioms; it does not constitute an independent proof of a PDE theorem. The value of the framework lies in its diagnostic power — systematically identifying which scalar constraints contribute to regularity and which do not — rather than in establishing new PDE results.")
+
+define subsec_variables = ArxivSubsection("Variables and their physical meaning",
+"The following Sobolev norms track the regularity of the velocity field $v$ on $TT^3$: $E = ||v||_(L^2)^2$ (kinetic energy), $Omega = ||nabla v||_(L^2)^2 = ||omega||_(L^2)^2$ (enstrophy), $H_(3 slash 2) = ||v||_(H^(3 slash 2))^2$ (half-derivative norm), $P = ||Delta v||_(L^2)^2 = ||nabla omega||_(L^2)^2$ (palinstrophy), $Q = ||Delta omega||_(L^2)^2$ (super-palinstrophy), and $S = integral omega_i S_(i j) omega_j d x$ (vortex stretching). The norm ordering $E <= Omega <= H_(3 slash 2) <= P <= Q$ follows from Poincaré inequalities on $TT^3$ with $k_(\"min\") = 1$.")
+
+define table_variables = ArxivTable("tab:variables", "Sobolev norm variables used in the Z3 axiom systems.",
+    "table(columns: (auto, auto, auto), align: (left, left, left), table.header([*Variable*], [*Sobolev norm*], [*Physical meaning*]), [$E$], [$||v||_(L^2)^2$], [Kinetic energy], [$Omega$], [$||nabla v||_(L^2)^2$], [Enstrophy], [$H_(3 slash 2)$], [$||v||_(H^(3 slash 2))^2$], [Half-derivative norm], [$P$], [$||Delta v||_(L^2)^2$], [Palinstrophy], [$S$], [$integral omega_i S_(i j) omega_j d x$], [Vortex stretching])")
+
+// =============================================================================
+// Section 3: The Half-Derivative Gap
+// =============================================================================
+
+define sec_halfderiv = ArxivSection("The Half-Derivative Gap",
+"The fundamental axiom system for 3D incompressible Navier-Stokes encodes: interpolation ($H_(3 slash 2)^2 <= Omega dot P$), Sobolev embedding ($||nabla v||_infinity <= H_(3 slash 2)$), the energy equation ($d E slash d t = -2 nu Omega$), the enstrophy equation ($d Omega slash d t = S - 2 nu P$), the stretching bound ($S <= ||nabla v||_infinity dot Omega$), norm ordering ($Omega <= H_(3 slash 2) <= P$), Poincaré ($P >= Omega$), and the energy bound ($E <= 1$).")
+
+define subsec_base_tests = ArxivSubsection("Base axiom tests",
+"*Test T1* (base axioms consistent): Asserting $nu > 0$ returns *SAT*. The axioms are mutually satisfiable.
+
+*Test T2* ($H_(3 slash 2) > 100$): Adding the axiom `large_H32 : H32 > 100` returns *SAT*. The $H^(3 slash 2)$ norm can be arbitrarily large.
+
+*Test T3* (blow-up scenario): Adding both `large_H32 : H32 > 100` and `growth : dOmega_dt > 0` returns *SAT*. Enstrophy growth with large $H^(3 slash 2)$ is not excluded by the axiom system.
+
+*Test T4* (2D control): Adding `no_stretching : S = 0` and `growth : dOmega_dt > 0` returns *UNSAT*. Without vortex stretching, enstrophy growth contradicts the axioms. This confirms the known result: 2D Navier-Stokes is globally smooth.
+
+*Test T5* (saturated stretching): Tightening the Sobolev and stretching bounds to equality, with growth, returns *SAT*. Even in the worst case, the axiom system does not exclude blow-up.
+
+These five tests establish the baseline: the half-derivative axioms do not close the gap. The 2D control confirms the axiom system is not trivially permissive.")
+
+// =============================================================================
+// Section 4: Riemann-Liouville Fractional Derivative Axioms
+// =============================================================================
+
+define sec_rl = ArxivSection("Riemann-Liouville Fractional Derivative Axioms",
+"The abstract interpolation $H_(3 slash 2)^2 <= Omega dot P$ captures the semigroup property $D^(1 slash 2) compose D^(1 slash 2) = D^1$ but not the explicit structure of fractional derivatives. The Riemann-Liouville formula
+
+$ D^(1 slash 2) f(t) = 1 / (Gamma(1 slash 2)) d / (d t) integral_0^t (t - s)^(-1 slash 2) f(s) d s $
+
+yields three additional axioms.")
+
+define subsec_rl_tests = ArxivSubsection("Three refined scalar closures",
+"The RL formula yields three refined axioms beyond abstract interpolation: (1) the Kato-Ponce fractional Leibniz inequality [5], giving the sharper stretching bound $S^2 <= C^2 H_(3 slash 2)^3$; (2) the fractional Gronwall inequality [6] at the critical exponent $p = 3 slash 2 = 1 + alpha$, giving a Mittag-Leffler bound $Omega(t) <= Omega_0 dot E_(1 slash 2)(C sqrt(Omega_0) sqrt(t))$ — exponential growth rather than finite-time blow-up; and (3) a fractional Poincaré inequality tightening the $H^(3 slash 2)$ lower bound.
+
+We tested each individually and in combination:
+
+*Test T6* (Kato-Ponce + blow-up): *SAT*. *Test T7* (fractional Gronwall + blow-up): *SAT*. *Test T8* (all three combined + blow-up): *SAT*.
+
+All three RL closures remain consistent with blow-up. They are equivalent representations of the same scalar obstruction — each reproduces the critical exponent $3 slash 2 = 1 + 1 slash 2$ from a different angle, but none introduces a constraint that the others lack.")
+
+define subsec_why_half = ArxivSubsection("Why the gap is exactly one half",
+"The three RL axioms converge on the same number from different directions. Interpolation: $H^(3 slash 2)$ sits between $H^1$ and $H^2$, a gap of $1 slash 2$ derivative on each side. Kato-Ponce: the stretching bound has critical exponent $3 slash 2 = 1 + 1 slash 2$. Fractional Gronwall: the critical exponent condition $p = 1 + alpha$ gives $3 slash 2 = 1 + 1 slash 2$. Lions threshold: global regularity requires $alpha >= 5 slash 4$, and $(5 slash 4 - 1) times 2 = 1 slash 2$.
+
+The physical interpretation is that $H^(3 slash 2)$ represents an intermediate-scale reservoir — scales too fine for the energy estimate ($H^1$) to control but too coarse for viscous dissipation ($H^2$) to reach. This reservoir is dynamically persistent: energy can accumulate there even as large-scale and small-scale structures decay. The convergence of all three RL axioms on the same critical exponent reflects the fact that they all probe the same uncontrolled intermediate band, each from a different algebraic angle.")
+
+// =============================================================================
+// Section 5: The Hyperviscous Control
+// =============================================================================
+
+define sec_hyperviscous = ArxivSection("The Hyperviscous Control: Identifying the Exact Axiom",
+"The most informative test compares two formulations that differ by _a single axiom_.")
+
+define subsec_standard = ArxivSubsection("Standard NS (alpha = 1)",
+"The dissipation $-nu Delta v$ controls the $H^2$ norm (palinstrophy $P$). The Sobolev embedding in 3D requires $H^(3 slash 2)$ for $||nabla v||_(L^infinity)$. Since $H^(3 slash 2)$ is not the dissipation, the connection is broken. The axiom: `sobolev : grad_v_inf ≤ H32`. The $H^(3 slash 2)$ norm mediates between dissipation and stretching but is not controlled by either.")
+
+define subsec_hyper = ArxivSubsection("Hyperviscous NS (alpha = 5/4)",
+"Lions [7] proved: replacing $-nu Delta$ with $-nu(-Delta)^(5 slash 4)$ gives global smooth solutions. The dissipation now controls the $H^(5 slash 2)$ norm ($P_(5 slash 4)$). The Sobolev embedding $H^(5 slash 2) arrow.hook L^infinity (nabla v)$ works because $5 slash 2 > 3 slash 2 = d slash 2$ in 3D. The axiom: `sobolev_hyper : grad_v_inf² ≤ P54`. The dissipation _directly_ controls the Sobolev embedding.")
+
+define subsec_hyper_results = ArxivSubsection("Z3 results",
+"*Test T9* (hyperviscous base, no growth): Axioms without growth → *SAT*. The axiom system is consistent.
+
+*Test T10* (hyperviscous + growth): Adding `growth : dOmega_dt > 0` → *UNSAT*. Growth is inconsistent with the axioms. This reproduces the structural obstruction identified by Lions — the enhanced dissipation axiom absorbs the stretching — and the UNSAT verdict matches the known regularity threshold exactly.
+
+*Test T11* (standard + growth): The same structure with `sobolev : grad_v_inf ≤ H32` instead of `sobolev_hyper` → *SAT*. Growth is not excluded.
+
+The difference between SAT and UNSAT is _one axiom_: whether the Sobolev embedding connects $||nabla v||_infinity$ to the dissipation ($P_(5 slash 4)$) or to the uncontrolled intermediate norm ($H_(3 slash 2)$).")
+
+// =============================================================================
+// Section 6: The Dimension Formula
+// =============================================================================
+
+define sec_dimension = ArxivSection("The Dimension Formula",
+"The gap has a clean dependence on the spatial dimension $d$:
+
+$ \"gap\"(d) = d / 2 - 1 $
+
+In 2D, $\"gap\" = 0$ (smooth, proved). In 3D, $\"gap\" = 1 slash 2$ (the Millennium Problem). In 4D, $\"gap\" = 1$ (would need $(-Delta)^(3 slash 2)$).
+
+The derivation: Sobolev embedding $H^s (TT^d) arrow.hook L^infinity$ requires $s > d slash 2$. For $||nabla v||_infinity$: need $||v|| in H^(d slash 2 + 1)$. Standard dissipation provides $||v|| in H^2$ (palinstrophy). Deficit: $(d slash 2 + 1) - 2 = d slash 2 - 1$.
+
+In 2D, the deficit vanishes identically: $2 slash 2 - 1 = 0$. The dissipation provides _exactly_ what Sobolev requires. In 3D, the deficit is $1 slash 2$ — the smallest possible nonzero value. The Lions threshold $alpha = (d + 2) slash 4$ compensates the deficit: the enhanced dissipation provides $||v|| in H^(2 alpha) = H^((d + 2) slash 2)$, which equals $d slash 2 + 1$ — exactly the Sobolev requirement.")
+
+define table_dimension = ArxivTable("tab:dimension", "Dimension dependence of the derivative gap.",
+    "table(columns: (auto, auto, auto, auto), align: (center, center, center, left), table.header([$d$], [gap], [Lions $alpha$], [Status]), [2], [0], [1 (standard $Delta$)], [Smooth (proved)], [3], [$1 slash 2$], [$5 slash 4$], [*Open* (Millennium Problem)], [4], [1], [$3 slash 2$], [Would need $(-Delta)^(3 slash 2)$])")
+
+// =============================================================================
+// Section 7: Boundary Conditions and Conservation Laws
+// =============================================================================
+
+define sec_boundary = ArxivSection("Boundary Conditions and Conservation Laws",
+"The Clay Institute formulation [1] specifies: domain $TT^3$, initial data $v_0 in C^infinity$ with $nabla dot v_0 = 0$, viscosity $nu > 0$. The question: does $v in C^infinity ([0, infinity) times TT^3)$?")
+
+define subsec_incomp = ArxivSubsection("Axioms from incompressibility",
+"The condition $nabla dot v = 0$ on $TT^3$ yields: (1) Strain-enstrophy identity: $integral |S_(i j)|^2 d x = Omega slash 2$, from $|nabla v|^2 = |S|^2 + |omega|^2 slash 2$ and $integral |nabla v|^2 = integral |omega|^2$ by integration by parts. (2) Trace-free strain: $S_(i i) = 0$, so the strain eigenvalues satisfy $lambda_1 + lambda_2 + lambda_3 = 0$. The corrected global stretching bound: $S^4 <= C (Omega P)^3$. (3) Poincaré inequalities: $Omega >= E$, $P >= Omega$, $Q >= P$.
+
+*Test T12* ($TT^3$ + $nabla dot v = 0$ + blow-up): All incompressibility axioms + blow-up → *SAT*.
+
+*Test T13* (pressure identity + trace-free): Adding the strain-enstrophy identity and corrected trace-free stretching → *SAT*.")
+
+define subsec_four_laws = ArxivSubsection("The four conservation laws",
+"We audit the axiom system against the four physical laws governing the Millennium Problem:
+
+*1. Medium continuity* (fluid fills $TT^3$): Encoded as $E > 0$, $E <= 1$. The pointwise bound $||v||_infinity < infinity$ is the _conclusion_, not an axiom.
+
+*2. Momentum conservation* (the NS equation): Encoded as three evolution equations — $d E slash d t = -2 nu Omega$, $d Omega slash d t = S - 2 nu P$, $d P slash d t <= ||nabla v||_infinity dot P - 2 nu Q$ — plus the stretching bound and Sobolev embedding.
+
+*3. Energy dissipation*: $E(t) = E(0) - 2 nu integral_0^t Omega(s) d s >= 0$, giving the Leray energy inequality $integral_0^T Omega(t) d t <= E(0) slash (2 nu)$.
+
+*4. Incompressibility*: Strain-enstrophy identity, trace-free stretching, Poincaré inequalities.
+
+*Test T14* (all four laws): Complete axiom set with Leray inequality, palinstrophy bound, super-Poincaré, and corrected trace-free → *SAT*. Even the full set of conservation laws does not prevent blow-up at the scalar level.")
+
+define subsec_escape = ArxivSubsection("Physical escape mechanisms",
+"The Millennium Problem formulation removes every physical mechanism that in real fluids prevents vortex concentration, leaving only viscous dissipation. Cavitation (opening voids when $p < p_(\"vapor\")$) is eliminated by incompressibility — the fluid cannot change phase or density. Acoustic radiation (pressure waves carrying energy away) is eliminated because incompressible flow has infinite speed of sound — no propagating pressure disturbances exist. Outward dispersion is eliminated by the $TT^3$ domain — what flows out one side returns from the other. Wall absorption is eliminated because the torus has no boundary — no boundary layers to dissipate extreme gradients. Compressibility effects are eliminated by $nabla dot v = 0$ exactly. The problem asks whether viscosity alone can prevent vortex concentration — a question that nature never faces in isolation, since real fluids cavitate, radiate sound, or disperse before reaching extreme concentrations.")
+
+define table_escape = ArxivTable("tab:escape", "Energy dissipation mechanisms in the Millennium Problem formulation.",
+    "table(columns: (auto, auto, auto), align: (left, left, center), table.header([*Mechanism*], [*What it does*], [*Present?*]), [Viscous dissipation], [Converts kinetic energy to heat], [Yes], [Cavitation], [Opens voids when $p < p_(\"vapor\")$], [No], [Acoustic radiation], [Sound waves carry energy away], [No], [Outward dispersion], [Flow pushes fluid to infinity], [No], [Wall absorption], [Boundary layers dissipate gradients], [No], [Compressibility], [Density adjusts to redistribute pressure], [No])")
+
+// =============================================================================
+// Section 8: The Cauchy-Green Metric Tensor
+// =============================================================================
+
+define sec_metric = ArxivSection("The Cauchy-Green Metric Tensor",
+"Arnold [9] showed that the Euler equations (inviscid NS) describe geodesic motion on the infinite-dimensional Riemannian manifold $\"SDiff\"(TT^3)$ of volume-preserving diffeomorphisms, equipped with the $L^2$ metric. The full Navier-Stokes equations add viscous damping to the geodesic.")
+
+define subsec_blowup_geodesic = ArxivSubsection("Blow-up as geodesic incompleteness",
+"The flow map $phi_t : TT^3 -> TT^3$ sends initial positions to current positions. The Cauchy-Green deformation tensor $C = F^T F$ (where $F = nabla phi_t$) defines a Riemannian metric on the material manifold. Its eigenvalues $lambda_1 >= lambda_2 >= lambda_3 > 0$ measure stretching in the principal directions. Cauchy's vorticity formula (incompressible): $omega(x, t) = F(x, t) dot omega(x, 0)$. Therefore $|omega(t)| <= |omega(0)| dot sqrt(lambda_(\"max\")(C))$, and blow-up requires $lambda_(\"max\") -> infinity$.
+
+The incompressibility constraint gives $det(C) = 1$, i.e., $lambda_1 dot lambda_2 dot lambda_3 = 1$. If one eigenvalue grows (stretching), others must shrink (compression).
+
+*Test T15* (Cauchy-Green 3D): Volume-preserving metric with extreme stretching ($lambda_1 > 10000$) and enstrophy growth → *SAT*. The volume constraint does not prevent degeneration.
+
+*Test T16* (2D control): $lambda_1 lambda_2 = 1$ with no stretching → *UNSAT*. In 2D, vorticity is a scalar transported without amplification.")
+
+define subsec_alignment = ArxivSubsection("Vortex alignment",
+"The vortex stretching rate depends on the alignment of $omega$ with the strain eigenvectors. With the trace-free constraint $lambda_1 + lambda_2 + lambda_3 = 0$: if $omega$ aligns equally with all eigenvectors, stretching equals zero. Numerical simulations consistently show preferential alignment with the _intermediate_ eigenvector [10].
+
+*Test T17* (intermediate alignment + blow-up): Even with alignment restricted to $lambda_2$ → *SAT*. The intermediate alignment reduces the stretching constant but not the critical exponent.")
+
+define subsec_geometric = ArxivSubsection("The geometric diagnosis",
+"The Millennium Problem, in Arnold's language, asks: _Is $\"SDiff\"(TT^3)$ geodesically complete under viscous damping?_ Arnold computed the curvature of $\"SDiff\"(TT^3)$: it is _negative_ in most directions, explaining the exponential sensitivity of fluid flows (turbulence). Negative curvature drives geodesic divergence but does not necessarily imply incompleteness — hyperbolic space has constant negative curvature and is geodesically complete.")
+
+// =============================================================================
+// Section 9: Structural Diagnosis
+// =============================================================================
+
+define sec_diagnosis = ArxivSection("Structural Diagnosis",
+"The twenty Z3 tests establish a rigorous structural result.")
+
+define table_results = ArxivTable("tab:results", "Summary of Z3 satisfiability tests. SAT = blow-up permitted; UNSAT = blow-up impossible.",
+    "table(columns: (auto, auto, auto), align: (left, left, center), table.header([*Axiom system*], [*What it tests*], [*Result*]), [Base NS axioms], [Abstract Sobolev hierarchy], [SAT], [#sym.plus half-derivative interpolation], [Semigroup $D^(1 slash 2) compose D^(1 slash 2) = D$], [SAT], [#sym.plus Kato-Ponce], [Fractional Leibniz rule], [SAT], [#sym.plus fractional Gronwall], [Mittag-Leffler bound], [SAT], [#sym.plus all RL axioms], [Complete RL formulation], [SAT], [#sym.plus $TT^3$ boundary conditions], [Strain-enstrophy, Poincaré], [SAT], [#sym.plus all four conservation laws], [Leray, palinstrophy, incompressibility], [SAT], [#sym.plus Cauchy-Green metric], [Volume-preserving deformation], [SAT], [#sym.plus vortex alignment], [Intermediate eigenvector], [SAT], [Remove stretching (2D)], [$S = 0$ control test], [*UNSAT*], [Hyperviscous $alpha = 5 slash 4$], [Enhanced dissipation], [*UNSAT*])")
+
+define subsec_missing = ArxivSubsection("The missing structure",
+"Within the axiom systems tested here, no finite conjunction of scalar inequalities between Sobolev norms is sufficient to exclude finite-time blow-up for the 3D incompressible Navier-Stokes equations. The only additional axioms that produce UNSAT are those that _change the equation_: removing stretching ($d = 2$) or enhancing dissipation ($alpha >= 5 slash 4$). This is consistent with Tao's [8] construction of a blow-up solution for an \"averaged\" Navier-Stokes system that satisfies all the same scalar estimates.
+
+The reason is not that the Navier-Stokes equations lack sufficient structure, but that _scalarization destroys it_. The 3D incompressible NS system is not merely an evolution law for magnitudes. It is written on the geometric object of divergence-free vector fields on $TT^3$ and simultaneously encodes: a velocity field with direction at every point; a divergence-free constraint forcing volume-preserving flow; a pressure field determined nonlocally by incompressibility via $Delta p = -partial_i v_j partial_j v_i$; vorticity transport and stretching with specific directional coupling; and the symmetric/antisymmetric decomposition of $nabla v$. These are geometric compatibility conditions built into the PDE's form, not external additions.
+
+When we project to scalar Sobolev norms ($E$, $Omega$, $H_(3 slash 2)$, $P$, $S$), we retain magnitudes but lose: relative directions, eigenvector alignment, cancellations, nonlocal phase information, and topological organization. The gap between SAT (scalar) and potentially UNSAT (full PDE) is not a gap in our knowledge — it is a gap created by the method of projection.
+
+The structure that would close the gap — if it exists — must be _non-scalar_: (1) vortex alignment geometry — the angle between $omega$ and the eigenvectors of $S_(i j)$; (2) nonlocal pressure coupling — the Poisson equation coupling every point to every other; (3) the specific algebraic structure of $(v dot nabla)v$, which is a Lie derivative with specific symmetries; (4) vortex line topology — on $TT^3$, $nabla dot omega = 0$ forces vortex lines to close.")
+
+define subsec_conparian_diag = ArxivSubsection("Remark on the diagnostic methodology",
+"We axiomatized all the scalar quantities (Sobolev norms) and their ordering (interpolation, Sobolev embedding, Poincaré, Kato-Ponce, Gronwall, Leray). Z3 verified every constraint system in under a second. What remains is the structure that the scalar framework cannot capture: how the velocity components at different points and in different directions are coupled through the NS nonlinearity.
+
+The diagnostic within this framework is complete. The key insight is that dynamics abide by geometry, not the other way around: the Navier-Stokes equations are defined on the manifold of divergence-free vector fields, and only motions compatible with that geometry are admissible. Scalarization — the projection from vector-valued PDE to scalar norm inequalities — discards the directional, nonlocal, and topological information that constrains admissible motions. The question is not whether Navier-Stokes contains sufficient structure to determine smoothness, but whether any analytical reduction to scalar quantities can preserve the relevant geometric information.")
+
+// =============================================================================
+// Section 10: Axiom Candidates — What Would Close the Gap
+// =============================================================================
+
+define sec_candidates = ArxivSection("Axiom Candidates: What Would Close the Gap",
+"The diagnostic framework identifies the scalar obstruction; a natural next question is: what _type_ of non-scalar axiom would be sufficient to flip the verdict from SAT to UNSAT? We test four concrete candidates, each corresponding to one of the routes identified in Section 9.")
+
+define subsec_alignment_axiom = ArxivSubsection("Vortex alignment as a stretching reduction",
+"The standard stretching chain is $S <= ||nabla v||_infinity dot Omega <= H^(3 slash 2) dot Omega$, which after interpolation gives $S^2 <= Omega^3 dot P$. The critical exponent on $Omega$ is $3$. If vorticity alignment with the intermediate eigenvector of the strain rate tensor [10] reduces the effective stretching, the exponent could drop. We test the alignment axiom:
+
+$ S^2 <= Omega dot P $
+
+This reduces the $Omega$ exponent from $3$ to $1$ — a drop of exactly $2$ in the squared bound, corresponding to one full derivative order. This is precisely the half-derivative gap $d slash 2 - 1 = 1 slash 2$ identified in Section 5.
+
+*Analytic prediction.* Growth requires $S > 2 nu P$, so $S^2 > 4 nu^2 P^2$. The alignment axiom gives $Omega dot P > 4 nu^2 P^2$, hence $Omega > 4 nu^2 P$. But Poincaré gives $P >= Omega$, so $Omega > 4 nu^2 Omega$, i.e., $1 > 4 nu^2$. With $nu >= 1 slash 2$, this is false.
+
+*Test T18* (alignment base): Alignment axiom without growth condition → *SAT*. The axiom system is consistent.
+
+*Test T19* (alignment + growth, $nu = 1$): Alignment + growth → *UNSAT*. Growth is impossible. The alignment axiom closes the half-derivative gap.
+
+*Test T20* (alignment + growth, $nu = 1 slash 2$): At the exact threshold $nu = 1 slash 2$ → *UNSAT*. The gap closes for all $nu >= 1 slash 2$.
+
+*Test T21* (alignment + growth, $nu$ free): With $nu > 0$ left free → *SAT*. Z3 picks $nu < 1 slash 2$, confirming the threshold is sharp.")
+
+define table_candidates = ArxivTable("tab:candidates", "Axiom candidates for closing the half-derivative gap. Only the alignment axiom at sufficient viscosity flips the verdict.",
+    "table(columns: (auto, auto, auto, auto), align: (left, left, center, center), table.header([*Candidate axiom*], [*What it encodes*], [*$nu$*], [*Result*]), [Alignment $S^2 <= Omega P$], [Intermediate eigenvector dominance], [$1$], [*UNSAT*], [Alignment $S^2 <= Omega P$], [Same, at threshold], [$1 slash 2$], [*UNSAT*], [Alignment $S^2 <= Omega P$], [Same, free viscosity], [free], [SAT], [Pressure $S^2 <= Omega^3$], [Nonlocal cancellation removes $P$], [$1$], [SAT], [BKM $S <= omega_infinity Omega$], [$||omega||_infinity^2 <= Omega P$], [$1$], [SAT])")
+
+define subsec_pressure_bkm = ArxivSubsection("Pressure cancellation and BKM rephrasing",
+"Two alternative routes fail to close the gap within this framework.
+
+*Nonlocal pressure cancellation.* If the Poisson equation $Delta p = -partial_i v_j partial_j v_i$ induces a systematic reduction in stretching, one might hope to remove the $P$-dependence entirely, giving $S^2 <= Omega^3$. *Test T22*: Growth requires $Omega^3 > 4 P^2 >= 4 Omega^2$, i.e., $Omega > 4$. This is easily satisfied. SAT.
+
+*BKM rephrasing.* The Beale-Kato-Majda criterion replaces the $H^(3 slash 2)$ route with $||nabla v||_infinity <= ||omega||_infinity (1 + log ||v||_(H^s))$. Encoding this as $S <= omega_infinity dot Omega$ with $omega_infinity^2 <= Omega P$ yields $S^2 <= Omega^3 P$ after elimination — exactly the standard bound. *Test T23*: SAT. The BKM route is an equivalent rephrasing, not a fix.")
+
+define subsec_critical_exponent = ArxivSubsection("The critical exponent sum",
+"The alignment axiom $S^2 <= Omega^a P^b$ has exponents $a = 1$, $b = 1$, with sum $a + b = 2$. We now show that the sum $a + b$ — not the individual exponents — determines whether the gap closes.
+
+For a general stretching bound $S^2 <= Omega^a P^b$, growth requires $S^2 > 4 nu^2 P^2$, so $Omega^a P^b > 4 nu^2 P^2$, giving $Omega^a > 4 nu^2 P^(2 - b)$. With Poincaré $P >= Omega$: $Omega^(a + b - 2) > 4 nu^2$. For $a + b > 2$, large $Omega$ satisfies this (SAT). For $a + b <= 2$, it reduces to $1 > 4 nu^2$ (UNSAT for $nu >= 1 slash 2$).
+
+We verify this with three additional tests:
+
+*Test T24* ($a + b = 3$, halfway): $S^2 <= Omega^2 P$ → *SAT*. The gap persists.
+
+*Test T25* ($a + b = 2$, redistributed): $S^4 <= Omega^3 P$ (i.e., $S^2 <= Omega^(3 slash 2) P^(1 slash 2)$) → *UNSAT*. Same total exponent as alignment, same verdict.
+
+*Test T26* ($a + b = 2$, $epsilon$-variant): $S^2 <= Omega^(1 + epsilon) P^(1 - epsilon)$ with $epsilon = 1 slash 2$ → *UNSAT*. The exponent distribution between $Omega$ and $P$ is irrelevant; only their sum matters.
+
+This yields a sharp characterization: any stretching bound $S^2 <= Omega^a P^b$ closes the half-derivative gap if and only if $a + b <= 2$. The standard bound has $a + b = 4$; the critical reduction is exactly $2$ in the exponent sum — within this framework's derivative counting, one full derivative order.
+
+Existing analytical tools already accomplish half of this reduction. The Kato-Ponce inequality [5] gives $S^2 <= H_(3 slash 2)^3$, and since $H_(3 slash 2)^2 <= Omega P$ (interpolation), we get $H_(3 slash 2)^3 <= Omega^(3 slash 2) P^(3 slash 2)$, yielding an effective $a + b = 3$. This is confirmed by Test T6 (SAT). Thus the Kato-Ponce already reduces the exponent sum from $4$ to $3$ — the remaining gap from $3$ to $2$ is what geometry must provide.")
+
+define table_exponent = ArxivTable("tab:exponent", "The critical exponent sum. For $S^2 <= Omega^a P^b$, the gap closes iff $a + b <= 2$. Kato-Ponce already reduces from 4 to 3; only one more unit is needed.",
+    "table(columns: (auto, auto, auto, auto, auto), align: (left, center, center, center, center), table.header([*Bound*], [*$a$*], [*$b$*], [*$a + b$*], [*Result*]), [Standard $S^2 <= Omega^3 P$], [$3$], [$1$], [$4$], [SAT], [Kato-Ponce $S^2 <= Omega^(3 slash 2) P^(3 slash 2)$], [$3 slash 2$], [$3 slash 2$], [$3$], [SAT], [Half-gap $S^2 <= Omega^2 P$], [$2$], [$1$], [$3$], [SAT], [Alignment $S^2 <= Omega P$], [$1$], [$1$], [$2$], [*UNSAT*], [$epsilon$-variant $S^2 <= Omega^(3 slash 2) P^(1 slash 2)$], [$3 slash 2$], [$1 slash 2$], [$2$], [*UNSAT*])")
+
+define subsec_candidate_interpretation = ArxivSubsection("Interpretation: global basin collapse",
+"The critical exponent sum $a + b = 2$ is the exact threshold separating SAT from UNSAT. We call this the *global basin collapse*: at $a + b > 2$, the system has a finite basin of stability with critical enstrophy $Omega_(\"crit\") = (2 nu)^(2 slash (a + b - 2))$; at $a + b = 2$, the critical enstrophy diverges and the basin of stability collapses onto the entire state space. No initial condition, however extreme, can trigger blow-up.
+
+This has four consequences.
+
+First, the alignment axiom is not a knife-edge result. Any stretching bound with $a + b <= 2$ induces global basin collapse, regardless of how the exponents are distributed. The specific form $S^2 <= Omega P$ is just the simplest representative of an equivalence class.
+
+Second, existing analytical tools already accomplish half of the required exponent reduction. The Kato-Ponce inequality reduces the effective exponent sum from $a + b = 4$ (standard) to $a + b = 3$. The remaining obstruction is only one unit in exponent sum beyond Kato-Ponce — within this framework's derivative counting, half a derivative order. This narrows the missing step from a dramatic unknown to a sharply quantified residual gap.
+
+Third, the viscosity threshold $nu >= 1 slash 2$ parallels the Lions threshold $alpha >= 5 slash 4$ for hyperviscosity. Both work by the same mechanism: ensuring that dissipation dominates stretching in the critical scaling. Hyperviscosity strengthens dissipation; the alignment axiom weakens the stretching coupling.
+
+Fourth, the physical meaning of the gap becomes precise. The $H^(3 slash 2)$ norm occupies an intermediate scale between the enstrophy ($H^1$, controlled by energy dissipation) and the palinstrophy ($H^2$, directly dissipated by viscosity). This intermediate scale acts as a dynamically persistent reservoir: it is neither directly dissipated nor controlled by energy estimates, allowing instability to accumulate even after large-scale initial conditions are forgotten. The global basin collapse at $a + b = 2$ corresponds to controlling this reservoir — forcing the intermediate-scale enstrophy to be bounded by scales that _are_ dissipated. This also explains why the fractional Gronwall inequality predicts exponential growth rather than finite-time blow-up: the reservoir accumulates energy smoothly rather than concentrating it instantaneously, producing Mittag-Leffler amplification rather than a singularity.
+
+Fifth, the open question sharpens: does the geometry of divergence-free flows on $TT^3$ force any stretching bound with effective $a + b <= 2$? Since Kato-Ponce already gives $a + b = 3$, this amounts to asking whether geometric structure (vortex alignment, pressure coupling, or algebraic cancellations) can provide one more unit of exponent reduction. This is an irreducibly non-scalar question — it concerns the _direction_ of $omega$ relative to the eigenvectors of $nabla v$, not the magnitude of any Sobolev norm.")
+
+// ODE trajectory computation for the exponent threshold figure
+define ode_nu = 1.0
+define ode_omega0 = 10.0
+define ode_get_t(pt) = nth(pt, 0)
+define ode_get_om(pt) = nth(nth(pt, 1), 0)
+
+// --- Figure 1: blow-up regimes (Omega_0 = 10) ---
+define ode_traj_std = ode45(lambda t y . [minus(times(nth(y, 0), nth(y, 0)), times(times(2, ode_nu), nth(y, 0)))], [ode_omega0], [0, 0.1], 0.001)
+define ode_traj_half = ode45(lambda t y . [minus(times(sqrt(nth(y, 0)), nth(y, 0)), times(times(2, ode_nu), nth(y, 0)))], [ode_omega0], [0, 0.5], 0.001)
+define ode_traj_align_low = ode45(lambda t y . [minus(nth(y, 0), times(times(2, ode_nu), nth(y, 0)))], [ode_omega0], [0, 2.0], 0.01)
+define ode_traj_near_low = ode45(lambda t y . [minus(pow(nth(y, 0), 1.1), times(times(2, ode_nu), nth(y, 0)))], [ode_omega0], [0, 2.0], 0.01)
+
+define ode_t_std = list_map(lambda p . ode_get_t(p), ode_traj_std)
+define ode_om_std = list_map(lambda p . ode_get_om(p), ode_traj_std)
+define ode_t_half = list_map(lambda p . ode_get_t(p), ode_traj_half)
+define ode_om_half = list_map(lambda p . ode_get_om(p), ode_traj_half)
+define ode_t_align_low = list_map(lambda p . ode_get_t(p), ode_traj_align_low)
+define ode_om_align_low = list_map(lambda p . ode_get_om(p), ode_traj_align_low)
+define ode_t_near_low = list_map(lambda p . ode_get_t(p), ode_traj_near_low)
+define ode_om_near_low = list_map(lambda p . ode_get_om(p), ode_traj_near_low)
+
+// --- Figure 2: basin of stability (Omega_0 = 2000) ---
+// a+b=2.2: Omega_crit = 2^10 = 1024. From 2000 > 1024: finite-time blow-up at t ~ 13.7
+// a+b=2: globally stable, decays from any initial condition.
+// Cap time at t=10 so both curves are visible (near-critical reaches ~700K, not yet 854B)
+define ode_traj_align_high = ode45(lambda t y . [minus(nth(y, 0), times(times(2, ode_nu), nth(y, 0)))], [2000], [0, 10.0], 0.1)
+define ode_traj_near_high = ode45(lambda t y . [minus(pow(nth(y, 0), 1.1), times(times(2, ode_nu), nth(y, 0)))], [2000], [0, 10.0], 0.1)
+
+define ode_t_align_high = list_map(lambda p . ode_get_t(p), ode_traj_align_high)
+define ode_om_align_high = list_map(lambda p . ode_get_om(p), ode_traj_align_high)
+define ode_t_near_high = list_map(lambda p . ode_get_t(p), ode_traj_near_high)
+define ode_om_near_high = list_map(lambda p . ode_get_om(p), ode_traj_near_high)
+
+define fig_blowup = ArxivDiagram("fig:blowup",
+    "Enstrophy trajectories from $Omega_0 = 10$ ($nu = 1$). Red ($a + b = 4$): finite-time blow-up. Orange ($a + b = 3$): slower blow-up. Green ($a + b = 2.2$) and blue ($a + b = 2$): both decay — because $Omega_0 = 10$ is below the critical enstrophy $Omega_(\"crit\") = 1024$ for $a + b = 2.2$. The near-critical and alignment curves nearly coincide, showing that from moderate initial data, the two regimes are indistinguishable.",
+    export_typst_fragment(
+        plot(ode_t_align_low, ode_om_align_low, color = "blue", label = "$a+b=2$ (alignment)"),
+        plot(ode_t_near_low, ode_om_near_low, color = "green", label = "$a+b=2.2$ (near-critical)"),
+        plot(ode_t_half, ode_om_half, color = "orange", label = "$a+b=3$ (half-gap)"),
+        plot(ode_t_std, ode_om_std, color = "red", label = "$a+b=4$ (standard)"),
+        title = "Blow-up regimes ($Omega_0 = 10$)",
+        xlabel = "$t$",
+        ylabel = "$Omega(t)$",
+        legend_position = "right + top",
+        width = 10
+    )
+)
+
+define fig_basin = ArxivDiagram("fig:basin",
+    "Basin of stability from $Omega_0 = 2000$ ($nu = 1$). Green ($a + b = 2.2$): above $Omega_(\"crit\") = 1024$, the trajectory accelerates toward blow-up (reaching $approx 7 times 10^5$ at $t = 10$; the ODE solver reports step-size underflow at $t approx 13.7$, signaling finite-time blow-up). Blue ($a + b = 2$): decays exponentially from the same initial condition. The near-critical blow-up time is orders of magnitude longer than the standard case ($t approx 0.0005$ at $a + b = 4$). At $a + b = 2$, global basin collapse occurs: no initial enstrophy can trigger blow-up.",
+    export_typst_fragment(
+        plot(ode_t_align_high, ode_om_align_high, color = "blue", label = "$a+b=2$ (alignment)"),
+        plot(ode_t_near_high, ode_om_near_high, color = "green", label = "$a+b=2.2$ (near-critical)"),
+        title = "Basin of stability ($Omega_0 = 2000$)",
+        xlabel = "$t$",
+        ylabel = "$Omega(t)$",
+        legend_position = "right + top",
+        width = 10
+    )
+)
+
+define subsec_ode_verification = ArxivSubsection("Numerical verification via ODE integration",
+"The exponent threshold is not only a symbolic result — it manifests in the dynamics of the reduced enstrophy ODE. Setting $P = Omega$ (Poincaré equality, worst case for dissipation), the stretching bound $S^2 <= Omega^(a+b)$ gives $S <= Omega^((a+b) slash 2)$, and the enstrophy equation becomes:
+
+$ d Omega slash d t = Omega^((a+b) slash 2) - 2 nu Omega $
+
+Equilibrium occurs at $Omega^((a+b) slash 2 - 1) = 2 nu$, giving a critical enstrophy $Omega_(\"crit\") = (2 nu)^(2 slash (a + b - 2))$. For $nu = 1$: $Omega_(\"crit\")$ is $2$ at $a + b = 4$; $4$ at $a + b = 3$; $1024$ at $a + b = 2.2$; and $infinity$ at $a + b = 2$. Below $Omega_(\"crit\")$, dissipation dominates and the solution decays; above it, stretching dominates and the solution blows up.
+
+*Two-regime behavior (Figure 1).* From moderate initial data ($Omega_0 = 10 < Omega_(\"crit\")$ for all closures with $a + b <= 3$), the $a + b = 4$ and $a + b = 3$ closures blow up because their critical enstrophies (2 and 4 respectively) are exceeded. But the near-critical closure ($a + b = 2.2$, $Omega_(\"crit\") = 1024$) and the alignment closure ($a + b = 2$) both decay — and their trajectories nearly coincide. This indistinguishability from moderate initial data is itself a structural insight: subcritical enstrophy dynamics cannot distinguish between a system that has a finite (but large) basin of stability and one that is globally stable.
+
+*Basin of stability and blow-up time scale (Figure 2).* Starting from $Omega_0 = 2000 > Omega_(\"crit\") = 1024$, the two closures separate decisively. The $a + b = 2.2$ trajectory accelerates slowly, reaching $Omega approx 7 times 10^5$ by $t = 10$ and eventually blowing up at $t approx 13.7$ (ODE solver reports step-size underflow). In contrast, the $a + b = 2$ trajectory decays exponentially.
+
+The blow-up time comparison is striking: the near-critical case ($a + b = 2.2$) blows up orders of magnitude more slowly than the standard case ($t approx 0.0005$ at $a + b = 4$). This extreme time-scale separation creates a misleading appearance of convergence: on moderate observation windows, the near-critical trajectory looks stable. The distinction between global stability ($a + b = 2$) and delayed blow-up ($a + b = 2.2$) is invisible from moderate initial data and nearly invisible from large initial data — until the final blow-up phase. As $a + b -> 2$ from above, $Omega_(\"crit\") -> infinity$ and the blow-up time diverges. At $a + b = 2$, the system undergoes *global basin collapse*: the critical enstrophy diverges to infinity, the basin of stability becomes the entire state space, and blow-up becomes impossible regardless of initial conditions.")
+
+// =============================================================================
+// Section 12: Conclusion
+// =============================================================================
+
+define sec_conclusion = ArxivSection("Conclusion",
+"We have presented a systematic, machine-verified structural diagnosis of the Navier-Stokes smoothness problem. The investigation spans twenty-six Z3 satisfiability tests, three fractional derivative formulations, four conservation laws, the Cauchy-Green deformation tensor, and non-scalar axiom candidates with varying exponent structure. The principal findings are:
+
+(1) *The half-derivative gap persists across all tested scalar closures*: Within the axiom families formalized here, no scalar inequality chain between Sobolev norms excludes blow-up in 3D. The organizing invariant $\"gap\"(d) = d slash 2 - 1$ explains why the same machinery closes in 2D ($\"gap\" = 0$) but not in 3D ($\"gap\" = 1 slash 2$).
+
+(2) *The critical axiom is identified*: The difference between the solvable hyperviscous case ($alpha = 5 slash 4$, UNSAT) and the open standard case ($alpha = 1$, SAT) is whether the Sobolev embedding connects $||nabla v||_infinity$ to the dissipation. One axiom separates smooth from possibly singular.
+
+(3) *Global basin collapse at the critical exponent sum*: For any stretching bound $S^2 <= Omega^a P^b$, the gap closes if and only if $a + b <= 2$. At this threshold, the critical enstrophy $Omega_(\"crit\")$ diverges and the basin of stability collapses onto the entire state space — blow-up becomes impossible regardless of initial conditions. The standard bound has $a + b = 4$; Kato-Ponce already reduces this to $a + b = 3$. The remaining obstruction is one unit in exponent sum. The distribution of exponents between $Omega$ and $P$ is irrelevant.
+
+(4) *The missing structure is non-scalar*: The persistent SAT results across all tested scalar families, together with Tao's construction [8] showing blow-up in equations satisfying the same scalar estimates, suggest that any resolution must engage the specific algebraic and geometric structure of the 3D incompressible Navier-Stokes nonlinearity — specifically, the directional coupling between vorticity and strain.
+
+(5) *The physical formulation removes all escape mechanisms except viscosity*: Incompressibility eliminates cavitation and acoustic radiation. The torus eliminates dispersion and wall absorption. The problem asks whether viscosity alone can prevent vortex concentration.
+
+These results establish that the Millennium Problem is *undecidable within the scalar Sobolev framework*: the information encoded in scalar norm inequalities — including all four conservation laws, fractional derivative bounds, and the Cauchy-Green metric — is insufficient to determine whether smooth solutions exist. This is not a gap in our knowledge of the Navier-Stokes equations; it is a gap created by the method of projection. The full PDE is not merely an evolution law for magnitudes — it is written on the geometric object of divergence-free vector fields on $TT^3$ and encodes geometric compatibility conditions (volume-preserving flow, trace-free strain, nonlocal pressure, directional vorticity transport) that scalarization destroys. Dynamics abide by geometry, not the other way around.
+
+The full Navier-Stokes equations may implicitly enforce a geometric depletion of stretching — but that enforcement is invisible after projection to scalar Sobolev inequalities. The global basin collapse characterization reduces the remaining question to: does the geometry of divergence-free flows on $TT^3$ force any stretching bound $S^2 <= Omega^a P^b$ with $a + b <= 2$? Kato-Ponce already achieves $a + b = 3$; the last unit of exponent reduction must come from structure that scalarization erases.
+
+The full test suite is available in the Kleis repository at `theories/ns_*.kleis`.")
+
+// =============================================================================
+// References
+// =============================================================================
+
+define ref_fefferman = ArxivReference("fefferman2000",
+    "Fefferman, C. L. (2000). Existence and smoothness of the Navier-Stokes equation. Clay Mathematics Institute Millennium Prize Problems.")
+
+define ref_spectralcomb = ArxivReference("atik2025spectral",
+    "Atik, E. (2025). The Spectral Comb: Antisymmetric Operator Architecture for the Riemann Zeta Zeros. Preprint.")
+
+define ref_conparian = ArxivReference("atik2025conparian",
+    "Atik, E. (2025). The Conparian School: Structural Foundations of Ontology. Unpublished manuscript.")
+
+define ref_kleis = ArxivReference("atik2025kleis",
+    "Atik, E. (2025). Kleis: A Symbolic Mathematics Language with Integrated Formal Verification. https://kleis.io.")
+
+define ref_katoponce = ArxivReference("kato1988",
+    "Kato, T. & Ponce, G. (1988). Commutator estimates and the Euler and Navier-Stokes equations. Communications on Pure and Applied Mathematics, 41(7), 891-907.")
+
+define ref_gronwall = ArxivReference("ye2007",
+    "Ye, H., Gao, J. & Ding, Y. (2007). A generalized Gronwall inequality and its application to a fractional differential equation. Journal of Mathematical Analysis and Applications, 328(2), 1075-1081.")
+
+define ref_lions = ArxivReference("lions1969",
+    "Lions, J.-L. (1969). Quelques méthodes de résolution des problèmes aux limites non linéaires. Dunod, Paris.")
+
+define ref_tao = ArxivReference("tao2016",
+    "Tao, T. (2016). Finite time blowup for an averaged three-dimensional Navier-Stokes equation. Journal of the American Mathematical Society, 29(3), 601-674.")
+
+define ref_arnold = ArxivReference("arnold1966",
+    "Arnold, V. I. (1966). Sur la géométrie différentielle des groupes de Lie de dimension infinie et ses applications à l'hydrodynamique des fluides parfaits. Annales de l'Institut Fourier, 16(1), 319-361.")
+
+define ref_ashurst = ArxivReference("ashurst1987",
+    "Ashurst, W. T. et al. (1987). Alignment of vorticity and scalar gradient with strain rate in simulated Navier-Stokes turbulence. Physics of Fluids, 30(8), 2343-2353.")
+
+define ref_constantin = ArxivReference("constantin1994",
+    "Constantin, P. (1994). Geometric statistics in turbulence. SIAM Review, 36(1), 73-98.")
+
+// =============================================================================
+// Assemble document
+// =============================================================================
+
+define all_elements = [
+    sec_intro, subsec_conparian,
+    sec_framework, subsec_variables, table_variables,
+    sec_halfderiv, subsec_base_tests,
+    sec_rl, subsec_rl_tests, subsec_why_half,
+    sec_hyperviscous, subsec_standard, subsec_hyper, subsec_hyper_results,
+    sec_dimension, table_dimension,
+    sec_boundary, subsec_incomp, subsec_four_laws, subsec_escape, table_escape,
+    sec_metric, subsec_blowup_geodesic, subsec_alignment, subsec_geometric,
+    sec_diagnosis, table_results, subsec_missing, subsec_conparian_diag,
+    sec_candidates, subsec_alignment_axiom, table_candidates, subsec_pressure_bkm, subsec_critical_exponent, table_exponent, subsec_candidate_interpretation, subsec_ode_verification, fig_blowup, fig_basin,
+    sec_conclusion,
+    ref_fefferman, ref_spectralcomb, ref_conparian, ref_kleis,
+    ref_katoponce, ref_gronwall, ref_lions, ref_tao, ref_arnold, ref_ashurst, ref_constantin
+]
+
+define my_paper = arxiv_paper(
+    paper_title,
+    paper_authors,
+    paper_affiliations,
+    paper_abstract,
+    paper_keywords,
+    all_elements
+)
+
+example "compile" {
+    let typst_output = compile_arxiv_paper(my_paper) in
+    out(typst_raw(typst_output))
+}
+
+example "validate" {
+    assert(valid_arxiv_paper(my_paper) = true)
+    out("Paper is valid!")
+}

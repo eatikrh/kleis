@@ -1,0 +1,67 @@
+// ============================================================================
+// NS: Leray constraint on growth rate
+//
+// The Leray inequality (∫Ω dt ≤ 1/(2ν)) constrains blow-up dynamics:
+//
+// If Ω → ∞ as t → T*, what is the blow-up rate?
+// Self-similar: Ω(t) ~ A/(T*-t)^α
+// Time integral: ∫₀^{T*} A/(T*-t)^α dt < ∞  iff  α < 1
+//
+// So: Leray says blow-up must be FASTER than 1/(T*-t).
+// The enstrophy equation says growth is at most ~ Ω^{3/2} (from S ≤ H32·Ω).
+// dΩ/dt ~ Ω^{3/2} → Ω ~ 1/(T*-t)^2 (α = 2 > 1, OK with Leray)
+//
+// BUT: if we ALSO constrain the palinstrophy growth (dP/dt), then the
+// interplay between Ω growth rate and P growth rate might be inconsistent.
+//
+// Test: encode both the upper bound on dΩ/dt (from enstrophy eq)
+// and a lower bound (from Leray energy budget) and check consistency.
+// ============================================================================
+
+structure NS_LerayGrowth {
+    element Omega : ℝ
+    element H32 : ℝ
+    element P : ℝ
+    element S : ℝ
+    element nu : ℝ
+    element dOmega_dt : ℝ
+    element grad_v_inf : ℝ
+
+    // For the Leray growth constraint:
+    element growth_rate_lower : ℝ  // minimum dΩ/dt for blow-up
+
+    axiom nu_pos : nu > 0
+    axiom nu_val : nu = 1   // fix ν = 1 for concrete test
+    axiom Omega_pos : Omega > 0
+    axiom H32_pos : H32 > 0
+    axiom P_pos : P > 0
+    axiom S_nonneg : S ≥ 0
+    axiom grad_nonneg : grad_v_inf ≥ 0
+
+    // NS dynamics
+    axiom enstrophy_eq : dOmega_dt = plus(S, negate(times(2, P)))
+    axiom stretching : S ≤ times(grad_v_inf, Omega)
+    axiom sobolev : grad_v_inf ≤ H32
+    axiom interpolation : times(H32, H32) ≤ times(Omega, P)
+    axiom norm_low : Omega ≤ H32
+    axiom norm_high : H32 ≤ P
+    axiom poincare : P ≥ Omega
+    axiom trace_free : times(S, S) ≤ times(Omega, times(Omega, P))
+
+    // LERAY GROWTH CONSTRAINT:
+    // For blow-up with Ω ~ 1/(T*-t)^α, need α ≥ 1 (borderline).
+    // dΩ/dt ~ αΩ^{(α+1)/α}. For α = 2: dΩ/dt ~ Ω^{3/2}.
+    // Minimum viable: dΩ/dt ≥ Ω² (to satisfy Leray for α = 1 case)
+    // This is the WEAKEST blow-up consistent with finite ∫Ω dt.
+    axiom leray_growth : dOmega_dt ≥ times(Omega, Omega)
+
+    // Enstrophy is large
+    axiom large_omega : Omega > 1000
+
+    // Growth happening
+    axiom growth : dOmega_dt > 0
+}
+
+example "Leray growth rate + NS bounds: consistent?" {
+    assert(dOmega_dt > 0)
+}

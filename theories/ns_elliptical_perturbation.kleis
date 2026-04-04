@@ -1,0 +1,72 @@
+// =============================================================================
+// Elliptical Perturbation of Burgers Vortex
+// =============================================================================
+//
+// Source perturbation: g₂(r) = -2ω₀² η exp(-2η) where η = r²/σ²
+// Poisson equation (m=2 mode): P₂'' + P₂'/r - 4P₂/r² = -g₂ = 2ω₀²η exp(-2η)
+//
+// Analytical solution via variation of parameters (u = r/σ):
+//   P̃₂(u) = (2u²+1)e^{-2u²}/8 - (1-e^{-2u²})/(16u²)
+//
+// KEY FINDINGS:
+//   1. P̃₂ > 0 in the core (pressure restores circular cross-section)
+//   2. P̃₂ < 0 outside (pressure relaxes toward environment)
+//   3. BUT: Q = e₂·H_tf·e₁ = 0 (z-Translation Vanishing Theorem)
+//   4. The elliptical perturbation doesn't break z-translational symmetry
+//   5. Q ≠ 0 requires z-DEPENDENT geometry (tube bending)
+//
+// =============================================================================
+
+// Compute P̃₂ at a given u value
+define P2_at(u) =
+    let u2 = times(u, u) in
+    let ev = exp(negate(times(2, u2))) in
+    minus(divide(times(plus(times(2, u2), 1), ev), 8),
+          divide(minus(1, ev), times(16, u2)))
+
+example "EP1: pressure perturbation P̃₂(u) at key radii" {
+    out("Pressure perturbation P̃₂ = P₂/(ω₀²σ²) for elliptical Burgers vortex:");
+    out(format("  u=0.1 (r=0.1σ):  {:.6}  POSITIVE (restoring)", P2_at(0.1)));
+    out(format("  u=0.3 (r=0.3σ):  {:.6}  POSITIVE", P2_at(0.3)));
+    out(format("  u=0.5 (r=0.5σ):  {:.6}  POSITIVE", P2_at(0.5)));
+    out(format("  u=0.7 (r=0.7σ):  {:.6}  POSITIVE", P2_at(0.7)));
+    out(format("  u=1.0 (r=σ):     {:.6}  SIGN CHANGE", P2_at(1.0)));
+    out(format("  u=1.5 (r=1.5σ):  {:.6}  NEGATIVE (relaxation)", P2_at(1.5)));
+    out(format("  u=2.0 (r=2σ):    {:.6}  NEGATIVE", P2_at(2.0)));
+    out(format("  u=3.0 (r=3σ):    {:.6}  NEGATIVE → 0", P2_at(3.0)));
+    out("");
+    out("Interpretation: pressure OPPOSES elliptical deformation in the core");
+    out("(P̃₂ > 0 means higher pressure along the long axis, resisting elongation).")
+}
+
+example "EP2: peak location and magnitude" {
+    let p_03 = P2_at(0.3) in
+    let p_04 = P2_at(0.4) in
+    let p_05 = P2_at(0.5) in
+    let p_06 = P2_at(0.6) in
+    out(format("Peak P̃₂ near u ≈ 0.4-0.5: P̃₂(0.3)={:.5}, P̃₂(0.4)={:.5}, P̃₂(0.5)={:.5}, P̃₂(0.6)={:.5}",
+        p_03, p_04, p_05, p_06));
+    out(format("Maximum restoring pressure ≈ {:.4}·ω₀²σ²ε", p_05))
+}
+
+example "EP3: z-Translation Vanishing Theorem" {
+    out("THEOREM (z-Translation Vanishing):");
+    out("For any flow v(x,y,z) = v_⊥(x,y) + γz·ẑ, Q = e₂·H_tf·e₁ = 0.");
+    out("");
+    out("Proof: velocity gradient block-diagonal → S and H block-diagonal.");
+    out("ẑ is always a strain eigenvector. H_xz = H_yz = 0.");
+    out("Q couples ẑ to an in-plane direction → Q = 0. □");
+    out("");
+    out("CONSEQUENCE: The elliptical Burgers vortex has Q = 0.");
+    out("The cos(2θ) pressure perturbation P₂(r)cos(2θ) acts entirely");
+    out("in-plane. It resists deformation but does NOT generate alignment");
+    out("depletion, because depletion requires z-to-inplane coupling.");
+    out("");
+    out("Q ≠ 0 REQUIRES z-DEPENDENT geometry:");
+    out("  • Tube bending (curvature κ → dipolar z-dependent flow)");
+    out("  • z-varying tube shape (twisting, flaring)");
+    out("  • Non-parallel tube interactions");
+    out("");
+    out("This strengthens the Axisymmetric Vanishing (§8.14):");
+    out("Not only axisymmetry but ALL z-translational symmetry must be broken.")
+}

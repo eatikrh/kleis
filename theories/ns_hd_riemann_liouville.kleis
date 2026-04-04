@@ -1,0 +1,72 @@
+// ============================================================================
+// NS Smoothness: Riemann-Liouville Fractional Derivative Axioms
+// ============================================================================
+//
+// QUESTION: Do the explicit formulas for fractional derivatives
+// (Riemann-Liouville, Caputo, Grünwald-Letnikov) provide axioms
+// that close the ½-derivative gap?
+//
+// Three axioms extracted from the RL integral representation:
+//
+//   1. KATO-PONCE (Fractional Leibniz):
+//      ||D^s(fg)|| ≤ C(||D^s f||·||g||_∞ + ||f||_∞·||D^s g||)
+//      Applied to stretching: S² ≤ C² · H32³
+//      (Sharper than S ≤ grad_v_inf · Ω when H32 large)
+//
+//   2. FRACTIONAL GRONWALL:
+//      D^{1/2}_t Ω ≤ C·Ω^{3/2} at critical exponent p = 1+α = 3/2.
+//      Mittag-Leffler bound: Ω(t) ≤ Ω₀ · E_{1/2}(C√Ω₀·√t).
+//      Exponential growth (bounded on [0,T]), NOT finite-time blow-up.
+//
+//   3. FRACTIONAL POINCARÉ:
+//      H32² ≥ Ω² (RL lower bound tighter than H32 ≥ Ω)
+//
+// ============================================================================
+// Z3 RESULTS (each test in its own file to avoid axiom contamination):
+//
+//   File                        Test                          Result
+//   ──────────────────────────  ────────────────────────────  ──────
+//   ns_rl_kato_ponce.kleis      Kato-Ponce + blow-up          SAT
+//   ns_rl_gronwall.kleis        Frac Gronwall + blow-up       SAT
+//   ns_rl_combined.kleis        ALL RL axioms + blow-up       SAT
+//   ns_rl_standard_sobolev.kleis  Standard α=1 + growth       SAT
+//   ns_rl_hyper_base.kleis      Hyperviscous base (no growth) SAT
+//   ns_rl_hyperviscous.kleis    Hyperviscous α=5/4 + growth   UNSAT ★
+//
+// ============================================================================
+// THE CRITICAL AXIOM (what Lions 1969 really proved):
+//
+//   Standard NS (α=1):                 Hyperviscous (α=5/4):
+//   grad_v_inf ≤ H32                   grad_v_inf² ≤ P54
+//   ↓                                  ↓
+//   H32 NOT controlled by              P54 IS the dissipation
+//   dissipation (P)                    → Sobolev bound absorbed
+//   → GAP                             → NO GAP
+//
+//   The SINGLE axiom that differs:
+//     α=1:   Sobolev connects ∇v to H^{3/2} (not dissipation)
+//     α=5/4: Sobolev connects ∇v to P_{5/4} (IS dissipation)
+//
+// ============================================================================
+// CONPARIAN INTERPRETATION:
+//
+//   The Riemann-Liouville formula does NOT close the gap.
+//   Kato-Ponce, fractional Gronwall, and fractional Poincaré
+//   are all EQUIVALENT representations of the same structural
+//   obstruction. They provide different views of the gap:
+//
+//   - Interpolation: H32 sits between Ω and P, not controlled
+//   - Kato-Ponce: S ~ H32^{3/2}, but dissipation ~ P ≠ H32
+//   - Fractional Gronwall: critical exponent p = 1+α = 3/2 exactly
+//   - Lions threshold: need α ≥ 5/4 (extra ¼ in the Laplacian)
+//
+//   The gap is ½ derivative because:
+//     • H^{3/2} is the Sobolev threshold for L^∞(∇v) in 3D
+//     • Dissipation provides H² (= H^{3/2 + 1/2})
+//     • H^{3/2} ≠ H² (not the same, can't absorb)
+//     • Need H^{5/2} (= H^{3/2 + 1}) for absorption → α = 5/4
+//
+//   This is not a failure of fractional calculus tools.
+//   The RL formula REVEALS the gap is structural,
+//   not a matter of choosing the right derivative definition.
+// ============================================================================

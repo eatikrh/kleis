@@ -1,0 +1,34 @@
+// D5: Isotropic alignment (α₁ = α₂ = α₃ = 1/3)
+// σ_eff = (1/3)·(λ₁ + λ₂ + λ₃) = 0 by trace-free!
+// S = 0, so dΩ/dt = -2P < 0. Clearly no blow-up.
+// Expect: UNSAT (trivially — isotropic alignment kills all stretching)
+
+structure NS_Depletion_Isotropic {
+    element Omega : ℝ
+    element P : ℝ
+    element S : ℝ
+    element dOmega_dt : ℝ
+    element lam1 : ℝ
+    element lam2 : ℝ
+    element lam3 : ℝ
+
+    axiom Omega_pos : Omega > 0
+    axiom P_pos : P > 0
+    axiom S_nonneg : S ≥ 0
+
+    axiom eigen_order : lam1 ≥ lam2
+    axiom eigen_order2 : lam2 ≥ lam3
+    axiom trace_free : plus(lam1, plus(lam2, lam3)) = 0
+
+    // Isotropic: σ_eff = (1/3)Σλᵢ = 0 by trace-free, so S = 0
+    axiom isotropic_stretching : S = 0
+
+    axiom poincare : P ≥ Omega
+    axiom enstrophy_eq : dOmega_dt = plus(S, negate(times(2, P)))
+    axiom large_omega : Omega > 10
+    axiom growth : dOmega_dt > 0
+}
+
+example "D5: isotropic α₁=α₂=α₃=1/3 + growth (expect UNSAT)" {
+    assert(dOmega_dt > 0)
+}

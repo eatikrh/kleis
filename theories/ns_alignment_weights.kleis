@@ -1,0 +1,217 @@
+// =============================================================================
+// Alignment Weight Formalization
+// =============================================================================
+//
+// The stretching integral decomposes as:
+//
+//   S = ∫ |ω|² Σᵢ λᵢ αᵢ dx
+//
+// where:
+//   αᵢ = (ξ · eᵢ)²    alignment weights, Σαᵢ = 1
+//   λᵢ                 strain eigenvalues, λ₁ ≥ λ₂ ≥ λ₃, Σλᵢ = 0
+//   ξ = ω/|ω|          vorticity direction
+//
+// Scalar methods implicitly assume worst-case alignment (α₁ = 1).
+// We test whether controlling α₁ changes the exponent threshold.
+//
+// Key identity (Lemma A):
+//   S ≤ λ₁·A + |λ₃|·(Ω - A)
+// where A = ∫ |ω|² α₁ dx is the "bad alignment" observable.
+
+// =============================================================================
+// Test AW1: Worst-case alignment (α₁ = 1) — standard bound
+// Expect: SAT (blow-up possible, this is the scalar worst case)
+// =============================================================================
+
+structure NS_Alignment_WorstCase {
+    element Omega : ℝ
+    element P : ℝ
+    element S : ℝ
+    element dOmega_dt : ℝ
+    element lam1 : ℝ       // largest strain eigenvalue
+    element lam2 : ℝ       // intermediate
+    element lam3 : ℝ       // most negative
+
+    axiom Omega_pos : Omega > 0
+    axiom P_pos : P > 0
+    axiom S_nonneg : S ≥ 0
+
+    // Strain eigenvalue ordering and trace-free
+    axiom eigen_order : lam1 ≥ lam2
+    axiom eigen_order2 : lam2 ≥ lam3
+    axiom trace_free : plus(lam1, plus(lam2, lam3)) = 0
+
+    // Worst-case: all vorticity aligned with e₁ (α₁ = 1)
+    // S = Ω · λ₁
+    axiom worst_stretching : S = times(Omega, lam1)
+
+    // λ₁ bounded by gradient norm, which is bounded by H^{3/2}
+    // Standard chain: λ₁ ≤ ||∇v||_∞ ≤ H_{3/2} ≤ sqrt(Ω·P)
+    axiom lam1_bound : times(lam1, lam1) ≤ times(Omega, P)
+
+    // Poincaré
+    axiom poincare : P ≥ Omega
+
+    // Enstrophy equation with ν = 1
+    axiom enstrophy_eq : dOmega_dt = plus(S, negate(times(2, P)))
+
+    axiom large_omega : Omega > 10
+    axiom growth : dOmega_dt > 0
+}
+
+example "AW1: worst-case alignment α₁=1 + growth (expect SAT)" {
+    assert(dOmega_dt > 0)
+}
+
+// =============================================================================
+// Test AW2: Controlled alignment — α₁ ≤ ε with ε = 1/2
+// S = Ω·(λ₁·α₁ + λ₂·α₂ + λ₃·α₃)
+// If α₁ is bounded, effective stretching is reduced.
+// Expect: test whether this alone closes the gap
+// =============================================================================
+
+structure NS_Alignment_Controlled {
+    element Omega : ℝ
+    element P : ℝ
+    element S : ℝ
+    element dOmega_dt : ℝ
+    element lam1 : ℝ
+    element lam2 : ℝ
+    element lam3 : ℝ
+    element alpha1 : ℝ      // bad alignment weight
+    element alpha2 : ℝ      // neutral alignment weight
+    element alpha3 : ℝ      // compressive alignment weight
+
+    axiom Omega_pos : Omega > 0
+    axiom P_pos : P > 0
+    axiom S_nonneg : S ≥ 0
+
+    // Alignment weights: on the unit sphere
+    axiom alpha1_nonneg : alpha1 ≥ 0
+    axiom alpha2_nonneg : alpha2 ≥ 0
+    axiom alpha3_nonneg : alpha3 ≥ 0
+    axiom alpha_sum : plus(alpha1, plus(alpha2, alpha3)) = 1
+
+    // Strain eigenvalue ordering and trace-free
+    axiom eigen_order : lam1 ≥ lam2
+    axiom eigen_order2 : lam2 ≥ lam3
+    axiom trace_free : plus(lam1, plus(lam2, lam3)) = 0
+
+    // Decomposed stretching: S = Ω · Σ λᵢ αᵢ
+    axiom decomposed_stretching : S = times(Omega, plus(times(lam1, alpha1), plus(times(lam2, alpha2), times(lam3, alpha3))))
+
+    // λ₁ bounded by gradient norm
+    axiom lam1_bound : times(lam1, lam1) ≤ times(Omega, P)
+
+    // DEPLETION: α₁ ≤ 1/2 (vorticity at most half-aligned with stretching)
+    axiom depletion : alpha1 ≤ 0.5
+
+    // Poincaré
+    axiom poincare : P ≥ Omega
+
+    // Enstrophy equation with ν = 1
+    axiom enstrophy_eq : dOmega_dt = plus(S, negate(times(2, P)))
+
+    axiom large_omega : Omega > 10
+    axiom growth : dOmega_dt > 0
+}
+
+example "AW2: controlled alignment α₁≤1/2 + growth (expect ?)" {
+    assert(dOmega_dt > 0)
+}
+
+// =============================================================================
+// Test AW3: Strong depletion — α₁ ≤ C/Ω (alignment decays with enstrophy)
+// This is the key conjecture: as gradients intensify, vorticity avoids e₁
+// Expect: UNSAT if depletion is strong enough
+// =============================================================================
+
+structure NS_Alignment_StrongDepletion {
+    element Omega : ℝ
+    element P : ℝ
+    element S : ℝ
+    element dOmega_dt : ℝ
+    element lam1 : ℝ
+    element lam2 : ℝ
+    element lam3 : ℝ
+    element alpha1 : ℝ
+    element alpha2 : ℝ
+    element alpha3 : ℝ
+
+    axiom Omega_pos : Omega > 0
+    axiom P_pos : P > 0
+    axiom S_nonneg : S ≥ 0
+
+    axiom alpha1_nonneg : alpha1 ≥ 0
+    axiom alpha2_nonneg : alpha2 ≥ 0
+    axiom alpha3_nonneg : alpha3 ≥ 0
+    axiom alpha_sum : plus(alpha1, plus(alpha2, alpha3)) = 1
+
+    axiom eigen_order : lam1 ≥ lam2
+    axiom eigen_order2 : lam2 ≥ lam3
+    axiom trace_free : plus(lam1, plus(lam2, lam3)) = 0
+
+    axiom decomposed_stretching : S = times(Omega, plus(times(lam1, alpha1), plus(times(lam2, alpha2), times(lam3, alpha3))))
+
+    axiom lam1_bound : times(lam1, lam1) ≤ times(Omega, P)
+
+    // STRONG DEPLETION: α₁ ≤ 1/Ω
+    // Bad alignment decays inversely with enstrophy
+    axiom strong_depletion : times(alpha1, Omega) ≤ 1
+
+    axiom poincare : P ≥ Omega
+
+    axiom enstrophy_eq : dOmega_dt = plus(S, negate(times(2, P)))
+
+    axiom large_omega : Omega > 10
+    axiom growth : dOmega_dt > 0
+}
+
+example "AW3: strong depletion α₁≤1/Ω + growth (expect UNSAT?)" {
+    assert(dOmega_dt > 0)
+}
+
+// =============================================================================
+// Test AW4: Intermediate alignment only (α₂ = 1, α₁ = α₃ = 0)
+// Vorticity fully aligned with intermediate eigenvector
+// S = Ω · λ₂. Since λ₂ can be positive or negative...
+// Expect: depends on whether λ₂ can drive growth
+// =============================================================================
+
+structure NS_Alignment_Intermediate {
+    element Omega : ℝ
+    element P : ℝ
+    element S : ℝ
+    element dOmega_dt : ℝ
+    element lam1 : ℝ
+    element lam2 : ℝ
+    element lam3 : ℝ
+
+    axiom Omega_pos : Omega > 0
+    axiom P_pos : P > 0
+    axiom S_nonneg : S ≥ 0
+
+    axiom eigen_order : lam1 ≥ lam2
+    axiom eigen_order2 : lam2 ≥ lam3
+    axiom trace_free : plus(lam1, plus(lam2, lam3)) = 0
+
+    // Full intermediate alignment: S = Ω · λ₂
+    axiom intermediate_stretching : S = times(Omega, lam2)
+
+    axiom lam1_bound : times(lam1, lam1) ≤ times(Omega, P)
+
+    // λ₂ is bounded: from trace-free, λ₂ = -(λ₁+λ₃), and |λ₂| ≤ |λ₁|
+    // So λ₂² ≤ λ₁² ≤ Ω·P
+    axiom lam2_bound : times(lam2, lam2) ≤ times(Omega, P)
+
+    axiom poincare : P ≥ Omega
+
+    axiom enstrophy_eq : dOmega_dt = plus(S, negate(times(2, P)))
+
+    axiom large_omega : Omega > 10
+    axiom growth : dOmega_dt > 0
+}
+
+example "AW4: intermediate alignment α₂=1 + growth (expect ?)" {
+    assert(dOmega_dt > 0)
+}
