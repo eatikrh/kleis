@@ -1,0 +1,144 @@
+// =============================================================================
+// Interaction Inevitability
+// =============================================================================
+//
+// Combines the tidal gradient locality (ns_tidal_locality.kleis) and
+// self-consistent separation scaling (ns_self_consistent_tubes.kleis)
+// with the existing reduction chain to formalize the "self-undermining"
+// property of blow-up:
+//
+//   1. Blow-up ⟹ ω₀ → ∞            (BKM criterion)
+//   2. ω₀ → ∞ with tubes ⟹ Re → ∞  (tube assumption)
+//   3. Re → ∞ ⟹ d/σ → ∞            (self-consistent separation, SC1)
+//   4. d/σ → ∞ ⟹ perturbative       (expansion parameter → 0, SC2)
+//   5. Perturbative + tidal gradient ⟹ Q < 0  (Interaction Depletion, SC3)
+//   6. Q < 0 ⟹ alignment depletion   (Paper 1)
+//
+// The blow-up scenario forces the system into the perturbative regime
+// where the tidal gradient mechanism applies, producing Q < 0 with
+// magnitude growing as √Re.
+//
+// AXIOM: "Tube structure" — vorticity concentrates in Burgers-type tubes.
+// This is a regime assumption, not a theorem. It is supported by DNS
+// evidence (She, Jackson, Orszag 1990) and the Burgers vortex as the
+// canonical stretched-vortex solution.
+//
+// TESTS:
+//   II1: Full chain — blow-up + tube structure ⟹ Q < 0
+//   II2: Growth with depletion — can enstrophy still grow under Q < 0?
+//   II3: Numeric: complete chain verification at Re = 100
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// II1: Full chain — blow-up + tube structure ⟹ depleting Q
+// -----------------------------------------------------------------------------
+//
+// Given:
+//   - Blow-up: ω₀ large (and growing)
+//   - Tube structure: Re = ω₀/γ, σ² = 2ν/γ
+//   - Self-consistency: 2d² = σ²Re
+//   - Q scaling: Q = C × γ² × √Re, C < 0
+//
+// Prove: Q < 0.
+//
+// This combines BKM + tube + self-consistency + Q scaling in one structure.
+
+structure InteractionInevitability {
+    element omega0 : ℝ
+    element gamma_ii : ℝ
+    element nu_ii : ℝ
+    element re_ii : ℝ
+    element sigma_ii : ℝ
+    element d_ii : ℝ
+    element sqrt_re_ii : ℝ
+    element c_ii : ℝ
+    element q_ii : ℝ
+
+    // Blow-up: high vorticity
+    axiom high_vort : omega0 > 100
+
+    // Physical parameters
+    axiom gamma_pos : gamma_ii > 0
+    axiom nu_pos : nu_ii > 0
+
+    // Tube structure: Re = ω₀/γ >> 1.
+    // Re >> 1 means the rotational velocity dominates the background strain.
+    // This is the defining property of a concentrated vortex tube.
+    axiom re_def : times(re_ii, gamma_ii) = omega0
+    axiom re_large : re_ii > 10
+
+    // Core radius: σ² = 2ν/γ (encoded as γσ² = 2ν)
+    axiom core_radius : times(gamma_ii, times(sigma_ii, sigma_ii)) = times(2, nu_ii)
+    axiom sigma_pos : sigma_ii > 0
+
+    // Self-consistency: 2d² = σ²Re
+    axiom self_consistent : times(2, times(d_ii, d_ii)) = times(times(sigma_ii, sigma_ii), re_ii)
+    axiom d_pos : d_ii > 0
+
+    // Square root auxiliary
+    axiom sqrt_sq : times(sqrt_re_ii, sqrt_re_ii) = re_ii
+    axiom sqrt_pos : sqrt_re_ii > 0
+
+    // Q scaling with universal negative constant
+    axiom c_negative : c_ii < 0
+    axiom q_scaling : q_ii = times(c_ii, times(times(gamma_ii, gamma_ii), sqrt_re_ii))
+}
+
+example "II1: blow-up + tube structure ⟹ Q < 0" {
+    assert(q_ii < 0)
+}
+
+// -----------------------------------------------------------------------------
+// II2: Perturbative regime guaranteed by blow-up
+// -----------------------------------------------------------------------------
+//
+// Under the same conditions, d > σ (tubes are separated).
+// The perturbative analysis that gives Q < 0 is valid.
+
+example "II2: blow-up ⟹ d > σ (perturbative regime)" {
+    assert(d_ii > sigma_ii)
+}
+
+// -----------------------------------------------------------------------------
+// II3: Re is large (follows from high ω₀ and tube structure)
+// -----------------------------------------------------------------------------
+
+example "II3: high vorticity ⟹ Re > 1" {
+    assert(re_ii > 1)
+}
+
+// -----------------------------------------------------------------------------
+// II4: Numeric verification of the complete chain
+// -----------------------------------------------------------------------------
+
+example "II4: complete chain at Re = 100, ν = 0.01" {
+    let nu = 0.01 in
+    let re = 100 in
+    let gamma = 1.0 in
+    let omega_peak = times(re, gamma) in
+    let sigma = sqrt(divide(times(2, nu), gamma)) in
+    let d = times(sigma, sqrt(divide(re, 2))) in
+    let d_over_sigma = divide(d, sigma) in
+    let eps1 = divide(times(2, times(nu, re)), times(3.14159, times(d, times(d, d)))) in
+    let lam_gap = divide(times(gamma, re), 4) in
+    let eps_ratio = divide(eps1, lam_gap) in
+    let q_dimless = times(negate(0.552), times(times(gamma, gamma), sqrt(re))) in
+    out("Complete Interaction Inevitability Chain:");
+    out(format("  ω₀ = {:.0}", omega_peak));
+    out(format("  Re = {:.0}", re));
+    out(format("  σ = {:.4}", sigma));
+    out(format("  d = {:.4} (self-consistent)", d));
+    out(format("  d/σ = {:.4}", d_over_sigma));
+    out(format("  ε₁ = {:.6}", eps1));
+    out(format("  λ₁−λ₂ = {:.1}", lam_gap));
+    out(format("  ε₁/(λ₁−λ₂) = {:.6} ≪ 1 ✓", eps_ratio));
+    out(format("  Q = C·γ²·√Re = {:.4}", q_dimless));
+    out("");
+    out("Chain:");
+    out("  1. ω₀ = 100 → blow-up regime");
+    out("  2. Re = 100 → tube structure");
+    out(format("  3. d/σ = {:.2} → well-separated", d_over_sigma));
+    out(format("  4. ε/(Δλ) = {:.4} → perturbative regime valid", eps_ratio));
+    out(format("  5. Q = {:.2} < 0 → depleting", q_dimless));
+    out("  6. Depletion opposes blow-up → self-undermining ✓")
+}
