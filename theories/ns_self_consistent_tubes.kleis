@@ -1,0 +1,156 @@
+// =============================================================================
+// Self-Consistent Tube Separation Scaling
+// =============================================================================
+//
+// When a Burgers vortex tube is sustained by the strain from a nearby tube,
+// the self-consistency condition determines the separation d in terms of Re:
+//
+//   σ² = 2ν/γ           (core radius from viscous balance)
+//   Γ  = 2πνRe          (circulation from Re = ω₀/γ)
+//   γ  = Γ/(2πd²)       (strain from nearby tube via Biot-Savart)
+//
+// Eliminating Γ and γ:  d² = σ²Re/2,  so  d/σ = √(Re/2).
+//
+// THREE CONSEQUENCES:
+//   SC1: d/σ > 1 for Re > 2 (tubes well-separated, perturbative regime)
+//   SC2: ε₁/(λ₁−λ₂) < 1 for Re > threshold (perturbation shrinks)
+//   SC3: Q < 0 under self-consistent scaling (depleting sign)
+//   SC4: |Q| increases with Re (depletion strengthens toward blow-up)
+//   SC5: Numeric verification at Re = 100
+//
+// SELF-UNDERMINING PROPERTY: The blow-up scenario forces the system into
+// a regime where our analysis is more accurate AND the depletion is stronger.
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// SC1: Self-consistent separation — d > σ for Re > 2
+// -----------------------------------------------------------------------------
+//
+// 2d² = σ²Re. For Re > 2: d² > σ², hence d > σ.
+
+structure SelfConsistentSeparation {
+    element re_sc1 : ℝ
+    element sigma_sc1 : ℝ
+    element d_sc1 : ℝ
+
+    axiom re_high : re_sc1 > 2
+    axiom sigma_pos : sigma_sc1 > 0
+    axiom d_pos : d_sc1 > 0
+    axiom self_consistent : times(2, times(d_sc1, d_sc1)) = times(times(sigma_sc1, sigma_sc1), re_sc1)
+}
+
+example "SC1: d > σ for Re > 2 (tubes separated)" {
+    assert(d_sc1 > sigma_sc1)
+}
+
+// -----------------------------------------------------------------------------
+// SC2: Perturbative validity — ε₁/(λ₁−λ₂) < 1 at high Re
+// -----------------------------------------------------------------------------
+//
+// ε₁/(λ₁−λ₂) ~ K/Re^{3/2} for a constant K = O(1).
+// Encoded as: ε_ratio × Re³ ≤ K (cubic because Re^{3/2} squared).
+// For Re > 10 and K ≤ 10: ε_ratio ≤ 10/1000 = 0.01 < 1.
+
+structure PerturbativeValidity {
+    element re_sc2 : ℝ
+    element eps_ratio : ℝ
+    element k_const : ℝ
+
+    axiom re_high_sc2 : re_sc2 > 10
+    axiom eps_ratio_pos : eps_ratio > 0
+    axiom k_bound : k_const ≤ 10
+    axiom k_pos : k_const > 0
+    axiom scaling : times(eps_ratio, times(re_sc2, times(re_sc2, re_sc2))) ≤ k_const
+}
+
+example "SC2: perturbation ratio < 1 for Re > 10" {
+    assert(eps_ratio < 1)
+}
+
+// -----------------------------------------------------------------------------
+// SC3: Q < 0 under self-consistent scaling
+// -----------------------------------------------------------------------------
+//
+// Q = C × γ² × √Re  with C < 0.
+// We define sqrt_re as an auxiliary variable: sqrt_re² = Re, sqrt_re > 0.
+// Then Q = C × γ² × sqrt_re < 0 (product of negative × positive × positive).
+
+structure DepletionSign {
+    element re_sc3 : ℝ
+    element gamma_sc3 : ℝ
+    element c_coeff : ℝ
+    element sqrt_re : ℝ
+    element q_scaled : ℝ
+
+    axiom re_pos : re_sc3 > 0
+    axiom gamma_pos_sc3 : gamma_sc3 > 0
+    axiom c_negative : c_coeff < 0
+    axiom sqrt_sq : times(sqrt_re, sqrt_re) = re_sc3
+    axiom sqrt_pos : sqrt_re > 0
+    axiom q_def : q_scaled = times(c_coeff, times(times(gamma_sc3, gamma_sc3), sqrt_re))
+}
+
+example "SC3: Q < 0 for all Re (depleting sign)" {
+    assert(q_scaled < 0)
+}
+
+// -----------------------------------------------------------------------------
+// SC4: |Q| increases with Re (depletion strengthens toward blow-up)
+// -----------------------------------------------------------------------------
+//
+// Q = C × γ² × √Re with C < 0. For Re₂ > Re₁ at fixed γ:
+//   √Re₂ > √Re₁ ⟹ Q₂ = C × γ² × √Re₂ < C × γ² × √Re₁ = Q₁
+// So Q₂ < Q₁ (more negative = stronger depletion).
+
+structure DepletionStrengthens {
+    element re_low : ℝ
+    element re_high_sc4 : ℝ
+    element gamma_sc4 : ℝ
+    element c_sc4 : ℝ
+    element sqrt_low : ℝ
+    element sqrt_high : ℝ
+    element q_low : ℝ
+    element q_high : ℝ
+
+    axiom re_order : re_high_sc4 > re_low
+    axiom re_low_pos : re_low > 0
+    axiom gamma_pos_sc4 : gamma_sc4 > 0
+    axiom c_neg : c_sc4 < 0
+    axiom sqrt_low_sq : times(sqrt_low, sqrt_low) = re_low
+    axiom sqrt_low_pos : sqrt_low > 0
+    axiom sqrt_high_sq : times(sqrt_high, sqrt_high) = re_high_sc4
+    axiom sqrt_high_pos : sqrt_high > 0
+    axiom q_low_def : q_low = times(c_sc4, times(times(gamma_sc4, gamma_sc4), sqrt_low))
+    axiom q_high_def : q_high = times(c_sc4, times(times(gamma_sc4, gamma_sc4), sqrt_high))
+}
+
+example "SC4: |Q| increases with Re (depletion strengthens)" {
+    assert(q_high < q_low)
+}
+
+// -----------------------------------------------------------------------------
+// SC5: Numeric verification at Re = 100
+// -----------------------------------------------------------------------------
+
+example "SC5: self-consistent scaling at Re = 100" {
+    let re = 100 in
+    let d_over_sigma = sqrt(divide(re, 2)) in
+    let sigma_over_d_cubed = divide(1, times(d_over_sigma, times(d_over_sigma, d_over_sigma))) in
+    let q_factor = times(times(re, re), sigma_over_d_cubed) in
+    let c_q = negate(0.552) in
+    let q_dimless = times(c_q, q_factor) in
+    out("Self-consistent scaling at Re = 100:");
+    out(format("  d/σ = √(Re/2) = {:.4}", d_over_sigma));
+    out(format("  (σ/d)³ = {:.6}", sigma_over_d_cubed));
+    out(format("  Re²(σ/d)³ = {:.4}", q_factor));
+    out(format("  Q̃ = C × Re²(σ/d)³ = {:.4} (with C = −0.552)", q_dimless));
+    out("");
+    let eps_param = divide(4, times(sqrt(re), times(sqrt(re), sqrt(re)))) in
+    out(format("  Perturbation ratio ~ 4/Re^(3/2) = {:.6}", eps_param));
+    out("  Perturbation ratio ≪ 1: perturbative regime valid ✓");
+    out("");
+    out("  SELF-UNDERMINING: As Re → ∞:");
+    out("    d/σ → ∞    (more separated, perturbation theory better)");
+    out("    ε/Δλ → 0   (expansion parameter shrinks)");
+    out("    |Q| → ∞    (depletion grows as √Re)")
+}

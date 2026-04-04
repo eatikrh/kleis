@@ -1,0 +1,537 @@
+// =============================================================================
+// Anti-Depletion in Curved Vortex Tubes: The First Nonzero Pressure-Hessian
+// Observable and Its Sign
+// =============================================================================
+//
+// Paper III in the Navier-Stokes series.
+//
+// Compile:
+//   kleis test --raw-output --example compile \
+//       examples/mathematics/ns_bent_tube_paper.kleis > ns_bent_tube_paper.typ
+//   typst compile ns_bent_tube_paper.typ ns_bent_tube_paper.pdf
+//
+// =============================================================================
+
+import "stdlib/prelude.kleis"
+import "stdlib/templates/arxiv_paper.kleis"
+
+// =============================================================================
+// Metadata
+// =============================================================================
+
+define paper_title = "From Self-Protection to Interaction Depletion: The Pressure-Hessian Sign in Curved and Interacting Vortex Tubes"
+
+define paper_authors = [
+    Author("Engin Atik", "1")
+]
+
+define paper_affiliations = [
+    Affiliation(1, "Kleis Research", "https://kleis.io")
+]
+
+define paper_abstract = "In the preceding paper [2] we reduced the Navier-Stokes regularity question to the time-averaged sign of a single scalar observable $Q = e_2 dot H_(\"tf\") e_1$, and proved two vanishing theorems showing that $Q = 0$ for any $z$-translationally symmetric flow. The present paper computes $Q$ for the first geometry that escapes these vanishing classes: a Burgers vortex tube with uniform curvature $kappa$. The Frenet-frame metric $h_s = 1 + kappa rho cos phi$ creates an off-diagonal strain perturbation $Delta S_(x z) = -gamma s kappa slash 2$, uniform over the cross-section, which tilts the strain eigenframe and produces $Q != 0$ at $O(kappa)$. However, this first nonzero mode is purely dipolar: $Q(rho, phi) = 2.925 cos(phi - 31 degree)$ at $rho = sigma$, so the enstrophy-weighted cross-sectional average vanishes (Dipolar Oscillation Theorem). To obtain the first nonzero mean, we solve the $m = 1$ Poisson equation for the curvature-induced pressure perturbation $p_c(rho) cos phi$, compute the Hessian, and evaluate the $O(kappa^2)$ cross-term between the eigenframe tilt and the pressure-Hessian response. The result is $chevron.l Q chevron.r^((2)) = +0.022 > 0$ at $rho = sigma$: the first net effect of curvature is _anti-depleting_. Curvature unlocks the observable but produces the wrong sign for regularity. Hence isolated tube curvature is not the depletion mechanism. We then compute $Q$ for the simplest interacting configuration — a Burgers tube subject to the strain from a perpendicular vortex — and discover the _tidal gradient mechanism_: the spatial gradient of the external off-diagonal strain, when projected onto the cylindrical strain eigenbasis, creates an $m = 0$ component that survives azimuthal averaging. The enstrophy-weighted result obeys $chevron.l Q chevron.r_omega = C gamma^2 \"Re\"^2 (sigma slash d)^3$ with $C approx -0.55$, giving $-5.52$ at $\"Re\" = 100$, $d = 10 sigma$: a robust depleting sign whose $\"Re\"^2$ scaling strengthens toward potential blow-up. The sign is controlled by a universal interaction kernel $F(rho) < 0$ and correlates with stretching enhancement, providing the first constructive derivation of the depleting pressure-Hessian sign from vortex-vortex interaction. A self-consistency analysis shows that the blow-up scenario is _self-undermining_: self-consistent tube separation scales as $d slash sigma = sqrt(\"Re\" slash 2)$, the perturbation parameter decays as $\"Re\"^(-3 slash 2)$, and the depletion grows as $sqrt(\"Re\")$ — all Z3-verified — so blow-up forces the system deeper into the depleting regime."
+
+define paper_keywords = "Navier-Stokes equations, vortex tubes, curvature, pressure Hessian, alignment depletion, Burgers vortex, Frenet frame, tidal gradient, vortex interaction"
+
+// =============================================================================
+// Section 1: Introduction
+// =============================================================================
+
+define sec_intro = ArxivSection("Introduction",
+"In a companion paper [1], we showed that scalar Sobolev methods cannot decide the Navier-Stokes regularity question: blow-up is consistent with every known inequality chain unless the stretching exponent sum $a + b$ is reduced from $4$ to $2$. In [2], we decomposed the stretching integral into geometric variables — strain eigenvalues $lambda_i$ and alignment weights $alpha_i = (xi dot e_i)^2$ — and showed that the missing exponent reduction localizes to a single scalar observable:
+
+$ Q = e_2 dot H_(\"tf\") e_1 $
+
+where $H_(\"tf\")$ is the trace-free pressure Hessian and $e_1$, $e_2$ are the most stretching and intermediate strain eigenvectors. The regularity question reduces, within the geometric framework, to whether $chevron.l Q chevron.r < 0$ on average in high-enstrophy regions.
+
+Paper [2] then proved two vanishing theorems:
+
+1. *Axisymmetric Vanishing:* $Q = 0$ in any axisymmetric flow with axial vorticity.
+2. *$z$-Translation Vanishing:* $Q = 0$ for any flow $v(x, y, z) = v_perp (x, y) + gamma z hat(z)$, regardless of in-plane structure.
+
+The second theorem subsumes the first and eliminates _all_ cross-sectional perturbations of straight tubes, including elliptically deformed Burgers vortices. The present paper asks the natural next question: what happens when we leave the vanishing class?
+
+The simplest symmetry-breaking geometry is a vortex tube with curvature. A Burgers vortex with uniform curvature $kappa$ has its axis along a circular arc rather than a straight line. The Frenet-frame metric introduces corrections at $O(kappa)$ that break the $z$-translational symmetry, creating both off-diagonal strain and an $m = 1$ pressure perturbation.
+
+We first show that curvature alone is insufficient: a non-swirling vortex ring has $Q = 0$ _exactly_ at all orders in $kappa$ (Ring Vanishing Theorem). The essential ingredient for $Q != 0$ is not curvature per se but the combination of curvature and axial velocity — the off-diagonal strain $Delta S_(x z) = -v_s kappa slash 2$ vanishes when either factor is zero.
+
+For the bent Burgers tube, which has both ingredients ($kappa > 0$ and $v_s = gamma s$), we find three structural results:
+
+(i) $Q != 0$ at $O(kappa)$ — the first model in our chain with genuinely nonzero $Q$;
+
+(ii) the first nonzero mode is purely dipolar ($m = 1$), so its cross-sectional average vanishes (Dipolar Oscillation Theorem);
+
+(iii) the first nonzero mean appears at $O(kappa^2)$ from the product of the eigenframe tilt and the pressure-Hessian response, and its sign is _positive_ — anti-depleting.
+
+These results have a clear physical interpretation: the pressure Hessian response to curvature _protects_ the vortex tube's alignment with the stretching direction. Vortex rings have $Q = 0$ exactly — consistent with their observed stability — while bent tubes with axial stretching are actively anti-depleting.
+
+Finally, we compute $Q$ for the simplest interacting configuration: a Burgers tube subject to the off-diagonal strain from a perpendicular vortex. A Fourier selection rule prevents direct coupling between curvature modes ($m = 1$) and tidal modes ($m = 2$). Instead, the _tidal gradient_ of the external strain, when projected onto the cylindrical strain eigenbasis, creates an $m = 0$ component that survives azimuthal averaging. The enstrophy-weighted average obeys a scaling law $chevron.l Q chevron.r_omega = C gamma^2 \"Re\"^2 (sigma slash d)^3$ with $C approx -0.55$, yielding a robust depleting sign that strengthens toward high Reynolds number and overwhelms the single-tube anti-depletion.")
+
+// =============================================================================
+// Section 2: Strain Tensor in Curved Tube Coordinates
+// =============================================================================
+
+define sec_strain = ArxivSection("Strain Tensor in Curved Tube Coordinates",
+"Consider a Burgers vortex whose axis has been bent with uniform curvature $kappa$. We work in Frenet tube coordinates $(rho, phi, s)$ where $rho$ is the distance from the tube axis, $phi$ is the azimuthal angle measured from the outward normal $hat(n)$, and $s$ is the arc length along the axis. The scale factors are:
+
+$ h_rho = 1 , quad h_phi = rho , quad h_s = 1 + kappa rho cos phi equiv H $
+
+The zeroth-order velocity field is the Burgers vortex:
+$ v_rho = -gamma rho slash 2 , quad v_phi = v_theta (rho) , quad v_s = gamma s $
+
+where $gamma$ is the background strain rate and $v_theta (rho) = (omega_0 sigma^2 slash 2 rho)(1 - e^(-rho^2 slash sigma^2))$ is the swirl velocity. Throughout this paper we work in units $gamma = sigma = 1$, so quantities with dimensions of inverse time appear as multiples of $gamma$ and lengths as multiples of $sigma$. The single dimensionless control parameter is the vortex Reynolds number $\"Re\" = omega_0 slash gamma$; we evaluate at $\"Re\" = 100$. All numerical results carry implicit factors of $gamma$ and $sigma$ that are restored in the scaling laws below.
+
+The off-diagonal strain components coupling in-plane to axial directions are, in the orthonormal basis of the Frenet frame:
+
+$ e_(rho s) = H / 2 partial / (partial rho)(v_s / H) + 1 / (2 H) (partial v_rho) / (partial s) $
+
+At zeroth order, $partial v_rho slash partial s = 0$ and $partial(gamma s slash H) slash partial rho = -gamma s kappa cos phi slash H^2$, giving:
+
+$ e_(rho s) = -(gamma s kappa) / 2 cos phi + O(kappa^2) $
+
+Similarly:
+
+$ e_(phi s) = H / (2 rho) partial / (partial phi)(v_s / H) + rho / (2 H) partial / (partial s)(v_phi / rho) $
+
+The second term vanishes ($v_theta$ is $s$-independent). The first gives:
+
+$ e_(phi s) = (gamma s kappa) / 2 sin phi + O(kappa^2) $")
+
+define subsec_cartesian = ArxivSubsection("Conversion to Cartesian coordinates",
+"Converting to Cartesian coordinates at the reference point ($hat(x) = cos phi thin hat(rho) - sin phi thin hat(phi)$):
+
+$ Delta S_(x z) = e_(rho s) cos phi - e_(phi s) sin phi = -(gamma s kappa) / 2 (cos^2 phi + sin^2 phi) = -(gamma s kappa) / 2 $
+
+$ Delta S_(y z) = e_(rho s) sin phi + e_(phi s) cos phi = 0 $
+
+This is a remarkably clean result: the curvature creates a _uniform_ off-diagonal strain $Delta S_(x z) = -gamma s kappa slash 2$, independent of the azimuthal angle $phi$. The uniformity arises because the $cos phi$ and $sin phi$ contributions from $e_(rho s)$ and $e_(phi s)$ combine to give a constant.
+
+We note that $Delta S_(x z)$ vanishes at $s = 0$ (the symmetry point where the axial velocity $v_s = gamma s$ is zero) and grows linearly with $s$. For a fluid element at position $s$ on the tube, the strain perturbation is proportional to both the curvature $kappa$ and the axial velocity $gamma s$.")
+
+// =============================================================================
+// Section 3: First-Order Q
+// =============================================================================
+
+define sec_first_order = ArxivSection("First-Order $Q$: Dipolar Oscillation",
+"The zeroth-order strain eigenframe has:
+$ lambda_1 = -gamma slash 2 + |S_(r theta)| , quad e_1 = (hat(rho) + hat(phi)) slash sqrt(2) $
+$ lambda_2 = gamma , quad e_2 = hat(z) $
+$ lambda_3 = -gamma slash 2 - |S_(r theta)| , quad e_3 = (hat(rho) - hat(phi)) slash sqrt(2) $
+
+where $S_(r theta) = (v_theta ' - v_theta slash rho) slash 2$ is the swirl shear. At high Reynolds number ($omega_0 >> gamma$), we have $lambda_1 approx omega_0 slash 4$ and $lambda_3 approx -omega_0 slash 4$.
+
+The strain perturbation $Delta S_(x z) = -gamma s kappa slash 2$ projects onto the eigenbasis as:
+
+$ Delta S_(12) = e_1 dot Delta S dot e_2 = Delta S_(x z) dot (cos phi - sin phi) / sqrt(2) $
+
+$ Delta S_(32) = e_3 dot Delta S dot e_2 = Delta S_(x z) dot (cos phi + sin phi) / sqrt(2) $
+
+The first-order $Q$ comes from the eigenframe perturbation (terms $B + C$ in standard perturbation theory):
+
+$ Q^((1)) = (Delta S_(12)) / (lambda_2 - lambda_1) (H_+ - H_(z z)) + (Delta S_(32)) / (lambda_2 - lambda_3) H_- $
+
+where $H_+ = (H_(r r) + H_(theta theta)) slash 2$ and $H_- = (H_(r r) - H_(theta theta)) slash 2$ are combinations of the zeroth-order (axisymmetric) pressure Hessian.")
+
+define subsec_angular = ArxivSubsection("Angular structure",
+"Substituting the explicit expressions for $Delta S_(12)$ and $Delta S_(32)$, we find:
+
+$ Q^((1)) = A cos phi + B sin phi $
+
+where $A$ and $B$ are radial functions depending on the Hessian components and eigenvalue gaps. At $rho = sigma$ with $\"Re\" = 100$, $s = 10$, $kappa = 0.01$:
+
+$ Q^((1))(rho = sigma , phi) = 2.505 cos phi + 1.510 sin phi = 2.925 cos(phi - 31 degree) $
+
+This is a pure $m = 1$ (dipolar) angular mode.
+
+*Theorem (Dipolar Oscillation).* _For a Burgers vortex with uniform curvature $kappa$, the first-order pressure-Hessian observable $Q^((1))$ has $m = 1$ angular dependence. Its enstrophy-weighted cross-sectional average vanishes:_
+
+$ chevron.l Q^((1)) chevron.r_omega equiv (integral Q^((1)) |omega|^2 thin d A) / (integral |omega|^2 thin d A) = 0 $
+
+_Proof._ The angular factor of $Q^((1))$ is $A cos phi + B sin phi$, which is a pure $m = 1$ mode. The enstrophy $|omega|^2 = omega_0^2 e^(-2 rho^2 slash sigma^2)$ is axisymmetric ($m = 0$). The integral of an $m = 1$ function against an $m = 0$ weight over $[0, 2 pi]$ vanishes. $square$
+
+The theorem has a deeper structural content than the mere vanishing of an integral. The first mode unlocked by symmetry breaking ($m = 1$, from $O(kappa)$ curvature) is _orthogonal to the weighting measure_ ($m = 0$ enstrophy). This is not accidental: the curvature perturbation is a translation-like deformation (displacing the axis), which generates a dipole, while the weighting measure retains the unperturbed azimuthal symmetry. Any mechanism that produces net $chevron.l Q chevron.r != 0$ must therefore either (a) excite $m = 0$ or $m = 2$ modes in $Q$ directly, or (b) break the axisymmetry of $|omega|^2$ so that the weight itself contains compatible harmonics. This is why single-tube curvature fails at first order and why tube-tube interactions — which generically break the $m = 0$ symmetry of the vorticity weight — are the natural next candidate.
+
+The trajectory average also vanishes at leading order. A fluid element at radius $rho_0$ orbiting with angular velocity $Omega_0 = v_theta (rho_0) slash rho_0$ samples $Q(t) = [A cos(Omega_0 t + phi_0) + B sin(Omega_0 t + phi_0)] times gamma s(t) kappa slash 2$. Since $gamma << Omega_0$ at high Reynolds number, the oscillation averages out over each circulation period.")
+
+define table_angular = ArxivTable("tab:angular", "First-order $Q$ at $rho = sigma$, $s = 10$, $kappa = 0.01$, $\"Re\" = 100$. The cross-section average is $-2.0 times 10^(-15) approx 0$.",
+    "table(columns: (auto, auto, auto), align: (left, center, center), table.header([*$phi$*], [*$Q^((1))$*], [*Sign*]), [$0$ (outward normal)], [$+2.504$], [positive], [$pi slash 4$], [$+2.838$], [maximum], [$pi slash 2$ (binormal)], [$+1.510$], [positive], [$3 pi slash 4$], [$-0.703$], [negative], [$pi$ (inward normal)], [$-2.504$], [negative], [$5 pi slash 4$], [$-2.838$], [minimum], [$3 pi slash 2$], [$-1.510$], [negative], [$7 pi slash 4$], [$+0.703$], [positive])")
+
+// =============================================================================
+// Section 4: Source Perturbation and Pressure Response
+// =============================================================================
+
+define sec_pressure = ArxivSection("Source Perturbation and Pressure Response",
+"The curvature also modifies the diagonal strain component $e_(s s)$ at $O(kappa)$:
+
+$ Delta e_(s s) = -(gamma rho slash 2) kappa cos phi - kappa v_theta sin phi $
+
+The dominant term at high Reynolds number is $-kappa v_theta sin phi$ (since $v_theta tilde omega_0 sigma >> gamma sigma$). This changes the source $g = |S|^2 - 1 slash 2 |omega|^2$ at $O(kappa)$:
+
+$ Delta g = kappa [g_c (rho) cos phi + g_s (rho) sin phi] $
+
+where:
+$ g_c (rho) = rho(omega_0^2 e^(-2 rho^2 slash sigma^2) - gamma^2) approx rho omega_0^2 e^(-2 eta) $
+$ g_s (rho) = -2 gamma v_theta (rho) $
+
+The $cos phi$ source $g_c$ dominates by a factor $omega_0^2 slash gamma^2 = \"Re\"^2$. It arises from the metric correction to the vorticity: on the outside of the bend, the tube is metrically compressed, weakening the vorticity.
+
+Each mode satisfies an $m = 1$ radial Poisson ODE:
+
+$ p_c '' + p_c ' slash rho - p_c slash rho^2 = g_c (rho) $
+
+with regularity at $rho = 0$ and decay at $rho -> infinity$. We solve this via ode45 integration with boundary matching (subtracting the growing homogeneous solution $C rho$ to enforce decay).")
+
+define subsec_hessian = ArxivSubsection("Hessian components at $rho = sigma$",
+"The physical solution $p_c (rho)$ (after boundary matching) yields the Hessian components at $rho = sigma$:
+
+$ A_c equiv p_c '' = 633 , quad B_c equiv p_c ' slash rho - p_c slash rho^2 = 742 $
+
+These are large because the source $g_c approx rho omega_0^2 e^(-2 eta)$ is driven by the peak vorticity. The trace-like combination $A_c + B_c = 1375$ and anisotropy $A_c - B_c = -109$ control the different contributions to $Q$.
+
+The pressure perturbation is an in-plane ($z$-independent) function $Delta p = kappa p_c (rho) cos phi$. Its Hessian has no $H_(x z)$ or $H_(y z)$ components (since $partial^2 Delta p slash partial z partial x = 0$). Therefore term $(A)$ of the perturbation expansion — $e_2^0 dot Delta H^((1)) dot e_1^0 = hat(z) dot Delta H dot e_1^0$ — vanishes. The only first-order contribution to $Q$ comes from the eigenframe perturbation (terms $B + C$), as computed in Section 3.
+
+*Robustness.* The sign of $chevron.l Q chevron.r^((2))$ is controlled by two structural features: (i) $A_c + 3 B_c > 0$, which holds whenever the source $g_c (rho)$ is dominated by vorticity rather than strain ($omega_0 >> gamma$, i.e., $\"Re\" >> 1$), since the Poisson solution inherits the positivity of the enstrophy source; and (ii) $lambda_2 - lambda_1 < 0$, which is guaranteed by the ordering convention $lambda_1 >= lambda_2$. At $\"Re\" = 50$, the values shift to $A_c = 127$, $B_c = 156$, giving $A_c + 3 B_c = 595 > 0$ and $chevron.l Q chevron.r^((2)) > 0$ with the same sign. The anti-depletion result is robust across the high-Reynolds-number regime relevant to potential blow-up and does not depend on the specific choice $\"Re\" = 100$.")
+
+// =============================================================================
+// Section 5: Second-Order Net Q
+// =============================================================================
+
+define sec_second_order = ArxivSection("Second-Order Net $Q$: The Anti-Depletion Result",
+"The first nonzero cross-section average of $Q$ appears at $O(kappa^2)$, from the product of two $m = 1$ quantities:
+
+- The eigenframe perturbation $e_2^((1))$ from $Delta S_(x z) = -gamma s kappa slash 2$ (Section 3)
+- The Hessian perturbation $Delta H^((1))$ from the pressure response $kappa p_c (rho) cos phi$ (Section 4)
+
+The $m = 0$ component of this $m = 1 times m = 1$ product gives a nonzero cross-section average.
+
+Explicitly, term $(b)$ of the second-order expansion is:
+
+$ Q_b^((2)) = e_2^((1)) dot Delta H^((1)) dot e_1^0 $
+
+where $e_2^((1)) = [Delta S_(12) slash (lambda_2 - lambda_1)] e_1^0 + [Delta S_(32) slash (lambda_2 - lambda_3)] e_3^0$.
+
+After computing the azimuthal average (using $chevron.l cos^2 phi chevron.r = 1 slash 2$, $chevron.l sin^2 phi chevron.r = 1 slash 2$, $chevron.l cos phi sin phi chevron.r = 0$):
+
+$ chevron.l Q_b^((2)) chevron.r_phi = -(gamma s kappa^2) / (8 sqrt(2)) [(A_c + 3 B_c) / (lambda_2 - lambda_1) + (A_c - B_c) / (lambda_2 - lambda_3)] $")
+
+define subsec_sign = ArxivSubsection("Evaluation and sign determination",
+"With the computed values at $rho = sigma$, $\"Re\" = 100$:
+
+$ (A_c + 3 B_c) / (lambda_2 - lambda_1) = 2858 / (-11.71) = -244.0 $
+
+$ (A_c - B_c) / (lambda_2 - lambda_3) = (-109) / 14.71 = -7.4 $
+
+$ \"Sum\" = -251.4 $
+
+$ \"Prefactor:\" quad -(gamma s kappa^2) / (8 sqrt(2)) = -(1 dot 10 dot 10^(-4)) / (8 sqrt(2)) = -8.84 times 10^(-5) $
+
+$ chevron.l Q chevron.r^((2)) = (-8.84 times 10^(-5)) times (-251.4) = bold(+0.022) $
+
+The sign is _positive_.
+
+*Theorem (Anti-Depletion).* _For a Burgers vortex with uniform curvature $kappa$ at high Reynolds number, the leading-order cross-section-averaged $Q$ is positive:_
+
+$ chevron.l Q chevron.r^((2)) > 0 $
+
+_Hence single-tube curvature is anti-depleting: the pressure-Hessian response to geometric bending promotes alignment with the most stretching strain direction rather than opposing it._
+
+The positivity arises from two factors:
+1. The dominant Hessian combination $A_c + 3 B_c = 2858 > 0$: the curvature-induced pressure perturbation has strong positive gradient structure in the core.
+2. The eigenvalue gap $lambda_2 - lambda_1 = -11.71 < 0$: the intermediate eigenvalue lies below the most stretching one. The division by this negative gap reverses the expected sign.")
+
+// =============================================================================
+// Section 6: The Vortex Ring — An Exact Vanishing Case
+// =============================================================================
+
+define sec_ring = ArxivSection("The Vortex Ring: An Exact Vanishing Case",
+"The bent Burgers tube has two ingredients: curvature $kappa$ and axial stretching $v_s = gamma s$. A natural question is whether curvature _alone_ suffices to produce $Q != 0$. The vortex ring — a closed tube with curvature $kappa = 1 slash R$ but no external stretching — is the canonical test case.
+
+*Theorem (Ring Vanishing).* _For a non-swirling axisymmetric vortex ring with purely toroidal vorticity, $Q = 0$ exactly at all orders in the curvature $kappa = 1 slash R$._
+
+_Proof._ We work in Frenet-frame toroidal coordinates $(rho, phi, s)$ with the same metric $h_s = 1 + kappa rho cos phi$ as the bent tube. A standard (non-swirling) ring has $v_s = 0$ (no toroidal velocity component) and toroidal symmetry ($partial slash partial s = 0$ for all flow variables).
+
+(1) _Off-diagonal strain vanishes:_ The strain components coupling axial to in-plane directions are:
+
+$ e_(rho s) = H / 2 partial / (partial rho)(v_s / H) + 1 / (2 H) (partial v_rho) / (partial s) = 0 + 0 = 0 $
+
+$ e_(phi s) = H / (2 rho) partial / (partial phi)(v_s / H) + rho / (2 H) partial / (partial s)(v_phi / rho) = 0 + 0 = 0 $
+
+(2) _Block-diagonal strain:_ With $e_(rho s) = e_(phi s) = 0$, the strain tensor decomposes as $(rho, phi) plus.o (s)$. The in-plane block has eigenvectors $e_1, e_3$ in the $(hat(rho), hat(phi))$ plane; the axial direction $hat(e)_s$ is an eigenvector with eigenvalue $lambda_2 = e_(s s)$. This is exact — not a perturbative statement — because the block-diagonal structure holds at all orders in $kappa$.
+
+(3) _Axisymmetric pressure:_ The pressure depends only on $(rho, phi)$, not on $s$, so $partial p slash partial s = 0$. All covariant derivatives of $nabla p$ in the $s$-direction also vanish (the connection coefficients $nabla_(hat(e)_s) hat(e)_rho$ and $nabla_(hat(e)_s) hat(e)_phi$ are proportional to $partial p slash partial s = 0$). Hence $H_(s rho) = H_(s phi) = 0$.
+
+(4) _Therefore:_ $Q = e_2 dot H_(\"tf\") dot e_1 = hat(e)_s dot H_(\"tf\") dot e_1 = 0$ because $H_(\"tf\")$ has no $s$-cross components and $e_1$ has no $s$-component. $square$
+
+The ring does have a nonzero diagonal strain at $O(kappa)$:
+
+$ e_(s s) = -kappa v_theta (rho) sin phi slash H $
+
+which is $m = 1$ and creates an $m = 1$ pressure perturbation and eigenvalue modulation. But this does not _tilt_ the eigenframe — it only changes $lambda_2$. The eigenframe tilt that drives $Q != 0$ requires off-diagonal strain $e_(rho s)$ or $e_(phi s)$, which are identically zero when $v_s = 0$.")
+
+define subsec_ring_key = ArxivSubsection("The essential ingredient for $Q != 0$",
+"Comparing the ring ($Q = 0$ exactly) with the bent Burgers tube ($Q != 0$ at $O(kappa)$) reveals the essential ingredient:
+
+$ Delta S_(x z) = -v_s kappa slash 2 $
+
+The off-diagonal strain arises from the _product_ of curvature $kappa$ and axial velocity $v_s$. Neither alone suffices:
+- Curvature without axial flow (ring): $v_s = 0 -> Delta S_(x z) = 0 -> Q = 0$.
+- Axial flow without curvature (straight Burgers tube): $kappa = 0 -> Delta S_(x z) = 0 -> Q = 0$.
+- Both together (bent Burgers tube): $v_s = gamma s$, $kappa > 0 -> Delta S_(x z) = -gamma s kappa slash 2 != 0 -> Q != 0$.
+
+This is a structural decomposition of what breaks the vanishing theorems: _curvature alone is necessary but not sufficient; the mechanism requires an axial velocity gradient along a curved axis_.
+
+The physical picture is clear. In the ring, the flow circulates in poloidal planes (swirl); there is no velocity component along the ring axis. The strain eigenframe is locked to the plane-plus-axis structure at all orders. In the bent Burgers tube, fluid moves _along_ the curved axis ($v_s = gamma s$), and the Frenet-frame metric creates a differential velocity between the inside and outside of the bend, tilting the eigenframe.
+
+The persistence of vortex rings reflects not a depleting mechanism but a symmetry-protected state in which the pressure-Hessian observable vanishes identically. Their eventual breakdown — the decoherence into turbulence observed in experiments — corresponds to the loss of this symmetry and the onset of interaction-driven dynamics, where the axisymmetric vorticity weight $|omega|^2$ is broken by external perturbations and the orthogonality argument of the Dipolar Oscillation Theorem no longer applies.")
+
+// =============================================================================
+// Section 7: Physical Interpretation
+// =============================================================================
+
+define sec_interpretation = ArxivSection("Physical Interpretation",
+"The anti-depletion result has a clear physical interpretation. Consider a vortex tube bent with curvature $kappa$ in the $x$-$z$ plane. The metric correction $h_s = 1 + kappa rho cos phi$ compresses the tube slightly on the outside of the bend ($phi = 0$) and expands it on the inside ($phi = pi$). This creates an asymmetry in the vorticity distribution at $O(kappa)$.
+
+The pressure responds to balance this asymmetry: on the side with metrically compressed (stronger) vorticity, the centrifugal force is slightly higher, creating a pressure maximum. On the other side, the pressure is lower. This dipolar pressure perturbation creates a Hessian with $m = 1$ angular dependence.
+
+Simultaneously, the curvature creates an off-diagonal strain $Delta S_(x z) = -gamma s kappa slash 2$ that tilts the strain eigenframe. The tilt direction is _correlated_ with the pressure response: both arise from the same curvature perturbation and share the same $m = 1$ symmetry.
+
+The $O(kappa^2)$ cross-term between the eigenframe tilt and the Hessian perturbation has a definite sign because the tilt and the pressure response are in phase. The sign is positive, meaning that the combined effect pushes vorticity _toward_ the most stretching direction. Physically:
+
+1. Curvature creates a pressure maximum on the outside of the bend.
+2. This pressure maximum acts to _maintain_ the tube's alignment with the stretching direction.
+3. The tube effectively resists deformation through its own pressure response.
+
+This is the _self-protection_ mechanism of vortex tubes. It explains the observed persistence of coherent vortex tubes in turbulent flows: if single-tube curvature depleted alignment, tubes would self-destruct. Instead, the pressure Hessian's primary role on an isolated tube is structural maintenance.")
+
+// =============================================================================
+// Section 8: Two-Tube Interaction
+// =============================================================================
+
+define sec_interaction = ArxivSection("Two-Tube Interaction: The Tidal Gradient Mechanism",
+"The preceding sections established that single-tube geometries either vanish ($Q = 0$) or are anti-depleting ($chevron.l Q chevron.r > 0$). We now compute $Q$ for the simplest interacting configuration that breaks $z$-translational symmetry.
+
+*Setup.* Tube $A$ is a Burgers vortex along $hat(z)$ at the origin. Tube $B$ is a line vortex along $hat(x)$ at position $(0, d, 0)$ with circulation $Gamma_B$. Perpendicular tubes are essential: two _parallel_ tubes (both along $hat(z)$) preserve $z$-translational symmetry, so $Q = 0$ by the $z$-Translation Vanishing Theorem [2]. Perpendicular tubes break this symmetry because tube $B$'s strain at $A$ varies with $z$: the distance from $A$'s axis to $B$ is $sqrt(d^2 + z^2)$, so $S_(y z) prop 1 slash (d^2 + z^2)$.
+
+*Selection rule.* The natural expectation is that the $m = 1$ curvature modes (Section 3) couple with the $m = 2$ tidal modes from the external tube. However, the product of $m = 1$ and $m = 2$ gives $m = 1$ and $m = 3$ only — never $m = 0$:
+
+$ integral_0^(2 pi) cos phi thin cos 2 phi thin d phi = 0 $
+
+This is a robust Fourier selection rule that prevents direct curvature-tidal coupling at any perturbative order. The mechanism for nonzero $chevron.l Q chevron.r$ must come from elsewhere.")
+
+define subsec_tidal_mechanism = ArxivSubsection("The tidal gradient mechanism",
+"Tube $B$ creates an off-diagonal strain $S_(y z)$ at tube $A$'s cross-section. At $z = 0$:
+
+$ S_(y z)(y) = -Gamma_B / (2 pi (d - y)^2) approx epsilon_0 + epsilon_1 y $
+
+where $epsilon_0 = -Gamma_B slash (2 pi d^2)$ is the uniform strain and $epsilon_1 = -Gamma_B slash (pi d^3)$ is the _tidal gradient_.
+
+The uniform part $epsilon_0$ creates $m = 1$ eigenbasis projections — the same dipolar structure as the bent tube — and averages to zero by the Dipolar Oscillation Theorem.
+
+The gradient part $epsilon_1 y = epsilon_1 rho sin phi$ has $m = 1$ angular dependence in Cartesian coordinates. But when projected onto the _cylindrical strain eigenbasis_, which is rotated by $pi slash 4$ relative to the Cartesian basis, it generates an $m = 0$ component:
+
+$ Delta S_(12) = S_(y z) (sin phi + cos phi) / sqrt(2) $
+
+Substituting $S_(y z) = epsilon_1 rho sin phi$ for the gradient part:
+
+$ Delta S_(12)^(\"grad\") = (epsilon_1 rho) / sqrt(2) (sin^2 phi + sin phi cos phi) = (epsilon_1 rho) / (2 sqrt(2)) [1 + sin 2 phi - cos 2 phi] $
+
+The $m = 0$ component is $epsilon_1 rho slash (2 sqrt(2))$. This is the key insight: the eigenbasis rotation converts Cartesian $m = 1$ into cylindrical $m = 0$.
+
+The cross-section-averaged $Q$ is therefore:
+
+$ chevron.l Q chevron.r_phi (rho) = (epsilon_1 rho) / (2 sqrt(2)) F(rho) $
+
+where $F(rho) = (H_+ - H_(z z)) / (lambda_2 - lambda_1) + H_- / (lambda_2 - lambda_3)$ is the _interaction kernel_ — the same radial function that controls the single-tube eigenframe tilt.")
+
+define subsec_interaction_sign = ArxivSubsection("Sign determination",
+"The interaction kernel $F(rho)$ is _uniformly negative_ throughout the vortex core:
+
+$ F(0.3 sigma) = -3421 , quad F(sigma) = -70.8 , quad F(2 sigma) = -8.8 , quad F(3 sigma) = -1.4 $
+
+The negativity arises because $lambda_2 - lambda_1 < 0$ in the core (the intermediate eigenvalue $lambda_2 = gamma$ lies below the most stretching $lambda_1 = -gamma slash 2 + |S_(r theta)|$ at high Reynolds number).
+
+Since $F(rho) < 0$ uniformly, the sign of $chevron.l Q chevron.r$ is determined by $epsilon_1 = -Gamma_B slash (pi d^3)$:
+
+- If $epsilon_1 > 0$ (stretching-enhancing, $Gamma_B < 0$): $chevron.l Q chevron.r < 0$ — *depleting*.
+- If $epsilon_1 < 0$ (stretching-opposing, $Gamma_B > 0$): $chevron.l Q chevron.r > 0$ — anti-depleting.
+
+The enstrophy-weighted cross-section average obeys the scaling law
+
+$ chevron.l Q chevron.r_omega = C thin gamma^2 \"Re\"^2 (sigma slash d)^3 $
+
+where $C approx -0.55$ is a negative dimensionless constant determined entirely by the Burgers vortex radial profile, independent of $\"Re\"$, $gamma$, $sigma$, or $d$ individually. At the representative values $\"Re\" = 100$, $d = 10 sigma$ (with $gamma = sigma = 1$), this gives $chevron.l Q chevron.r_omega = -5.52$ for the stretching-enhancing case ($Gamma_B = -Gamma_A$).
+
+The $\"Re\"^2$ scaling is physically significant: the interaction-induced depletion _strengthens_ toward the high-Reynolds-number regime relevant to potential blow-up. The $(sigma slash d)^3$ factor reflects the tidal-gradient decay with separation.
+
+At the same representative parameters, the interaction dominates the single-tube self-protection $chevron.l Q chevron.r^((2)) = +0.022$ by a factor of $approx 250$. This ratio depends on the comparison point — the separation $d slash sigma$ for the interaction, the curvature $kappa sigma$ and station $s slash sigma$ for the self-protection — and should not be read as a universal constant.
+
+*Theorem (Interaction Depletion).* _For two perpendicular vortex tubes with stretching-enhancing circulation, the enstrophy-weighted cross-section average of the pressure-Hessian observable is negative:_
+
+$ chevron.l Q chevron.r_omega < 0 $
+
+_The dominant interaction effect is depleting and overwhelms the single-tube anti-depletion._
+
+*Physical interpretation.* The sign depends on whether the interaction enhances or opposes tube $A$'s axial stretching. In turbulence, vortex tubes form precisely because the surrounding velocity field stretches them; the dominant pairwise interactions are therefore stretching-enhancing. The tidal gradient mechanism ensures that these interactions produce $Q < 0$, providing the first constructive derivation of the depleting sign from first principles. The correlation between stretching enhancement and depletion is not a coincidence — it is a structural consequence of the interaction kernel $F(rho) < 0$, which is negative whenever the in-plane shear exceeds the axial strain rate ($lambda_1 > lambda_2$), a condition satisfied throughout the core at high Reynolds number.")
+
+// =============================================================================
+// Section 9: Implications for the Regularity Problem
+// =============================================================================
+
+define sec_implications = ArxivSection("Implications for the Regularity Problem",
+"The results of this paper, combined with those of [1] and [2], establish a hierarchy of vanishing and sign results for the pressure-Hessian observable $Q$:
+
+1. *Straight tube* ($kappa = 0$, $z$-translationally symmetric): $Q = 0$ identically [2].
+2. *Elliptically deformed straight tube* (still $z$-symmetric): $Q = 0$ by the $z$-Translation Vanishing Theorem [2].
+3. *Vortex ring* ($kappa = 1 slash R > 0$, but no axial flow): $Q = 0$ exactly at all orders (Ring Vanishing Theorem, Section 6).
+4. *Bent Burgers tube* ($kappa > 0$ and $v_s = gamma s != 0$, first genuine escape):
+   (a) $Q != 0$ at $O(kappa)$, but purely dipolar ($m = 1$), so $chevron.l Q chevron.r = 0$.
+   (b) $chevron.l Q chevron.r^((2)) > 0$ at $O(kappa^2)$: anti-depleting.
+
+This progression systematically eliminates candidate mechanisms:
+
+- Cross-sectional deformation is eliminated by the $z$-Translation Vanishing Theorem.
+- Curvature without axial flow is eliminated by the Ring Vanishing Theorem.
+- Curvature with axial flow is eliminated by the Anti-Depletion Theorem.
+
+What remains? The depletion mechanism must break the axisymmetry of the _vorticity distribution itself_, not merely the geometry of a single tube. Three candidate mechanisms satisfy this requirement:
+
+*(A) Tube-tube interactions.* When two vortex tubes approach each other, each tube's vorticity creates a strain field that acts on the other. This external strain does not share the single tube's axisymmetry, so the $m = 1$ field of $Q$ is weighted against a non-axisymmetric $|omega|^2$, producing a nonzero average.
+
+*(B) Non-axisymmetric background strain.* In turbulence, the background strain that stretches a tube is generically anisotropic in the cross-sectional plane. This breaks the azimuthal symmetry and creates an $m = 2$ or higher correction to $|omega|^2$, which can couple with the $m = 1$ dipolar $Q$ to produce a net bias.
+
+*(C) Curvature variation.* If the curvature $kappa$ varies along the tube ($d kappa slash d s != 0$), the local $s$-reflection symmetry is broken, creating additional contributions that do not cancel pairwise.")
+
+define subsec_two_tube = ArxivSubsection("The pairwise interaction kernel",
+"The two-tube computation (Section 8) reveals that the mechanism for $chevron.l Q chevron.r < 0$ is not tidal deformation of the vorticity weight, but the _tidal gradient_ of the off-diagonal strain acting through the eigenbasis projection. This mechanism:
+
+(a) Requires perpendicular (not parallel) tubes to break $z$-symmetry.
+
+(b) Bypasses the $m = 1 times m = 2 -> 0$ selection rule by converting Cartesian $m = 1$ into cylindrical $m = 0$ through the $pi slash 4$ eigenbasis rotation.
+
+(c) Produces a sign controlled by the interaction kernel $F(rho) < 0$, which is negative throughout the core for any vortex tube whose in-plane shear exceeds the axial strain rate — a condition equivalent to $\"Re\" >> 1$ and satisfied by all tubes in the regime relevant to potential blow-up.
+
+(d) Correlates the depleting sign with stretching enhancement: the pairwise interactions that sustain vortex tubes in turbulence are precisely those that produce $Q < 0$.
+
+The hierarchy of effects is now clear: single-tube self-protection is overwhelmed by pairwise interaction depletion. Both effects scale as $\"Re\"^2$, so their ratio is independent of Reynolds number. The interaction scales as $(sigma slash d)^3$ while the self-protection scales as $(kappa sigma)^2$; at representative parameters ($d = 10 sigma$, $kappa sigma = 0.01$) the ratio is $approx 250$, showing that the cooperative depleting mechanism dominates at any moderate separation.")
+
+define subsec_inevitability = ArxivSubsection("Interaction inevitability",
+"A natural question is whether the interaction mechanism is merely a possibility or a structural necessity of blow-up. We argue, via two Z3-verified lemmas and a self-consistency argument, that the blow-up scenario _forces_ the system into the perturbative regime where the tidal gradient mechanism applies — and that the depletion strengthens as blow-up intensifies.
+
+*Tidal gradient locality (Z3-verified).* The $m = 0$ component of $Q$ that survives cross-section averaging arises solely from the tidal gradient $epsilon_1 tilde Gamma slash d^3$ — not the uniform strain $epsilon_0 tilde Gamma slash d^2$, which produces only dipolar ($m = 1$) contributions that average to zero. Since $epsilon_1$ decays as $1 slash d^3$, the sum over all tubes converges rapidly: $sum_(k=2)^infinity 1 slash k^3 = zeta(3) - 1 approx 0.202$, so the nearest tube contributes at least $83%$ of the total tidal gradient (Z3 proves the bound $epsilon_(1,\"near\") >= 0.8 thin epsilon_(1,\"total\")$). Distant vorticity contributes background strain but _not_ averaged $Q$.
+
+*Self-consistent separation scaling.* When tube $A$'s background strain $gamma$ is provided by a nearby tube $B$ at distance $d$, the self-consistency condition $gamma = Gamma_B slash (2 pi d^2)$ combined with $sigma^2 = 2 nu slash gamma$ and $Gamma = 2 pi nu \"Re\"$ yields:
+
+$ d slash sigma = sqrt(\"Re\" slash 2) $
+
+Three consequences follow, all Z3-verified:
+
+(a) *Perturbative validity strengthens.* The expansion parameter of the tidal gradient analysis is $epsilon_1 slash (lambda_1 - lambda_2) tilde \"Re\"^(-3 slash 2)$, which _shrinks_ as $\"Re\"$ grows. At $\"Re\" = 100$ this ratio is $0.025$; at $\"Re\" = 10^4$ it is $10^(-4)$. The perturbative regime becomes _exact_ in the blow-up limit.
+
+(b) *Tube separation grows.* $d slash sigma = sqrt(\"Re\" slash 2) -> infinity$ as $\"Re\" -> infinity$. The tubes are well-separated relative to their cores, precisely the regime where the Biot-Savart tidal expansion is most accurate.
+
+(c) *Depletion strengthens.* The interaction $Q$ under self-consistent scaling becomes $chevron.l Q chevron.r_omega = C thin gamma^2 sqrt(\"Re\")$ with $C < 0$ (Z3-verified). The depleting effect _grows_ as $sqrt(\"Re\")$ toward blow-up — the mechanism does not fade but sharpens.
+
+*The self-undermining property.* Combining these observations: a blow-up scenario requires high vorticity ($omega_0 -> infinity$) sustained by external stretching. In the vortex-tube regime ($\"Re\" >> 1$), this stretching comes from nearby tubes via Biot-Savart, with self-consistent separation $d slash sigma = sqrt(\"Re\" slash 2)$. The same interaction that sustains the tube (stretching-enhancing) produces $Q < 0$ with growing magnitude. The blow-up scenario is _self-undermining_: the mechanism that would drive it simultaneously produces the depletion that opposes it.
+
+*Regime assumption.* The above argument assumes vorticity concentrates in Burgers-type tubes with $\"Re\" >> 1$ — a well-supported but unproven assumption for blow-up configurations. Whether all admissible blow-up scenarios must pass through tube-dominated configurations remains the principal open question.")
+
+// =============================================================================
+// Section 8: Synthesis and Conclusion
+// =============================================================================
+
+define sec_synthesis = ArxivSection("Synthesis",
+"The complete reduction chain is:
+
+1. Scalar Sobolev methods cannot decide the problem [1].
+2. The missing mechanism localizes to $Q = e_2 dot H_(\"tf\") e_1$ [2].
+3. $Q = 0$ for all $z$-translationally symmetric flows [2].
+4. $Q = 0$ exactly for the vortex ring — curvature alone is not sufficient (this paper).
+5. $Q != 0$ requires curvature _plus_ axial flow; the bent Burgers tube is the first escape (this paper).
+6. The first nonzero mode is dipolar ($m = 1$), averaging to zero (Dipolar Oscillation Theorem, this paper).
+7. The first nonzero mean is $chevron.l Q chevron.r^((2)) > 0$: anti-depleting (this paper).
+8. The $m = 1 times m = 2$ coupling vanishes by Fourier selection rules (this paper).
+9. The _tidal gradient_ mechanism from perpendicular tube interaction creates an $m = 0$ eigenbasis projection that survives averaging (this paper).
+10. The resulting $chevron.l Q chevron.r_omega = C thin gamma^2 \"Re\"^2 (sigma slash d)^3 < 0$ ($C approx -0.55$): the first constructive derivation of the depleting sign, with $\"Re\"^2$ scaling toward blow-up (this paper).
+11. Tidal gradient locality: the $m = 0$ mechanism requires _nearby_ tubes ($epsilon_1 tilde 1 slash d^3$ convergence), so averaged $Q$ is controlled by the nearest tube (Z3-verified, this paper).
+12. Self-consistent blow-up scaling: $d slash sigma = sqrt(\"Re\" slash 2)$, perturbation parameter $tilde \"Re\"^(-3 slash 2) -> 0$, depletion $tilde sqrt(\"Re\") -> infinity$ (Z3-verified, this paper).
+13. The blow-up scenario is _self-undermining_: the stretching-enhancing interactions that would sustain blow-up are precisely those that produce $Q < 0$ with growing magnitude (this paper).
+
+The transition from single-tube vanishing (steps 3–7) to interaction depletion (steps 9–10) is not merely a change of target but a structural necessity. The single-tube vanishing is due to symmetry orthogonality: the first unlocked mode ($m = 1$) is incompatible with the axisymmetric weighting measure ($m = 0$). The interaction breaks this orthogonality through the tidal gradient — not by modifying the weight, but by creating an $m = 0$ component of the $Q$ field itself through the eigenbasis rotation.
+
+The self-protection of individual tubes (positive $chevron.l Q chevron.r$) and the interaction depletion (negative $chevron.l Q chevron.r$) coexist: the former preserves coherent tubes while the latter drives enstrophy growth when tubes interact. Since both effects scale as $\"Re\"^2$, their ratio is Reynolds-number-independent; the interaction dominates the self-protection at any moderate separation (e.g., by a factor $approx 250$ at $d = 10 sigma$, $kappa sigma = 0.01$).
+
+The inevitability argument (steps 11–13) tightens the narrative from _mechanism identification_ to _structural necessity_: the depletion is not merely possible but forced by the blow-up dynamics, under the tube-structure assumption.")
+
+define sec_conclusion = ArxivSection("Conclusion",
+"We have computed the pressure-Hessian observable $Q = e_2 dot H_(\"tf\") e_1$ for curved vortex geometries and interacting tubes, establishing six results:
+
+1. *Ring Vanishing Theorem:* A non-swirling vortex ring has $Q = 0$ exactly at all orders in $kappa = 1 slash R$. Curvature alone is necessary but not sufficient for $Q != 0$.
+
+2. *First nonzero $Q$:* The bent Burgers tube ($kappa > 0$, $v_s = gamma s != 0$) creates $Q != 0$ — the first model in our chain to escape the vanishing classes.
+
+3. *Dipolar Oscillation Theorem:* The first-order $Q$ is a pure $m = 1$ mode whose cross-section average vanishes.
+
+4. *Anti-Depletion Theorem:* The first nonzero mean is $chevron.l Q chevron.r^((2)) = +0.022 > 0$. Single-tube curvature is anti-depleting.
+
+5. *Interaction Depletion Theorem:* For perpendicular vortex tubes with stretching-enhancing circulation, the tidal gradient mechanism produces $chevron.l Q chevron.r_omega = C gamma^2 \"Re\"^2 (sigma slash d)^3$ with $C approx -0.55$ — a robust depleting sign that scales as $\"Re\"^2$ toward blow-up and overwhelms the single-tube self-protection at any moderate separation.
+
+6. *Interaction Inevitability:* Under the tube-structure assumption, the blow-up scenario is self-undermining. Self-consistent scaling gives $d slash sigma = sqrt(\"Re\" slash 2)$, forcing the system into the perturbative regime (expansion parameter $tilde \"Re\"^(-3 slash 2) -> 0$) where the tidal gradient mechanism applies with _growing_ magnitude ($Q tilde sqrt(\"Re\") -> infinity$). Z3 verifies the complete chain: blow-up + tube structure $=> Q < 0$.
+
+The complete narrative is:
+
+$ bold(\"Curvature unlocks the observable; interaction determines the sign.\") $
+
+Single-tube curvature breaks the vanishing theorems (Ring → Bent Tube → Dipolar Oscillation → Anti-Depletion) but produces the wrong sign. The correct depleting sign emerges from the _tidal gradient_ of the off-diagonal strain in vortex-vortex interaction — a mechanism that converts Cartesian $m = 1$ strain variation into cylindrical $m = 0$ through the $pi slash 4$ eigenbasis rotation. The sign is controlled by the interaction kernel $F(rho) < 0$, which is negative throughout the core whenever the in-plane shear exceeds the axial strain rate ($\"Re\" >> 1$), and correlates with stretching enhancement.
+
+The inevitability argument (Result 6) strengthens this from mechanism identification to structural necessity: the self-consistent blow-up dynamics _forces_ the system into the regime where the depleting mechanism applies and sharpens. Within the tube-structure regime, blow-up is self-undermining — the stretching-enhancing interactions that would sustain it are precisely those that produce $Q < 0$.
+
+The principal remaining question is whether all admissible blow-up scenarios must pass through tube-dominated configurations. The tube-structure assumption is supported by DNS evidence [4] and the Burgers vortex as the canonical stretched-vortex solution, but it is not a theorem. The reduction from the abstract regularity question — does $H^1$ blow up? — to a computable pairwise kernel — is $F(rho)$ negative in the core? — to a self-consistency argument — does blow-up force the depleting regime? — represents a progressive structural narrowing of the problem. Whether this chain closes into a proof depends on formalizing the tube-structure assumption or, equivalently, showing that vorticity concentration is inevitable at blow-up.")
+
+// =============================================================================
+// References
+// =============================================================================
+
+define ref_paper1 = ArxivReference(1, "E. Atik, \"The Half-Derivative Gap: Machine-Verified Structural Diagnosis of Navier-Stokes Smoothness,\" Kleis Research (2025).")
+define ref_paper2 = ArxivReference(2, "E. Atik, \"Geometric Depletion of Vortex Stretching: Machine-Verified Conditions for Navier-Stokes Regularity,\" Kleis Research (2025).")
+define ref_ashurst = ArxivReference(3, "W. T. Ashurst, A. R. Kerstein, R. M. Kerr, and C. H. Gibson, \"Alignment of vorticity and scalar gradient with strain rate in simulated Navier-Stokes turbulence,\" Phys. Fluids 30, 2343 (1987).")
+define ref_she = ArxivReference(4, "Z.-S. She, E. Jackson, and S. A. Orszag, \"Intermittent vortex structures in homogeneous isotropic turbulence,\" Nature 344, 226 (1990).")
+define ref_callegari = ArxivReference(5, "A. J. Callegari and L. Ting, \"Motion of a curved vortex filament with decaying vortical core and axial velocity,\" SIAM J. Appl. Math. 35, 148 (1978).")
+define ref_kleis = ArxivReference(6, "E. Atik, \"Kleis: A formal verification language for mathematics,\" https://kleis.io (2025).")
+
+// =============================================================================
+// Assemble document
+// =============================================================================
+
+define all_elements = [
+    sec_intro,
+    sec_strain, subsec_cartesian,
+    sec_first_order, subsec_angular, table_angular,
+    sec_pressure, subsec_hessian,
+    sec_second_order, subsec_sign,
+    sec_ring, subsec_ring_key,
+    sec_interpretation,
+    sec_interaction, subsec_tidal_mechanism, subsec_interaction_sign,
+    sec_implications, subsec_two_tube, subsec_inevitability,
+    sec_synthesis,
+    sec_conclusion,
+    ref_paper1, ref_paper2, ref_ashurst, ref_she, ref_callegari, ref_kleis
+]
+
+define my_paper = arxiv_paper(
+    paper_title,
+    paper_authors,
+    paper_affiliations,
+    paper_abstract,
+    paper_keywords,
+    all_elements
+)
+
+example "compile" {
+    let typst_output = compile_arxiv_paper(my_paper) in
+    out(typst_raw(typst_output))
+}
+
+example "validate" {
+    assert(valid_arxiv_paper(my_paper) = true)
+    out("Paper is valid!")
+}

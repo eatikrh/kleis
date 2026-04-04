@@ -1,0 +1,229 @@
+// =============================================================================
+// Bent Vortex Tube: First-Order Curvature Correction to Q
+// =============================================================================
+//
+// For a Burgers vortex with curvature κ, the Frenet frame metric
+// h_s = 1 + κρ cos(φ) creates off-diagonal strain:
+//
+//   ΔS_xz = -γsκ/2     (uniform over cross-section!)
+//   ΔS_yz = 0
+//
+// where s is the arc length along the tube axis.
+//
+// The diagonal strain e_{ss} also gets an O(κ) correction:
+//   Δe_{ss} = -(γρ/2)κ cos(φ) - κ v_θ sin(φ)
+// which modifies the source term g at O(κ).
+//
+// The strain eigenframe perturbation at O(κ) gives:
+//   Q = (eigenframe rotation) × (zeroth-order Hessian)
+// with angular dependence cos(φ + π/4).
+//
+// KEY RESULT: Q ≠ 0 pointwise — the first model with nonzero Q.
+// The cross-section average vanishes at O(κ) due to dipolar symmetry.
+// =============================================================================
+
+define pi = 3.14159265358979
+
+// Burgers vortex parameters
+define Re_bv = 100
+define gamma_bv = 1.0
+define sigma_bv = 1.0
+define omega0 = times(Re_bv, gamma_bv)
+
+// Swirl velocity v_θ(ρ) = (ω₀σ²/2ρ)(1 - e^{-ρ²/σ²})
+define v_theta(rho) =
+    let eta = divide(times(rho, rho), times(sigma_bv, sigma_bv)) in
+    let prefactor = divide(times(omega0, times(sigma_bv, sigma_bv)),
+                           times(2, rho)) in
+    times(prefactor, minus(1, exp(negate(eta))))
+
+// Pressure gradient: p₀'(r) = v_θ²/r (centrifugal balance)
+define p0_prime(rho) = divide(times(v_theta(rho), v_theta(rho)), rho)
+
+// Pressure Hessian components (zeroth order, axisymmetric)
+// H_θθ = p₀'/r = v_θ²/r²
+define H_thetatheta(rho) = divide(times(v_theta(rho), v_theta(rho)), times(rho, rho))
+
+// h_rr via finite differences on p₀'
+define h_fd = 0.0001
+define h_rr(rho) =
+    divide(minus(p0_prime(plus(rho, h_fd)), p0_prime(minus(rho, h_fd))),
+           times(2, h_fd))
+
+// H_zz = -γ² (from background strain pressure)
+define H_zz_val = negate(times(gamma_bv, gamma_bv))
+
+// Shear strain s_rθ = (v_θ' - v_θ/ρ)/2 via finite differences
+define shear_rtheta(rho) =
+    let vt = v_theta(rho) in
+    let vt_prime = divide(minus(v_theta(plus(rho, h_fd)), v_theta(minus(rho, h_fd))),
+                          times(2, h_fd)) in
+    divide(minus(vt_prime, divide(vt, rho)), 2)
+
+// Eigenvalues of zeroth-order strain at radius ρ:
+// λ₁ = -γ/2 + |S_rθ|  (most stretching, in-plane, e₁ ~ (ρ̂ + φ̂)/√2)
+// λ₂ = γ               (intermediate, along ẑ)
+// λ₃ = -γ/2 - |S_rθ|  (most compressing, in-plane, e₃ ~ (ρ̂ - φ̂)/√2)
+define lambda1(rho) = plus(negate(divide(gamma_bv, 2)), abs(shear_rtheta(rho)))
+define lambda2_val = gamma_bv
+define lambda3(rho) = minus(negate(divide(gamma_bv, 2)), abs(shear_rtheta(rho)))
+
+// Strain perturbation from curvature (in Cartesian at reference point):
+// ΔS_xz = -γsκ/2  (UNIFORM over cross-section)
+define DeltaS_xz(s_val, kappa) = negate(divide(times(gamma_bv, times(s_val, kappa)), 2))
+
+// Project ΔS onto strain eigenbasis:
+// e₁ · ΔS · e₂ = ΔS_xz × (cosφ - sinφ)/√2
+// e₃ · ΔS · e₂ = ΔS_xz × (cosφ + sinφ)/√2
+define DeltaS_12(phi, s_val, kappa) =
+    times(DeltaS_xz(s_val, kappa),
+          divide(minus(cos(phi), sin(phi)), sqrt(2)))
+
+define DeltaS_32(phi, s_val, kappa) =
+    times(DeltaS_xz(s_val, kappa),
+          divide(plus(cos(phi), sin(phi)), sqrt(2)))
+
+// Q at first order in κ (eigenframe perturbation, terms B + C):
+//
+// Term B: e₂¹ · H₀ · e₁⁰
+//   = ΔS₁₂/(λ₂-λ₁) × H₊ + ΔS₃₂/(λ₂-λ₃) × H₋
+//
+// Term C: e₂⁰ · H₀ · e₁¹
+//   = -ΔS₁₂/(λ₂-λ₁) × H_zz
+//
+// Combined: Q = ΔS₁₂/(λ₂-λ₁) × (H₊ - H_zz) + ΔS₃₂/(λ₂-λ₃) × H₋
+//
+// where H₊ = (H_rr + H_θθ)/2, H₋ = (H_rr - H_θθ)/2
+define Q_bent(rho, phi, s_val, kappa) =
+    let ds12 = DeltaS_12(phi, s_val, kappa) in
+    let ds32 = DeltaS_32(phi, s_val, kappa) in
+    let lam1 = lambda1(rho) in
+    let lam3 = lambda3(rho) in
+    let hrr = h_rr(rho) in
+    let htt = H_thetatheta(rho) in
+    let hplus = divide(plus(hrr, htt), 2) in
+    let hminus = divide(minus(hrr, htt), 2) in
+    plus(times(divide(ds12, minus(lambda2_val, lam1)),
+               minus(hplus, H_zz_val)),
+         times(divide(ds32, minus(lambda2_val, lam3)),
+               hminus))
+
+example "BT1a: strain perturbation from curvature" {
+    let dsxz = DeltaS_xz(10.0, 0.01) in
+    let vt = v_theta(sigma_bv) in
+    out("Bent tube strain perturbation for κ=0.01, s=10 (v_s = γs = 10):");
+    out(format("  ΔS_xz = -γsκ/2 = {:.4}", dsxz));
+    out(format("  v_θ(σ) = {:.2}", vt));
+    out("");
+    out("Key: ΔS_xz is UNIFORM over the cross-section (no φ-dependence).");
+    out("     ΔS_yz = 0 (curvature in the x-z plane only).")
+}
+
+example "BT1b: eigenvalue structure" {
+    let rho = sigma_bv in
+    let l1 = lambda1(rho) in
+    let l3 = lambda3(rho) in
+    let gap = minus(lambda2_val, l1) in
+    out(format("  λ₁(σ) = {:.4} (most stretching, in-plane)", l1));
+    out(format("  λ₂    = {:.4} (intermediate, along ẑ)", lambda2_val));
+    out(format("  λ₃(σ) = {:.4} (most compressing, in-plane)", l3));
+    out(format("  λ₂ - λ₁ = {:.4} (eigenvalue gap)", gap))
+}
+
+example "BT2: Q at specific points on the bent tube" {
+    let kappa = 0.01 in
+    let s_val = 10.0 in
+    let rho = sigma_bv in
+    out(format("Q(ρ=σ, s={}, κ={}) at various azimuthal angles φ:", s_val, kappa));
+    out(format("  φ=0    (outward normal): Q = {:.6}", Q_bent(rho, 0, s_val, kappa)));
+    out(format("  φ=π/4  (45°):            Q = {:.6}", Q_bent(rho, divide(pi, 4), s_val, kappa)));
+    out(format("  φ=π/2  (binormal):        Q = {:.6}", Q_bent(rho, divide(pi, 2), s_val, kappa)));
+    out(format("  φ=3π/4 (135°):           Q = {:.6}", Q_bent(rho, times(3, divide(pi, 4)), s_val, kappa)));
+    out(format("  φ=π    (inward normal):   Q = {:.6}", Q_bent(rho, pi, s_val, kappa)));
+    out(format("  φ=5π/4 (225°):           Q = {:.6}", Q_bent(rho, times(5, divide(pi, 4)), s_val, kappa)));
+    out(format("  φ=3π/2 (270°):           Q = {:.6}", Q_bent(rho, times(3, divide(pi, 2)), s_val, kappa)));
+    out(format("  φ=7π/4 (315°):           Q = {:.6}", Q_bent(rho, times(7, divide(pi, 4)), s_val, kappa)));
+    out("");
+    out("Angular dependence: Q ∝ cos(φ + π/4) — dipolar pattern.");
+    out("Q is NONZERO pointwise — first model with Q ≠ 0!")
+}
+
+example "BT3: Q cross-section average (should vanish)" {
+    let kappa = 0.01 in
+    let s_val = 10.0 in
+    let rho = sigma_bv in
+    let q0 = Q_bent(rho, 0, s_val, kappa) in
+    let q1 = Q_bent(rho, divide(pi, 4), s_val, kappa) in
+    let q2 = Q_bent(rho, divide(pi, 2), s_val, kappa) in
+    let q3 = Q_bent(rho, times(3, divide(pi, 4)), s_val, kappa) in
+    let q4 = Q_bent(rho, pi, s_val, kappa) in
+    let q5 = Q_bent(rho, times(5, divide(pi, 4)), s_val, kappa) in
+    let q6 = Q_bent(rho, times(3, divide(pi, 2)), s_val, kappa) in
+    let q7 = Q_bent(rho, times(7, divide(pi, 4)), s_val, kappa) in
+    let q_sum = plus(plus(plus(q0, q1), plus(q2, q3)),
+                     plus(plus(q4, q5), plus(q6, q7))) in
+    let q_avg = divide(q_sum, 8) in
+    out(format("Cross-section average ⟨Q⟩_φ at ρ=σ, s={}: {:.8}", s_val, q_avg));
+    out("Expected: ≈ 0 (dipolar cos(φ+π/4) averages out over the circle)")
+}
+
+example "BT4: Q radial profile" {
+    let kappa = 0.01 in
+    let s_val = 10.0 in
+    let phi = 0 in
+    out(format("Q(φ=0, s={}, κ={}) vs radius:", s_val, kappa));
+    out(format("  ρ=0.3σ: Q = {:.6}", Q_bent(0.3, phi, s_val, kappa)));
+    out(format("  ρ=0.5σ: Q = {:.6}", Q_bent(0.5, phi, s_val, kappa)));
+    out(format("  ρ=0.7σ: Q = {:.6}", Q_bent(0.7, phi, s_val, kappa)));
+    out(format("  ρ=1.0σ: Q = {:.6}", Q_bent(1.0, phi, s_val, kappa)));
+    out(format("  ρ=1.5σ: Q = {:.6}", Q_bent(1.5, phi, s_val, kappa)));
+    out(format("  ρ=2.0σ: Q = {:.6}", Q_bent(2.0, phi, s_val, kappa)));
+    out(format("  ρ=3.0σ: Q = {:.6}", Q_bent(3.0, phi, s_val, kappa)));
+    out("");
+    out("Q is concentrated in the vortex core (ρ ~ σ) where swirl is strong.")
+}
+
+example "BT5: Hessian components profile" {
+    out("Zeroth-order pressure Hessian at various ρ:");
+    out(format("  H_zz = {:.4} (uniform)", H_zz_val));
+    let hr03 = h_rr(0.3) in
+    let ht03 = H_thetatheta(0.3) in
+    let hp03 = divide(plus(hr03, ht03), 2) in
+    let hm03 = divide(minus(hr03, ht03), 2) in
+    out(format("  ρ=0.3σ: h_rr={:.2}, H_θθ={:.2}, H₊={:.2}, H₋={:.2}",
+        hr03, ht03, hp03, hm03));
+    let hr10 = h_rr(1.0) in
+    let ht10 = H_thetatheta(1.0) in
+    let hp10 = divide(plus(hr10, ht10), 2) in
+    let hm10 = divide(minus(hr10, ht10), 2) in
+    out(format("  ρ=1.0σ: h_rr={:.2}, H_θθ={:.2}, H₊={:.2}, H₋={:.2}",
+        hr10, ht10, hp10, hm10));
+    let hr20 = h_rr(2.0) in
+    let ht20 = H_thetatheta(2.0) in
+    let hp20 = divide(plus(hr20, ht20), 2) in
+    let hm20 = divide(minus(hr20, ht20), 2) in
+    out(format("  ρ=2.0σ: h_rr={:.2}, H_θθ={:.2}, H₊={:.2}, H₋={:.2}",
+        hr20, ht20, hp20, hm20));
+    out("");
+    out("In the core (solid body rotation): h_rr ≈ H_θθ ≈ ω₀²/4, so H₋ ≈ 0.");
+    out("The dominant Q term is ΔS₁₂/(λ₂-λ₁) × (H₊ - H_zz).")
+}
+
+example "BT6a: computed Q value" {
+    let rho = sigma_bv in
+    let q_val = Q_bent(rho, 0, 10.0, 0.01) in
+    let om2_4 = divide(times(omega0, omega0), 4) in
+    out("SCALING: Q ≈ ΔS₁₂/(λ₂-λ₁) × (H₊ - H_zz)");
+    out(format("  Computed Q(ρ=σ, φ=0, s=10, κ=0.01): {:.4}", q_val));
+    out(format("  γsκ/2 = {:.4}", 0.05));
+    out(format("  ω₀ = {}, ω₀²/4 = {}", omega0, om2_4))
+}
+
+example "BT6b: eigenvalue gap check" {
+    let l1 = lambda1(sigma_bv) in
+    let gap = minus(lambda2_val, l1) in
+    let hplus = divide(plus(h_rr(sigma_bv), H_thetatheta(sigma_bv)), 2) in
+    out(format("  λ₂ - λ₁ = {:.4}", gap));
+    out(format("  H₊(σ) = {:.2}", hplus));
+    out(format("  H₊ - H_zz = {:.2}", minus(hplus, H_zz_val)))
+}
