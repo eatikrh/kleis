@@ -463,6 +463,261 @@ Theory file: `theories/ns_angular_averaging.kleis` (8 tests, all pass)
 
 ---
 
+## 10. Paper V: Blow-Up Profile Classification and the Tube-Structure Question
+
+**Date added:** April 4, 2026
+**Context:** Paper IV closed Gaps 2-4. The sole remaining conditional is the
+tube-structure hypothesis (Gap 1). Paper V must address whether blow-up scenarios
+necessarily produce tube-like vorticity concentration, or identify what remains
+if they do not.
+
+### 10.1 What Must Be Decided
+
+The conditional regularity theorem (Paper IV, Theorem 4) states:
+
+> If high-vorticity regions organize into Burgers-type tubes with self-consistent
+> separation scaling d/σ = √(Re/2), then enstrophy remains bounded.
+
+To convert this to an unconditional theorem, one must prove:
+
+> Any finite-time blow-up scenario must develop tube-dominated vorticity concentration.
+
+Or, failing that, show that non-tube blow-up profiles also produce Q < 0.
+
+### 10.2 Partial Regularity: The CKN Constraint
+
+**Caffarelli, Kohn & Nirenberg (1982)** — "Partial regularity of suitable weak
+solutions of the Navier-Stokes equations," *CPAM* 35, 771–831.
+
+- The singular set S of any suitable weak solution has **parabolic 1-dimensional
+  Hausdorff measure zero**: H¹_par(S) = 0.
+- In physical terms: singularities cannot fill a curve in space-time. They are
+  at most isolated points (in a parabolic sense).
+- **Ożański (2019)**: monograph proving CKN bounds are sharp — cannot be improved
+  without new structural insight.
+
+**Relevance to Paper V:** CKN constrains the *size* of the singular set but not
+its *geometry*. A point singularity could involve tube-like concentration, sheet-like
+concentration, or something else. However, CKN implies that if blow-up occurs, it
+is *extremely localized* — which favors tube-like concentration (since tubes are
+1D objects and sheets are 2D, only tubes are compatible with the dimensional constraint).
+
+**Key insight for Paper V:** CKN's H¹ = 0 constraint is actually *compatible* with
+tubular blow-up (a tube collapsing to a point at blow-up time has H¹_par = 0) but
+*incompatible* with extended sheet-like blow-up. This narrows the dichotomy.
+
+### 10.3 Type I Exclusion: The ESS Theorem
+
+**Escauriaza, Seregin & Šverák (2003)** — "L_{3,∞}-solutions of the Navier-Stokes
+equations and backward uniqueness," *Russian Math. Surveys* 58, 211–250.
+
+- Proved that **Type I blow-up is impossible**: if |u(x,t)| ≤ C/√(T-t) (the
+  self-similar rate), then the solution is regular at T.
+- Method: backward uniqueness for parabolic equations.
+- Over 550 citations; foundational result.
+
+**Type I vs Type II:**
+- Type I: |u| ~ (T-t)^{-1/2} (self-similar scaling)
+- Type II: |u| grows faster than (T-t)^{-1/2} (super-critical)
+
+**Relevance:** Any NS blow-up must be **Type II** — faster than self-similar.
+This eliminates the "simplest" blow-up scenario and forces any singularity to have
+non-trivial profile structure. The Burgers vortex, as a self-similar solution,
+cannot blow up in isolation (consistent with our self-protection result). Blow-up
+must involve interaction dynamics that amplify beyond self-similar rates — exactly
+the regime where our tidal gradient mechanism operates.
+
+### 10.4 Self-Similar Blow-Up Exclusion
+
+**Nečas, Růžička & Šverák (1996)** — Proved nonexistence of non-trivial self-similar
+blow-up solutions with finite energy.
+
+**Tsai (1998)** — Extended to forward self-similar solutions.
+
+**Hou & Li (2008)** — "Nonexistence of local self-similar blow-up for the 3D
+incompressible Navier-Stokes equations," *DCDS* 18, 637–642.
+- Extended to *locally* self-similar solutions: even if self-similar scaling holds
+  only in a shrinking core, blow-up is impossible (under L^p convergence for p > 3).
+
+**Relevance:** The entire class of self-similar profiles is excluded. Any blow-up
+must have a *non-self-similar* time dependence. This is significant because the
+Burgers vortex *is* self-similar — meaning blow-up cannot occur while the solution
+remains a Burgers vortex. The system must *depart* from the Burgers profile to
+blow up, but our interaction depletion mechanism keeps pushing it back toward
+the Burgers equilibrium. This is a consistency check on the self-undermining argument.
+
+### 10.5 Profile Decomposition
+
+**Gallagher, Koch & Planchon (2013/2016)** — Profile decomposition approach to
+the L³ Navier-Stokes regularity criterion.
+
+- Decompose bounded L³ sequences into orthogonal concentration profiles plus
+  a remainder term.
+- Each profile concentrates at a specific scale and location.
+- Originally developed for dispersive equations; adapted to NS.
+- Provides an alternative proof of the ESS result via "critical elements."
+
+**Seregin (2012)** — "A certain necessary condition of potential blow up for
+Navier-Stokes equations," *Comm. Math. Phys.*
+- If blow-up occurs at (x₀, T), then for any δ > 0, the L³ norm on balls
+  B(x₀, r) must blow up: ‖u(t)‖_{L³(B(x₀,r))} → ∞ as t → T.
+- Blow-up is truly local in L³.
+
+**Relevance:** Profile decomposition is the natural tool for proving vorticity
+concentration. If the L³ norm blows up locally, the vorticity must concentrate.
+The question is *into what shape*. Profile decomposition decomposes the blow-up
+into individual "bubbles" — but does not determine their geometry (tubes vs sheets
+vs other). The geometry must come from the NS-specific nonlinearity.
+
+### 10.6 Geometric Characterization: The Double-Cone Theorem
+
+**Lei, Ren & Tian (2025)** — "A geometric characterization of potential
+Navier-Stokes singularities," arXiv:2501.08976.
+
+- If vorticity vectors in high-|ω| regions belong to a **double cone** (i.e.,
+  vorticity direction is confined to a narrow solid angle), the solution is regular.
+- Equivalently: **near any potential singularity, vorticity direction must cover
+  every great circle on S².**
+- Method: controls local vorticity fluxes via Kelvin-Helmholtz-type arguments.
+
+**Relevance to Paper V:** This is extremely important. It says:
+
+> At a potential singularity, vorticity cannot be approximately unidirectional.
+
+This means:
+- Pure tube blow-up (all vorticity along ẑ) is excluded — the double-cone
+  condition would be satisfied, giving regularity.
+- Blow-up requires vorticity pointing in *many* directions simultaneously.
+- This is consistent with our interaction picture: multiple tubes at different
+  angles are needed. A single tube (vorticity in one direction) cannot blow up.
+
+**Critical connection:** Our isotropic angular averaging (Paper IV, Section 2)
+averages over all relative orientations. The Lei-Ren-Tian result says blow-up
+*forces* vorticity to explore all orientations. So the isotropic average is not
+just a theoretical construct — it is the *required* average at blow-up. This
+potentially converts the angular averaging from a statistical assumption to a
+structural necessity.
+
+### 10.7 Inviscid Anti-Twist Mechanism
+
+**Cirin, Busse, Holzner & Krug (2024)** — "Twisting vortex lines regularize
+Navier-Stokes turbulence," *Science Advances* (September 2024).
+
+- DNS at high resolution: vorticity initially amplifies via vortex line twisting.
+- A **spontaneous anti-twist** emerges that prevents unbounded growth.
+- This self-regularization operates even without viscosity.
+- Demonstrated genericity by isolating individual vortices.
+
+**Relevance:** This is likely the physical manifestation of Q < 0 in vortex-line
+language. The "anti-twist" = eigenframe rotation opposing stretching-induced
+alignment = pressure Hessian depletion. If this mechanism is truly inviscid and
+generic, it may provide the missing universality beyond tube structure.
+
+### 10.8 Barker's Quantitative Classification (2026)
+
+**Barker (2026)** — "Quantitative classification of potential Navier-Stokes
+singularities beyond the blow-up time," arXiv:2510.20757.
+
+- First quantitative classification of potentially singular solutions near blow-up.
+- For approximately axisymmetric initial data (motivated by Hou's candidate).
+- Uses iterated Carleman inequalities to track localized vorticity concentration.
+- Bounds amenable to numerical testing.
+
+**Relevance:** Barker's work is the closest existing result to what Paper V needs.
+He tracks vorticity concentration quantitatively near blow-up. The question is
+whether his concentration regions are tube-like. His restriction to approximately
+axisymmetric data is a limitation — but also a natural starting point.
+
+### 10.9 Hou's Nearly Self-Similar Blow-Up Program
+
+**Hou (2024-2025)** — "Nearly self-similar blowup of generalized axisymmetric
+Navier-Stokes equations," arXiv:2405.10916.
+
+- Two-scale dynamic rescaling formulation for axisymmetric NS.
+- Achieves vorticity amplification O(10³⁰) in modified NS model.
+- Effective dimension converges toward 3 as viscosity diminishes.
+
+**Chen & Hou (2025)** — Computer-assisted proof of 3D Euler blow-up in bounded
+domains with smooth initial data and boundary. Published *PNAS* (2025).
+
+**Relevance:** Hou's program is the most serious numerical candidate for NS
+blow-up. The blow-up is axisymmetric and boundary-driven — a different regime
+from our interior tube-tube interactions. If Hou's candidate were to extend to
+true NS (not the modified version), it would represent a *non-tube* blow-up
+scenario (ring singularity on a boundary). Our mechanism does not directly
+address boundary-driven blow-up. However, the Millennium Problem concerns the
+whole-space or periodic case, where boundary effects are absent.
+
+### 10.10 The Tube-Sheet Dichotomy
+
+The key structural question for Paper V is: **at potential blow-up, does vorticity
+concentrate into tubes or sheets?**
+
+| Property | Tubes | Sheets |
+|----------|-------|--------|
+| Codimension | 2 (1D in 3D) | 1 (2D in 3D) |
+| CKN compatible? | Yes (H¹_par = 0 OK) | Marginal (need measure zero) |
+| Self-similar? | Burgers vortex (excluded by ESS) | Burgers layer (less studied) |
+| DNS evidence | Strong (She, Jimenez) | Weak (strain-dominated, not vorticity) |
+| Double-cone (Lei-Ren) | Single tube excluded | Single sheet excluded |
+| Our mechanism | Q < 0 (depleting) | Not analyzed |
+
+**Key observation:** DNS universally shows tubes, not sheets, in high-vorticity
+regions. CKN's dimensional constraint is more naturally satisfied by tubes.
+The Lei-Ren-Tian double-cone result excludes unidirectional vorticity at blow-up,
+which is more compatible with interacting tubes (multiple directions) than with
+a single sheet (vorticity in one plane).
+
+### 10.11 Strategy for Paper V
+
+**The Dichotomy Approach** (recommended by ChatGPT, endorsed):
+
+Rather than proving "all blow-up profiles are tubes," prove:
+
+> Either the blow-up profile is tube-dominated, and Papers I-IV rule out blow-up;
+> or it is not tube-dominated, and then it must satisfy structural constraints
+> that can be analyzed separately (or are already excluded by known results).
+
+The key components:
+
+1. **Dimensional argument (CKN):** Blow-up is at most 0-dimensional in space.
+   This favors point-like concentration → tubes more natural than sheets.
+
+2. **Directionality argument (Lei-Ren-Tian):** Blow-up requires vorticity in
+   all directions. This forces multi-tube configuration or genuinely 3D structure.
+
+3. **Self-similar exclusion (ESS + Nečas-Růžička-Šverák):** Blow-up cannot be
+   self-similar. Departure from Burgers profile is required. But our mechanism
+   pushes back toward Burgers → the system resists departure.
+
+4. **Anti-twist universality:** If the inviscid anti-twist (Cirin et al. 2024)
+   is proven to be universal and not tube-specific, it may provide a mechanism
+   for Q < 0 beyond tube geometry.
+
+5. **Profile decomposition:** Use Gallagher-Koch-Planchon to decompose blow-up
+   into concentration profiles. Show each profile must locally resemble a
+   stretched vortex (Burgers-type).
+
+### 10.12 What Is Missing (Honest Assessment)
+
+1. **No rigorous tube-formation result at blow-up.** DNS shows tubes, but no
+   theorem says blow-up must produce them.
+
+2. **No analysis of Q for non-tube concentration.** Our mechanism is derived
+   for Burgers-type profiles. If vorticity concentrates in a different shape
+   (e.g., a pancake or a spiral), Q might have a different sign.
+
+3. **No connection between profile decomposition and tube geometry.** The
+   decomposition gives "bubbles" but not their shape.
+
+4. **Boundary-driven blow-up not addressed.** Hou's candidates involve
+   boundaries, which our whole-space analysis excludes.
+
+5. **The gap between "DNS always shows tubes" and "blow-up must produce tubes"
+   is real.** This is the hardest remaining problem.
+
+---
+
 ## References (by gap)
 
 ### Tube Structure
@@ -499,4 +754,19 @@ Theory file: `theories/ns_angular_averaging.kleis` (8 tests, all pass)
 
 ### Self-Regularizing
 - Constantin, P., Procaccia, I. & Segel, D. (1995). *Phys. Rev. E* 51, 3207.
-- MPI group (2024). Inviscid regularizing via vortex line twisting.
+- Cirin, D., Busse, A., Holzner, M. & Krug, D. (2024). "Twisting vortex lines regularize Navier-Stokes turbulence," *Science Advances*.
+
+### Partial Regularity and Blow-Up Profile (Paper V)
+- Caffarelli, L., Kohn, R. & Nirenberg, L. (1982). *CPAM* 35, 771–831.
+- Escauriaza, L., Seregin, G. & Šverák, V. (2003). *Russian Math. Surveys* 58, 211–250.
+- Nečas, J., Růžička, M. & Šverák, V. (1996). Self-similar solutions nonexistence.
+- Tsai, T.-P. (1998). Forward self-similar solutions.
+- Hou, T.Y. & Li, C. (2008). "Nonexistence of local self-similar blow-up," *DCDS* 18, 637–642.
+- Gallagher, I., Koch, G. & Planchon, F. (2013/2016). Profile decomposition for L³ NS regularity.
+- Seregin, G. (2012). "A certain necessary condition of potential blow up," *Comm. Math. Phys.*
+- Lei, Z., Ren, X. & Tian, G. (2025). "A geometric characterization of potential NS singularities," arXiv:2501.08976.
+- Barker, T. (2026). "Quantitative classification of potential NS singularities," arXiv:2510.20757.
+- Hou, T.Y. (2024-2025). "Nearly self-similar blowup of generalized axisymmetric NS," arXiv:2405.10916.
+- Chen, J. & Hou, T.Y. (2025). "Singularity formation in 3D Euler with smooth data and boundary," *PNAS*.
+- Ożański, W. (2019). *The Partial Regularity Theory of CKN and its Sharpness*, Springer.
+- Maekawa, Y., Miura, H. & Prange, C. (2019). "On stability of blow-up solutions of the Burgers vortex type," *J. Math. Fluid Mech.*
