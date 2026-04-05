@@ -392,5 +392,6 @@ example "AD9: alignment dynamics summary" {
     out("  The xi_var_def result is DERIVED from these two theorems.");
     out("  The only modeling step is identifying the regime:");
     out("  sustained stretching with eigenvalue separation, which");
-    out("  is the blow-up scenario itself (Links 1-4). QED.")
+    out("  is the blow-up scenario itself (Links 1-4).");
+    out("  Converting this into uniform PDE estimates remains open.")
 }

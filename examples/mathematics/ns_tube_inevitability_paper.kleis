@@ -29,7 +29,7 @@ define paper_affiliations = [
     Affiliation(1, "Kleis Research", "https://kleis.io")
 ]
 
-define paper_abstract = "The preceding papers [1]-[4] reduced the 3D incompressible Navier-Stokes regularity question to a single conditional: the tube-structure hypothesis. Under that hypothesis, the interaction depletion mechanism prevents finite-time blow-up through a self-undermining feedback loop. This paper addresses the hypothesis itself. We construct a seven-link deductive chain showing that any potential Navier-Stokes singularity must arise from interacting vortex tubes, and that this interaction simultaneously prevents the singularity. Link 1: without vortex stretching, vorticity obeys a heat equation and decays (maximum principle). Link 2: self-stretching drives a vortex tube to the Burgers equilibrium, a fixed point with finite peak vorticity. Link 3: the Burgers profile is the unique radial attractor --- all perturbation modes decay with eigenvalues $lambda_n = n gamma > 0$. Link 4: since self-consistent stretching is bounded above by $Gamma^2 slash (8 pi^2 nu)$, blow-up requires external strain, i.e., interaction with other vorticity regions. Link 5: the Lei-Ren-Tian theorem (2025) shows that near any singularity, vorticity directions must cover the full sphere $S^2$; a single tube's vorticity is unidirectional and confined to a double cone, so a single tube cannot blow up. Blow-up requires at least three non-coplanar vorticity directions --- multiple interacting tubes. Link 6: Papers [3]-[4] proved that interacting tubes produce $chevron.l Q chevron.r_(\"iso\") = C_(\"iso\") gamma^2 \"Re\"^2 (sigma slash d)^3$ with $C_(\"iso\") approx -0.43$, a depleting sign. Link 7: the depletion scales as $\"Re\"^2$ while stretching scales as $\"Re\"$; above a critical Reynolds number $\"Re\"_c$, depletion dominates and net enstrophy growth turns negative. The blow-up scenario is self-undermining: approaching the singularity increases $\"Re\"$, which strengthens depletion faster than stretching. All seven links are formalized in thirteen Kleis theory files with 109 passing examples including 63 Z3-verified structural theorems. Three auxiliary theorems close all gaps between the conditional chain and an unconditional result: the _adiabatic persistence theorem_ (profile tracking self-reinforces near blow-up under ESS, with forcing bound derived from Type II perturbation expansion, resolving Gap B), the _transient robustness theorem_ (each interaction phase has its own regularity mechanism --- depletion dominance derived from $Q < 0$ scaling, enhanced dissipation derived from gradient steepening during reconnection --- resolving Gap C), and the _cross-sectional coherence theorem_ (the NS vorticity direction equation forces $theta -> 0$ under sustained stretching, combined with Calderon-Zygmund smoothing of the Biot-Savart integral, deriving directional coherence of vorticity on sigma-scale cross-sections, resolving Gap A). Every axiom in the chain is classified as THEOREM (published), SERIES-ESTABLISHED (Papers [1]-[4]), or DERIVED (from classical ingredients in this paper). A complete axiom audit table is provided. The resulting chain is self-closing: blow-up forces stretching, which forces alignment (NS vorticity direction equation), which forces coherence (Calderon-Zygmund), which forces tube structure, which forces depletion, which prevents blow-up. Z3 verifies the full logical chain including the contradiction: assuming blow-up leads to net enstrophy decrease."
+define paper_abstract = "The preceding papers [1]-[4] reduced the 3D incompressible Navier-Stokes regularity question to a single conditional: the tube-structure hypothesis. Under that hypothesis, the interaction depletion mechanism prevents finite-time blow-up through a self-undermining feedback loop. This paper addresses the hypothesis itself. We construct a seven-link deductive chain --- a machine-checked proof architecture --- showing that any potential Navier-Stokes singularity must arise from interacting vortex tubes, and that this interaction simultaneously prevents the singularity. Link 1: without vortex stretching, vorticity obeys a heat equation and decays (maximum principle). Link 2: self-stretching drives a vortex tube to the Burgers equilibrium, a fixed point with finite peak vorticity. Link 3: the Burgers profile is the unique radial attractor --- all perturbation modes decay with eigenvalues $lambda_n = n gamma > 0$. Link 4: since self-consistent stretching is bounded above by $Gamma^2 slash (8 pi^2 nu)$, blow-up requires external strain, i.e., interaction with other vorticity regions. Link 5: the Lei-Ren-Tian theorem (2025) shows that near any singularity, vorticity directions must cover the full sphere $S^2$; a single tube's vorticity is unidirectional and confined to a double cone, so a single tube cannot blow up. Blow-up requires at least three non-coplanar vorticity directions --- multiple interacting tubes. Link 6: Papers [3]-[4] proved that interacting tubes produce $chevron.l Q chevron.r_(\"iso\") = C_(\"iso\") gamma^2 \"Re\"^2 (sigma slash d)^3$ with $C_(\"iso\") approx -0.43$, a depleting sign. Link 7: the depletion scales as $\"Re\"^2$ while stretching scales as $\"Re\"$; above a critical Reynolds number $\"Re\"_c$, depletion dominates and net enstrophy growth turns negative. The blow-up scenario is self-undermining: approaching the singularity increases $\"Re\"$, which strengthens depletion faster than stretching. All seven links are formalized in thirteen Kleis theory files with 109 passing examples including 63 Z3-verified structural theorems. Three structural arguments address the gaps between the conditional chain and a potential unconditional result: the _adiabatic persistence argument_ (profile tracking self-reinforces near blow-up under ESS, with forcing bound derived from Type II perturbation expansion, addressing Gap B), the _transient robustness argument_ (each interaction phase has its own regularity mechanism --- depletion dominance derived from $Q < 0$ scaling, enhanced dissipation derived from gradient steepening during reconnection --- addressing Gap C), and the _cross-sectional coherence argument_ (the NS vorticity direction equation forces $theta -> 0$ under sustained stretching, combined with Calderon-Zygmund smoothing of the Biot-Savart integral, proposing directional coherence of vorticity on sigma-scale cross-sections, addressing Gap A). Every axiom in the chain is classified as THEOREM (published), SERIES-ESTABLISHED (Papers [1]-[4]), or STRUCTURAL ARGUMENT (assembled from classical ingredients in this paper). A complete axiom audit table is provided. Z3 verifies the logical implication structure: _if_ the structural arguments are analytically valid, then blow-up leads to net enstrophy decrease --- a contradiction. Converting the structural arguments (particularly the alignment-to-coherence step in Gap A) into fully rigorous PDE estimates with uniform bounds remains the principal open obligation."
 
 define paper_keywords = "Navier-Stokes equations, regularity, blow-up, vortex tubes, Burgers vortex, stretching necessity, interaction necessity, Lei-Ren-Tian theorem, pressure Hessian, self-undermining singularity, tube-structure inevitability"
 
@@ -61,9 +61,9 @@ The seven links are:
 
 Each link is formalized in a Kleis theory file with Z3 verification and numerical examples. The chain is fully machine-checked: 109 examples pass across 13 theory files, including 63 Z3-verified structural theorems.
 
-Three auxiliary theorems close all gaps between the conditional chain and an unconditional result. The _adiabatic persistence theorem_ (Gap B) shows that ESS forces Type II blow-up, where the forcing bound is _derived_ from the perturbation expansion ($\"forcing\" = eta dot gamma dot E$ with $eta -> 0$) rather than assumed --- profile tracking self-reinforces with derived forcing. The _transient robustness theorem_ (Gap C) partitions the interaction lifecycle into phases, each with its own regularity mechanism: depletion dominance _derived_ from $Q < 0$ scaling ($c dot \"Re\" > 1$) in quasi-steady phases, enhanced dissipation _derived_ from gradient steepening ($sigma^2 slash 2 delta^2 >> 1$) during reconnection. The _cross-sectional coherence theorem_ (Gap A) is now grounded in the _alignment dynamics theorem_: the NS vorticity direction equation gives $d(cos^2 theta) slash d t > 0$ under active stretching, forcing $theta -> 0$ (not just $cos theta > 0$); combined with Calderon-Zygmund smoothing of the Biot-Savart integral, this _derives_ $xi$-coherence on $sigma$-scale cross-sections.
+Three structural arguments address the gaps between the conditional chain and a potential unconditional result. The _adiabatic persistence argument_ (Gap B) shows that ESS forces Type II blow-up, where the forcing bound is _derived_ from the perturbation expansion ($\"forcing\" = eta dot gamma dot E$ with $eta -> 0$) rather than assumed --- profile tracking self-reinforces with derived forcing. The _transient robustness argument_ (Gap C) partitions the interaction lifecycle into phases, each with its own regularity mechanism: depletion dominance _derived_ from $Q < 0$ scaling ($c dot \"Re\" > 1$) in quasi-steady phases, enhanced dissipation _derived_ from gradient steepening ($sigma^2 slash 2 delta^2 >> 1$) during reconnection. The _cross-sectional coherence argument_ (Gap A) is grounded in the _alignment dynamics_ of the NS vorticity direction equation: $d(cos^2 theta) slash d t > 0$ under active stretching, forcing $theta -> 0$ (not just $cos theta > 0$); combined with Calderon-Zygmund smoothing of the Biot-Savart integral, this _proposes_ $xi$-coherence on $sigma$-scale cross-sections.
 
-Z3 verifies the complete logical chain including the final contradiction (CS11): assuming blow-up leads to net enstrophy decrease. Every axiom used in the chain is classified and audited in a complete axiom table (Section 8.6b): THEOREM (published), SERIES-ESTABLISHED (Papers [1]-[4]), or DERIVED (from classical ingredients in this paper).")
+Z3 verifies the _logical implication structure_ of the complete chain (CS11): if the structural arguments are analytically valid, then assuming blow-up leads to net enstrophy decrease --- a contradiction. Every axiom used in the chain is classified and audited in a complete axiom table (Section 8.6b): THEOREM (published), SERIES-ESTABLISHED (Papers [1]-[4]), or STRUCTURAL ARGUMENT (assembled from classical ingredients in this paper). Converting the structural arguments into fully rigorous PDE estimates remains the principal open obligation, with Gap A (alignment-to-coherence) as the decisive step.")
 
 // =============================================================================
 // Section 2: Stretching Necessity
@@ -233,7 +233,7 @@ define subsec_chain = ArxivSubsection("The complete deductive chain",
 6. Multi-directional interacting tubes produce $Q < 0$, scaling as $\"Re\"^2$. [Papers [3]-[4]]
 7. Depletion ($tilde \"Re\"^2$) dominates stretching ($tilde \"Re\"$) above critical $\"Re\"_c$. [Self-Undermining Scaling, Z3: RP2-RP5]
 
-*Main Result.* _Under the formalization that high-vorticity regions organize into Burgers-type vortex tubes, finite-time blow-up of 3D incompressible Navier-Stokes solutions is self-undermining. The dynamics that drive potential blow-up simultaneously produce the depletion mechanism that prevents it._
+*Main Result (Conditional).* _Under the formalization that high-vorticity regions organize into Burgers-type vortex tubes, finite-time blow-up of 3D incompressible Navier-Stokes solutions is self-undermining. The dynamics that drive potential blow-up simultaneously produce the depletion mechanism that prevents it. Section 8 addresses the question of whether this formalization is itself a consequence of the NS equations._
 
 The chain is not circular: Links 1-5 establish _necessary_ conditions for blow-up (using the vorticity equation, the Burgers steady state, and the Lei-Ren-Tian theorem). Links 6-7 show that these conditions _imply_ depletion dominance (using the tidal gradient mechanism and scaling analysis). The contradiction arises because Links 1-5 are consequences of the Navier-Stokes equations, not assumptions.")
 
@@ -241,15 +241,15 @@ The chain is not circular: Links 1-5 establish _necessary_ conditions for blow-u
 // Section 8: What Remains for the Millennium Problem
 // =============================================================================
 
-define sec_remaining = ArxivSection("From Conditional to Unconditional: Closing the Three Gaps",
-"The seven-link chain of Sections 2-7 establishes regularity _conditional_ on the tube-structure formalization: that blow-up candidates have vorticity concentrated in Burgers-type tubes with self-consistent separation scaling. We now close the three gaps between the conditional result and an unconditional proof, showing that the tube-structure hypothesis is not an assumption but a _consequence_ of the Navier-Stokes equations themselves.
+define sec_remaining = ArxivSection("From Conditional to Unconditional: Addressing the Three Gaps",
+"The seven-link chain of Sections 2-7 establishes regularity _conditional_ on the tube-structure formalization: that blow-up candidates have vorticity concentrated in Burgers-type tubes with self-consistent separation scaling. We now address the three gaps between the conditional result and a potential unconditional proof. For each gap, we construct a structural argument from classical ingredients and verify with Z3 that it is logically sufficient for the chain to close. We emphasize that these structural arguments, while assembled from known ingredients, have not yet been demonstrated as rigorous PDE theorems with the uniform estimates a full proof would require.
 
 The three gaps are:
 - Gap B: Does the Burgers profile persist under time-varying stretching?
 - Gap C: Does the depletion mechanism survive transient interaction events?
 - Gap A: Must blow-up vorticity organize into tube-like structures?
 
-We resolve all three using classical ingredients: the ESS theorem, spectral theory, Calderon-Zygmund smoothing, and reconnection dissipation scaling.")
+We address all three using classical ingredients: the ESS theorem, spectral theory, Calderon-Zygmund smoothing, and reconnection dissipation scaling. The resulting arguments are logically complete (Z3-verified) but analytically provisional.")
 
 define subsec_ckn = ArxivSubsection("Caffarelli-Kohn-Nirenberg partial regularity",
 "The CKN theorem [6] establishes that the singular set of any suitable weak solution has zero one-dimensional parabolic Hausdorff measure: $cal(H)^1_(\"par\"))(S) = 0$. This means singularities, if they exist, are extremely localized --- they cannot form sheets, surfaces, or volumes of concentrated vorticity. The zero-dimensional character of the singular set is geometrically consistent with tube-like (one-dimensional) vorticity concentration but not with higher-dimensional structures.
@@ -263,7 +263,7 @@ The Escauriaza-Seregin-Sverak theorem [8] strengthens this: Type I blow-up ($|u(
 
 *Status:* These results exclude the simplest blow-up profiles but do not directly constrain what _can_ happen. The remaining gap is proving that the mechanisms producing super-self-similar growth are themselves tube-dominated.")
 
-define subsec_attractor_evidence = ArxivSubsection("Burgers attractor and adiabatic persistence (Gap B resolved)",
+define subsec_attractor_evidence = ArxivSubsection("Burgers attractor and adiabatic persistence (Gap B)",
 "Our Link 3 (Burgers attractor) shows that _any_ radial vorticity profile under sustained stretching converges to the Gaussian Burgers profile. This means the tube structure is not a special initial condition --- it is a dynamical consequence of stretching.
 
 *The adiabatic persistence theorem.* A natural concern is whether the attractor property persists under _time-varying_ stretching $gamma(t)$, as occurs near blow-up. We resolve this using the Escauriaza-Seregin-Sverak (ESS) theorem [8].
@@ -282,11 +282,11 @@ Numerical verification (`theories/ns_adiabatic_persistence.kleis`, AP1-AP4) conf
 
 Z3 verifies the full chain (AP5-AP9): ESS forces positive exponent ($alpha - 1 > 0$); the forcing bound is derived from Type II scaling (AP5b); perturbation energy decays under the derived forcing (AP6); the adiabatic ratio improves monotonically toward blow-up (AP7); and the ESS+adiabatic combination gives perturbation decay (AP9).
 
-*Theorem (Adiabatic Persistence).* _Under any admissible (Type II) blow-up scenario, the adiabatic parameter $eta -> 0$ as $t -> T^*$. The Burgers profile is asymptotically exact near blow-up. The tube structure is self-reinforcing: blow-up dynamics push the vorticity profile closer to the Burgers Gaussian, not further from it._
+*Structural Claim (Adiabatic Persistence).* _Under any admissible (Type II) blow-up scenario, the adiabatic parameter $eta -> 0$ as $t -> T^*$. If the scaling argument carries through with uniform estimates, the Burgers profile becomes asymptotically exact near blow-up --- meaning tube structure self-reinforces._
 
-This resolves Gap B. The ESS theorem, which excludes Type I blow-up, is _precisely_ the condition needed for the Burgers attractor to persist under time-varying stretching. The DNS evidence from She _et al._ [9] and Jimenez _et al._ [10] --- showing universal tube formation at all Reynolds numbers --- is now explained dynamically rather than merely observed.")
+This addresses Gap B at the structural level. The ESS theorem, which excludes Type I blow-up, is _precisely_ the condition needed for the adiabatic parameter to vanish. The DNS evidence from She _et al._ [9] and Jimenez _et al._ [10] --- showing universal tube formation at all Reynolds numbers --- is consistent with this picture. The analytical obligation that remains is proving that the evolving NS solution actually tracks the Burgers family asymptotically, which requires converting the scaling argument into uniform parabolic regularity estimates.")
 
-define subsec_transient = ArxivSubsection("Transient robustness of the depletion mechanism (Gap C resolved)",
+define subsec_transient = ArxivSubsection("Transient robustness of the depletion mechanism (Gap C)",
 "The depletion mechanism $Q < 0$ of Papers [3]-[4] was derived for quasi-steady interacting Burgers tubes with separation $d >> sigma$. Near blow-up, tubes may undergo transient events: close approach, reconnection, merging. Gap C asks whether the time-averaged $Q$ remains negative through these events.
 
 We resolve this with a _three-pronged argument_ (formalized in `theories/ns_transient_robustness.kleis`, TR1-TR11):
@@ -316,14 +316,14 @@ _Dissipation dominates during reconnection (TR7c)_: Reconnection creates gradien
 
 The spatial partition itself is _exact_: $d Omega slash d t = integral_(\"QS\") + integral_(\"recon\")$ is an identity of the enstrophy integral over disjoint spatial domains. Z3 verifies the _phase-partition_ argument (TR8): each phase contributes negative enstrophy growth independently, and the weighted total is negative. Z3 verifies (TR9, TR10): the enstrophy budget is negative during reconnection and across all phases combined.
 
-*Theorem (Transient Robustness).* _The depletion mechanism $Q < 0$ is robust against transient interaction events. Depletion dominance in quasi-steady phases is derived from the $Q < 0$ scaling of Papers [3]-[4]. Dissipation dominance during reconnection is derived from gradient steepening. The regularity mechanism has no temporal gaps._
+*Structural Claim (Transient Robustness).* _The phase-partition argument provides a regularity mechanism for each interaction phase: depletion dominance in quasi-steady phases (from the $Q < 0$ scaling of Papers [3]-[4]) and dissipation dominance during reconnection (from gradient steepening). If these mechanisms can be established with uniform bounds over all admissible near-singular configurations, the regularity mechanism has no temporal gaps._
 
-This resolves Gap C. Every axiom in the phase-partition argument (depletion dominance, dissipation dominance, spatial partition) is either a theorem or derived from established physics.")
+This addresses Gap C at the structural level. The argument is physically well-motivated and Z3 verifies that the phase partition is logically sufficient. The analytical obligation that remains is proving that _every_ possible near-singular interaction can be partitioned this way with the required uniform bounds --- not just the idealized configurations considered here.")
 
-define subsec_coherence = ArxivSubsection("Cross-sectional coherence via alignment dynamics + Biot-Savart smoothing (Gap A resolved)",
+define subsec_coherence = ArxivSubsection("Cross-sectional coherence via alignment dynamics + Biot-Savart smoothing (Gap A)",
 "Gap A asks whether blow-up vorticity must organize into tube-like structures. We resolve the _weak_ version --- sufficient for the chain --- by showing that blow-up itself forces tube-dominated subsequences (`theories/ns_cross_sectional_coherence.kleis`, CS1-CS12, and `theories/ns_alignment_dynamics.kleis`, AD1-AD9).
 
-The argument has five steps. The critical new ingredients are Step 1b (alignment dynamics) and Step 2 (Biot-Savart smoothing combined with alignment). A previous version of this argument jumped from $cos theta > 0$ to $xi approx e_1$; this revision closes that gap with the NS vorticity direction equation.
+The argument has five steps. The critical new ingredients are Step 1b (alignment dynamics) and Step 2 (Biot-Savart smoothing combined with alignment). A previous version of this argument jumped from $cos theta > 0$ to $xi approx e_1$; this revision addresses that gap with the NS vorticity direction equation.
 
 *Step 1: Stretching requires alignment (CS6).* The vortex stretching rate is $sigma_(\"stretch\")) = |omega| lambda_1 cos theta$, where $theta$ is the angle between $omega$ and the principal strain eigenvector $e_1$. For blow-up, $cos theta$ must be bounded away from zero: $omega$ has a _preferred direction_ aligned with $e_1$. Z3 verifies: supercritical stretching implies positive alignment.
 
@@ -359,41 +359,37 @@ The chain is _not circular_: alignment dynamics (Step 1b, NS theorem) + Biot-Sav
 
 *Step 5: Tube-dominated times have positive measure (CS9).* Blow-up requires stretching on a set $T_(\"stretch\"))$ of positive temporal measure. Steps 1-3 give tube structure after an attractor delay $O(1 slash gamma)$. Since stretching must persist for at least $O(10 slash gamma)$ time units for significant enstrophy growth, the tube-dominated set has positive measure. Z3 verifies (CS9): tube-dominated time is positive.
 
-*Theorem (Cross-Sectional Coherence).* _Any blow-up scenario necessarily develops tube-dominated structure on a set of times with positive measure. The NS vorticity direction equation forces $theta -> 0$ under sustained stretching (alignment dynamics theorem). Calderon-Zygmund smoothing of the Biot-Savart integral gives $|nabla e_1| <= C slash d$. Combined: $|delta xi| <= sin theta + C sigma slash d -> C sigma slash d$, deriving directional coherence on $sigma$-scale cross-sections before the Burgers profile converges._
+*Structural Claim (Cross-Sectional Coherence).* _If the alignment dynamics of the vorticity direction equation carry through with uniform quantitative control in the full 3D NS setting, then any blow-up scenario necessarily develops tube-dominated structure on a set of times with positive measure. The argument assembles two classical ingredients: (i) the NS vorticity direction ODE forcing $theta -> 0$ under sustained stretching, and (ii) Calderon-Zygmund smoothing giving $|nabla e_1| <= C slash d$. Combined: $|delta xi| <= sin theta + C sigma slash d -> C sigma slash d$._
 
-Z3 verifies the complete self-closure chain (CS11): assuming blow-up leads through stretching, eigenvalue separation, alignment dynamics ($theta -> 0$), Biot-Savart smoothing, coherence, Burgers convergence, tube structure, interaction depletion, and finally to net enstrophy decrease --- a contradiction.
+Z3 verifies the complete logical chain (CS11): _if_ the structural argument is valid, then assuming blow-up leads through stretching, alignment, coherence, tube structure, depletion, and finally to net enstrophy decrease --- a contradiction.
 
-This resolves Gap A. The alignment dynamics argument is a _theorem_ of the NS vorticity direction equation. The Biot-Savart smoothing is a _theorem_ of Calderon-Zygmund theory. Their combination _derives_ the $xi$-coherence result that was previously assumed.")
+This is the load-bearing step of the entire paper, and also the step with the largest analytical gap. The individual ingredients are classical: the vorticity direction equation is a theorem of NS, and Calderon-Zygmund smoothing is established theory. However, the jump from these ingredients to quantitative $xi$-coherence on $sigma$-scale cross-sections requires explicit hypotheses (nondegeneracy of eigenvalue gaps), norms (what function spaces control the errors), and uniform bounds (holding as $\"Re\" -> infinity$) that have not been demonstrated here. We identify this as the decisive analytical step that would convert the present proof architecture into a complete proof.")
 
-define subsec_precise_gap = ArxivSubsection("Resolution of all three gaps",
-"All three gaps between the conditional chain and an unconditional result have been resolved. Crucially, every axiom used in the closure has been audited and classified. We present the resolution and the complete axiom audit below.
+define subsec_precise_gap = ArxivSubsection("Status of the three gaps",
+"We now summarize the status of each gap, distinguishing between what is logically verified (by Z3) and what remains to be analytically established (as rigorous PDE estimates).
 
-*Gap A: Concentration morphology (RESOLVED --- alignment dynamics + Biot-Savart smoothing).* The cross-sectional coherence theorem (Section 8.5) was previously based on the jump from $cos theta > 0$ (stretching requires alignment) to $xi approx e_1$ (directional coherence). An honest audit identified this as the critical analytical gap: $cos theta > 0$ means only $theta < pi slash 2$, but coherence requires $theta approx 0$.
+*Gap A: Concentration morphology (ADDRESSED --- alignment dynamics + Biot-Savart smoothing).* This is the load-bearing gap. A previous version jumped from $cos theta > 0$ to $xi approx e_1$; an honest audit identified this as the critical analytical gap.
 
-We close this gap with the _alignment dynamics theorem_ (`theories/ns_alignment_dynamics.kleis`, AD1-AD9): the Navier-Stokes vorticity direction equation gives
+The current argument uses the NS vorticity direction equation:
 $ d(cos^2 theta) / (d t) = 2(lambda_1 - lambda_2) sin^2 theta cos^2 theta > 0 $
-for active stretching ($lambda_1 > lambda_2$). This is a _theorem_ of the NS equations (not an assumption), derived from the standard vorticity direction equation (Girimaji-Pope 1990, Ashurst _et al._ 1987). Under sustained stretching: $theta -> 0$ exponentially at rate $lambda_1 - lambda_2$. For the Burgers eigenvalue gap $3 gamma slash 2$, the alignment time $2 slash (3 gamma) < 1 slash gamma$ (Burgers convergence time) --- alignment _precedes_ profile convergence (AD6).
-
-After alignment: $xi approx e_1$ pointwise (not just $cos theta > 0$). Combined with Calderon-Zygmund smoothing $|nabla e_1| <= C slash d$, the vorticity direction variation decomposes as
+for active stretching ($lambda_1 > lambda_2$). This ODE is a theorem of the NS equations (Girimaji-Pope 1990, Ashurst _et al._ 1987). Under sustained stretching with constant eigenvalue gap: $theta -> 0$ exponentially. Combined with Calderon-Zygmund smoothing ($|nabla e_1| <= C slash d$):
 $ |delta xi| <= sin theta + C sigma slash d -> C sigma slash d quad \"as\" quad theta -> 0 $
-The $xi$-variation result is now _derived_ from NS dynamics + CZ theory (AD7), not assumed. Z3-verified: AD5 (alignment rate positive), AD6 (alignment precedes Burgers), AD7 (xi bounded), AD8 (full derivation chain), CS7 (coherence verified).
+Z3-verified: AD5, AD6, AD7, AD8, CS7.
 
-*Gap B: Profile convergence (RESOLVED --- ESS + spectral gap + derived forcing bound).* The adiabatic persistence theorem (Section 8.3) now _derives_ the forcing bound rather than assuming it. The perturbation expansion around the Burgers profile gives forcing $= eta dot gamma dot E$ where $eta = alpha (T^* - t)^(alpha-1)$. Under Type II blow-up ($alpha > 1$, forced by ESS): $eta -> 0$ as $t -> T^*$. Therefore forcing $< gamma dot E$ for $t$ sufficiently close to $T^*$.
+*What remains for Gap A:* Converting this structural argument into a rigorous PDE theorem requires (i) proving the eigenvalue gap $lambda_1 - lambda_2$ remains bounded below uniformly near blow-up, (ii) controlling the viscous corrections in the vorticity direction equation, (iii) establishing the CZ estimate $|nabla e_1| <= C slash d$ with explicit constants and nondegeneracy conditions, and (iv) proving the $xi$-coherence bound holds uniformly in $L^p$ norms as $\"Re\" -> infinity$. These are substantial analytical tasks.
 
-Z3 verifies the derivation chain: AP5b (forcing bound derived from Type II scaling), AP6 (perturbation energy decays with derived forcing), AP7 (adiabatic ratio improves), AP9 (ESS + derived forcing gives decay).
+*Gap B: Profile convergence (ADDRESSED --- ESS + spectral gap + derived forcing bound).* The forcing bound forcing $= eta dot gamma dot E$ with $eta -> 0$ is derived from Type II scaling (ESS). Z3-verified: AP5b, AP6, AP7, AP9.
 
-*Gap C: Interaction geometry (RESOLVED --- phase partition with derived dominance).* The transient robustness theorem (Section 8.4) now _derives_ the two dominance conditions from established physics:
+*What remains for Gap B:* Proving that the evolving NS solution actually tracks the Burgers family asymptotically requires converting the scaling ratio $eta -> 0$ into uniform parabolic regularity estimates. The spectral gap argument is suggestive but does not constitute a rigorous proof of asymptotic tracking in Sobolev norms.
 
-_Depletion dominates stretching in quasi-steady phases (TR7b)_: From Papers [3]-[4] (Link 6), depletion scales as $c gamma^2 \"Re\"^2$. Stretching scales as $gamma^2 \"Re\"$. The ratio is $c dot \"Re\"$. Above the critical Reynolds number $\"Re\"_c = 1 slash c$ (Link 7): depletion exceeds stretching. Near blow-up ($\"Re\" -> infinity$): depletion dominates.
+*Gap C: Interaction geometry (ADDRESSED --- phase partition with derived dominance).* The phase partition is an exact spatial integral identity. Depletion dominance follows from the $Q < 0$ scaling (Link 6) with $c dot \"Re\" > 1$; dissipation dominance follows from gradient steepening. Z3-verified: TR7b, TR7c, TR8.
 
-_Dissipation dominates stretching during reconnection (TR7c)_: Reconnection creates gradients at scale $delta << sigma$. Dissipation scales as $sigma^2 slash (2 delta^2)$. For $delta < sigma slash 3$: dissipation/stretching ratio $> 9 slash 2 > 1$.
+*What remains for Gap C:* Proving that every possible near-singular interaction can be partitioned into quasi-steady and reconnection phases with the required uniform bounds. The idealized phase partition must be shown to hold for all admissible flow configurations, not just the symmetric cases analyzed here.
 
-The spatial partition is _exact_ (not an approximation): $d Omega slash d t = integral_(\"QS\") + integral_(\"recon\")$ is an identity of the enstrophy evolution integral over disjoint spatial domains. Z3-verified: TR7b (depletion dominance derived), TR7c (dissipation dominance derived), TR8 (phase-partition gives negative total growth).
-
-*The self-closing chain.* With all three gaps closed, the chain becomes unconditional:
+*The proposed self-closing chain.* If all three structural arguments are analytically valid, the chain closes:
 $ \"Blow-up\" =>^(\"Link 1\") \"stretching\" =>^(\"AD5\") \"alignment\" =>^(\"CZ\") \"coherence\" =>^(\"Links 2-3\") \"tubes\" =>^(\"Links 5-7\") \"depletion\" => \"NOT blow-up\" $
 
-Z3 verifies the complete chain (CS11): assuming blow-up leads to net enstrophy decrease --- a contradiction.")
+Z3 verifies the logical implication (CS11): _given_ the structural axioms, assuming blow-up leads to net enstrophy decrease --- a contradiction. The chain is logically complete. Whether it constitutes a proof of NS regularity depends on whether the structural arguments (particularly Gap A) can be established as rigorous PDE theorems.")
 
 define subsec_axiom_table = ArxivSubsection("Complete axiom classification",
 "We classify _every_ axiom used in the proof chain. This table enables a reviewer to verify the epistemic status of each step without reading the full theory files.
@@ -426,7 +422,7 @@ define subsec_axiom_table = ArxivSubsection("Complete axiom classification",
   [Self-consistent separation scaling $d slash sigma tilde sqrt(\"Re\" slash 2)$], [Papers [3]-[4]],
 )
 
-*Layer 3: Derived in this paper from classical ingredients.*
+*Layer 3: Structural arguments assembled in this paper from classical ingredients.*
 
 #table(
   columns: (auto, auto, auto),
@@ -443,9 +439,17 @@ define subsec_axiom_table = ArxivSubsection("Complete axiom classification",
   [Phase partition: $d Omega slash d t = integral_(\"QS\")) + integral_(\"recon\"))$], [Spatial integral over disjoint domains (exact)], [TR8],
 )
 
-*Layer 4: What Z3 actually verifies.* Z3 verifies logical consistency: given the axioms, do the conclusions follow? It confirms that no logical gap exists between the stated axioms and the regularity conclusion. It does _not_ independently verify that the axioms are true in the physical Navier-Stokes sense --- that burden falls on the mathematical derivations (Layers 1-3 above) and their grounding in published literature. The key advance of this revision is that every Layer 3 item is now _derived_ from Layer 1 or Layer 2 ingredients, with the derivation pathway explicitly traced.
+*Layer 4: What Z3 actually verifies --- and what it does not.* Z3 verifies _logical consistency_: given the axioms, do the conclusions follow? It confirms that no logical gap exists between the stated axioms and the regularity conclusion. It does _not_ verify that the axioms are true in the Navier-Stokes sense. Layers 1-2 axioms are published theorems and can be taken as given. Layer 3 items are assembled from classical ingredients, but their assembly into the specific quantitative claims used in the chain has not been established as rigorous PDE estimates.
 
-*Remaining analytical obligations.* The derivation chain is self-closing: every axiom is either a published theorem (Layer 1), established in Papers [1]-[4] (Layer 2), or derived from Layers 1-2 in this paper (Layer 3). The principal analytical obligation for a full Millennium-level proof is upgrading the Layer 3 derivations from the current `argument + Z3 verification' level to fully rigorous PDE proofs with epsilon-delta estimates. The key derivation requiring this upgrade is the alignment dynamics argument: converting the vorticity direction ODE analysis into uniform estimates that hold in the full 3D NS setting (with viscous corrections, non-constant eigenvalues, and boundary effects). We identify this as the single load-bearing analytical step that separates the present framework from a complete proof.")
+*Remaining analytical obligations.* Every axiom is either a published theorem (Layer 1), established in Papers [1]-[4] (Layer 2), or assembled from classical ingredients in this paper (Layer 3). The Layer 3 items are the decisive new claims. Converting them into rigorous PDE theorems requires:
+
+1. *Gap A (decisive step):* Proving uniform quantitative $xi$-coherence on $sigma$-scale cross-sections. This requires: nondegeneracy of eigenvalue gaps, control of viscous corrections in the alignment ODE, explicit CZ estimates with uniform constants, and $L^p$ bounds that hold as $\"Re\" -> infinity$.
+
+2. *Gap B:* Proving asymptotic Burgers tracking in Sobolev norms under Type II blow-up, not just scaling compatibility.
+
+3. *Gap C:* Proving the phase-partition bounds uniformly over all admissible near-singular configurations.
+
+We identify Gap A as the single load-bearing analytical step that separates the present proof architecture from a complete proof of Navier-Stokes regularity.")
 
 // =============================================================================
 // Section 9: Discussion
@@ -485,9 +489,9 @@ Total: 109 examples across 13 core theory files, including 63 Z3-verified struct
 // =============================================================================
 
 define sec_conclusion = ArxivSection("Conclusion",
-"We have constructed a machine-checked proof framework for Navier-Stokes regularity, consisting of a seven-link argument chain, three gap-closure theorems, and a complete axiom audit. The framework is formalized in thirteen Kleis theory files with 109 verified examples including 63 Z3-verified structural theorems.
+"We have constructed a machine-checked proof architecture for a proposed Navier-Stokes regularity mechanism, consisting of a seven-link argument chain, three structural gap-closure arguments, and a complete axiom audit. The architecture is formalized in thirteen Kleis theory files with 109 verified examples including 63 Z3-verified structural theorems.
 
-*The seven links:*
+*The seven links (established):*
 
 1. *Stretching necessity*: no stretching $=>$ vorticity decays (maximum principle).
 2. *Burgers fixed point*: self-stretching $=>$ bounded equilibrium.
@@ -497,29 +501,31 @@ define sec_conclusion = ArxivSection("Conclusion",
 6. *Interaction depletion*: multi-directional tubes $=>$ $Q < 0$, scaling as $\"Re\"^2$.
 7. *Self-undermining scaling*: depletion dominates stretching above $\"Re\"_c$.
 
-*The three gap closures (with derived axioms):*
+*The three gap-closure arguments (structural, not yet rigorous PDE theorems):*
 
-- *Gap A (cross-sectional coherence)*: The NS vorticity direction equation gives $d(cos^2 theta) slash d t = 2(lambda_1 - lambda_2) sin^2 theta cos^2 theta > 0$ under active stretching (THEOREM), forcing $theta -> 0$ (not just $cos theta > 0$). Combined with Calderon-Zygmund smoothing of Biot-Savart ($|nabla e_1| <= C slash d$, THEOREM), this _derives_ $xi$-coherence: $|delta xi| = sin theta + C sigma slash d -> C sigma slash d$.
+- *Gap A (cross-sectional coherence)*: The NS vorticity direction ODE and Calderon-Zygmund smoothing are classical theorems. Their assembly into the claim that $xi$ is coherent on $sigma$-scale cross-sections is a structural argument that awaits uniform quantitative PDE estimates. This is the decisive step.
 
-- *Gap B (adiabatic persistence)*: The forcing bound forcing $= eta dot gamma dot E$ with $eta < 1$ is _derived_ from the Type II perturbation expansion (ESS gives $alpha > 1$, so $eta = alpha(T^*-t)^(alpha-1) -> 0$). Not assumed.
+- *Gap B (adiabatic persistence)*: The forcing bound forcing $= eta dot gamma dot E$ with $eta -> 0$ follows from the Type II perturbation expansion. Converting this into a rigorous asymptotic tracking result requires uniform parabolic regularity estimates.
 
-- *Gap C (transient robustness)*: Depletion dominance ($c dot \"Re\" > 1$) is _derived_ from $Q < 0$ scaling (Link 6). Dissipation dominance ($sigma^2 slash 2 delta^2 > 1$) is _derived_ from gradient steepening at reconnection. The spatial partition is an _exact_ integral identity.
+- *Gap C (transient robustness)*: The phase partition is an exact spatial integral identity. The dominance conditions follow from scaling arguments. Proving these hold uniformly over all admissible near-singular configurations remains open.
 
-*The self-closing chain:*
+*The proposed self-closing chain:*
 
 $ \"Blow-up\" =>^(\"Link 1\") \"stretching\" =>^(\"AD5\") \"alignment\" =>^(\"CZ\") \"coherence\" =>^(\"Links 2-3\") \"tubes\" =>^(\"Links 5-7\") \"depletion\" => \"NOT blow-up\" $
 
-Z3 verifies the contradiction directly (CS11): assuming blow-up, the chain forces net enstrophy growth negative.
+Z3 verifies the logical implication (CS11): _if_ the structural arguments are valid, then assuming blow-up leads to net enstrophy decrease --- a contradiction.
 
-*Honest epistemic assessment.* Every axiom in the chain is classified in the complete audit (Section 8.6b):
+*Axiom classification.* Every axiom is classified in the complete audit (Section 8.6b):
 
-- *Layer 1 (Classical):* Maximum principle, Burgers steady state, ESS, CKN, Lei-Ren-Tian, Calderon-Zygmund, vorticity direction equation. Published, peer-reviewed mathematical theorems.
+- *Layer 1 (Classical):* Maximum principle, Burgers steady state, ESS, CKN, Lei-Ren-Tian, Calderon-Zygmund, vorticity direction equation. Published theorems.
 - *Layer 2 (Series-established):* Interaction depletion $Q < 0$, angular averaging, many-body locality, dynamical closure. Established in Papers [1]-[4].
-- *Layer 3 (Derived in this paper):* Alignment dynamics, forcing bound, depletion/dissipation dominance, spatial partition. Each derived from Layers 1-2.
+- *Layer 3 (Structural arguments):* Alignment-to-coherence, adiabatic tracking, phase-partition bounds. Assembled from Layers 1-2 but not yet rigorous PDE theorems.
 
-*Remaining obligations for a Millennium-level proof.* The derivation chain is self-closing at the level of formal structure: every axiom is derived from classical ingredients. The principal remaining obligation is upgrading the Layer 3 derivations --- particularly the alignment dynamics argument (Step 1b) --- from the current level of `structured argument + Z3 verification' to fully rigorous PDE proofs with epsilon-delta estimates that hold uniformly in the full 3D NS setting (with viscous corrections, non-constant eigenvalues, and boundary effects in the vorticity direction equation). This single analytical step is what separates the present framework from a complete proof.
+*What this paper is.* A machine-checked proof architecture for a proposed Navier-Stokes regularity mechanism, with the decisive new analytical steps identified, stated, and integrated into a logically complete chain. Z3 confirms the chain has no logical gaps. The architecture reduces the regularity problem to a finite set of explicit analytical obligations, with the alignment-to-coherence step (Gap A) as the single decisive one.
 
-$ bold(\"The singularity destroys itself.\") $")
+*What this paper is not.* A complete proof of Navier-Stokes regularity. The Layer 3 structural arguments are physically motivated and logically sufficient, but they have not been established as rigorous PDE theorems with the uniform estimates the field requires. Until the Gap A argument is analytically closed, the chain remains a proof architecture, not a proof.
+
+*What remains.* The problem has been compressed: prove that sustained supercritical stretching forces quantitative $xi$-coherence on $sigma$-scale cross-sections, uniformly as $\"Re\" -> infinity$, in the full 3D NS setting with viscous corrections.")
 
 // =============================================================================
 // References

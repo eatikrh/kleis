@@ -414,5 +414,5 @@ example "TR11: Gap C resolution summary" {
     out("    total_def: DERIVED (spatial integral over disjoint domains).");
     out("    depletion_dominates_qs: DERIVED (Q<0 + Re scaling, TR7b).");
     out("    dissip_dominates_recon: DERIVED (gradient steepening, TR7c).");
-    out("    No ungrounded assumptions remain. QED.")
+    out("    Uniform bounds over all configurations remain open.")
 }

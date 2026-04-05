@@ -351,7 +351,8 @@ example "AP10: Gap B resolution summary" {
     out("     All initial perturbations are exponentially damped (AP8).");
     out("");
     out("CONSEQUENCE:");
-    out("  Gap B is closed. Near blow-up, the profile converges to");
-    out("  Burgers faster than it can deviate. This is not an assumption");
-    out("  but a consequence of ESS + spectral analysis. QED.")
+    out("  Gap B is addressed at the structural level.");
+    out("  The scaling argument shows eta -> 0 under Type II (ESS).");
+    out("  Converting this into rigorous asymptotic tracking");
+    out("  in Sobolev norms remains an analytical obligation.")
 }
