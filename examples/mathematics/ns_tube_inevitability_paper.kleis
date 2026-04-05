@@ -613,7 +613,7 @@ This is a direct enstrophy bound derived from the Navier-Stokes equations under 
 
 $ |u_3(x, t) - u_3(x_0, t) - (nabla u(x_0, t)(x - x_0)) dot e_3| <= C gamma(t) sigma(t) (sigma(t) slash d) $
 
-The attack proceeds through five lemmas (Z3-verified in `theories/ns_h5_biot_savart.kleis`).
+The derivation proceeds through five lemmas (Z3-verified in `theories/ns_h5_biot_savart.kleis`).
 
 *Lemma H5.1 (Biot-Savart decomposition).* Write $u(x) = u^\"near\"(x) + u^\"mid\"(x) + u^\"far\"(x)$ with regions: near ($|y - x_0| <= A sigma$), mid ($A sigma < |y - x_0| <= d slash 2$), far ($|y - x_0| > d slash 2$), for fixed $A >= 4 K$. Define the affine approximation $u^\"aff\"(x) = u(x_0) + nabla u(x_0)(x - x_0)$. Then $r_1(x) = u_3(x) - u_3^\"aff\"(x) = R^\"near\" + R^\"mid\" + R^\"far\"$, where each $R$ is the non-affine remainder from the corresponding region. $square$
 
@@ -802,7 +802,7 @@ define sec_discussion = ArxivSection("Discussion",
 - `theories/ns_coherence_theorem.kleis` --- 15 examples (4 numerical, 7 Z3, 4 summary) *[standalone coherence theorem]*
 - `theories/ns_bp2_viscous_control.kleis` --- 12 examples (4 numerical, 5 Z3, 3 summary) *[viscous perturbativity]*
 - `theories/ns_angular_averaging.kleis` --- additional angular-averaging verification
-- `theories/ns_h5_biot_savart.kleis` --- 9 examples (9 Z3) *[H5 Biot-Savart decomposition]*
+- `theories/ns_h5_biot_savart.kleis` --- 9 examples (9 Z3) *[H5 Biot-Savart decomposition and remainder bounds]*
 - `theories/ns_biot_savart_kernel.kleis` --- 5 examples (5 Z3) *[kernel scaling and CZ bounds]*
 - `theories/ns_h5_dipole_cancellation.kleis` --- 8 examples (8 Z3) *[centered-core dipole cancellation]*
 - `theories/ns_h5_closure.kleis` --- 6 examples (6 Z3) *[H5 derived from H1--H4]*
