@@ -489,7 +489,7 @@ with equality only at the exact Gaussian equilibrium (Z3-verified: BE4). For thi
 
 (H3) _Scale separation._ $sigma(t) slash d <= delta << 1$.
 
-(H4) _High-vorticity localization._ There exists a smooth cutoff $chi$ supported on $B(x_0(t), K sigma(t))$ such that the enstrophy outside the slab ${|z| <= K sigma(t)} sect {|x_perp - x_(0, perp)(t)| <= K sigma(t)}$ is $O(delta)$ relative to the total localized enstrophy $Omega(t)$, for some fixed $K > 0$.
+(H4) _High-vorticity localization._ There exists a smooth cutoff $chi$ supported on $B(x_0(t), K sigma(t))$ such that the enstrophy outside the slab ${|z| <= K sigma(t)} inter {|x_perp - x_(0, perp)(t)| <= K sigma(t)}$ is $O(delta)$ relative to the total localized enstrophy $Omega(t)$, for some fixed $K > 0$.
 
 (H5) _Nonlocal velocity perturbativity._ The $e_3$-component of velocity, after subtracting the linear compression drift, satisfies $|u_3(x, t) + 2 gamma(t) z| <= C_3 gamma(t) sigma(t)^2 slash d$ throughout the support of the localized enstrophy density.
 
