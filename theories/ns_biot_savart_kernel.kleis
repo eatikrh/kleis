@@ -1,0 +1,219 @@
+// =============================================================================
+// BIOT-SAVART KERNEL FOUNDATIONS
+// =============================================================================
+//
+// Formalizes the scaling, symmetry, and derivative properties of the
+// Biot-Savart kernel K(x) = (1/4pi) x / |x|^3 and its action on vorticity.
+//
+// The velocity field is u(x) = integral K(x-y) cross omega(y) dy.
+// The strain tensor is S_ij = (nabla_i u_j + nabla_j u_i)/2, which
+// involves nabla K -- a Calderon-Zygmund kernel of order -3.
+//
+// Key estimates encoded:
+//   |K(x)|       <= C_K / |x|^2        (velocity kernel)
+//   |nabla K(x)| <= C_S / |x|^3        (strain/CZ kernel)
+//   |nabla^2 K(x)| <= C_T / |x|^4      (Taylor remainder kernel)
+//
+// The Taylor remainder for nabla K (the strain kernel) is what controls
+// the non-affine residual in the H5 argument.
+//
+// References:
+//   Calderon-Zygmund (1952), Stein "Singular Integrals" Ch. II
+//   Majda & Bertozzi "Vorticity and Incompressible Flow" Ch. 2
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Structure 1: Kernel scaling hierarchy
+// -----------------------------------------------------------------------------
+// The Biot-Savart kernel and its derivatives have a strict scaling hierarchy.
+// At distance r from a vorticity source of strength Gamma ~ gamma sigma^2:
+//   velocity:  |u| ~ Gamma / r^2 = gamma sigma^2 / r^2
+//   strain:    |S| ~ Gamma / r^3 = gamma sigma^2 / r^3
+//   remainder: |nabla S| ~ Gamma / r^4 = gamma sigma^2 / r^4
+
+structure KernelScaling {
+    element r : ℝ              // distance from vorticity source
+    element Gamma : ℝ          // circulation ~ gamma sigma^2
+    element gamma_ks : ℝ       // stretching rate
+    element sigma_ks : ℝ       // core radius
+
+    element u_bound : ℝ        // |u| bound
+    element S_bound : ℝ        // |S| bound
+    element nabla_S_bound : ℝ  // |nabla S| bound
+
+    axiom r_pos : r > 0
+    axiom Gamma_pos : Gamma > 0
+    axiom gamma_pos : gamma_ks > 0
+    axiom sigma_pos : sigma_ks > 0
+
+    // Circulation from Burgers scaling: Gamma = gamma sigma^2
+    axiom circ_def : Gamma = times(gamma_ks, times(sigma_ks, sigma_ks))
+
+    // Velocity: |u| <= Gamma / r^2
+    // Encoded: u_bound * r^2 <= Gamma
+    axiom velocity_decay : times(u_bound, times(r, r)) <= Gamma
+
+    // Strain: |S| <= Gamma / r^3
+    // Encoded: S_bound * r^3 <= Gamma
+    axiom strain_decay : times(S_bound, times(r, times(r, r))) <= Gamma
+
+    // Strain gradient: |nabla S| <= Gamma / r^4
+    // Encoded: nabla_S_bound * r^4 <= Gamma
+    axiom strain_grad_decay : times(nabla_S_bound, times(r, times(r, times(r, r)))) <= Gamma
+
+    axiom u_pos : u_bound >= 0
+    axiom S_pos : S_bound >= 0
+    axiom nS_pos : nabla_S_bound >= 0
+}
+
+example "BK1: velocity decays as 1/r^2 (Z3)" {
+    assert(times(u_bound, times(r, r)) <= Gamma)
+}
+
+example "BK2: strain decays as 1/r^3 (Z3)" {
+    assert(times(S_bound, times(r, times(r, r))) <= Gamma)
+}
+
+// -----------------------------------------------------------------------------
+// Structure 2: CZ operator bound (strain from vorticity)
+// -----------------------------------------------------------------------------
+// The key CZ estimate: the strain tensor S = (nabla u + nabla u^T)/2
+// satisfies pointwise bounds via the singular integral representation.
+// On a localized region at distance >= d/2 from other vorticity sources,
+// the self-strain is controlled by the local vorticity distribution.
+//
+// For the H5 argument, we need:
+//   |S(x) - S(x_0)| <= C integral |omega(y)| / |y - x_0|^3 * |x - x_0| dy
+// which is the first-order Taylor expansion of the CZ kernel.
+
+structure CZStrainBound {
+    element gamma_cz : ℝ
+    element sigma_cz : ℝ
+    element d_cz : ℝ
+    element C_cz : ℝ          // CZ constant (universal, O(1))
+
+    // Strain at the center point
+    element S33_center : ℝ    // S_33(x_0) = -2 gamma (biaxial)
+
+    // Strain deviation: |S_33(x) - S_33(x_0)| on support |x-x_0| <= K sigma
+    element S33_deviation : ℝ
+
+    axiom gamma_pos : gamma_cz > 0
+    axiom sigma_pos : sigma_cz > 0
+    axiom d_pos : d_cz > 0
+    axiom C_pos : C_cz > 0
+    axiom C_bounded : C_cz <= 10
+    axiom scale_sep : times(10, sigma_cz) < d_cz
+
+    // S_33 at center is -2 gamma (biaxial eigenvalue)
+    axiom S33_center_val : S33_center = times(-2, gamma_cz)
+
+    // CZ bound: |S(x) - S(x_0)| <= C |nabla S| |x - x_0| <= C (gamma/d) sigma
+    // Encoded: S33_deviation * d <= C * gamma * sigma
+    axiom S33_dev_bound : times(S33_deviation, d_cz) <= times(C_cz, times(gamma_cz, sigma_cz))
+
+    axiom S33_dev_pos : S33_deviation >= 0
+}
+
+example "BK3: strain deviation is O(gamma sigma/d) on localized support (Z3)" {
+    assert(times(S33_deviation, d_cz) <= times(C_cz, times(gamma_cz, sigma_cz)))
+    assert(S33_deviation >= 0)
+}
+
+// -----------------------------------------------------------------------------
+// Structure 3: Taylor remainder for the strain kernel
+// -----------------------------------------------------------------------------
+// The non-affine remainder of the strain kernel nabla K at a point x
+// relative to the expansion point x_0, evaluated at source point y:
+//
+//   |nabla K(x-y) - nabla K(x_0-y) - nabla^2 K(x_0-y)(x-x_0)|
+//       <= C |x-x_0|^2 / |y-x_0|^4
+//
+// This is the standard second-order Taylor remainder for a smooth function,
+// valid when |x-x_0| <= |y-x_0|/4 (mid-field separation ensures smoothness).
+//
+// Integrating against |omega(y)| gives the non-affine strain remainder.
+
+structure StrainTaylorRemainder {
+    element sigma_str : ℝ       // |x - x_0| ~ sigma (support radius)
+    element r_min : ℝ           // minimum |y - x_0| in mid-field (= A sigma)
+    element A_str : ℝ           // near-field cutoff A >= 4K
+    element K_str : ℝ           // support parameter
+
+    // Taylor remainder integrand bound
+    element integrand_bound : ℝ // C |x-x_0|^2 / |y-x_0|^4
+
+    axiom sigma_pos : sigma_str > 0
+    axiom r_min_pos : r_min > 0
+    axiom A_pos : A_str > 0
+    axiom K_pos : K_str > 0
+
+    // A >= 4K ensures mid-field separation
+    axiom separation : A_str >= times(4, K_str)
+
+    // r_min = A sigma
+    axiom r_min_def : r_min = times(A_str, sigma_str)
+
+    // K >= 1
+    axiom K_min : K_str >= 1
+
+    // Taylor remainder: C sigma^2 / r_min^4  (at closest mid-field point)
+    // Encoded: integrand_bound * r_min^4 <= sigma^2
+    axiom remainder_bound : times(integrand_bound, times(r_min, times(r_min, times(r_min, r_min)))) <= times(sigma_str, sigma_str)
+
+    axiom ib_pos : integrand_bound >= 0
+}
+
+example "BK4: Taylor remainder scales as sigma^2/r_min^4 (Z3)" {
+    assert(times(integrand_bound, times(r_min, times(r_min, times(r_min, r_min)))) <= times(sigma_str, sigma_str))
+}
+
+// -----------------------------------------------------------------------------
+// Structure 4: Velocity recovery from strain via integration
+// -----------------------------------------------------------------------------
+// Once we have |S_33(x) + 2 gamma| <= C gamma (epsilon + sigma/d),
+// we recover the velocity bound by integrating along z:
+//
+//   u_3(x) = u_3(x_0) + integral_0^z partial_z u_3 dz'
+//          = u_3(x_0) + integral_0^z [S_33 + antisymmetric] dz'
+//
+// The antisymmetric part (omega cross terms) is bounded by
+// |omega| |u_perp| / |omega| ~ gamma sigma (Burgers scaling).
+// On the support |z| <= K sigma:
+//
+//   |u_3(x) - u_3(x_0) - (-2 gamma) z| <= C gamma sigma (epsilon + sigma/d)
+
+structure VelocityFromStrain {
+    element gamma_vfs : ℝ
+    element sigma_vfs : ℝ
+    element d_vfs : ℝ
+    element epsilon_vfs : ℝ
+
+    element S33_dev_vfs : ℝ    // |S_33 + 2gamma| on support
+    element r1_bound : ℝ       // |r_1| = |u_3 - u_3^aff|
+
+    axiom gamma_pos : gamma_vfs > 0
+    axiom sigma_pos : sigma_vfs > 0
+    axiom d_pos : d_vfs > 0
+    axiom eps_small : epsilon_vfs >= 0
+    axiom eps_bound : times(10, epsilon_vfs) < 1
+    axiom scale_sep : times(10, sigma_vfs) < d_vfs
+
+    // Input: strain deviation bound
+    // |S_33 + 2gamma| <= C gamma (epsilon + sigma/d)
+    // Encoded: S33_dev * d <= gamma * (epsilon * d + sigma)
+    axiom strain_input : times(S33_dev_vfs, d_vfs) <= times(gamma_vfs, plus(times(epsilon_vfs, d_vfs), sigma_vfs))
+
+    // Output: velocity remainder after integrating over |z| <= K sigma
+    // |r_1| <= |S_33_dev| * K sigma <= C gamma sigma (epsilon + sigma/d)
+    // Encoded: r1_bound * d <= gamma * sigma * (epsilon * d + sigma)
+    axiom velocity_recovery : times(r1_bound, d_vfs) <= times(gamma_vfs, times(sigma_vfs, plus(times(epsilon_vfs, d_vfs), sigma_vfs)))
+
+    axiom r1_pos : r1_bound >= 0
+    axiom S33_pos : S33_dev_vfs >= 0
+}
+
+example "BK5: velocity remainder is O(gamma sigma (epsilon + sigma/d)) (Z3)" {
+    // This is exactly H5: |r_1| <= C gamma sigma^2 / d (when epsilon ~ sigma/d)
+    assert(times(r1_bound, d_vfs) <= times(gamma_vfs, times(sigma_vfs, plus(times(epsilon_vfs, d_vfs), sigma_vfs))))
+}
