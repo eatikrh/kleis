@@ -2,6 +2,11 @@
 // Cross-Sectional Coherence: Gap A Resolution
 // =============================================================================
 //
+// STANDALONE THEOREM: See theories/ns_coherence_theorem.kleis (CT1-CT11)
+// for the standalone coherence theorem with 7 hypotheses, 5-lemma estimate
+// chain, 7 Z3-verified structures, and precise breaking point analysis.
+// This file provides the narrative context and end-to-end regularity chain.
+//
 // GAP A IN THE REGULARITY PROGRAM:
 //   Does blow-up vorticity concentrate into tube-like structures?
 //
