@@ -106,7 +106,7 @@ Each link is formalized in a Kleis theory file with Z3 verification and numerica
 
 Three analytical gaps separate the conditional chain from an unconditional result. All three are addressed. Gap A (cross-sectional coherence): Proposition 8.1 proves the viscous correction bound $|V[xi]| <= (7 slash 6) gamma sigma slash d$; Theorem 8.2 derives the required gradient bounds from the parabolic $xi$-equation; Proposition 8.3 handles eigenvalue nondegeneracy via a three-case dichotomy --- separated eigenvalues (coherence chain applies), biaxial degeneracy (direct enstrophy fixed-point bound excludes blow-up), and vanishing gap (near-biaxial enstrophy control). Gap B (adiabatic persistence): Proposition 8.4 proves that vorticity profiles asymptotically track the Burgers family under Type II blow-up, using the spectral gap of the Burgers linearization and ESS exclusion of Type I. Gap C (transient robustness): Proposition 8.5 proves the enstrophy budget is uniformly negative across all interaction phases, using the exhaustive spatial partition into quasi-static (depleted by Papers [3]-[4]) and reconnection (dissipation-dominated) regions.
 
-Z3 verifies the _logical implication structure_ of the complete chain (CS11): assuming blow-up leads to net enstrophy decrease --- a contradiction. Every axiom is classified in a complete audit (Section 8.6b): THEOREM (published), SERIES-ESTABLISHED (Papers [1]-[4]), or PROVED/REDUCED IN THIS PAPER (Propositions 8.1-8.5, Theorem 8.2, Theorem 8.3a\*). The argument does not require eigenvalue nondegeneracy (H3) as a global assumption; the zero-gap case is handled by the biaxial enstrophy fixed point (Proposition 8.3, Case 2b).
+Z3 verifies the _logical implication structure_ of the complete chain (CS11): assuming blow-up leads to net enstrophy decrease --- a contradiction. Every axiom is classified in a complete audit (Section 8.6b): THEOREM (published), SERIES-ESTABLISHED (Papers [1]-[4]), or PROVED HERE (Propositions 8.1, 8.3, Theorem 8.2), or REDUCED HERE TO EXPLICIT HYPOTHESES (Theorem 8.3a\*, Propositions 8.4-8.5). The argument does not require eigenvalue nondegeneracy (H3) as a global assumption; the zero-gap case is handled by the biaxial enstrophy fixed point (Proposition 8.3, Case 2b).
 
 = Stretching Necessity
 
@@ -140,19 +140,19 @@ The core radius $sigma$ is set by the balance between radial compression (stretc
 
 The peak vorticity $omega_0 = Gamma slash (pi sigma^2)$ is finite for finite circulation $Gamma$ and stretching rate $gamma$. The enstrophy at equilibrium is $Omega = pi omega_0^2 sigma^2$, also finite. No blow-up occurs.
 
-*Theorem (Burgers Fixed Point).* _At the Burgers equilibrium, the stretching and diffusion terms balance exactly at every radial position: $(d omega slash d t)_("stretching")) + (d omega slash d t)_("diffusion")) = 0$. The peak vorticity and enstrophy are finite constants for any finite stretching rate $gamma$._
+*Theorem (Burgers Fixed Point).* _At the Burgers equilibrium, the stretching and diffusion terms balance exactly at every radial position: $(d omega slash d t)_("stretching") + (d omega slash d t)_("diffusion") = 0$. The peak vorticity and enstrophy are finite constants for any finite stretching rate $gamma$._
 
 The Z3 structure `BurgersFixedPoint` in `theories/ns_self_stretching_equilibrium.kleis` encodes the equilibrium condition $sigma^2 gamma = 2 nu$ and verifies that the time derivative at the tube center is zero: $d omega slash d t = gamma omega_0 + (-gamma omega_0) = 0$ (example SE4). The structure `FixedGammaBounded` verifies that fixed stretching gives bounded peak vorticity (SE5).
 
-*Self-consistent stretching bound.* A single tube's self-stretching rate is $gamma_("self")) = Gamma slash (2 pi R^2)$, where $R$ is the radius of curvature. Since $R >= sigma$ for a thin tube (the curvature radius exceeds the core radius), and $sigma^2 = 2 nu slash gamma$, the self-consistent bound gives $gamma_("self")) <= Gamma^2 slash (8 pi^2 nu)$ --- finite for finite $Gamma$ and $nu > 0$. The Z3 structure `SelfStretchingBounded` verifies this (SE6).
+*Self-consistent stretching bound.* A single tube's self-stretching rate is $gamma_("self") = Gamma slash (2 pi R^2)$, where $R$ is the radius of curvature. Since $R >= sigma$ for a thin tube (the curvature radius exceeds the core radius), and $sigma^2 = 2 nu slash gamma$, the self-consistent bound gives $gamma_("self") <= Gamma^2 slash (8 pi^2 nu)$ --- finite for finite $Gamma$ and $nu > 0$. The Z3 structure `SelfStretchingBounded` verifies this (SE6).
 
-Numerical examples (SE1, SE3) confirm: the Burgers equilibrium has $sigma = 0.141$ at $gamma = 1$, $nu = 0.01$; peak vorticity is proportional to $"Re"$ but always finite; and self-consistent stretching for ring geometries ($R = 1, 5, 10$) gives bounded $gamma_("self"))$ and bounded $sigma$ in each case.
+Numerical examples (SE1, SE3) confirm: the Burgers equilibrium has $sigma = 0.141$ at $gamma = 1$, $nu = 0.01$; peak vorticity is proportional to $"Re"$ but always finite; and self-consistent stretching for ring geometries ($R = 1, 5, 10$) gives bounded $gamma_("self")$ and bounded $sigma$ in each case.
 
 = The Burgers Profile as the Unique Attractor
 
 The Burgers vortex is not merely a fixed point --- it is an _attractor_. Any initial radial vorticity profile under sustained stretching converges to the Gaussian.
 
-The linearized perturbation analysis proceeds by writing $omega = omega_("Burgers")) + epsilon phi(r) e^(-lambda t)$ and substituting into the radial vorticity equation under constant stretching. The perturbation eigenfunctions satisfy a Sturm-Liouville problem, and the eigenvalues are:
+The linearized perturbation analysis proceeds by writing $omega = omega_("Burgers") + epsilon phi(r) e^(-lambda t)$ and substituting into the radial vorticity equation under constant stretching. The perturbation eigenfunctions satisfy a Sturm-Liouville problem, and the eigenvalues are:
 
 $ lambda_n = n gamma, quad n = 0, 1, 2, dots $
 
@@ -163,7 +163,7 @@ The $n = 0$ mode is the Burgers profile itself (neutral: $lambda_0 = 0$). All pe
 The Z3 structures in `theories/ns_burgers_attractor.kleis` verify:
 - All perturbation eigenvalues are positive (BA4): $n >= 1$ and $gamma > 0$ implies $lambda_n > 0$.
 - Higher modes decay faster (BA5): $n_2 > n_1$ implies $lambda_(n_2) > lambda_(n_1)$.
-- Perturbation energy decays (BA6): $d E_("pert")) slash d t = -2 delta E_("pert")) < 0$ with $delta >= gamma$.
+- Perturbation energy decays (BA6): $d E_("pert") slash d t = -2 delta E_("pert") < 0$ with $delta >= gamma$.
 - Equilibrium core size is uniquely determined (BA7): $sigma^2 gamma = 2 nu$.
 
 Numerical examples demonstrate convergence from non-Gaussian initial conditions:
@@ -180,17 +180,17 @@ Links 1-3 established that a single vortex tube under its own stretching reaches
 
 *The blow-up scaling.* For finite-time blow-up of enstrophy at time $T^*$, the enstrophy $Omega(t) tilde (T^* - t)^(-p)$ with $p >= 1$. The corresponding stretching rate must diverge: $gamma(t) tilde p slash (2(T^* - t)) -> infinity$ as $t -> T^*$. But self-consistent stretching is bounded above by $Gamma^2 slash (8 pi^2 nu)$. Therefore, the diverging stretching rate cannot come from self-interaction alone.
 
-*Theorem (Interaction Necessity).* _Let the total stretching rate at a vortex tube decompose as $gamma_("total")) = gamma_("self")) + gamma_("ext"))$. Since $gamma_("self")) <= Gamma^2 slash (8 pi^2 nu) < infinity$, finite-time blow-up requires $gamma_("ext")) -> infinity$, which requires interaction with external vorticity sources._
+*Theorem (Interaction Necessity).* _Let the total stretching rate at a vortex tube decompose as $gamma_("total") = gamma_("self") + gamma_("ext")$. Since $gamma_("self") <= Gamma^2 slash (8 pi^2 nu) < infinity$, finite-time blow-up requires $gamma_("ext") -> infinity$, which requires interaction with external vorticity sources._
 
-The external stretching rate from a vortex tube of circulation $Gamma_B$ at distance $d$ is $gamma_("ext")) = Gamma_B slash (2 pi d^2)$. For $gamma_("ext"))$ to diverge, either $Gamma_B -> infinity$ (impossible: circulation is conserved) or $d -> 0$ (tubes approach each other). Therefore, blow-up requires tubes to come close together --- the interaction regime.
+The external stretching rate from a vortex tube of circulation $Gamma_B$ at distance $d$ is $gamma_("ext") = Gamma_B slash (2 pi d^2)$. For $gamma_("ext")$ to diverge, either $Gamma_B -> infinity$ (impossible: circulation is conserved) or $d -> 0$ (tubes approach each other). Therefore, blow-up requires tubes to come close together --- the interaction regime.
 
 The Z3 structures in `theories/ns_interaction_necessity.kleis` verify:
 - Self-stretching has a finite upper bound (IN4).
 - Constant stretching gives finite enstrophy (IN5).
 - Without external interaction, enstrophy is bounded: $d Omega slash d t <= 0$ at equilibrium (IN6).
-- With external interaction, enstrophy can grow: $d Omega slash d t > 0$ when $gamma_("ext")) > 0$ (IN7).
+- With external interaction, enstrophy can grow: $d Omega slash d t > 0$ when $gamma_("ext") > 0$ (IN7).
 
-Numerical examples (IN2) confirm the scaling: blow-up at $T^* = 1$ requires $gamma = 5$ at $t = 0.9$, $gamma = 50$ at $t = 0.99$, $gamma = 500$ at $t = 0.999$ --- all exceeding the self-consistent bound $gamma_("max")) = 1.27$ for $Gamma = 1$. External strain grows as $d^(-2)$ (IN3): at $d = 10$, $gamma_("ext")) = 0.0016$; at $d = 0.1$, $gamma_("ext")) = 15.9$.
+Numerical examples (IN2) confirm the scaling: blow-up at $T^* = 1$ requires $gamma = 5$ at $t = 0.9$, $gamma = 50$ at $t = 0.99$, $gamma = 500$ at $t = 0.999$ --- all exceeding the self-consistent bound $gamma_("max") = 1.27$ for $Gamma = 1$. External strain grows as $d^(-2)$ (IN3): at $d = 10$, $gamma_("ext") = 0.0016$; at $d = 0.1$, $gamma_("ext") = 15.9$.
 
 = Directional Covering and the Lei-Ren-Tian Theorem
 
@@ -213,7 +213,7 @@ The Z3 structures in `theories/ns_directional_covering.kleis` verify:
 - Covering $S^2$ requires at least 3 independent directions (DC6).
 - Blow-up reduces to tube interaction (DC7): blow-up $=>$ multi-directional vorticity $=>$ multiple tubes $=>$ interaction (under hypotheses (H1)--(H5) of Theorem 8.3a\*).
 
-*Connection to Paper [4].* Multiple interacting tubes at various angles is _exactly_ the configuration analyzed in Paper [4]: the isotropic average over $"SO"(3)$ of relative orientations gives $chevron.l Q chevron.r_("iso")) = (pi slash 4) Q_("perp"))$. By the Lei-Ren-Tian theorem, blow-up implies this isotropic interaction regime. The depleting sign is not an assumption about the geometry --- it is a consequence of the blow-up hypothesis.
+*Connection to Paper [4].* Multiple interacting tubes at various angles is _exactly_ the configuration analyzed in Paper [4]: the isotropic average over $"SO"(3)$ of relative orientations gives $chevron.l Q chevron.r_("iso") = (pi slash 4) Q_("perp")$. By the Lei-Ren-Tian theorem, blow-up implies this isotropic interaction regime. The depleting sign is not an assumption about the geometry --- it is a consequence of the blow-up hypothesis.
 
 = The Self-Undermining Singularity
 
@@ -221,7 +221,7 @@ We now assemble the complete chain. Links 1-5 establish that blow-up implies a m
 
 *Link 6: Interaction depletion (Papers [3]-[4]).* In a configuration of interacting Burgers vortex tubes, the tidal gradient of one tube acting on another produces a cross-sectionally averaged pressure-Hessian observable:
 
-$ chevron.l Q chevron.r_("iso")) = C_("iso")) gamma^2 "Re"^2 (sigma slash d)^3, quad C_("iso")) = pi / 4 C_("perp")) approx -0.43 $
+$ chevron.l Q chevron.r_("iso") = C_("iso") gamma^2 "Re"^2 (sigma slash d)^3, quad C_("iso") = pi / 4 C_("perp") approx -0.43 $
 
 The sign is negative (depleting), the scaling $"Re"^2$ _strengthens_ toward blow-up, and the constant is universal (determined by the Burgers vortex radial profile).
 
@@ -260,9 +260,11 @@ Assembling all seven links:
 6. Multi-directional interacting tubes produce $Q < 0$, scaling as $"Re"^2$. [Papers [3]-[4]]
 7. Depletion ($tilde "Re"^2$) dominates stretching ($tilde "Re"$) above critical $"Re"_c$. [Self-Undermining Scaling, Z3: RP2-RP5]
 
-*Theorem (Navier-Stokes Regularity).* _Let $u_0 in C^infinity (RR^3) inter L^2(RR^3)$ be divergence-free. Then the unique smooth solution of the 3D incompressible Navier-Stokes equations with initial data $u_0$ extends to all $t > 0$._
+*Theorem (Conditional regularity under localized confinement and transient robustness).* _Let $u_0 in C^infinity (RR^3) inter L^2(RR^3)$ be divergence-free, and let $u$ be the unique smooth solution of the 3D incompressible Navier-Stokes equations with initial data $u_0$ on a maximal interval $[0, T^*)$. Assume that every putative blow-up sequence enters a regime satisfying the hypotheses of Theorem 8.3a\* (localized OU confinement, (H1)--(H5)) and the assumptions of Propositions 8.4--8.5 (adiabatic Burgers tracking and transient robustness). Then $T^* = infinity$: the solution extends to all $t > 0$._
 
-_Proof (by contradiction)._ Suppose $T^* < infinity$ is a first singular time. By Proposition 8.3 (eigenvalue dichotomy), Proposition 8.1 (viscous perturbativity), and Theorem 8.2 (parabolic gradient control), blow-up implies coherent vorticity tube structure (Gap A). By Proposition 8.4, the tube profiles asymptotically track the Burgers family (Gap B). By Proposition 8.5, the enstrophy budget is uniformly negative across all interaction phases (Gap C). By Links 5-7, depletion dominates stretching: $d Omega slash d t < 0$, contradicting blow-up. $square$
+_Proof (by contradiction)._ Suppose $T^* < infinity$ is a first singular time. By assumption, blow-up sequences satisfy hypotheses (H1)--(H5) of Theorem 8.3a\*. By Proposition 8.3 (eigenvalue dichotomy), Proposition 8.1 (viscous perturbativity), and Theorem 8.2 (parabolic gradient control), blow-up implies coherent vorticity tube structure (Gap A). By Proposition 8.4, the tube profiles asymptotically track the Burgers family (Gap B). By Proposition 8.5, the enstrophy budget is uniformly negative across all interaction phases (Gap C). By Links 5-7, depletion dominates stretching: $d Omega slash d t < 0$, contradicting blow-up. $square$
+
+_Remark._ The theorem is conditional: the hypotheses of Theorem 8.3a\* and Propositions 8.4--8.5 are not yet unconditionally derived from the Navier-Stokes dynamics. The principal remaining analytical burden is hypothesis (H5) --- the nonlocal perturbativity condition --- which is constructively attacked via the Biot-Savart decomposition of Lemmas H5.1--H5.5. The remaining hypotheses (H1)--(H4) are either definitional or consistent with blow-up scaling (see Status of hypotheses after Theorem 8.3a\*).
 
 The chain is not circular: Links 1-5 establish _necessary_ conditions for blow-up (using the vorticity equation, the Burgers steady state, and the Lei-Ren-Tian theorem). Links 6-7 show that these conditions _imply_ depletion dominance (by the tidal gradient inequality and scaling analysis). The contradiction arises because Links 1-5 are consequences of the Navier-Stokes equations, not assumptions.
 
@@ -279,7 +281,7 @@ Gap A is reformulated as a localized conditional theorem (Theorem 8.3a\*) with e
 
 == Caffarelli-Kohn-Nirenberg partial regularity
 
-The CKN theorem [6] establishes that the singular set of any suitable weak solution has zero one-dimensional parabolic Hausdorff measure: $cal(H)^1_("par"))(S) = 0$. Singularities cannot form sheets, surfaces, or volumes of concentrated vorticity. The zero-dimensional character of the singular set is geometrically compatible only with tube-like (one-dimensional) vorticity concentration, not with higher-dimensional structures. This constraint is used in Proposition 8.3 (Case 2) to exclude blow-up through biaxial strain regions.
+The CKN theorem [6] establishes that the singular set of any suitable weak solution has zero one-dimensional parabolic Hausdorff measure: $cal(H)^1_("par")(S) = 0$. Singularities cannot form sheets, surfaces, or volumes of concentrated vorticity. The zero-dimensional character of the singular set is geometrically compatible only with tube-like (one-dimensional) vorticity concentration, not with higher-dimensional structures. This constraint is used in Proposition 8.3 (Case 2) to exclude blow-up through biaxial strain regions.
 
 == Self-similar blow-up exclusion
 
@@ -293,9 +295,9 @@ Our Link 3 (Burgers attractor) shows that _any_ radial vorticity profile under s
 
 *The adiabatic persistence theorem.* A natural concern is whether the attractor property persists under _time-varying_ stretching $gamma(t)$, as occurs near blow-up. We resolve this using the Escauriaza-Seregin-Sverak (ESS) theorem [8].
 
-For blow-up at time $T^*$ with $gamma(t) tilde (T^* - t)^(-alpha)$, the profile relaxation time is $tau_("relax")) = 1 slash gamma = (T^* - t)^alpha$ and the stretching variation time is $tau_gamma = gamma slash |dot(gamma)| = (T^* - t) slash alpha$. The adiabatic parameter --- the ratio of relaxation to variation --- is:
+For blow-up at time $T^*$ with $gamma(t) tilde (T^* - t)^(-alpha)$, the profile relaxation time is $tau_("relax") = 1 slash gamma = (T^* - t)^alpha$ and the stretching variation time is $tau_gamma = gamma slash |dot(gamma)| = (T^* - t) slash alpha$. The adiabatic parameter --- the ratio of relaxation to variation --- is:
 
-$ eta = tau_("relax")) / tau_gamma = alpha (T^* - t)^(alpha - 1) $
+$ eta = tau_("relax") / tau_gamma = alpha (T^* - t)^(alpha - 1) $
 
 For Type I blow-up ($alpha = 1$): $eta = 1$ (marginal --- adiabatic tracking fails). But the ESS theorem _excludes_ Type I blow-up for Navier-Stokes.
 
@@ -337,7 +339,7 @@ Z3 verifies (TR6): the quasi-static fraction of the tube is positive (and in fac
 
 *(C) Depletion strengthening at close approach.* As tubes approach ($d$ decreasing), the depletion factor $(sigma slash d)^3$ _increases_ monotonically (TR3). At $d = 2 sigma$: $Q$ is 8 times stronger than at $d = 4 sigma$. The perturbative regime _strengthens_ depletion all the way down to $d tilde sigma$, which is precisely where reconnection begins and enhanced dissipation takes over.
 
-Z3 verifies (TR7): for $d_("close")) < d_("far"))$ with both in the perturbative regime, $Q_("close")) < Q_("far"))$ (more negative).
+Z3 verifies (TR7): for $d_("close") < d_("far")$ with both in the perturbative regime, $Q_("close") < Q_("far")$ (more negative).
 
 *The three-phase structure.* The interaction between vortex tubes passes through three phases, each regularity-favorable:
 
@@ -354,11 +356,11 @@ The spatial partition itself is _exact_: $d Omega slash d t = integral_("QS") + 
 
 *Proposition 8.5* (Uniform enstrophy budget across all interaction phases). _Under the tube structure established by Gap A (Propositions 8.1, 8.3, Theorem 8.2) and the Burgers tracking of Proposition 8.4, every high-vorticity region near blow-up consists of Burgers-type vortex tubes. For $"Re" > "Re"_c = 1 slash c$, the total enstrophy growth satisfies $d Omega slash d t < 0$, uniformly over all admissible near-singular configurations._
 
-_Proof._ The enstrophy identity $d Omega slash d t = 2 integral omega_i S_(i j) omega_j d V - 2 nu integral |nabla omega|^2 d V$ partitions exactly over any disjoint spatial decomposition: $d Omega slash d t = integral_("QS")) + integral_("recon"))$, where the quasi-static domain has inter-tube separation $d > sigma$ and the reconnection domain has $d <= sigma$. This partition is exhaustive --- every point in the high-vorticity region has a well-defined separation from other tubes, and no intermediate regime exists.
+_Proof._ The enstrophy identity $d Omega slash d t = 2 integral omega_i S_(i j) omega_j d V - 2 nu integral |nabla omega|^2 d V$ partitions exactly over any disjoint spatial decomposition: $d Omega slash d t = integral_("QS") + integral_("recon")$, where the quasi-static domain has inter-tube separation $d > sigma$ and the reconnection domain has $d <= sigma$. This partition is exhaustive --- every point in the high-vorticity region has a well-defined separation from other tubes, and no intermediate regime exists.
 
-In quasi-static regions ($d > sigma$): Gap A establishes tube-like coherent vorticity; Proposition 8.4 establishes Burgers tracking. By Papers [3]-[4] (Link 6), $Q < 0$ for all interaction angles between Burgers tubes, with $|Q| >= c_D gamma^2 "Re"^2 (sigma slash d)^3$. The Lei-Ren-Tian covering [5] guarantees multi-directional interactions with isotropic constant $C_("iso")) approx -0.43$. Depletion exceeds stretching for $c dot "Re" > 1$ (Link 7, TR7b).
+In quasi-static regions ($d > sigma$): Gap A establishes tube-like coherent vorticity; Proposition 8.4 establishes Burgers tracking. By Papers [3]-[4] (Link 6), $Q < 0$ for all interaction angles between Burgers tubes, with $|Q| >= c_D gamma^2 "Re"^2 (sigma slash d)^3$. The Lei-Ren-Tian covering [5] guarantees multi-directional interactions with isotropic constant $C_("iso") approx -0.43$. Depletion exceeds stretching for $c dot "Re" > 1$ (Link 7, TR7b).
 
-In reconnection regions ($d <= sigma$): gradient steepening at scale $delta << sigma$ enhances dissipation by factor $sigma^2 slash (2 delta^2) > 1$ for $delta < sigma slash sqrt(2)$ (TR7c). The reconnection volume fraction is $O(sigma slash d) = O(1 slash sqrt("Re")) -> 0$ (TR2).
+In reconnection regions ($d <= sigma$): gradient steepening at scale $delta << sigma$ enhances dissipation by factor $sigma^2 slash (2 delta^2) > 1$ for $delta < sigma slash sqrt(2)$ (TR7c). The reconnection volume fraction is $O(sigma slash d) = O(1 slash sqrt("Re") -> 0$ (TR2).
 
 Both contributions yield negative enstrophy growth. The depletion monotonically strengthens as $d$ decreases toward $sigma$ (TR3, TR7), providing seamless coverage at the quasi-static/reconnection boundary. The constants are universal: they depend only on the Burgers profile (Layer 1), the Calderon-Zygmund kernel (Layer 1), and the LRT covering geometry (Layer 1). $square$
 
@@ -370,17 +372,19 @@ Gap A asks whether blow-up vorticity must organize into tube-like structures. We
 
 *Theorem (Quantitative Cross-Sectional Coherence).* _Let $(u, p)$ be a smooth Leray-Hopf solution of the 3D incompressible Navier-Stokes equations on $RR^3 times [0, T^*)$. Suppose $T^* < infinity$ is a first singular time. Under hypotheses (H1)-(H7), on each high-vorticity ball $B(x_j, sigma)$ the vorticity direction field $xi = omega slash |omega|$ satisfies:_
 
-$ ||xi - xi_j||_(L^infinity (B(x_j, sigma))) <= 2 sin theta_("max")) + 2/3 dot sigma / d $
+$ ||xi - xi_j||_(L^infinity (B(x_j, sigma))) <= 2 sin theta_("max") + 2/3 dot sigma / d $
 
-_where $theta_("max"))$ is the alignment angle after sustained stretching, $sigma = sqrt(2 nu slash gamma)$ is the vortex core radius, and $d$ is the inter-vortex separation with $d slash sigma >= sqrt("Re" slash 2)$._ _Moreover, $sin theta_("max"))$ decays exponentially under sustained stretching (Lemma 4), and $sigma slash d -> 0$ as $"Re" -> infinity$ (Lemma 1), so the coherence bound improves toward blow-up._
+_where $theta_("max")$ is the alignment angle after sustained stretching, $sigma = sqrt(2 nu slash gamma)$ is the vortex core radius, and $d$ is the inter-vortex separation with $d slash sigma >= sqrt("Re" slash 2)$._ _Moreover, $sin theta_("max")$ decays exponentially under sustained stretching (Lemma 4), and $sigma slash d -> 0$ as $"Re" -> infinity$ (Lemma 1), so the coherence bound improves toward blow-up._
 
-*Hypotheses.* (H1) Supercritical stretching on a set of positive measure [ESTABLISHED --- BKM 1984]. (H2) Vorticity concentration in balls [ESTABLISHED --- CKN 1982 + covering]. (H3) Eigenvalue nondegeneracy: $lambda_1 - lambda_2 >= delta gamma$ [NOT ASSUMED GLOBALLY --- Proposition 8.3 handles all cases: separated eigenvalues use the coherence chain; biaxial degeneracy is excluded by a direct enstrophy bound; vanishing gap is controlled by near-biaxial enstrophy analysis]. (H4) Self-consistent separation: $2 d^2 >= "Re" dot sigma^2$ [ESTABLISHED --- Papers III-IV]. (H5) Biot-Savart far-field decay: $|S_("ext"))| <= C Gamma slash d^2$ [ESTABLISHED --- Biot-Savart kernel, pointwise]. (H6) Alignment: $cos theta > 0$ [ESTABLISHED --- stretching formula]. (H7) Sustained stretching duration $>= tau_("align"))$ [ESTABLISHED --- measure-theoretic, from H1 + BKM].
+_Relationship to Theorem 8.3a\*._ This theorem provides the complementary route to Theorem 8.3a\*: it establishes entry into localized tube-like regimes from alignment and eigenvalue control (Case 1 of Proposition 8.3, separated eigenvalues). Theorem 8.3a\* handles the biaxial compression regime (Case 2) via direct OU confinement under hypotheses (H1)--(H5). The two theorems cover complementary eigenvalue configurations; together they exhaust all cases in the Proposition 8.3 dichotomy.
+
+*Hypotheses.* (H1) Supercritical stretching on a set of positive measure [ESTABLISHED --- BKM 1984]. (H2) Vorticity concentration in balls [ESTABLISHED --- CKN 1982 + covering]. (H3) Eigenvalue nondegeneracy: $lambda_1 - lambda_2 >= delta gamma$ [NOT ASSUMED GLOBALLY --- Proposition 8.3 handles all cases: separated eigenvalues use the coherence chain; biaxial degeneracy is excluded by a direct enstrophy bound; vanishing gap is controlled by near-biaxial enstrophy analysis]. (H4) Self-consistent separation: $2 d^2 >= "Re" dot sigma^2$ [ESTABLISHED --- Papers III-IV]. (H5) Biot-Savart far-field decay: $|S_("ext")| <= C Gamma slash d^2$ [ESTABLISHED --- Biot-Savart kernel, pointwise]. (H6) Alignment: $cos theta > 0$ [ESTABLISHED --- stretching formula]. (H7) Sustained stretching duration $>= tau_("align")$ [ESTABLISHED --- measure-theoretic, from H1 + BKM].
 
 *Estimate chain (5 lemmas).* The proof proceeds through five lemmas, each with a precise analytical status.
 
-*Lemma 1: Biot-Savart far-field decay of external strain [ESTABLISHED].* The Biot-Savart kernel $K(x) tilde 1 slash |x|^2$ gives pointwise far-field decay of the velocity gradient: at distance $d$ from a vorticity source of circulation $Gamma = gamma sigma^2$, the external strain satisfies $|S_("ext"))| <= C Gamma slash d^2 = C gamma sigma^2 slash d^2 = 2 C gamma slash "Re"$. For $"Re" > 100$ and $C <= 10$: perturbation ratio $< 0.2$. The self-strain of an axisymmetric tube has _constant_ eigenvectors across the cross-section. Z3 verifies (CT2): external strain is perturbative.
+*Lemma 1: Biot-Savart far-field decay of external strain [ESTABLISHED].* The Biot-Savart kernel $K(x) tilde 1 slash |x|^2$ gives pointwise far-field decay of the velocity gradient: at distance $d$ from a vorticity source of circulation $Gamma = gamma sigma^2$, the external strain satisfies $|S_("ext")| <= C Gamma slash d^2 = C gamma sigma^2 slash d^2 = 2 C gamma slash "Re"$. For $"Re" > 100$ and $C <= 10$: perturbation ratio $< 0.2$. The self-strain of an axisymmetric tube has _constant_ eigenvectors across the cross-section. Z3 verifies (CT2): external strain is perturbative.
 
-*Lemma 2: Eigenvalue nondegeneracy [HANDLED BY DICHOTOMY --- Proposition 8.3].* Self-strain gap: $3 gamma slash 2$ (Burgers eigenvalues $gamma, -gamma slash 2, -gamma slash 2$). External perturbation shifts each eigenvalue by at most $|S_("ext"))| = 2 C gamma slash "Re"$. Net gap: $>= gamma(3 slash 2 - 4 C slash "Re") > gamma$ for $"Re" > 8 C$. Z3 verifies (CT3, CT3b): gap remains positive and exceeds $gamma$. The three-case dichotomy of Proposition 8.3 handles all eigenvalue configurations: Case 1 (separated, gap $>= gamma$) is the generic case where the coherence chain applies directly; Case 2 (biaxial $lambda_1 = lambda_2$) is excluded by a direct enstrophy fixed-point bound (no coherence or Burgers invocation needed); Case 3 (vanishing gap) is excluded by near-biaxial enstrophy control.
+*Lemma 2: Eigenvalue nondegeneracy [HANDLED BY DICHOTOMY --- Proposition 8.3].* Self-strain gap: $3 gamma slash 2$ (Burgers eigenvalues $gamma, -gamma slash 2, -gamma slash 2$). External perturbation shifts each eigenvalue by at most $|S_("ext")| = 2 C gamma slash "Re"$. Net gap: $>= gamma(3 slash 2 - 4 C slash "Re") > gamma$ for $"Re" > 8 C$. Z3 verifies (CT3, CT3b): gap remains positive and exceeds $gamma$. The three-case dichotomy of Proposition 8.3 handles all eigenvalue configurations: Case 1 (separated, gap $>= gamma$) is the generic case where the coherence chain applies directly; Case 2 (biaxial $lambda_1 = lambda_2$) is excluded by a direct enstrophy fixed-point bound (no coherence or Burgers invocation needed); Case 3 (vanishing gap) is excluded by near-biaxial enstrophy control.
 
 *Lemma 3: Eigenvector regularity via Kato [ESTABLISHED given L2].* By Kato's analytic perturbation theorem [17]: $|delta e_1| <= |delta S| slash "gap"$. Two contributions: (a) external strain gradient across $sigma$: $(2 C slash 3) sigma^3 slash d^3$ (negligible for $"Re" >> 1$); (b) tube curvature: $(2 slash 3) sigma slash d$ (curvature radius $>= d$). Total: $|delta e_1| <= (2 slash 3) sigma slash d$, curvature-dominated. At $"Re" = 1000$: $|delta e_1| approx 0.03$. Z3 verifies (CT4).
 
@@ -388,7 +392,7 @@ _where $theta_("max"))$ is the alignment angle after sustained stretching, $sigm
 
 $ d(cos^2 theta) / (d t) = 2(lambda_1 - lambda_2) sin^2 theta cos^2 theta + "viscous corrections" $
 
-For the inviscid part: $d(cos^2 theta) slash d t > 0$ for $0 < theta < pi slash 2$. Alignment time: $tau_("align")) = 2 slash (3 gamma) < 1 slash gamma = tau_("Burgers"))$. Alignment precedes Burgers convergence. Z3 verifies (CT5, CT5b). After $n$ alignment times: $sin theta ~ sin theta_0 dot e^(-n)$.
+For the inviscid part: $d(cos^2 theta) slash d t > 0$ for $0 < theta < pi slash 2$. Alignment time: $tau_("align") = 2 slash (3 gamma) < 1 slash gamma = tau_("Burgers")$. Alignment precedes Burgers convergence. Z3 verifies (CT5, CT5b). After $n$ alignment times: $sin theta ~ sin theta_0 dot e^(-n)$.
 
 *Proposition 8.1* (Viscous perturbativity on coherent $sigma$-scale cross-sections). _Let $(u, p)$ be a smooth solution of the 3D incompressible Navier-Stokes equations on $RR^3 times [0, T^*)$, and let $B(x_j, sigma)$ be a high-vorticity ball on which $|omega| > 0$. Write $xi := omega slash |omega|$. Assume the following local bounds hold on $B(x_j, sigma)$:_
 
@@ -500,15 +504,15 @@ $ d Omega / (d t) = 2 integral omega_i S_(i j) omega_j d V - 2 nu integral |nabl
 
 _Stretching bound._ By (2a): $2 integral omega_i S_(i j) omega_j d V <= 2 gamma Omega$ (Z3-verified: BE1).
 
-_Confinement._ The compression $v_(e_3) = -2 gamma z$ (from $lambda_3 = -2 gamma$) confines vorticity in the $e_3$ direction to the viscous-compression equilibrium thickness $ell_("eq"))^2 = nu slash (2 gamma)$. This is the steady-state of the advection-diffusion equation $2 gamma z thin (partial omega) slash (partial z) + nu thin (partial^2 omega) slash (partial z^2) = 0$ in the compression direction, with the Gaussian $omega tilde exp(-gamma z^2 slash nu)$ as the unique normalizable solution (Z3-verified: BE3).
+_Confinement._ The compression $v_(e_3) = -2 gamma z$ (from $lambda_3 = -2 gamma$) confines vorticity in the $e_3$ direction to the viscous-compression equilibrium thickness $ell_("eq")^2 = nu slash (2 gamma)$. This is the steady-state of the advection-diffusion equation $2 gamma z thin (partial omega) slash (partial z) + nu thin (partial^2 omega) slash (partial z^2) = 0$ in the compression direction, with the Gaussian $omega tilde exp(-gamma z^2 slash nu)$ as the unique normalizable solution (Z3-verified: BE3).
 
-_Dissipation bound._ For the Gaussian equilibrium profile at scale $ell_("eq"))$, the gradient satisfies $integral |partial omega slash partial z|^2 d z = Omega_(1D) slash (2 ell_("eq"))^2)$ where $Omega_(1D) = integral omega^2 d z$. Therefore the dissipation from the compression direction alone gives $2 nu integral |partial omega slash partial z|^2 d V >= nu Omega slash ell_("eq"))^2 = 2 gamma Omega$ (Z3-verified: BE4b). The Gaussian profile minimizes this ratio among all profiles at the same scale; any profile concentrated at scale $ell <= ell_("eq"))$ has equal or larger dissipation.
+_Dissipation bound._ For the Gaussian equilibrium profile at scale $ell_("eq")$, the gradient satisfies $integral |partial omega slash partial z|^2 d z = Omega_(1D) slash (2 ell_("eq")^2)$ where $Omega_(1D) = integral omega^2 d z$. Therefore the dissipation from the compression direction alone gives $2 nu integral |partial omega slash partial z|^2 d V >= nu Omega slash ell_("eq")^2 = 2 gamma Omega$ (Z3-verified: BE4b). The Gaussian profile minimizes this ratio among all profiles at the same scale; any profile concentrated at scale $ell <= ell_("eq")$ has equal or larger dissipation.
 
 _Enstrophy budget._ Combining:
 
 $ d Omega / (d t) <= 2 gamma Omega - 2 gamma Omega = 0 $
 
-with equality only at the exact Gaussian equilibrium (Z3-verified: BE4). For thickness $ell < ell_("eq"))$: dissipation exceeds stretching and $d Omega slash d t < 0$ (Z3-verified: BE5), so the sheet is a _stable_ enstrophy fixed point. The equilibrium peak vorticity $omega_0 = Gamma_("sheet")) slash (sqrt(2 pi) dot ell_("eq"))$) is finite for finite circulation per unit length $Gamma_("sheet"))$ (Z3-verified: BE6). Therefore blow-up cannot occur through a biaxial strain configuration.
+with equality only at the exact Gaussian equilibrium (Z3-verified: BE4). For thickness $ell < ell_("eq")$: dissipation exceeds stretching and $d Omega slash d t < 0$ (Z3-verified: BE5), so the sheet is a _stable_ enstrophy fixed point. The equilibrium peak vorticity $omega_0 = Gamma_("sheet") slash (sqrt(2 pi) dot ell_("eq")$) is finite for finite circulation per unit length $Gamma_("sheet")$ (Z3-verified: BE6). Therefore blow-up cannot occur through a biaxial strain configuration.
 
 *Theorem 8.3a\* (Localized OU confinement in near-biaxial compression regions).* Let $(u, p)$ be a smooth 3D incompressible Navier-Stokes solution on $[t_0, t_1)$, and let $x_0(t)$ be a path of high-vorticity points. Define the parabolic neighborhood $Q := {(x, t) : |x - x_0(t)| <= d, thin t in [t_0, t_1)}$, where $d > 0$ is the interaction scale. Assume on $Q$:
 
@@ -550,7 +554,7 @@ Under biaxial strain, $u_z = lambda_3 z + r_1 = -2 gamma z + r_1$ where $r_1$ co
 
 (b) _Sheet curvature_ at interaction scale $d$ introduces $|v_z^"curv"| <= C_1 gamma sigma^2 slash d$.
 
-(c) _External strain variation_ across the sheet thickness $ell_("eq")) tilde sigma slash sqrt(2)$ gives $|v_z^"ext"| <= |nabla S| dot ell_("eq")) <= C_2 gamma sigma slash (d sqrt(2))$.
+(c) _External strain variation_ across the sheet thickness $ell_("eq") tilde sigma slash sqrt(2)$ gives $|v_z^"ext"| <= |nabla S| dot ell_("eq") <= C_2 gamma sigma slash (d sqrt(2))$.
 
 (d) _Frame-projection consistency._ The $z$-coordinate uses the fixed eigenvector $e_3(x_0)$, but the local eigenvector $e_3(x)$ varies in space. The projection error is $|e_3(x) - e_3(x_0)| <= |nabla e_3| dot |x - x_0|$. Within the sheet ($|z| <= O(sigma)$), this is $<= sigma slash d << 1$. The corresponding velocity projection error $|u_z^"actual" - u_z^"projected"| <= |u| dot sigma slash d tilde gamma sigma^2 slash d$ (using $|u| tilde gamma sigma$ at the sheet edge) is the same order as the curvature term in (b), and is therefore already captured in $r_1$.
 
@@ -560,7 +564,7 @@ Under biaxial strain, $u_z = lambda_3 z + r_1 = -2 gamma z + r_1$ where $r_1$ co
 
 (g) _No pre-assumed morphology._ The argument does not assume tube or sheet structure as input. The starting point is the eigenvalue structure of $S$ at $x_0$: biaxial strain means $lambda_1 = lambda_2 = gamma$, $lambda_3 = -2 gamma$ (tracelessness). The compression $v_(e_3) = -2 gamma z$ is a _kinematic_ consequence of incompressibility and biaxial stretching, not a geometric hypothesis about vorticity shape. The vorticity field starts with _arbitrary_ morphology; the OU operator then forces convergence to the Gaussian ground state (spectral gap $2 gamma$, Lemma D). Sheet/tube structure is a _conclusion_ of the confinement argument, not a premise. In Case 1 (separated eigenvalues), the coherent tube structure is likewise derived from the alignment + eigenvector regularity chain, not assumed.
 
-(h) _Blow-up scaling uniformity._ As blow-up is approached, $gamma -> infinity$ and $sigma = sqrt(2 nu slash gamma) -> 0$, while $d$ (interaction scale) remains bounded below or grows. All error terms are controlled by the ratio $sigma slash d tilde 1 slash sqrt("Re") -> 0$: (i) residual $|r_1| <= C gamma sigma^2 slash d = C nu slash d -> 0$; (ii) frame projection error $sigma slash d -> 0$; (iii) OU spectral gap $2 gamma -> infinity$ while perturbation operator norm $||R||_("op")) tilde C gamma sigma slash d = C sqrt(nu gamma) slash d$; the ratio $||R|| slash Delta tilde sigma slash (2 d) -> 0$. Every bound in the argument _improves_ as blow-up is approached. The constants $C$ depend on the Biot-Savart kernel and the LRT covering number, both of which are universal. Z3 verifies all error ratios are $< 1$ for $"Re" > 100$ and that they decrease monotonically with $"Re"$ (BE17--BE21). This is consistent with quantitative concentration results [21] showing critical norms are forced into viscous-scale balls near singularities.
+(h) _Blow-up scaling uniformity._ As blow-up is approached, $gamma -> infinity$ and $sigma = sqrt(2 nu slash gamma) -> 0$, while $d$ (interaction scale) remains bounded below or grows. All error terms are controlled by the ratio $sigma slash d tilde 1 slash sqrt("Re") -> 0$: (i) residual $|r_1| <= C gamma sigma^2 slash d = C nu slash d -> 0$; (ii) frame projection error $sigma slash d -> 0$; (iii) OU spectral gap $2 gamma -> infinity$ while perturbation operator norm $||R||_("op") tilde C gamma sigma slash d = C sqrt(nu gamma) slash d$; the ratio $||R|| slash Delta tilde sigma slash (2 d) -> 0$. Every bound in the argument _improves_ as blow-up is approached. The constants $C$ depend on the Biot-Savart kernel and the LRT covering number, both of which are universal. Z3 verifies all error ratios are $< 1$ for $"Re" > 100$ and that they decrease monotonically with $"Re"$ (BE17--BE21). This is consistent with quantitative concentration results [21] showing critical norms are forced into viscous-scale balls near singularities.
 
 _In-plane decay and boundary terms._ The integration $integral.double_(RR^2) partial slash partial x_i (u_i |omega|^2) d x thin d y = 0$ for $i = 1, 2$ requires $u |omega|^2 -> 0$ at spatial infinity in the $(x, y)$-plane. For smooth NS solutions on $RR^3$, $omega in L^2(RR^3) inter L^infinity$ at each time $t < T^*$, so $|omega|^2$ decays spatially; $u$ is bounded. The decay is uniform in $t$ on compact subsets of $[0, T^*)$ because the solution is smooth. For the localized version on $B(x_0, d)$: the enstrophy is concentrated in the high-vorticity core ($sigma << d$), so the boundary contribution $|omega|^2 |_(partial B)$ is exponentially small relative to the interior $Omega_z$.
 
@@ -580,13 +584,13 @@ where $cal(L)_"OU" = nu partial^2 slash partial z^2 + 2 gamma partial slash part
 
 (i) $cal(L)_"OU"$ is self-adjoint on $D(cal(L)_"OU") = H^2(RR, d mu)$ with Hermite eigenfunctions ${psi_n}_(n >= 0)$ and eigenvalues $lambda_n = -2 n gamma$, giving spectral gap $Delta = 2 gamma$ [19, Ch. 4].
 
-(ii) From Lemma B, the perturbation $R$ decomposes as $R = R_"adv" + R_"stretch"$, where $R_"adv" = partial(r_1 dot) slash partial z$ is the residual advection and $R_"stretch"$ collects the stretching shape correction. Each is a first-order differential operator of the form $R = a(z) partial_z + b(z)$. The coefficient bounds $|a(z)| <= C gamma sigma slash d$ and $|b(z)| <= C gamma sigma slash d$ hold uniformly on the support of $tilde(phi)$ (which is concentrated at $|z| <= O(ell_("eq")) = O(sigma)$), because $|r_1| <= C gamma sigma^2 slash d$ (Lemma B) and the stretching correction involves $omega_3^2$ which decays exponentially under biaxial compression.
+(ii) From Lemma B, the perturbation $R$ decomposes as $R = R_"adv" + R_"stretch"$, where $R_"adv" = partial(r_1 dot) slash partial z$ is the residual advection and $R_"stretch"$ collects the stretching shape correction. Each is a first-order differential operator of the form $R = a(z) partial_z + b(z)$. The coefficient bounds $|a(z)| <= C gamma sigma slash d$ and $|b(z)| <= C gamma sigma slash d$ hold uniformly on the support of $tilde(phi)$ (which is concentrated at $|z| <= O(ell_("eq") = O(sigma)$), because $|r_1| <= C gamma sigma^2 slash d$ (Lemma B) and the stretching correction involves $omega_3^2$ which decays exponentially under biaxial compression.
 
 (iii) $R$ is relatively bounded with respect to $cal(L)_"OU"$ with _relative bound zero_: for any $epsilon > 0$,
 
-$ ||R u||_(L^2(d mu)) <= epsilon ||cal(L)_"OU" u||_(L^2(d mu)) + C(epsilon) ||u||_(L^2(d mu)) quad forall u in D(cal(L)_"OU")) $
+$ ||R u||_(L^2(d mu)) <= epsilon ||cal(L)_"OU" u||_(L^2(d mu)) + C(epsilon) ||u||_(L^2(d mu)) quad forall u in D(cal(L)_"OU") $
 
-_Proof._ By the interpolation inequality for Gaussian Sobolev spaces [19, Prop. 5.5.1], the first derivative satisfies $||partial_z u||_(L^2(d mu)) <= epsilon ||partial_z^2 u||_(L^2(d mu)) + C(epsilon) ||u||_(L^2(d mu))$ for any $epsilon > 0$. Since $cal(L)_"OU"$ controls $||partial_z^2 u||$ via its second-order term $nu partial_z^2$, applying this with the coefficient bounds on $a(z)$ and $b(z)$ gives relative bound zero. By the Kato-Rellich theorem [17, Thm. V.4.3], $cal(L)_"OU" + R$ generates a $C_0$-semigroup on $L^2(d mu)$ with domain $D(cal(L)_"OU"))$. This establishes Lemma C. $square$
+_Proof._ By the interpolation inequality for Gaussian Sobolev spaces [19, Prop. 5.5.1], the first derivative satisfies $||partial_z u||_(L^2(d mu)) <= epsilon ||partial_z^2 u||_(L^2(d mu)) + C(epsilon) ||u||_(L^2(d mu))$ for any $epsilon > 0$. Since $cal(L)_"OU"$ controls $||partial_z^2 u||$ via its second-order term $nu partial_z^2$, applying this with the coefficient bounds on $a(z)$ and $b(z)$ gives relative bound zero. By the Kato-Rellich theorem [17, Thm. V.4.3], $cal(L)_"OU" + R$ generates a $C_0$-semigroup on $L^2(d mu)$ with domain $D(cal(L)_"OU")$. This establishes Lemma C. $square$
 
 *Lemma D (Spectral-gap persistence and dissipation bound).* Under hypotheses (H1)--(H5) with scale separation (H3):
 
@@ -600,19 +604,19 @@ for a universal constant $C > 0$.
 
 $ 2 nu integral |partial omega slash partial z|^2 d V >= 2 gamma (1 - C sigma slash d) Omega $
 
-_Proof of (i)._ The Hermite matrix element connecting ground and first excited states satisfies $|R_(0 1)| = |chevron.l psi_0, R psi_1 chevron.r| <= C' gamma sigma slash d$ (from the coefficient bounds in Lemma B and $||partial psi_1 slash partial z|| tilde 1 slash ell_("eq"))$). By second-order perturbation theory [17, Ch. II.2], the spectral gap shift is bounded:
+_Proof of (i)._ The Hermite matrix element connecting ground and first excited states satisfies $|R_(0 1)| = |chevron.l psi_0, R psi_1 chevron.r| <= C' gamma sigma slash d$ (from the coefficient bounds in Lemma B and $||partial psi_1 slash partial z|| tilde 1 slash ell_("eq")$). By second-order perturbation theory [17, Ch. II.2], the spectral gap shift is bounded:
 
 $ |delta Delta| <= |R_(0 1)|^2 / (2 gamma) + O(|R_(0 1)|^3 slash gamma^2) <= C gamma sigma^2 / d^2 = C gamma / "Re" $
 
 The leading-order term is Z3-verified (BE14). For $"Re" > 100$, the perturbed gap $Delta' > 0$ (Z3-verified: BE15) and retains over 99% of its original value (Z3-verified: BE16). All non-ground-state modes decay at rate $>= Delta' > 0$, so the $z$-profile converges exponentially to the perturbed ground state.
 
-_Quantitative perturbation-to-gap ratio._ Define $epsilon_("pert")) := ||R||_("op")) slash Delta$. From the coefficient bounds $|a|, |b| <= C gamma sigma slash d$ and the spectral gap $Delta = 2 gamma$, the operator norm satisfies $||R||_("op")) <= C gamma sigma slash d$ (acting on $L^2(d mu)$), giving:
+_Quantitative perturbation-to-gap ratio._ Define $epsilon_("pert") := ||R||_("op") slash Delta$. From the coefficient bounds $|a|, |b| <= C gamma sigma slash d$ and the spectral gap $Delta = 2 gamma$, the operator norm satisfies $||R||_("op") <= C gamma sigma slash d$ (acting on $L^2(d mu)$), giving:
 
-$ epsilon_("pert")) = ||R||_("op")) / Delta <= (C gamma sigma slash d) / (2 gamma) = C / 2 dot sigma / d $
+$ epsilon_("pert") = ||R||_("op") / Delta <= (C gamma sigma slash d) / (2 gamma) = C / 2 dot sigma / d $
 
-For $d slash sigma > C$, we have $epsilon_("pert")) < 1$ and the perturbation is strictly sub-dominant. Under blow-up scaling $d slash sigma tilde sqrt("Re" slash 2)$, we obtain $epsilon_("pert")) = O("Re"^(-1 slash 2)) -> 0$. This is not merely a sign condition: it is a quantitative bound ensuring the residual cannot close the spectral gap at any finite order (Z3-verified: BE15, BE16).
+For $d slash sigma > C$, we have $epsilon_("pert") < 1$ and the perturbation is strictly sub-dominant. Under blow-up scaling $d slash sigma tilde sqrt("Re" slash 2)$, we obtain $epsilon_("pert") = O("Re"^(-1 slash 2)) -> 0$. This is not merely a sign condition: it is a quantitative bound ensuring the residual cannot close the spectral gap at any finite order (Z3-verified: BE15, BE16).
 
-_Proof of (ii)._ The Gaussian ground state $psi_0$ minimizes the Rayleigh quotient $integral |partial_z phi|^2 d mu slash integral |phi|^2 d mu = 1 slash (2 ell_("eq"))^2)$ among all profiles in $L^2(d mu)$ [19, Ch. 4]. The perturbed ground state $psi_0'$ differs from $psi_0$ by $||psi_0' - psi_0||_(L^2(d mu)) = O(sigma slash d)$ (first-order perturbation theory [17, Ch. II.1]). The Rayleigh quotient is perturbed by $O(sigma slash d)$, giving $integral |partial_z psi_0'|^2 d mu slash integral |psi_0'|^2 d mu >= (1 - C sigma slash d) slash (2 ell_("eq"))^2)$. Multiplying by $2 nu$ and $Omega$ yields the claimed dissipation bound (Z3-verified: BE12, BE12b). $square$
+_Proof of (ii)._ The Gaussian ground state $psi_0$ minimizes the Rayleigh quotient $integral |partial_z phi|^2 d mu slash integral |phi|^2 d mu = 1 slash (2 ell_("eq")^2)$ among all profiles in $L^2(d mu)$ [19, Ch. 4]. The perturbed ground state $psi_0'$ differs from $psi_0$ by $||psi_0' - psi_0||_(L^2(d mu)) = O(sigma slash d)$ (first-order perturbation theory [17, Ch. II.1]). The Rayleigh quotient is perturbed by $O(sigma slash d)$, giving $integral |partial_z psi_0'|^2 d mu slash integral |psi_0'|^2 d mu >= (1 - C sigma slash d) slash (2 ell_("eq")^2)$. Multiplying by $2 nu$ and $Omega$ yields the claimed dissipation bound (Z3-verified: BE12, BE12b). $square$
 
 *Proposition 8.3a (Compression-direction confinement).* Combining Lemmas A--D: the enstrophy budget under biaxial strain satisfies
 
@@ -678,9 +682,9 @@ _Lemma (Near-biaxial enstrophy control)._ Let $lambda_1 = gamma(1 + epsilon)$, $
 
 _(i) Stretching bound._ $omega_i S_(i j) omega_j <= lambda_1 |omega|^2 = gamma(1 + epsilon)|omega|^2$, so $2 integral omega_i S_(i j) omega_j d V <= 2 gamma(1 + epsilon) Omega$ (Z3-verified: BE9).
 
-_(ii) Compression rate._ The $e_3$-compression velocity is $v_(e_3) = -(2 + epsilon) gamma z$, giving equilibrium thickness $ell_("eq"))^2(epsilon) = nu slash ((2 + epsilon) gamma)$. By the same Ornstein-Uhlenbeck convergence as Case 2b (spectral gap $(2 + epsilon) gamma > 2 gamma$), the $z$-profile converges to the Gaussian ground state.
+_(ii) Compression rate._ The $e_3$-compression velocity is $v_(e_3) = -(2 + epsilon) gamma z$, giving equilibrium thickness $ell_("eq")^2(epsilon) = nu slash ((2 + epsilon) gamma)$. By the same Ornstein-Uhlenbeck convergence as Case 2b (spectral gap $(2 + epsilon) gamma > 2 gamma$), the $z$-profile converges to the Gaussian ground state.
 
-_(iii) $z$-dissipation._ At the equilibrium scale: $2 nu integral |partial omega slash partial z|^2 d V >= nu Omega slash ell_("eq"))^2 = (2 + epsilon) gamma Omega$ (same confinement argument as Case 2b with compression rate $(2 + epsilon) gamma$).
+_(iii) $z$-dissipation._ At the equilibrium scale: $2 nu integral |partial omega slash partial z|^2 d V >= nu Omega slash ell_("eq")^2 = (2 + epsilon) gamma Omega$ (same confinement argument as Case 2b with compression rate $(2 + epsilon) gamma$).
 
 _(iv) $z$-direction budget._ Combining (i) and (iii): $d Omega slash d t <= 2 gamma(1 + epsilon) Omega - (2 + epsilon) gamma Omega = gamma Omega (2 + 2 epsilon - 2 - epsilon) = epsilon gamma Omega$ (Z3-verified: BE9). The excess stretching over $z$-dissipation is exactly $epsilon gamma Omega$.
 
@@ -692,7 +696,7 @@ _Conclusion._ In all three cases, either the coherence theorem applies directly 
 
 *Lemma 5: Triangle inequality and combined bound [STANDARD].* The vorticity direction variation decomposes via the triangle inequality:
 
-$ |delta xi| <= 2 sin theta_("max")) + |delta e_1| <= 2 sin theta_("max")) + 2/3 dot sigma / d $
+$ |delta xi| <= 2 sin theta_("max") + |delta e_1| <= 2 sin theta_("max") + 2/3 dot sigma / d $
 
 At $"Re" = 1000$ after 3 alignment times ($sin theta approx 0.025$): $|delta xi| <= 0.08$. Coherence at the level of a few percent, improving toward blow-up. Z3 verifies (CT7): $|delta xi| < 1$.
 
@@ -719,7 +723,7 @@ We now summarize the status of each gap. None of these reductions constitute unc
 *Gap A: Concentration morphology (reformulated as localized conditional theorem).* This is the load-bearing gap. The argument is formalized as a standalone theorem (`theories/ns_coherence_theorem.kleis`, CT1-CT11) with the viscous perturbativity analysis in a companion file (`theories/ns_bp2_viscous_control.kleis`, VP1-VP9). Total: 27 examples across two files, 12 Z3-verified structures.
 
 The coherence bound is:
-$ ||xi - xi_j||_(L^infinity (B(x_j, sigma))) <= 2 sin theta_("max")) + 2/3 dot sigma / d $
+$ ||xi - xi_j||_(L^infinity (B(x_j, sigma))) <= 2 sin theta_("max") + 2/3 dot sigma / d $
 
 _Case 1 (separated eigenvalues):_ Biot-Savart decay $=>$ $|nabla S| <= C slash d$ (Lemma 1) $=>$ eigenvalue gap $>= gamma$ $=>$ $|nabla e_1| <= C slash d$ (Lemma 3, Kato [17]) $=>$ $|nabla xi| <= C slash d$ (Theorem 8.2) $=>$ $|V[xi]| <= (7 slash 6) gamma sigma slash d$ (Proposition 8.1) $=>$ perturbative ratio $-> 0$ (Corollary 8.1.1) $=>$ alignment dominates $=>$ coherence.
 
@@ -729,10 +733,11 @@ BP2 reduces to Proposition 8.1 + Theorem 8.2; assumptions (A1), (A4) are dimensi
 
 *Gap B: Profile convergence (reduced to adiabatic spectral control --- Proposition 8.4).* Proposition 8.4 proves that the perturbation energy $E = ||omega - omega_B||^2$ satisfies $d E slash d t <= -gamma E + gamma eta^2 C_B^2 ||omega_B||^2$, with equilibrium $E^* = eta^2 C_B^2 ||omega_B||^2 -> 0$ since $eta -> 0$ under Type II blow-up (ESS). The argument uses the spectral gap $gamma$ of the Burgers linearization (Layer 1) and Young's inequality. Z3-verified: AP5b, AP6, AP7, AP9.
 
-*Gap C: Interaction geometry (reduced to transient robustness --- Proposition 8.5).* Proposition 8.5 proves that the enstrophy budget $d Omega slash d t < 0$ uniformly across all interaction phases. The spatial partition $d Omega slash d t = integral_("QS")) + integral_("recon"))$ is exact and exhaustive. Quasi-static regions have $Q < 0$ by Papers [3]-[4]; reconnection regions have dissipation dominance by gradient steepening (TR7c). Constants are universal (Burgers profile + CZ kernel + LRT covering). Z3-verified: TR7b, TR7c, TR8-TR10.
+*Gap C: Interaction geometry (reduced to transient robustness --- Proposition 8.5).* Proposition 8.5 proves that the enstrophy budget $d Omega slash d t < 0$ uniformly across all interaction phases. The spatial partition $d Omega slash d t = integral_("QS") + integral_("recon")$ is exact and exhaustive. Quasi-static regions have $Q < 0$ by Papers [3]-[4]; reconnection regions have dissipation dominance by gradient steepening (TR7c). Constants are universal (Burgers profile + CZ kernel + LRT covering). Z3-verified: TR7b, TR7c, TR8-TR10.
 
 *The self-closing chain.* Gap A is reformulated as a localized confinement theorem (Theorem 8.3a\*) whose hardest hypothesis is the nonlocal perturbativity condition (H5); the separated-eigenvalue case is handled by Propositions 8.1, 8.3 + Theorem 8.2. Gap B is mostly reduced to standard adiabatic/spectral control via Proposition 8.4. Gap C is reduced to transient robustness under quantified assumptions via Proposition 8.5 (Papers [3]-[4]). The chain:
-$ "Blow-up" =>^("Link 1") "stretching" =>^("Prop 8.3") "alignment" =>^("Thm 8.2") "coherence" =>^("Links 2-3") "tubes" =>^("Prop 8.4") "Burgers" =>^("Links 5-7") "depletion" =>^("Prop 8.5") "NOT blow-up" $
+$ "Blow-up" =>^("Link 1") "stretching" =>^("Prop 8.3") "alignment" =>^("Thm 8.2") "coherence" =>^("Links 2-3") "tubes" $
+$ quad =>^("Prop 8.4") "Burgers" =>^("Links 5-7") "depletion" =>^("Prop 8.5") "NOT blow-up" $
 
 Z3 verifies the logical implication (CS11): assuming blow-up leads to net enstrophy decrease --- a contradiction. The proof does not require eigenvalue nondegeneracy (H3) as a global assumption; biaxial and near-biaxial cases are handled by the direct enstrophy bound of Proposition 8.3, Case 2b.
 
@@ -751,7 +756,7 @@ We classify _every_ axiom used in the argument chain. This table enables a revie
   [ESS excluding Type I blow-up], [Escauriaza-Seregin-Sverak (2003) [8]],
   [CKN partial regularity ($cal(H)^1 (S) = 0$)], [Caffarelli-Kohn-Nirenberg (1982) [6]],
   [Lei-Ren-Tian directional covering], [Lei-Ren-Tian (2025) [5]],
-  [Biot-Savart far-field decay ($|S_("ext"))| <= C Gamma slash d^2$, $|nabla S| <= C Gamma slash d^3$)], [Biot-Savart kernel (pointwise)],
+  [Biot-Savart far-field decay ($|S_("ext")| <= C Gamma slash d^2$, $|nabla S| <= C Gamma slash d^3$)], [Biot-Savart kernel (pointwise)],
   [Vorticity direction equation ($d xi slash d t = (S - (xi dot S dot xi) I) xi + ...$)], [Classical NS consequence],
   [Alignment rate ($d(cos^2 theta) slash d t = 2(lambda_1 - lambda_2) sin^2 cos^2$)], [Girimaji-Pope (1990)],
   [Kato-Rellich theorem (relative boundedness $=>$ semigroup generation)], [Kato (1966) [17]; Reed-Simon (1975) [18]],
@@ -780,15 +785,15 @@ We classify _every_ axiom used in the argument chain. This table enables a revie
   columns: (auto, auto, auto),
   [*Result*], [*Derivation*], [*Z3 ID*],
   [Alignment dynamics: $theta -> 0$ under sustained stretching], [NS vorticity direction equation + eigenvalue gap], [AD5-AD8],
-  [Alignment precedes Burgers convergence ($tau_("align")) < tau_("Burgers"))$)], [Eigenvalue gap $3 gamma slash 2$ vs $gamma$], [AD6],
+  [Alignment precedes Burgers convergence ($tau_("align") < tau_("Burgers")$)], [Eigenvalue gap $3 gamma slash 2$ vs $gamma$], [AD6],
   [$xi$-variation after alignment: $|delta xi| <= sin theta + C sigma slash d$], [Alignment dynamics + Biot-Savart decay], [AD7],
   [Cross-sectional coherence: $xi$ coherent on $sigma$-scale], [Proposition 8.1 + Corollary 8.1.1 + Theorem 8.2 (Case 1: eigenvalue gap); Proposition 8.3 Case 2b: biaxial enstrophy bound (Case 2: biaxial)], [CT2-CT8 + VP1-VP9 + BE1-BE7],
   [Forcing bound: forcing $= eta dot gamma dot E$ with $eta < 1$], [Type II perturbation expansion + ESS], [AP5b],
   [Perturbation decay under derived forcing], [Forcing bound + spectral gap], [AP6],
-  [Adiabatic ratio improvement ($eta_("late")) < eta_("early"))$)], [Type II: $eta = alpha tau^(alpha-1)$ decreasing], [AP7],
+  [Adiabatic ratio improvement ($eta_("late") < eta_("early")$)], [Type II: $eta = alpha tau^(alpha-1)$ decreasing], [AP7],
   [Depletion dominates stretching ($c dot "Re" > 1$ near blow-up)], [$Q < 0$ scaling (Link 6) + Re growth], [TR7b],
   [Dissipation dominates during reconnection ($sigma^2 slash 2 delta^2 > 1$)], [Gradient steepening at scale $delta << sigma$], [TR7c],
-  [Phase partition: $d Omega slash d t = integral_("QS")) + integral_("recon"))$], [Spatial integral over disjoint domains (exact)], [TR8],
+  [Phase partition: $d Omega slash d t = integral_("QS") + integral_("recon")$], [Spatial integral over disjoint domains (exact)], [TR8],
 )
 
 *Layer 4: What Z3 actually verifies --- and what it does not.* Z3 verifies _logical consistency_: given the axioms, do the conclusions follow? It confirms that no logical gap exists between the stated axioms and the regularity conclusion. It does _not_ verify that the axioms are true in the Navier-Stokes sense. Layers 1-2 axioms are published theorems and can be taken as given. Layer 3 items are proved in this paper from classical ingredients, with each proof given explicitly (Propositions 8.1-8.5, Theorem 8.2).
@@ -842,7 +847,8 @@ This paper reduces the Navier-Stokes regularity problem to a small number of exp
 
 *The complete chain:*
 
-$ "Blow-up" =>^("Link 1") "stretching" =>^("Prop 8.3") "alignment" =>^("Thm 8.2") "coherence" =>^("Links 2-3") "tubes" =>^("Prop 8.4") "Burgers" =>^("Links 5-7") "depletion" =>^("Prop 8.5") d Omega slash d t < 0 => "NOT blow-up" $
+$ "Blow-up" =>^("Link 1") "stretching" =>^("Prop 8.3") "alignment" =>^("Thm 8.2") "coherence" =>^("Links 2-3") "tubes" $
+$ quad =>^("Prop 8.4") "Burgers" =>^("Links 5-7") "depletion" =>^("Prop 8.5") d Omega slash d t < 0 => "NOT blow-up" $
 
 Every axiom is either a published theorem (Layer 1: CKN, ESS, BKM, CZ, LRT), established in Papers [1]-[4] (Layer 2: $Q < 0$, angular averaging, many-body locality), or proved/reduced in this paper (Layer 3: Propositions 8.1-8.5, Theorem 8.2, Theorem 8.3a\*). The argument does not require eigenvalue nondegeneracy (H3) as a global assumption; the biaxial and near-biaxial cases are handled by the direct enstrophy bound of Proposition 8.3, Case 2b. Z3 verifies the logical chain (CS11). The Millennium Problem is compressed to a small, explicitly enumerable set of analytical obligations; the most analytically exposed is the nonlocal perturbative control (H5), which is constructively attacked via the Biot-Savart decomposition of Lemmas H5.1--H5.5 and requires establishing that centered-core dipole cancellation and mid-field multipole decay hold under general blow-up geometry.
 
