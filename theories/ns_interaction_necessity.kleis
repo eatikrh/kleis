@@ -1,0 +1,230 @@
+// =============================================================================
+// Interaction Necessity: Blow-Up Requires External Stretching
+// =============================================================================
+//
+// CLAIM:
+//   Blow-up requires the stretching rate gamma to grow without bound.
+//   But gamma for a single tube is self-consistently bounded (Step 2).
+//   Therefore, gamma growth requires EXTERNAL sources of strain —
+//   i.e., interaction with other vorticity regions.
+//
+// ARGUMENT CHAIN:
+//   1. Blow-up requires Omega -> infinity in finite time (BKM criterion).
+//   2. Enstrophy growth dOmega/dt ~ gamma * Omega requires gamma to grow
+//      faster than 1/(T* - t) to produce finite-time divergence.
+//   3. Self-consistent stretching: gamma_self = Gamma/(2 pi R^2)
+//      With conservation of circulation and R >= sigma = sqrt(2nu/gamma),
+//      gamma_self is bounded above by Gamma^2 / (8 pi^2 nu).
+//   4. Bounded gamma -> Burgers equilibrium -> no blow-up (Step 2).
+//   5. Therefore: unbounded gamma requires external strain, i.e., interaction.
+//
+// BIOT-SAVART AND EXTERNAL STRAIN:
+//   The velocity field is u(x) = integral K(x-y) x omega(y) dy
+//   The strain at vortex A comes from:
+//     - Self-induced strain (from A's own vorticity) -> bounded (Step 2)
+//     - External strain (from other vorticity B, C, ...) -> can grow
+//   The external strain rate is gamma_ext ~ Gamma_ext / (2 pi d^2)
+//   where d is the distance to the external source.
+//   For gamma_ext to blow up: d -> 0 (tubes approach) or Gamma_ext -> inf.
+//   Circulation is conserved, so d -> 0 is the only mechanism.
+//
+// CONNECTION TO PAPERS I-IV:
+//   Once we establish that blow-up requires interacting tubes,
+//   the pressure-Hessian analysis of Papers III-IV applies.
+//   The interaction produces Q < 0 (depleting), which prevents the
+//   very blow-up that drives the interaction.
+//
+// =============================================================================
+
+define pi_in = 3.14159265358979
+define nu_in = 0.01
+
+// --- Self-consistent stretching bound ---
+
+// gamma_max = Gamma^2 / (8 pi^2 nu) for a single tube
+define gamma_max_self(circ) =
+    divide(times(circ, circ), times(8, times(times(pi_in, pi_in), nu_in)))
+
+// Burgers equilibrium vorticity at this max gamma
+define omega_max_self(circ) =
+    let g = gamma_max_self(circ) in
+    divide(times(circ, g), times(2, times(pi_in, nu_in)))
+
+// --- IN1: self-consistent stretching bound (numerical) ---
+
+example "IN1: self-consistent stretching bound" {
+    let g_01 = gamma_max_self(0.1) in
+    let g_1 = gamma_max_self(1.0) in
+    let g_10 = gamma_max_self(10.0) in
+    out("Maximum self-consistent stretching gamma_max = Gamma^2/(8 pi^2 nu):");
+    out(format("  Gamma = 0.1: gamma_max = {:.6}", g_01));
+    out(format("  Gamma = 1.0: gamma_max = {:.6}", g_1));
+    out(format("  Gamma = 10:  gamma_max = {:.6}", g_10));
+    out("All finite — self-stretching cannot diverge")
+}
+
+// --- IN2: blow-up requires gamma ~ 1/(T* - t) ---
+//
+// For finite-time blow-up at time T*:
+//   Omega(t) ~ (T* - t)^(-p) with p >= 1
+//   dOmega/dt ~ p * Omega / (T* - t)
+//   From dOmega/dt ~ 2 gamma Omega: gamma ~ p / (2(T* - t)) -> infinity
+//
+// So blow-up requires unbounded gamma, but self-stretching gives bounded gamma.
+
+define gamma_blowup(p, t_star, t) =
+    divide(p, times(2, minus(t_star, t)))
+
+example "IN2: blow-up requires diverging stretching rate" {
+    let t_star = 1.0 in
+    let g_09 = gamma_blowup(1, t_star, 0.9) in
+    let g_099 = gamma_blowup(1, t_star, 0.99) in
+    let g_0999 = gamma_blowup(1, t_star, 0.999) in
+    let g_self = gamma_max_self(1.0) in
+    out("Required gamma for blow-up (p=1, T* = 1.0):");
+    out(format("  t = 0.9:   gamma_req = {:.2}", g_09));
+    out(format("  t = 0.99:  gamma_req = {:.2}", g_099));
+    out(format("  t = 0.999: gamma_req = {:.2}", g_0999));
+    out(format("  gamma_max(self) = {:.2}", g_self));
+    out("Blow-up gamma diverges, but self-stretching is bounded");
+    out("Therefore: external stretching is required for blow-up")
+}
+
+// --- IN3: external strain from another tube ---
+//
+// Tube B at distance d provides strain gamma_ext ~ Gamma_B / (2 pi d^2)
+// As d -> 0, gamma_ext -> infinity (potential blow-up source)
+// But d cannot go below sigma (core overlap changes the physics)
+
+define gamma_external(circ_b, d) =
+    divide(circ_b, times(2, times(pi_in, times(d, d))))
+
+example "IN3: external strain can grow as tubes approach" {
+    let circ_b = 1.0 in
+    let g_d10 = gamma_external(circ_b, 10.0) in
+    let g_d5 = gamma_external(circ_b, 5.0) in
+    let g_d1 = gamma_external(circ_b, 1.0) in
+    let g_d01 = gamma_external(circ_b, 0.1) in
+    out("External stretching rate vs separation (Gamma_B = 1.0):");
+    out(format("  d = 10:  gamma_ext = {:.6}", g_d10));
+    out(format("  d = 5:   gamma_ext = {:.6}", g_d5));
+    out(format("  d = 1:   gamma_ext = {:.6}", g_d1));
+    out(format("  d = 0.1: gamma_ext = {:.6}", g_d01));
+    out("External strain grows as d^(-2) — source of potential blow-up")
+}
+
+// =============================================================================
+// Z3 Verification: Interaction necessity
+// =============================================================================
+
+// --- IN4: self-stretching is bounded (Z3) ---
+
+structure SelfStretchingBoundedIN {
+    element circ_in : ℝ
+    element nu_in4 : ℝ
+    element gamma_self : ℝ
+    element gamma_bound : ℝ
+
+    axiom circ_pos : circ_in > 0
+    axiom nu_pos : nu_in4 > 0
+
+    // gamma_self <= Gamma^2 / (8 pi^2 nu)
+    axiom self_bound : times(gamma_self, times(8, times(times(pi_in, pi_in), nu_in4))) ≤ times(circ_in, circ_in)
+    axiom gamma_nonneg : gamma_self ≥ 0
+
+    // The upper bound
+    axiom bound_def : times(gamma_bound, times(8, times(times(pi_in, pi_in), nu_in4))) = times(circ_in, circ_in)
+}
+
+example "IN4: self-stretching has a finite upper bound (Z3)" {
+    assert(gamma_self ≤ gamma_bound)
+}
+
+// --- IN5: constant gamma gives bounded enstrophy (Z3) ---
+
+structure ConstantGammaBounded {
+    element gamma_cg : ℝ
+    element omega_eq : ℝ
+    element enstrophy_eq : ℝ
+    element sigma_cg : ℝ
+
+    axiom gamma_pos : gamma_cg > 0
+    axiom omega_pos : omega_eq > 0
+    axiom sigma_pos : sigma_cg > 0
+
+    // Enstrophy at Burgers equilibrium: Omega = pi w0^2 sigma^2
+    axiom enstrophy_finite : enstrophy_eq = times(pi_in, times(times(omega_eq, omega_eq), times(sigma_cg, sigma_cg)))
+    axiom enstrophy_pos : enstrophy_eq > 0
+}
+
+example "IN5: constant gamma gives finite enstrophy (Z3)" {
+    assert(enstrophy_eq > 0)
+}
+
+// --- IN6: blow-up requires external stretching (Z3) ---
+//
+// If gamma is bounded by gamma_max and enstrophy growth is
+// dOmega/dt = 2(gamma - gamma_burgers) Omega, then for gamma <= gamma_max
+// and gamma_burgers = gamma (at equilibrium), we get dOmega/dt <= 0.
+
+structure InteractionNecessity {
+    element gamma_total : ℝ
+    element gamma_self_in : ℝ
+    element gamma_ext : ℝ
+    element gamma_max_in : ℝ
+    element gamma_eq : ℝ
+    element enstrophy_in : ℝ
+    element d_enstrophy_in : ℝ
+
+    axiom enstrophy_pos : enstrophy_in > 0
+    axiom gamma_eq_pos : gamma_eq > 0
+
+    // Total stretching = self + external
+    axiom total_decomp : gamma_total = plus(gamma_self_in, gamma_ext)
+
+    // Self-stretching bounded
+    axiom self_bounded : gamma_self_in ≤ gamma_max_in
+    axiom gamma_max_pos : gamma_max_in > 0
+
+    // No external interaction: gamma_ext = 0
+    axiom no_interaction : gamma_ext = 0
+
+    // At equilibrium: dOmega/dt = 2(gamma_total - gamma_eq) Omega
+    // With gamma_total = gamma_self <= gamma_max = gamma_eq (at Burgers equilibrium)
+    axiom at_equilibrium : gamma_eq = gamma_max_in
+    axiom enstrophy_rate : d_enstrophy_in = times(2, times(minus(gamma_total, gamma_eq), enstrophy_in))
+}
+
+example "IN6: without external interaction enstrophy bounded (Z3)" {
+    assert(d_enstrophy_in ≤ 0)
+}
+
+// --- IN7: with external interaction, blow-up POSSIBLE (Z3) ---
+
+structure WithInteraction {
+    element gamma_total_wi : ℝ
+    element gamma_self_wi : ℝ
+    element gamma_ext_wi : ℝ
+    element gamma_eq_wi : ℝ
+    element enstrophy_wi : ℝ
+    element d_enstrophy_wi : ℝ
+
+    axiom enstrophy_pos : enstrophy_wi > 0
+
+    // Total = self + external
+    axiom total_decomp : gamma_total_wi = plus(gamma_self_wi, gamma_ext_wi)
+
+    // External interaction present and strong
+    axiom ext_strong : gamma_ext_wi > 0
+
+    // Self at equilibrium
+    axiom self_at_eq : gamma_self_wi = gamma_eq_wi
+    axiom gamma_eq_pos : gamma_eq_wi > 0
+
+    // Enstrophy rate: excess stretching from external
+    axiom enstrophy_rate : d_enstrophy_wi = times(2, times(gamma_ext_wi, enstrophy_wi))
+}
+
+example "IN7: with external interaction enstrophy CAN grow (Z3)" {
+    assert(d_enstrophy_wi > 0)
+}

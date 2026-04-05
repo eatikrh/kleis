@@ -1,0 +1,179 @@
+// =============================================================================
+// Stretching Necessity: Without Stretching, Vorticity Decays
+// =============================================================================
+//
+// CLAIM:
+//   The NS vorticity equation has only one amplification term: vortex stretching.
+//   Without it, the equation is a heat equation and vorticity decays.
+//   Therefore: blow-up requires stretching.
+//
+// VORTICITY EQUATION:
+//   dw/dt + (u.nabla)w = (w.nabla)u + nu nabla^2 w
+//                         ^^^^^^^^^^   ^^^^^^^^^^^^
+//                         stretching    diffusion
+//
+// Without stretching: dw/dt = nu nabla^2 w  (heat equation)
+//   - Maximum principle: |w(t)| <= |w(0)|
+//   - Enstrophy dissipation: d/dt int |w|^2 = -2 nu int |nabla w|^2 < 0
+//
+// ENSTROPHY EVOLUTION:
+//   dOmega/dt = 2 S - 2 nu P
+//   where S = stretching production, P = palenstrophy (dissipation)
+//   Without stretching (S=0): dOmega/dt = -2 nu P < 0  (always decreasing)
+//
+// =============================================================================
+
+define pi_sn = 3.14159265358979
+define nu_sn = 0.01
+define omega0_sn = 100.0
+define sigma0_sn = 1.0
+define s0sq = times(sigma0_sn, sigma0_sn)
+
+// --- Exact heat equation solutions ---
+
+// Peak vorticity: w_max(t) = w0 s0^2 / (s0^2 + 4 nu t)
+define omega_peak_heat(t) =
+    times(omega0_sn, divide(s0sq, plus(s0sq, times(4, times(nu_sn, t)))))
+
+// Enstrophy: E(t) = pi w0^2 s0^4 / (s0^2 + 4 nu t)
+define enstrophy_heat(t) =
+    times(pi_sn, times(times(omega0_sn, omega0_sn),
+        divide(times(s0sq, s0sq), plus(s0sq, times(4, times(nu_sn, t))))))
+
+// Core radius squared: s^2(t) = s0^2 + 4 nu t
+define sigma_sq_heat(t) = plus(s0sq, times(4, times(nu_sn, t)))
+
+// --- SN1: peak vorticity decay (numerical) ---
+
+example "SN1: heat equation peak vorticity decays" {
+    let w0 = omega_peak_heat(0) in
+    let w1 = omega_peak_heat(1) in
+    let w5 = omega_peak_heat(5) in
+    let w10 = omega_peak_heat(10) in
+    let w50 = omega_peak_heat(50) in
+    let r1 = divide(w1, w0) in
+    let r5 = divide(w5, w0) in
+    let r10 = divide(w10, w0) in
+    let r50 = divide(w50, w0) in
+    out("Peak vorticity decay (no stretching):");
+    out(format("  t=0:  w_max = {:.2}", w0));
+    out(format("  t=1:  w_max = {:.2}  (ratio {:.4})", w1, r1));
+    out(format("  t=5:  w_max = {:.2}  (ratio {:.4})", w5, r5));
+    out(format("  t=10: w_max = {:.2}  (ratio {:.4})", w10, r10));
+    out(format("  t=50: w_max = {:.2}  (ratio {:.4})", w50, r50))
+}
+
+// --- SN2: enstrophy decay (numerical) ---
+
+example "SN2: heat equation enstrophy decays" {
+    let e0 = enstrophy_heat(0) in
+    let e1 = enstrophy_heat(1) in
+    let e10 = enstrophy_heat(10) in
+    let e50 = enstrophy_heat(50) in
+    out("Enstrophy decay (no stretching):");
+    out(format("  t=0:  E = {:.2}", e0));
+    out(format("  t=1:  E = {:.2}  (ratio {:.4})", e1, divide(e1, e0)));
+    out(format("  t=10: E = {:.2}  (ratio {:.4})", e10, divide(e10, e0)));
+    out(format("  t=50: E = {:.2}  (ratio {:.4})", e50, divide(e50, e0)))
+}
+
+// --- SN3: core broadening (numerical) ---
+
+example "SN3: core broadens without stretching" {
+    let sq0 = sigma_sq_heat(0) in
+    let sq25 = sigma_sq_heat(25) in
+    let sq100 = sigma_sq_heat(100) in
+    out("Core radius squared (no stretching):");
+    out(format("  t=0:   s^2 = {:.2}", sq0));
+    out(format("  t=25:  s^2 = {:.2} (doubled)", sq25));
+    out(format("  t=100: s^2 = {:.2}", sq100))
+}
+
+// =============================================================================
+// Z3 Verification: Structural theorems about stretching necessity
+// =============================================================================
+
+// --- SN4: without stretching, enstrophy MUST decrease ---
+//
+// dOmega/dt = -2 nu P  (S = 0)
+// Since nu > 0 and P > 0, we get dOmega/dt < 0.
+
+structure NoStretchingDecay {
+    element enstrophy_ns : ℝ
+    element palenstrophy : ℝ
+    element nu_ns : ℝ
+    element d_enstrophy : ℝ
+
+    axiom enstrophy_positive : enstrophy_ns > 0
+    axiom nu_positive : nu_ns > 0
+    axiom palenstrophy_positive : palenstrophy > 0
+    axiom no_stretching : d_enstrophy = negate(times(2, times(nu_ns, palenstrophy)))
+}
+
+example "SN4: without stretching enstrophy decreases (Z3)" {
+    assert(d_enstrophy < 0)
+}
+
+// --- SN5: with stretching, enstrophy CAN increase ---
+//
+// dOmega/dt = 2S - 2 nu P
+// If S > nu P, then dOmega/dt > 0.
+
+structure WithStretching {
+    element enstrophy_ws : ℝ
+    element stretching : ℝ
+    element palenstrophy_ws : ℝ
+    element nu_ws : ℝ
+    element d_enstrophy_ws : ℝ
+
+    axiom enstrophy_pos : enstrophy_ws > 0
+    axiom nu_pos : nu_ws > 0
+    axiom palenstrophy_pos : palenstrophy_ws > 0
+    axiom full_evolution : d_enstrophy_ws = minus(times(2, stretching), times(2, times(nu_ws, palenstrophy_ws)))
+    axiom stretching_dominates : stretching > times(nu_ws, palenstrophy_ws)
+}
+
+example "SN5: with stretching enstrophy CAN increase (Z3)" {
+    assert(d_enstrophy_ws > 0)
+}
+
+// --- SN6: zero or negative stretching forces decay ---
+//
+// If S <= 0 and dissipation > 0, then dOmega/dt < 0.
+
+structure StretchingNecessity {
+    element enstrophy_dic : ℝ
+    element stretching_dic : ℝ
+    element dissipation : ℝ
+    element d_enstrophy_dic : ℝ
+
+    axiom enstrophy_pos : enstrophy_dic > 0
+    axiom dissipation_pos : dissipation > 0
+    axiom evolution : d_enstrophy_dic = minus(times(2, stretching_dic), dissipation)
+    axiom no_positive_stretching : stretching_dic ≤ 0
+}
+
+example "SN6: non-positive stretching forces enstrophy decay (Z3)" {
+    assert(d_enstrophy_dic < 0)
+}
+
+// --- SN7: Burgers equilibrium (numerical) ---
+//
+// At Burgers equilibrium: S = gamma * Omega, dissipation = 2 gamma * Omega
+//   (using sigma^2 = 2 nu / gamma)
+// Net: dOmega/dt = 2 gamma Omega - 2 gamma Omega = 0
+// Without stretching: dOmega/dt = -2 gamma Omega (exponential decay)
+
+define gamma_sn = 1.0
+
+example "SN7: Burgers equilibrium stretching balances dissipation" {
+    let stretch = times(2, gamma_sn) in
+    let dissip = times(2, gamma_sn) in
+    let net = minus(stretch, dissip) in
+    out("Burgers vortex equilibrium:");
+    out(format("  Stretching rate  2 gamma = {:.2}", stretch));
+    out(format("  Dissipation rate 2 gamma = {:.2}", dissip));
+    out(format("  Net enstrophy rate = {:.4} (equilibrium)", net));
+    out("Without stretching: exponential decay, half-life ~ 1/(2 gamma) = 0.5");
+    out("CONCLUSION: Stretching is NECESSARY for sustained vorticity")
+}
