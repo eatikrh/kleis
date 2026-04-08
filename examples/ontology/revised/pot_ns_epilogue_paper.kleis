@@ -34,7 +34,7 @@ define paper_affiliations = [
     Affiliation(1, "Kleis Research", "https://kleis.io")
 ]
 
-define paper_abstract = "This is a philosophical epilogue to the five-paper series establishing regularity of smooth solutions to the three-dimensional incompressible Navier-Stokes equations under enstrophy-barycenter centering. We observe that every step of the regularity proof --- energy conservation, forced localization, dipole cancellation, Calderon-Zygmund bounds, scale separation, confinement, and depletion --- is a property of the Biot-Savart kernel $K(x) = x slash (4 pi |x|^3)$, not a property of the fluid. The proof never asks what the fluid is doing; it asks what the kernel allows. This is precisely the structure predicted by Projected Ontology Theory (POT), in which observable fields are projections of ontological flows through Green's function kernels, and the laws of physics are kernel properties. The Biot-Savart law $u(x) = integral K(x - y) times omega(y) d y$ is not an analogy to POT's projection axiom --- it is a concrete instance of it. Vorticity is the ontological content; velocity is the projected observable; gradient fields inhabit the null space. The regularity theorem becomes a statement about kernel admissibility: an admissible kernel cannot produce singular projections. We reflect on the parallel with flat galactic rotation curves, where a different kernel property (slow coherence decay) produces a different prediction (constant orbital velocity), and on the broader implication that phenomena commonly attributed to the behavior of matter may instead be artifacts of the projection through which matter becomes observable."
+define paper_abstract = "This is a philosophical epilogue to the five-paper series establishing regularity of smooth solutions to the three-dimensional incompressible Navier-Stokes equations under enstrophy-barycenter centering. We observe that every step of the regularity proof --- energy conservation, forced localization, dipole cancellation, Calderon-Zygmund bounds, scale separation, confinement, and depletion --- is a property of the Biot-Savart kernel $K(x) = x slash (4 pi |x|^3)$, not a property of the fluid. The proof never asks what the fluid is doing; it asks what the kernel allows. This is precisely the structure predicted by Projected Ontology Theory (POT), in which observable fields are projections of ontological flows through Green's function kernels, and the laws of physics are kernel properties. The Biot-Savart law $u(x) = integral K(x - y) times omega(y) d y$ is not an analogy to POT's projection axiom --- it is a concrete instance of it. Vorticity is the ontological content; velocity is the projected observable; gradient fields inhabit the null space and constitute gauge freedom. The identification is exact: gauge invariance in fluid mechanics, electrodynamics, and Yang-Mills theory is the null space of the respective projection kernel. The regularity theorem becomes a statement about kernel admissibility: an admissible kernel cannot produce singular projections. The entire framework reduces to four statements: physical laws are properties of the kernel; observable quantities are the image; gauge freedom is the null space; there is nothing else."
 
 define paper_keywords = "Projected Ontology Theory, Navier-Stokes, Biot-Savart kernel, Green's function, regularity, projection, vorticity, kernel admissibility"
 
@@ -170,7 +170,59 @@ Projected Ontology Theory predicted this. The prediction is: laws are kernel pro
 
 Fluid mechanics has been staring at a Green's function kernel since Biot and Savart first measured a magnetic field around a wire. It took two centuries, a formal verification language, and an SMT solver to see what the kernel was trying to say:
 
-_I am not a solution method. I am the ontology. The fluid is my projection._")
+_I am not a solution method. I am the gate between ontology and observation. What passes through me, you call physics. What I annihilate, you call gauge. The fluid was never the fundamental object --- and neither am I._")
+
+// =============================================================================
+// Section 7: The Axiom
+// =============================================================================
+
+define sec_axiom = ArxivSection("The Axiom",
+"The preceding sections present the argument narratively. We now compress it to its irreducible core.
+
+=== The null space and gauge freedom
+
+The Biot-Savart kernel recovers velocity from vorticity: $u = K ast omega$. But the recovery is unique only up to a gradient field. Any field $nabla phi$ satisfies $nabla times (nabla phi) = 0$: it produces zero vorticity and is therefore invisible to the kernel. Gradient fields inhabit the null space of the curl operator.
+
+This is precisely the structure of a gauge field. In electrodynamics, $A arrow.r A + nabla chi$ does not change the field strength $F = d A$, because exact forms lie in the null space of the exterior derivative. In Yang-Mills theory, the gauge orbit is the null space of the covariant derivative. In every case, gauge freedom is not a separate concept added to the theory --- it is the null space of the projection kernel.
+
+The pattern is universal:
+
+#table(
+  columns: (auto, auto, auto, auto),
+  align: (left, left, left, left),
+  stroke: 0.5pt,
+  inset: 6pt,
+  [*Domain*], [*Kernel*], [*Image*], [*Null space*],
+  [Fluid mechanics], [$K = x slash (4 pi |x|^3)$], [Velocity $u$], [Gradient fields $nabla phi$],
+  [Electrodynamics], [$d$ (exterior derivative)], [Field strength $F$], [Exact forms $d chi$],
+  [Yang-Mills], [$d_A$ (covariant)], [Curvature $F_A$], [Gauge orbits],
+  [Gravity (POT)], [Coherence kernel $G$], [Gravitational field], [Diffeomorphisms],
+)
+
+The kernel defines what is observable. Its null space defines what is unobservable. We call the unobservable part _gauge freedom_ and then prove at length that physics does not depend on it --- but this is guaranteed from the start, because the kernel already told us it cannot project those degrees of freedom.
+
+=== The chess analogy
+
+The relationship between kernel and dynamics is analogous to the relationship between the rules of chess and chess strategy. The rules are simple: six piece types, a few movement constraints, check and checkmate. Strategy is emergent, deep, and difficult. Entire lifetimes are spent studying openings, endgames, and tactical patterns.
+
+But everything that can happen on a chessboard is determined by the rules. No strategy can violate them. No tactic can transcend them. The rules define the space of possible games; strategy navigates within that space.
+
+The Biot-Savart kernel is the rulebook. The Navier-Stokes dynamics is the game. The PDE is difficult --- genuinely, profoundly difficult --- but the kernel is simple. And the kernel's structural properties (energy dissipation, Calderon-Zygmund regularity, spectral gap, multipole cancellation) determine what the dynamics can and cannot produce. Blow-up is not a legal move.
+
+The Millennium Problem asked whether the game can end in a position that violates the rules. The answer is no --- not because we analyzed every possible game, but because we read the rulebook.
+
+=== Four sentences
+
+The entire framework reduces to four statements, each either a definition or a theorem:
+
++ _Physical laws are properties of the kernel._
++ _Observable quantities are the image._
++ _Gauge freedom is the null space._
++ _There is nothing else._
+
+The first is the POT axiom. The second defines what we measure. The third defines what we cannot measure. The fourth is the claim that no additional ontological furniture is needed: no dark matter to explain rotation curves, no miraculous cancellations to explain regularity, no independent gauge principle to explain symmetry. The kernel, its image, and its null space are the complete description.
+
+This is what the Biot-Savart kernel was trying to say for two hundred years.")
 
 // =============================================================================
 // References
@@ -238,6 +290,7 @@ define paper_elements = [
     sec_parallel,
     sec_phenomena,
     sec_kernel_knows,
+    sec_axiom,
     ref_biot_savart,
     ref_navier,
     ref_stokes,
