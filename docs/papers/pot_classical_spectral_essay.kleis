@@ -93,7 +93,7 @@ define sec_itcm = ArxivSection("Integral Transform Composition as Architecture",
 
 The integral transform composition method (ITCM) constructs a transmutation operator $T_w = H_nu^(-1) compose M_w compose H_mu$ from Hankel transforms $H_mu, H_nu$ and a multiplication operator $M_w$. The resulting kernel
 $ K(x, y) = integral_0^infinity w(k) J_mu (k x) J_nu (k y) k thin d k $
-has $attach(, tl: 2) F_1$ (Gauss hypergeometric) structure inherited from the Sonine--Poisson--Delsarte transmutation [15].
+has $attach(, bl: 2) F_1$ (Gauss hypergeometric) structure inherited from the Sonine--Poisson--Delsarte transmutation [15].
 
 Volume VII [7] established three structural facts:
 

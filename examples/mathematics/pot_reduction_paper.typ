@@ -85,7 +85,7 @@ The Yang--Mills mass gap problem, one of the seven Clay Millennium Prize Problem
 
 This paper presents a _conditional reduction_ of the mass gap problem. The central result is:
 
-*Main Reduction Theorem.* _If Assumptions A, B, C, D, and E hold, then four-dimensional Yang--Mills theory has a positive mass gap._
+*Main Reduction Theorem.* _If Assumptions A, B, C, D, and E hold, and the derived potential belongs to the regular confining class $cal(V)_p$ (defined in §2.4), then four-dimensional Yang--Mills theory has a positive mass gap._
 
 The theorem decomposes into two forms. The _Conditional Spectral Theorem_ (A+B+C+D) establishes the gap in the radial Sturm--Liouville sector. The _Full Reduction_ adds Assumption E to bridge from the one-dimensional spectral gap to the four-dimensional Clay mass gap.
 
@@ -96,7 +96,7 @@ The scaffold (B+C+D) is at epistemic Level A/B -- each component is established 
 
 The contribution is the reduction itself: a rigorous mathematical pipeline that converts two sharply stated external conditions into a mass gap. We do _not_ claim to have solved the Clay Millennium Problem. Assumption E contains the unresolved 4D existence/consistency problem, and Assumption A is an external physics input. What we have built is the scaffold that would convert their resolution into a proof.
 
-This paper is Volume VIII of the Projected Ontology Theory (POT) series, building directly on the ITCM framework developed in Volume VII [19]. The earlier volumes established the structural foundations: Volume IV [18] proved that Yang--Mills confinement arises from fiber non-invariance of the gauge kernel (the Lie-bracket defect makes the kernel non-admissible, and confinement is the topological consequence). Volume VII [19] made the decisive analytical move: it formalized QFT renormalization as projection-kernel composition, proving via the ITCM of Sitnik and collaborators [23] that the path integral and renormalization compose into a single integral transform $K_("QFT") = "FP" compose K_("ren") compose K_("path")$ with an explicit Gauss hypergeometric kernel. Volume VII further established the _Kernel Decomposition Principle_ (the hypergeometric kernel factors via Euler's transformation into a universal Green's-function pole and a regular interaction dressing), localized the mass gap to the regular $attach(, tl: 2) F_1$ correction, and stated the _Spectral Gap Conjecture_: $Delta > 0$ if and only if $mu_("YM") eq.not nu_("YM")$ with IR-regular weight function.
+This paper is Volume VIII of the Projected Ontology Theory (POT) series, building directly on the ITCM framework developed in Volume VII [19]. The earlier volumes established the structural foundations: Volume IV [18] proved that Yang--Mills confinement arises from fiber non-invariance of the gauge kernel (the Lie-bracket defect makes the kernel non-admissible, and confinement is the topological consequence). Volume VII [19] made the decisive analytical move: it formalized QFT renormalization as projection-kernel composition, proving via the ITCM of Sitnik and collaborators [23] that the path integral and renormalization compose into a single integral transform $K_("QFT") = "FP" compose K_("ren") compose K_("path")$ with an explicit Gauss hypergeometric kernel. Volume VII further established the _Kernel Decomposition Principle_ (the hypergeometric kernel factors via Euler's transformation into a universal Green's-function pole and a regular interaction dressing), localized the mass gap to the regular $attach(, bl: 2) F_1$ correction, and stated the _Spectral Gap Conjecture_: $Delta > 0$ if and only if $mu_("YM") eq.not nu_("YM")$ with IR-regular weight function.
 
 The present paper converts Volume VII's conjecture into a rigorous conditional reduction. Where Volume VII identified the framework and asked the question, Volume VIII isolates the five assumptions (A--E), proves the mathematical scaffold (B+C+D) at Level A/B through 14 formal theory files, derives the quantitative gap formula, and states the reduction as an explicit theorem with a complete dependency graph.
 
@@ -128,24 +128,28 @@ _Formal source:_ `pot_assumption_a_formalization.kleis` (18 structures, 24 Z3 ex
 
 == Assumption B: Theorem B -- ITCM Kernel as Resolvent (Level A/B)
 
-*Statement.* The ITCM hypergeometric kernel $K(x,y;z)$ is the Green's function of a Sturm--Liouville operator $L = -d^2 slash d x^2 + V(x)$:
+*Statement.* The ITCM hypergeometric kernel $K(x,y;z)$ satisfies the defining Green's function identity for a Sturm--Liouville operator $L = -d^2 slash d x^2 + V(x)$:
 $ K(x,y;z) = (L - z I)^(-1)(x,y). $
 
 This is established through five clauses. The structural identification is developed in `pot_assumption_b_proof.kleis` (16 structures, 30 Z3 examples), the Green's function normalization -- including the derivative jump condition via the Weber--Schafheitlin integral [11, Ch. 13] and Sonine--Poisson--Delsarte transmutation [23] -- is proved in `pot_greens_normalization.kleis` (15 structures, 35 Z3 examples), and the consolidated theorem is stated in `pot_theorem_b.kleis` (8 structures, 15 Z3 examples):
 
-+ _(i) ODE._ For $x eq.not y$, the kernel satisfies the homogeneous equation $(L_x - z) K = 0$, which follows from the Gauss hypergeometric ODE applied to the $attach(, tl: 2) F_1 (a_1, b_1; c_1; y^2 slash x^2)$ factor.
++ _(i) ODE._ For $x eq.not y$, the kernel satisfies the homogeneous equation $(L_x - z) K = 0$, which follows from the Gauss hypergeometric ODE applied to the $attach(, bl: 2) F_1 (a_1, b_1; c_1; y^2 slash x^2)$ factor.
 
 + _(ii) Singularity._ The universal Euler exponent $c_1 - a_1 - b_1 = -1$ (independent of $mu, nu$) implies a simple pole at $xi = 1$ with residue $R = Gamma(c_1) slash [Gamma(a_1) dot Gamma(b_1)]$, producing a Green's function singularity $K tilde A slash (x - y)$.
 
 + _(iii) $y$-independence._ The near-diagonal coefficient $A = sin(pi b_1) slash pi$ is independent of $y$, by cancellation between the ITCM prefactor ($y^(-1)$) and the geometric Jacobian ($y slash 2$), simplified via the Euler reflection formula.
 
-+ _(iv) Free case._ At $mu = nu$: $attach(, tl: 2) F_1 (c_1, 1; c_1; xi) = (1-xi)^(-1)$ (exact collapse), $K$ reduces to the Bessel Green's function $G_mu$, Wronskian $= -1$, jump $= -1$. This is Level A.
++ _(iv) Free case._ At $mu = nu$: $attach(, bl: 2) F_1 (c_1, 1; c_1; xi) = (1-xi)^(-1)$ (exact collapse), $K$ reduces to the Bessel Green's function $G_mu$, Wronskian $= -1$, jump $= -1$. This is Level A.
 
 + _(v) Spectral normalization._ At $mu eq.not nu$: the spectral construction $T_w = H_nu^(-1) compose M_w compose H_mu$ with Hankel--Parseval unitarity fixes the normalization. This is Level A/B.
 
-The parameters are $a_1 = (mu + nu) slash 2 + 1$, $b_1 = (mu - nu) slash 2 + 1$, $c_1 = mu + 1$, where $mu, nu >= 0$ are the Hankel orders. The Dereziński--Karimi classification [17] provides the structural framework for Sturm--Liouville operators whose Green's functions have $attach(, tl: 2) F_1$ form.
+The parameters are $a_1 = (mu + nu) slash 2 + 1$, $b_1 = (mu - nu) slash 2 + 1$, $c_1 = mu + 1$, where $mu, nu >= 0$ are the Hankel orders. The Dereziński--Karimi classification [17] provides the structural framework for Sturm--Liouville operators whose Green's functions have $attach(, bl: 2) F_1$ form.
 
-*Remark on normalization (local vs. spectral).* Clauses (i)--(iv) are _intrinsic_ to the kernel: the ODE, singularity structure, $y$-independence of the coefficient $A$, and the free-case jump condition are all derived from the local analytic properties of the $attach(, tl: 2) F_1$ factor and its coordinate change $xi = y^2 slash x^2$. No external spectral data is needed. Only clause (v) invokes the global spectral construction: in the dressed case ($mu eq.not nu$), the overall multiplicative normalization is fixed by the unitarity of the Hankel transforms composing $T_w$, not by a local calculation at the diagonal. This is why the free case is Level A (fully local) while the dressed case is Level A/B (local structure plus spectral identification). A reviewer asking whether normalization is intrinsic or imported should note that the _structure_ is intrinsic; only the _scale_ is spectral.
+*Self-adjointness domain.* Throughout this paper, $L = -d^2 slash d x^2 + V(x)$ acts on the half-line $(0, infinity)$ with Dirichlet boundary condition $u(0) = 0$ and domain $D(L) = {u in L^2(RR_+) : u, u' "a.c.", L u in L^2, u(0) = 0}$. For $V in cal(V)_p$ (§2.4), the operator is essentially self-adjoint on $C_c^infinity (0,infinity)$ and has purely discrete spectrum.
+
+*Remark on normalization (local vs. spectral).* Clauses (i)--(iv) are _intrinsic_ to the kernel: the ODE, singularity structure, $y$-independence of the coefficient $A$, and the free-case jump condition are all derived from the local analytic properties of the $attach(, bl: 2) F_1$ factor and its coordinate change $xi = y^2 slash x^2$. No external spectral data is needed. Only clause (v) invokes the global spectral construction: in the dressed case ($mu eq.not nu$), the overall multiplicative normalization is fixed by the unitarity of the Hankel transforms composing $T_w$, not by a local calculation at the diagonal. This is why the free case is Level A (fully local) while the dressed case is Level A/B (local structure plus spectral identification). A reviewer asking whether normalization is intrinsic or imported should note that the _structure_ is intrinsic; only the _scale_ is spectral.
+
+*What would falsify B:* the kernel failing to satisfy the derivative jump condition $partial_x K |_(x=y^+) - partial_x K |_(x=y^-) = -1$, or the $attach(, bl: 2) F_1$ factor not belonging to the Dereziński--Karimi ODE class (e.g., if the Euler exponent $c_1 - a_1 - b_1 eq.not -1$).
 
 == Assumption C: Hankel Asymptotic Regularity (Level A/B)
 
@@ -157,9 +161,11 @@ The parameters are $a_1 = (mu + nu) slash 2 + 1$, $b_1 = (mu - nu) slash 2 + 1$,
 
 + _(C3) Distributional convergence._ The kernel integral $K(x,y) = integral_0^infinity w(k) J_mu (k x) J_nu (k y) k d k$ converges in the distributional sense, with the near-diagonal singularity matching the resolvent structure of Theorem B.
 
-Watson's lemma for Hankel integrals (Titchmarsh [20], Wong) then gives the asymptotic transfer: $w(k) tilde k^(-2 beta)$ in the IR implies $K(x, x) tilde x^(2 beta - 2) = x^(2 gamma)$ for large $x$. The $attach(, tl: 2) F_1$ structure of the ITCM kernel provides strong analytic control: hypergeometric functions have at most power-law singularities, the universal Euler exponent $c - a - b = -1$ gives a simple (integrable) pole, and the Hankel transforms $H_mu, H_nu$ are isometries on $L^2 (RR_+, x d x)$, preserving regularity classes.
+Watson's lemma for Hankel integrals (Titchmarsh [20], Wong) then gives the asymptotic transfer: $w(k) tilde k^(-2 beta)$ in the IR implies $K(x, x) tilde x^(2 beta - 2) = x^(2 gamma)$ for large $x$. The $attach(, bl: 2) F_1$ structure of the ITCM kernel provides strong analytic control: hypergeometric functions have at most power-law singularities, the universal Euler exponent $c - a - b = -1$ gives a simple (integrable) pole, and the Hankel transforms $H_mu, H_nu$ are isometries on $L^2 (RR_+, x d x)$, preserving regularity classes.
 
 *What C does not assume:* pointwise bounds on the kernel away from the diagonal. The transfer from IR weight behavior to position-space growth is asymptotic, not uniform.
+
+*What would falsify C:* the weight $w(k)$ violating any of (C1)--(C3) -- for instance, an IR singularity stronger than power-law (e.g., $w(k) tilde e^(1 slash k)$), a UV tail too heavy for Hankel convergence, or a distributional pathology in the kernel integral preventing asymptotic extraction.
 
 _Formal source:_ `pot_assumption_c_proof.kleis` (12 structures, 22 Z3 examples).
 
@@ -178,6 +184,8 @@ The extraction chain uses three classical results:
 + The _Borg uniqueness theorem_ [13] establishes that $V in cal(V)_p$ is uniquely determined by its spectral data (eigenvalues + norming constants), in the tradition of Gel'fand--Levitan [21] and Marchenko [22] inverse spectral theory.
 
 *What D does not cover:* potentials with oscillatory tails (e.g. $V(x) = x^p sin(x)$) or potentials that grow but fail to be eventually monotone. The ITCM-derived potentials, being Darboux-generated from a smooth superpotential, satisfy the regular confining conditions.
+
+*What would falsify D:* the derived potential falling outside $cal(V)_p$ -- specifically, if $V$ develops oscillatory tails, changes sign infinitely often at large $x$, or fails the monotone-growth condition required for the Weyl--Karamata--Borg chain.
 
 _Formal source:_ `pot_assumption_d_proof.kleis` (14 structures, 31 Z3 examples).
 
@@ -244,7 +252,7 @@ arrow.r.double V(x) tilde x^(2 gamma) arrow infinity quad & ["B+C+D, Level A/B"]
 arrow.r.double "discrete spectrum" quad & ["Rellich--Molchanov, Level A"] \
 arrow.r.double Delta > 0 quad & ["from discreteness, Level A"] $
 
-Step 1 is algebraic: $beta = 1 + gamma$. Step 2 is the bridge equation $alpha = gamma$, derived in File 5 through a three-step asymptotic analysis (IR-to-kernel, kernel-to-Green, Green-to-superpotential). Steps 3--4 use the full scaffold: Theorem B (kernel $=$ resolvent), Hankel regularity (IR singularity $arrow.r$ position-space growth), and inverse spectral extraction (kernel growth $arrow.r$ potential growth). Step 5 is the Rellich--Molchanov theorem: $V(x) arrow infinity$ implies purely discrete spectrum, hence $Delta > 0$.
+Step 1 is algebraic: $beta = 1 + gamma$. Step 2 is the bridge equation $alpha = gamma$, derived in `pot_ir_dressing_bridge.kleis` through a three-step asymptotic matching chain: (i) the IR weight singularity $w(k) tilde k^(-2 beta)$ transfers via Watson's lemma (Assumption C) to position-space kernel growth $K(x,x) tilde x^(2 gamma)$; (ii) Theorem B identifies this kernel as the resolvent of an operator with potential $V$; (iii) the Darboux superpotential $W tilde c x^alpha$ gives $V tilde c^2 x^(2 alpha)$, forcing $alpha = gamma$. The chain depends on B and C; it does not require D. Steps 3--4 use the full scaffold: Theorem B (kernel $=$ resolvent), Hankel regularity (IR singularity $arrow.r$ position-space growth), and inverse spectral extraction (kernel growth $arrow.r$ potential growth). Step 5 is the Rellich--Molchanov theorem: $V(x) arrow infinity$ implies purely discrete spectrum, hence $Delta > 0$.
 
 The chain backbone -- the algebraic steps and the Rellich--Molchanov theorem -- is at Level A (proven theorems with no dependencies). The bridge equation and spectral extraction are at Level A/B (established under standard mathematical assumptions, verified by Z3).
 
