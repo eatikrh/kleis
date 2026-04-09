@@ -1,61 +1,58 @@
 # Next Session Notes
 
-**Last Updated:** April 14, 2026 (session — Spectral Transfer + Green's Function Identification theory files complete)
+**Last Updated:** March 14, 2026 (session — 7 theory files complete, Assumption C upgraded)
 
 ---
 
-## SPECTRAL TRANSFER + GREEN'S FUNCTION IDENTIFICATION — COMPLETE
+## YANG-MILLS MASS GAP PROGRAM — 7 THEORY FILES, 230+ EXAMPLES
 
-**Theory files:**
-- `theories/pot_spectral_transfer.kleis` — 28/28 Z3 examples passing
-- `theories/pot_green_identification.kleis` — 33/33 Z3 examples passing
+### The conditional theorem
 
-### What these theory files establish
+**Under Assumptions A-D, the IR singularity of the YM weight forces the dressed resolvent into the α = γ = 1/2 Darboux asymptotic class, yielding linear confinement and gap scaling ~ σ^{2/3} · 1.750.**
 
-**pot_spectral_transfer.kleis** — The spectral transfer framework:
-1. Spectral mapping theorem: gap in SL operator L transfers to its resolvent (Green's function)
-2. Resolvent gap transfer (concrete and abstract)
-3. Heat semigroup as alternative bridge (supporting)
-4. Intertwining operators preserve spectral gaps
-5. Bessel centrifugal barrier raises eigenvalues monotonically with delta
-6. Green's function structural correspondence (Cauchy pole + hypergeometric dressing)
-7. Yang-Mills conditional chain: IR regularity + delta > 0 => gap (conditional on identification)
-8. QED vs YM comparison: delta=0 gapless, delta>0 gapped
+### Theory files
 
-**pot_green_identification.kleis** — The identification attack:
-1. **Anchor theorem (Level A):** Free resolvent IS an ITCM kernel — (L_mu - zI)^{-1} = H_mu^{-1} o [1/(k^2-z)] o H_mu
-2. **Bessel Green's function (Level A):** Has 2F1 structure with c = mu + 1
-3. **Parameter matching (Level B):** ITCM c1 = mu+1 matches Green's function c_green = mu+1 exactly; free field gives Cauchy kernel; interaction shifts b1 by delta/2
-4. **Euler factorization (Level B):** Euler exponent c-a-b = -1 universally at s=0, matching Green's function simple pole
-5. **Perturbed resolvent (Level B/C):** Hypergeometric dressing consistent with Born series structure (not claimed exact)
-6. **Weight-to-potential conjecture (Level C):** IR regularity induces long-range growth in V_w, consistent with confinement (weakened formulation)
-7. **Toy inverse spectral (Level A/B):** Power-law weight w(k) = k^{2alpha}/(k^2-z) produces explicit V = (2mu*alpha + alpha^2)/x^2; gap grows monotonically with alpha
+| # | File | Examples | What it establishes |
+|---|------|----------|---------------------|
+| 1 | `pot_spectral_transfer.kleis` | 28 | Spectral mapping theorem, resolvent gap transfer |
+| 2 | `pot_green_identification.kleis` | 33 | Anchor theorem (free resolvent = ITCM kernel), parameter matching, Born series |
+| 3 | `pot_weight_families.kleis` | 66 | IR classification (β threshold), Rellich-Molchanov, Darboux bridge |
+| 4 | `pot_ym_darboux_matching.kleis` | 25 | Darboux universality family W_α, gap scaling, YM IR matching |
+| 5 | `pot_ir_dressing_bridge.kleis` | 34 | Hankel duality, Born dressing, bridge equation α = γ (derived) |
+| 6 | `pot_ym_assumptions.kleis` | 22 | Assumptions isolation, conditional theorem, falsifiability |
+| 7 | `pot_assumption_c_proof.kleis` | 22 | Watson's lemma, IR/UV convergence, ₂F₁ regularity → Assumption C upgraded |
 
-### Epistemic status
+### The five assumptions
 
-| Level | Content | Status |
-|-------|---------|--------|
-| A (proven) | Free resolvent = ITCM kernel, spectral mapping, parameter c match, Euler exponent -1 | Z3-verified |
-| B (structural) | Parameter matching, Euler factorization, Born series consistency, toy w->V map | Z3-verified |
-| C (conjectural) | General w->V correspondence, IR regularity -> confinement, YM application | Z3-verified as conditionals |
+| Assumption | Status | Statement | What closes it |
+|-----------|--------|-----------|----------------|
+| **A** (γ > 0) | Level C | w_YM(k) ~ k^{-2(1+γ)}, γ ≈ 0.5 | Derive γ from YM Lagrangian |
+| **B** (kernel = resolvent) | Level B/C | K_ITCM = (L-z)^{-1} for some SL operator L | Verify resolvent equation |
+| **C** (Hankel regularity) | **Level A/B** | Dressed kernel satisfies asymptotic conditions | Watson's lemma verified; mild condition μ+ν > 1 remains |
+| **D** (inverse extraction) | Level B | K ~ x^{2γ} ⟹ V ~ x^{2γ} | Apply Gel'fand-Levitan |
+| **E** (QFT construction) | Level C | SL operator ↔ rigorous 4D YM | Construct 4D YM (= Clay problem) |
 
-### Key technical lesson
+### Upgrade priority (next targets)
 
-Z3's `divide`/`rat_div` requires numeric (Real/Int) arguments. Encode divisions on symbolic elements as multiplications: `a = (mu+nu)/2 + 1` becomes `2*a = (mu+nu) + 2`. This is the correct approach for staying in a decidable equational fragment.
+1. **Assumption D** (inverse spectral extraction) — apply Gel'fand-Levitan to specific spectral measure
+2. **Assumption B** (kernel = resolvent) — verify resolvent equation for ITCM kernel — **the decisive step**
+3. **Assumption A** (γ from physics) — non-perturbative QCD input
+4. **Assumption E** (QFT construction) — the hardest open problem in mathematical physics
 
-### Next steps (research directions)
+### Key results from this session
 
-1. **Enlarge the toy inverse spectral family** (highest priority): Power-law weights only shift the centrifugal barrier (1/x^2 decay). Need weights that produce genuine confining potentials (growing at large x). Candidates:
-   - Gaussian-damped: w(k) = e^{-k^2/Lambda^2}/(k^2-z)
-   - Rational (massive propagator): w(k) = (k^2+m^2)/[(k^2-z)(k^2+M^2)]
-   - Marchenko-reconstructible weights with closed-form solutions
-2. **Lattice QCD validation:** Extract w_YM(k) from lattice gluon propagators, determine (mu_YM, nu_YM)
-3. **Write the paper** (Volume VIII or addendum): "The Spectral Transfer Theorem"
-4. **Prove Structure 6 partially:** Even asymptotics or small-delta expansion of the w->V map
+- **Bridge equation α = γ**: Derived (not posited) from dressed kernel asymptotics via Hankel duality
+- **Self-consistency loop**: w → V → L → resolvent → w closes at the exponent level
+- **Darboux universality family**: W_α(x) = (μ+1/2)/x + c·x^α spans all confining IR classes β > 1
+- **Watson's lemma proof**: Rigorous asymptotic extraction under conditions C1-C3, upgrading Assumption C
+- **Falsifiability checklist**: Each assumption has explicit conditions for disproof
 
-### The one-sentence summary
+### Key technical lessons
 
-"The Yang-Mills mass gap reduces to an inverse spectral problem: identifying the potential induced by the ITCM weight function."
+- Z3 `divide`/`rat_div` requires numeric arguments — encode as multiplications
+- Z3 `implies` with `element = 1` comparisons can fail — use separate structures with direct assertions
+- `let` variable names can conflict with structure elements — use distinct names
+- Self-contained theory files (no imports) avoid cross-file Z3 context issues
 
 ---
 
