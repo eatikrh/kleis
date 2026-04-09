@@ -381,7 +381,7 @@ $ w(k) tilde.op 1 + alpha / (2 pi) ["loop corrections"] + cal(O)(alpha^2) $
 
 where $alpha approx 1\/137$ is the fine-structure constant. The *running* of $alpha$ with energy scale --- the renormalization group flow --- is the scale-dependence of $w(k, mu)$ as a function of the renormalization point $mu$. In ITCM language, this is an *index shift*: the transmutation operator shifts the spectral index of the Bessel-type kernel from $mu$ to $nu$, exactly as in Sitnik and Jebabli's Theorems 1--4.
 
-The crucial insight is that dimensional regularization corresponds to the ITCM with $w(t) = (-t^2)^s$ where $s = epsilon\/2$ and $d = 4 - 2 epsilon$. The resulting transmutation operator has the explicit integral representation given by Theorem 5 of Sitnik and Jebabli, involving Gauss hypergeometric functions $attach(, tl: 2) F_1$. This provides a *closed-form kernel* for the renormalized QED propagator --- something the standard QFT literature treats only perturbatively.
+The crucial insight is that dimensional regularization corresponds to the ITCM with $w(t) = (-t^2)^s$ where $s = epsilon\/2$ and $d = 4 - 2 epsilon$. The resulting transmutation operator has the explicit integral representation given by Theorem 5 of Sitnik and Jebabli, involving Gauss hypergeometric functions $attach(, bl: 2) F_1$. This provides a *closed-form kernel* for the renormalized QED propagator --- something the standard QFT literature treats only perturbatively.
 
 The fine-structure constant $alpha$ itself may be understood as a projected observable: the finite part extracted from the electromagnetic kernel's spectral data at a given energy scale. Its value $alpha^(-1) approx 137$ at low energies, and its running to $alpha^(-1) approx 128$ at the $Z$-boson mass, is the ITCM index shift in action.
 
@@ -389,7 +389,7 @@ The fine-structure constant $alpha$ itself may be understood as a projected obse
 
 The ITCM does not merely assert that the composition exists --- it provides the closed-form integral representation. By Theorem 5 of Sitnik and Jebabli (2024), the composition of Hankel transforms $H_nu$ and $H_mu$ with the power weight $w(t) = (-t^2)^s$ yields:
 
-$ [H_nu (-t^2)^s H_mu f](x) = c_1 x^(-mu - 2 s - 3\/2) integral_0^x attach(, tl: 2) F_1 (a_1, b_1 ; c_1 ; y^2 \/ x^2) y^(mu + 1\/2) f(y) thin d y \ + thin c_2 x^(nu + 1\/2) integral_x^infinity attach(, tl: 2) F_1 (a_2, b_2 ; c_2 ; x^2 \/ y^2) y^(-nu - 2 s - 3\/2) f(y) thin d y $
+$ [H_nu (-t^2)^s H_mu f](x) = c_1 x^(-mu - 2 s - 3\/2) integral_0^x attach(, bl: 2) F_1 (a_1, b_1 ; c_1 ; y^2 \/ x^2) y^(mu + 1\/2) f(y) thin d y \ + thin c_2 x^(nu + 1\/2) integral_x^infinity attach(, bl: 2) F_1 (a_2, b_2 ; c_2 ; x^2 \/ y^2) y^(-nu - 2 s - 3\/2) f(y) thin d y $
 
 where the hypergeometric parameters are:
 
@@ -401,7 +401,7 @@ $ c_1 = (-1)^s dot.op 2^(2 s + 1) dot.op (Gamma((mu + nu)\/2 + s + 1)) / (Gamma(
 
 For QED with dimensional regularization $d = 4 - 2 epsilon$, the parameter identification is: $s = epsilon \/ 2$ (the regularization parameter), $nu$ is the free-field spectral index (determined by spin and mass), and $mu$ is the interacting-field spectral index (shifted by the electromagnetic coupling). The transmutation operator maps free-field Green's functions to renormalized interacting-field Green's functions in a *single integral operation* --- not as a perturbative series in $alpha$, but as a closed-form integral with hypergeometric kernel.
 
-This is a non-perturbative result. Standard QED provides renormalized amplitudes as power series in $alpha$; the ITCM provides the *exact integral operator* whose Taylor expansion reproduces those series. The kernel decomposes into two terms: an inner integral over $[0, x]$ and an outer integral over $[x, infinity)$, each weighted by a Gauss hypergeometric function $attach(, tl: 2) F_1$. The two terms correspond to two integration regions --- forward and reflected channels --- and their specific hypergeometric weights encode all the information that perturbative QED distributes across Feynman diagrams of every loop order.
+This is a non-perturbative result. Standard QED provides renormalized amplitudes as power series in $alpha$; the ITCM provides the *exact integral operator* whose Taylor expansion reproduces those series. The kernel decomposes into two terms: an inner integral over $[0, x]$ and an outer integral over $[x, infinity)$, each weighted by a Gauss hypergeometric function $attach(, bl: 2) F_1$. The two terms correspond to two integration regions --- forward and reflected channels --- and their specific hypergeometric weights encode all the information that perturbative QED distributes across Feynman diagrams of every loop order.
 
 === Symmetries of the hypergeometric kernel
 
@@ -409,19 +409,19 @@ The kernel has three symmetries that dramatically simplify its structure.
 
 *Exchange symmetry ($mu arrow.l.r nu$).* The second-term parameters $(a_2, b_2, c_2)$ are obtained from the first by swapping $mu$ and $nu$: $a_2 = a_1$ (it is symmetric in $mu, nu$), $b_2 = (nu - mu)\/2 + s + 1$, and $c_2 = nu + 1$. The relation $b_1 + b_2 = 2(s + 1)$ holds. The two causal regions are therefore *spectral duals*: they exchange the free-field index $nu$ and interacting-field index $mu$. The full kernel is invariant under simultaneous $mu arrow.l.r nu$ and transposition of the integration regions.
 
-*Euler factorization.* Applying Euler's hypergeometric transformation $attach(, tl: 2) F_1 (a, b ; c ; z) = (1 - z)^(c - a - b) attach(, tl: 2) F_1 (c - a, c - b ; c ; z)$ to the first term, the Euler exponent is:
+*Euler factorization.* Applying Euler's hypergeometric transformation $attach(, bl: 2) F_1 (a, b ; c ; z) = (1 - z)^(c - a - b) attach(, bl: 2) F_1 (c - a, c - b ; c ; z)$ to the first term, the Euler exponent is:
 
 $ c_1 - a_1 - b_1 = (mu + 1) - ((mu + nu)\/2 + s + 1) - ((mu - nu)\/2 + s + 1) = -1 - 2 s $
 
 The kernel factors into a *universal pole* and a *regular correction*:
 
-$ attach(, tl: 2) F_1 (a_1, b_1 ; c_1 ; y^2 \/ x^2) = (1 - y^2 \/ x^2)^(-1 - 2 s) dot.op attach(, tl: 2) F_1 ((mu - nu)\/2 - s, (mu + nu)\/2 - s ; mu + 1 ; y^2 \/ x^2) $
+$ attach(, bl: 2) F_1 (a_1, b_1 ; c_1 ; y^2 \/ x^2) = (1 - y^2 \/ x^2)^(-1 - 2 s) dot.op attach(, bl: 2) F_1 ((mu - nu)\/2 - s, (mu + nu)\/2 - s ; mu + 1 ; y^2 \/ x^2) $
 
-The singular factor $(1 - y^2 \/ x^2)^(-1 - 2 s)$ has a branch point at $y = x$ (the lightcone). The remaining $attach(, tl: 2) F_1$ is *regular* for all $y^2 \/ x^2 in [0, 1]$. This factorization separates the *universal singularity structure* --- which generates the divergences when $s arrow 0$ --- from the *theory-specific content*, which determines the finite parts.
+The singular factor $(1 - y^2 \/ x^2)^(-1 - 2 s)$ has a branch point at $y = x$ (the lightcone). The remaining $attach(, bl: 2) F_1$ is *regular* for all $y^2 \/ x^2 in [0, 1]$. This factorization separates the *universal singularity structure* --- which generates the divergences when $s arrow 0$ --- from the *theory-specific content*, which determines the finite parts.
 
 At $s = 0$ (the physical limit), the singular factor becomes $(1 - y^2 \/ x^2)^(-1) = x^2 \/ (x^2 - y^2)$, a simple Cauchy-type pole. The full kernel reduces to:
 
-$ K(x, y)|_(s = 0) = x^2 / (x^2 - y^2) dot.op attach(, tl: 2) F_1 ((mu - nu)\/2, (mu + nu)\/2 ; mu + 1 ; y^2 \/ x^2) $
+$ K(x, y)|_(s = 0) = x^2 / (x^2 - y^2) dot.op attach(, bl: 2) F_1 ((mu - nu)\/2, (mu + nu)\/2 ; mu + 1 ; y^2 \/ x^2) $
 
 *Green's function structure of the Cauchy pole.* The denominator factors as $x^2 - y^2 = (x - y)(x + y)$, revealing the propagator content:
 
@@ -431,11 +431,11 @@ The pole $1 \/ (x - y)$ is the *direct channel*: singular when $y = x$ (the sour
 
 The full kernel at $s = 0$ then reads:
 
-$ K(x, y)|_(s = 0) = underbrace(x^2 / ((x - y)(x + y)), "free propagator") dot.op underbrace(attach(, tl: 2) F_1 ((mu - nu)\/2, (mu + nu)\/2 ; mu + 1 ; y^2 \/ x^2), "interaction dressing") $
+$ K(x, y)|_(s = 0) = underbrace(x^2 / ((x - y)(x + y)), "free propagator") dot.op underbrace(attach(, bl: 2) F_1 ((mu - nu)\/2, (mu + nu)\/2 ; mu + 1 ; y^2 \/ x^2), "interaction dressing") $
 
-The interaction dressing is the regular $attach(, tl: 2) F_1$ correction: it modifies the free propagator's pole structure without introducing new singularities. The mass gap question, in this language, is whether the interaction dressing shifts the propagator's spectral support away from zero --- whether $R^("YM")$ converts the gapless Green's function $1 \/ (x^2 - y^2)$ into a massive one.
+The interaction dressing is the regular $attach(, bl: 2) F_1$ correction: it modifies the free propagator's pole structure without introducing new singularities. The mass gap question, in this language, is whether the interaction dressing shifts the propagator's spectral support away from zero --- whether $R^("YM")$ converts the gapless Green's function $1 \/ (x^2 - y^2)$ into a massive one.
 
-*Free-field limit ($mu arrow nu$).* When $mu = nu$ (coupling turned off), the parameters simplify: $b_1 arrow s + 1$ and $c_1 arrow nu + 1$. At $s = 0$: $attach(, tl: 2) F_1 (nu + 1, 1 ; nu + 1 ; z) = (1 - z)^(-1)$, since $attach(, tl: 2) F_1 (a, b ; a ; z) = (1 - z)^(-b)$ for any $a$. The entire kernel collapses to the Cauchy kernel $1 \/ (1 - z)$ --- which is the *free-field propagator*. The hypergeometric correction vanishes, and only the universal pole survives.
+*Free-field limit ($mu arrow nu$).* When $mu = nu$ (coupling turned off), the parameters simplify: $b_1 arrow s + 1$ and $c_1 arrow nu + 1$. At $s = 0$: $attach(, bl: 2) F_1 (nu + 1, 1 ; nu + 1 ; z) = (1 - z)^(-1)$, since $attach(, bl: 2) F_1 (a, b ; a ; z) = (1 - z)^(-b)$ for any $a$. The entire kernel collapses to the Cauchy kernel $1 \/ (1 - z)$ --- which is the *free-field propagator*. The hypergeometric correction vanishes, and only the universal pole survives.
 
 *Summary of the factorization.* The QED kernel has the schematic form:
 
@@ -447,7 +447,7 @@ The theory file formalizes this as the `QEDHypergeometricKernel` structure with 
 
 *Kernel Decomposition Principle (proposed).* Any ITCM-generated transmutation kernel admits a decomposition into a universal singular Green's kernel and a regular dressing factor, with spectral properties determined solely by the latter after finite-part extraction.
 
-This principle unifies the results of this subsection. The Euler factorization (derived from the composition theorem) separates the universal pole from the regular correction. The partial-fraction decomposition reveals the pole as a propagator-like Green's kernel with direct and reflected channels. The regular $attach(, tl: 2) F_1$ dressing encodes the interaction. The free-field limit confirms that the dressing vanishes when the coupling is turned off. The Spectral Localization Principle (Section 9.8) establishes that the mass gap, if it exists, resides in the dressing. The pipeline from composition theorem to spectral localization is:
+This principle unifies the results of this subsection. The Euler factorization (derived from the composition theorem) separates the universal pole from the regular correction. The partial-fraction decomposition reveals the pole as a propagator-like Green's kernel with direct and reflected channels. The regular $attach(, bl: 2) F_1$ dressing encodes the interaction. The free-field limit confirms that the dressing vanishes when the coupling is turned off. The Spectral Localization Principle (Section 9.8) establishes that the mass gap, if it exists, resides in the dressing. The pipeline from composition theorem to spectral localization is:
 
 $ "ITCM" arrow.r "hypergeometric kernel" arrow.r "Euler factorization" $
 $ arrow.r underbrace("Green's kernel", "universal") times underbrace("dressing", "theory-specific") arrow.r "spectral localization" $
@@ -472,7 +472,7 @@ The same holds for QFT. When you compute via the factored route $"FP" compose K_
 
 $ K_("direct") : "Source" arrow.r "FinitePart" $
 
-No divergent intermediate quantity ever appears. The hypergeometric kernel $attach(, tl: 2) F_1 (a, b ; c ; y^2 / x^2)$ is a convergent function; the integral it defines is finite; the output is a finite observable. The type signature of the direct composite is $"Source" arrow.r "FinitePart"$, not $"Source" arrow.r "RegValue" arrow.r "FinitePart"$. The domain of divergent objects (`RegValue`) is absent from the composed map.
+No divergent intermediate quantity ever appears. The hypergeometric kernel $attach(, bl: 2) F_1 (a, b ; c ; y^2 / x^2)$ is a convergent function; the integral it defines is finite; the output is a finite observable. The type signature of the direct composite is $"Source" arrow.r "FinitePart"$, not $"Source" arrow.r "RegValue" arrow.r "FinitePart"$. The domain of divergent objects (`RegValue`) is absent from the composed map.
 
 The formal consequence is sharp. The direct composite equals both the factored composite and the ITCM transmutation for every source $J$ (Examples 23--24):
 
@@ -523,7 +523,7 @@ The five constraints on $w_("YM")$ are (Examples 25--29):
   caption: [The five constraints on the Yang--Mills weight function. The Millennium Problem asks for existence (constraints 1--4) and mass gap (constraint 5) of pure Yang--Mills, a theory of gauge fields without quarks. Color confinement --- the unobservability of color charge --- is a separate algebraic consequence of the kernel's non-admissibility (Volume IV), not a constraint on $w_("YM")$.]
 ) <tab:ym>
 
-This is a genuine simplification. The traditional formulation requires constructing an infinite-dimensional measure (on the space of gauge connections modulo gauge equivalence). The composite kernel formulation requires finding a single real-valued function $w_("YM")(k)$ on momentum space. The existence part reduces to: does such a $w_("YM")$ satisfying constraints 1--4 exist? The mass gap part reduces to: does the $attach(, tl: 2) F_1$ kernel with parameters determined by $w_("YM")$ have a spectral gap?
+This is a genuine simplification. The traditional formulation requires constructing an infinite-dimensional measure (on the space of gauge connections modulo gauge equivalence). The composite kernel formulation requires finding a single real-valued function $w_("YM")(k)$ on momentum space. The existence part reduces to: does such a $w_("YM")$ satisfying constraints 1--4 exist? The mass gap part reduces to: does the $attach(, bl: 2) F_1$ kernel with parameters determined by $w_("YM")$ have a spectral gap?
 
 Both are questions about functions and spectra --- ordinary analysis --- not about infinite-dimensional measures.
 
@@ -531,13 +531,13 @@ Moreover, lattice QCD already computes non-perturbative quantities numerically: 
 
 *Symmetry transfer to Yang--Mills (conditional).* The exchange symmetry, Euler factorization, and free-field limit derived in Section 9.4 are properties of the ITCM composition theorem (Theorem 5 of Sitnik--Jebabli), not of QED specifically. These symmetries are inherited by any Yang--Mills kernel that admits an ITCM/Hankel composite representation of the same form $K = F^(-1) compose w compose F$. If the Yang--Mills composite kernel is realized as such a composition --- which is the central hypothesis of this section --- then it inherits the factored form:
 
-$ K_("YM")(x, y) = (1 - y^2 \/ x^2)^(-1 - 2 s) dot.op attach(, tl: 2) F_1 ("regular parameters"; y^2 \/ x^2) dot.op ["power-law weights"] $
+$ K_("YM")(x, y) = (1 - y^2 \/ x^2)^(-1 - 2 s) dot.op attach(, bl: 2) F_1 ("regular parameters"; y^2 \/ x^2) dot.op ["power-law weights"] $
 
 By the Kernel Decomposition Principle (Section 9.4), this factors at $s = 0$ into:
 
-$ K_("YM")(x, y)|_(s = 0) = underbrace(x^2 / ((x - y)(x + y)), "universal Green's kernel") dot.op underbrace(attach(, tl: 2) F_1 (dots.c ; y^2 \/ x^2), "YM interaction dressing") $
+$ K_("YM")(x, y)|_(s = 0) = underbrace(x^2 / ((x - y)(x + y)), "universal Green's kernel") dot.op underbrace(attach(, bl: 2) F_1 (dots.c ; y^2 \/ x^2), "YM interaction dressing") $
 
-The universal Green's kernel --- the same propagator-like pole structure shared by QED --- is a property of the Hankel composition mechanism, not the specific gauge theory. The regular $attach(, tl: 2) F_1$ dressing is where the Yang--Mills-specific content resides, with parameters determined by $w_("YM")$ instead of $w_("QED")$. The full Kernel Decomposition pipeline applies:
+The universal Green's kernel --- the same propagator-like pole structure shared by QED --- is a property of the Hankel composition mechanism, not the specific gauge theory. The regular $attach(, bl: 2) F_1$ dressing is where the Yang--Mills-specific content resides, with parameters determined by $w_("YM")$ instead of $w_("QED")$. The full Kernel Decomposition pipeline applies:
 
 $ "ITCM" + w_("YM") arrow.r "hypergeometric kernel" arrow.r "Euler factorization" $
 $ arrow.r underbrace("Green's kernel", "same as QED") times underbrace(R^("YM"), "YM-specific") arrow.r "mass gap question" $
@@ -545,7 +545,7 @@ $ arrow.r underbrace("Green's kernel", "same as QED") times underbrace(R^("YM"),
 *Conjectural localization of the mass gap.* Under the hypothesis that the Yang--Mills kernel admits this ITCM representation, the symmetry analysis suggests a localization of the mass gap question. QED has the same universal pole but *no* mass gap (the photon is massless). The pole is therefore not the source of the mass gap. More precisely:
 
 - The *universal pole* $(1 - y^2 \/ x^2)^(-1 - 2 s)$ is universal across all Hankel-composite theories and is removed by finite-part extraction, so the theory-distinguishing spectral content must be sought elsewhere.
-- The *regular $attach(, tl: 2) F_1$ correction* survives FP extraction and encodes the theory-specific spectral structure.
+- The *regular $attach(, bl: 2) F_1$ correction* survives FP extraction and encodes the theory-specific spectral structure.
 - If the mass gap $Delta > 0$ exists, it is a spectral property of this regular correction.
 
 The Millennium Problem is thus localized: it is not in the universal pole (which QED shares), but in the spectral behavior of the regular correction determined by $w_("YM")$.
@@ -556,7 +556,7 @@ We name the structural claim and sketch the argument for bridge (1).
 
 *Spectral Localization Principle (informal).* For any ITCM-composite kernel, the spectrum of the associated operator after finite-part extraction depends only on the regular component of the Euler-factorized kernel.
 
-*Sketch of argument.* The composite operator $T_s : f arrow.r.bar integral K(x, y ; s) f(y) thin d y$ depends on the regularization parameter $s$. By the Euler factorization, the kernel is $K(x, y ; s) = P(x, y ; s) dot.op R(x, y ; s) dot.op W(x, y ; s)$, where $P = (1 - y^2 \/ x^2)^(-1 - 2 s)$ is the universal pole, $R$ is the regular $attach(, tl: 2) F_1$ correction, and $W$ contains the power-law weights. As a function of $s$, the operator $T_s$ admits a distributional Laurent expansion:
+*Sketch of argument.* The composite operator $T_s : f arrow.r.bar integral K(x, y ; s) f(y) thin d y$ depends on the regularization parameter $s$. By the Euler factorization, the kernel is $K(x, y ; s) = P(x, y ; s) dot.op R(x, y ; s) dot.op W(x, y ; s)$, where $P = (1 - y^2 \/ x^2)^(-1 - 2 s)$ is the universal pole, $R$ is the regular $attach(, bl: 2) F_1$ correction, and $W$ contains the power-law weights. As a function of $s$, the operator $T_s$ admits a distributional Laurent expansion:
 
 $ T_s = T_(-1) \/ s + T_0 + T_1 dot.op s + dots.c $
 
@@ -576,11 +576,11 @@ The composite kernel framework complements the structural result of Volume IV, w
 
 == Parameter constraints for the mass gap
 
-The spectral localization analysis identifies the regular correction $R(z) = attach(, tl: 2) F_1 ((mu - nu)\/2, (mu + nu)\/2 ; mu + 1 ; z)$ as the carrier of the mass gap. We now extract concrete parameter constraints from this identification.
+The spectral localization analysis identifies the regular correction $R(z) = attach(, bl: 2) F_1 ((mu - nu)\/2, (mu + nu)\/2 ; mu + 1 ; z)$ as the carrier of the mass gap. We now extract concrete parameter constraints from this identification.
 
 *The free-field degeneracy.* When $mu = nu$ (coupling turned off), the first upper parameter of the hypergeometric function vanishes:
 
-$ attach(, tl: 2) F_1 (0, mu ; mu + 1 ; z) = 1 quad "for all" z $
+$ attach(, bl: 2) F_1 (0, mu ; mu + 1 ; z) = 1 quad "for all" z $
 
 The regular correction is trivially equal to unity. The full kernel collapses to the universal Cauchy pole $x^2 slash (x^2 - y^2)$, which has continuous spectrum extending to zero --- it is gapless. This is the free-field limit already noted in Section 9.4. The *new* content is the contrapositive:
 
@@ -614,7 +614,7 @@ This is labeled a *conjecture*, not a theorem. The necessary direction ($Delta >
 
 *The well-posed mathematical target.* The conjecture reduces to a concrete spectral theory problem:
 
-#quote[_For the integral operator on $L^2 (bb(R)_+)$ with kernel $K(x, y) = x^2 slash ((x - y)(x + y)) dot.op attach(, tl: 2) F_1 (a, b ; c ; y^2 slash x^2)$, determine the spectrum as a function of $(a, b, c)$ and identify the parameter region where a spectral gap exists._]
+#quote[_For the integral operator on $L^2 (bb(R)_+)$ with kernel $K(x, y) = x^2 slash ((x - y)(x + y)) dot.op attach(, bl: 2) F_1 (a, b ; c ; y^2 slash x^2)$, determine the spectrum as a function of $(a, b, c)$ and identify the parameter region where a spectral gap exists._]
 
 This is a question about functions and eigenvalues --- ordinary one-dimensional spectral theory, not infinite-dimensional measure construction.
 
@@ -724,7 +724,7 @@ This is the strongest and most speculative implication. A full proof would requi
   ),
 )
 ,
-  caption: [Regular correction $R(z) = attach(, tl: 2) F_1 ((mu - nu)\/2, (mu + nu)\/2; mu + 1; z)$ as a function of $z = y^2 \/ x^2$ for five values of the Hankel-order asymmetry $delta = |mu - nu|$ (fixing $nu = 2$). At $delta = 0$ (grey), $R(z) = 1$ identically --- the free-field limit where the full kernel is the universal Cauchy pole alone. As $delta$ increases, the interaction dressing grows monotonically: $delta = 1$ (blue, near-QED regime), $delta = 2$ (green), $delta = 3$ (orange), and $delta = 6$ (red, strong-coupling regime relevant to Yang--Mills). The departure from unity quantifies the strength of interaction-induced spectral modification. All curves are computed from 50-term series truncation (convergent to $<$ 0.2% in this range).]
+  caption: [Regular correction $R(z) = attach(, bl: 2) F_1 ((mu - nu)\/2, (mu + nu)\/2; mu + 1; z)$ as a function of $z = y^2 \/ x^2$ for five values of the Hankel-order asymmetry $delta = |mu - nu|$ (fixing $nu = 2$). At $delta = 0$ (grey), $R(z) = 1$ identically --- the free-field limit where the full kernel is the universal Cauchy pole alone. As $delta$ increases, the interaction dressing grows monotonically: $delta = 1$ (blue, near-QED regime), $delta = 2$ (green), $delta = 3$ (orange), and $delta = 6$ (red, strong-coupling regime relevant to Yang--Mills). The departure from unity quantifies the strength of interaction-induced spectral modification. All curves are computed from 50-term series truncation (convergent to $<$ 0.2% in this range).]
 ) <fig:dressing>
 
 #figure(
@@ -1021,7 +1021,7 @@ The following axioms are defined in `theories/pot_renormalization_kernel.kleis` 
 
 - *exchange_symmetry_a*: $a_1 = a_2$ (symmetric in $mu, nu$)
 - *exchange_symmetry_b_sum*: $b_1 = b_2$ (spectral duality)
-- *kernel_decomposition*: $forall k_1, k_2. thin K_("inner")(k_1, k_2) = attach(, tl: 2) F_1 (a_1, b_1 ; c_1 ; K_("inner")(k_1, k_2))$
+- *kernel_decomposition*: $forall k_1, k_2. thin K_("inner")(k_1, k_2) = attach(, bl: 2) F_1 (a_1, b_1 ; c_1 ; K_("inner")(k_1, k_2))$
 - *hypergeom_gauge_invariance*: $forall k_1, k_2, R, R'. thin (R tilde.op R') arrow.r.double "FP"(K_("inner")(k_1, k_2)) = "FP"(K_("inner")(k_1, k_2))$
 
 == Spectral Localization
