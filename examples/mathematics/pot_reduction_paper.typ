@@ -96,7 +96,11 @@ The scaffold (B+C+D) is at epistemic Level A/B -- each component is established 
 
 The contribution is the reduction itself: a rigorous mathematical pipeline that converts two sharply stated external conditions into a mass gap. We do _not_ claim to have solved the Clay Millennium Problem. Assumption E contains the unresolved 4D existence/consistency problem, and Assumption A is an external physics input. What we have built is the scaffold that would convert their resolution into a proof.
 
-The entire program is implemented in the Kleis formal verification language [18], comprising 14 theory files with over 400 Z3-verified examples. Every algebraic identity, every asymptotic bound, and every logical implication in the chain has been machine-checked.
+This paper is Volume VIII of the Projected Ontology Theory (POT) series, building directly on the ITCM framework developed in Volume VII [19]. The earlier volumes established the structural foundations: Volume IV [18] proved that Yang--Mills confinement arises from fiber non-invariance of the gauge kernel (the Lie-bracket defect makes the kernel non-admissible, and confinement is the topological consequence). Volume VII [19] made the decisive analytical move: it formalized QFT renormalization as projection-kernel composition, proving via the ITCM of Sitnik and collaborators [23] that the path integral and renormalization compose into a single integral transform $K_("QFT") = "FP" compose K_("ren") compose K_("path")$ with an explicit Gauss hypergeometric kernel. Volume VII further established the _Kernel Decomposition Principle_ (the hypergeometric kernel factors via Euler's transformation into a universal Green's-function pole and a regular interaction dressing), localized the mass gap to the regular $attach(, tl: 2) F_1$ correction, and stated the _Spectral Gap Conjecture_: $Delta > 0$ if and only if $mu_("YM") eq.not nu_("YM")$ with IR-regular weight function.
+
+The present paper converts Volume VII's conjecture into a rigorous conditional reduction. Where Volume VII identified the framework and asked the question, Volume VIII isolates the five assumptions (A--E), proves the mathematical scaffold (B+C+D) at Level A/B through 14 formal theory files, derives the quantitative gap formula, and states the reduction as an explicit theorem with a complete dependency graph.
+
+The entire program is implemented in the Kleis formal verification language [24], comprising 14 theory files with over 400 Z3-verified examples. Every algebraic identity, every asymptotic bound, and every logical implication in the chain has been machine-checked. Each theory file is an executable Kleis source (`.kleis`) containing formal structures, axioms, and Z3-verified examples; the complete source is available at `https://kleis.io/theories/`.
 
 = The Five Assumptions
 
@@ -120,12 +124,14 @@ The sign survives all known systematics. Even subtracting Gribov corrections ($d
 
 *What lattice evidence does not claim:* (1) the Euclidean-to-Minkowski analytic continuation is non-trivial; (2) the ITCM weight is not identical to the propagator -- the mapping requires spectral density regularity near $m^2 = 0$.
 
+_Formal source:_ `pot_assumption_a_formalization.kleis` (18 structures, 24 Z3 examples).
+
 == Assumption B: Theorem B -- ITCM Kernel as Resolvent (Level A/B)
 
 *Statement.* The ITCM hypergeometric kernel $K(x,y;z)$ is the Green's function of a Sturm--Liouville operator $L = -d^2 slash d x^2 + V(x)$:
 $ K(x,y;z) = (L - z I)^(-1)(x,y). $
 
-This is established through five clauses, formalized in Theorem B (File 11 of the program):
+This is established through five clauses. The structural identification is developed in `pot_assumption_b_proof.kleis` (16 structures, 30 Z3 examples), the Green's function normalization -- including the derivative jump condition via the Weber--Schafheitlin integral [11, Ch. 13] and Sonine--Poisson--Delsarte transmutation [23] -- is proved in `pot_greens_normalization.kleis` (15 structures, 35 Z3 examples), and the consolidated theorem is stated in `pot_theorem_b.kleis` (8 structures, 15 Z3 examples):
 
 + _(i) ODE._ For $x eq.not y$, the kernel satisfies the homogeneous equation $(L_x - z) K = 0$, which follows from the Gauss hypergeometric ODE applied to the $attach(, tl: 2) F_1 (a_1, b_1; c_1; y^2 slash x^2)$ factor.
 
@@ -137,25 +143,43 @@ This is established through five clauses, formalized in Theorem B (File 11 of th
 
 + _(v) Spectral normalization._ At $mu eq.not nu$: the spectral construction $T_w = H_nu^(-1) compose M_w compose H_mu$ with Hankel--Parseval unitarity fixes the normalization. This is Level A/B.
 
-The parameters are $a_1 = (mu + nu) slash 2 + 1$, $b_1 = (mu - nu) slash 2 + 1$, $c_1 = mu + 1$, where $mu, nu >= 0$ are the Hankel orders.
+The parameters are $a_1 = (mu + nu) slash 2 + 1$, $b_1 = (mu - nu) slash 2 + 1$, $c_1 = mu + 1$, where $mu, nu >= 0$ are the Hankel orders. The Dereziński--Karimi classification [17] provides the structural framework for Sturm--Liouville operators whose Green's functions have $attach(, tl: 2) F_1$ form.
+
+*Remark on normalization (local vs. spectral).* Clauses (i)--(iv) are _intrinsic_ to the kernel: the ODE, singularity structure, $y$-independence of the coefficient $A$, and the free-case jump condition are all derived from the local analytic properties of the $attach(, tl: 2) F_1$ factor and its coordinate change $xi = y^2 slash x^2$. No external spectral data is needed. Only clause (v) invokes the global spectral construction: in the dressed case ($mu eq.not nu$), the overall multiplicative normalization is fixed by the unitarity of the Hankel transforms composing $T_w$, not by a local calculation at the diagonal. This is why the free case is Level A (fully local) while the dressed case is Level A/B (local structure plus spectral identification). A reviewer asking whether normalization is intrinsic or imported should note that the _structure_ is intrinsic; only the _scale_ is spectral.
 
 == Assumption C: Hankel Asymptotic Regularity (Level A/B)
 
-*Statement.* The dressed ITCM kernel satisfies the regularity conditions needed for the Hankel asymptotic correspondence: (C1) $w_("YM")(k)$ has power-law IR behavior; (C2) $w_("YM")(k)$ is UV-regular; (C3) the kernel integral converges distributionally.
+*Statement.* The dressed ITCM kernel satisfies the regularity conditions needed for the Hankel asymptotic correspondence. The precise hypotheses are:
 
-This is established through Watson's lemma for Hankel integrals (File 7). The $attach(, tl: 2) F_1$ structure provides strong analytic control: hypergeometric functions have at most power-law singularities, the Euler exponent gives a simple (integrable) pole, and the Hankel transforms $H_mu, H_nu$ are bounded on $L^2$ and preserve regularity classes.
++ _(C1) IR power law._ $w(k) = k^(-2 beta) dot ell(k)$ for $k arrow 0$, where $beta > 1$ and $ell$ is slowly varying (bounded ratio $ell(lambda k) slash ell(k) arrow 1$ as $k arrow 0$ for each fixed $lambda > 0$).
+
++ _(C2) UV integrability._ $w(k) = O(k^(-2 + epsilon))$ as $k arrow infinity$ for some $epsilon > 0$, ensuring $integral_1^infinity w(k) k^(2 mu + 1) d k < infinity$ for all relevant Hankel orders $mu$.
+
++ _(C3) Distributional convergence._ The kernel integral $K(x,y) = integral_0^infinity w(k) J_mu (k x) J_nu (k y) k d k$ converges in the distributional sense, with the near-diagonal singularity matching the resolvent structure of Theorem B.
+
+Watson's lemma for Hankel integrals (Titchmarsh [20], Wong) then gives the asymptotic transfer: $w(k) tilde k^(-2 beta)$ in the IR implies $K(x, x) tilde x^(2 beta - 2) = x^(2 gamma)$ for large $x$. The $attach(, tl: 2) F_1$ structure of the ITCM kernel provides strong analytic control: hypergeometric functions have at most power-law singularities, the universal Euler exponent $c - a - b = -1$ gives a simple (integrable) pole, and the Hankel transforms $H_mu, H_nu$ are isometries on $L^2 (RR_+, x d x)$, preserving regularity classes.
+
+*What C does not assume:* pointwise bounds on the kernel away from the diagonal. The transfer from IR weight behavior to position-space growth is asymptotic, not uniform.
+
+_Formal source:_ `pot_assumption_c_proof.kleis` (12 structures, 22 Z3 examples).
 
 == Assumption D: Inverse Spectral Extraction (Level A/B)
 
 *Statement.* If the kernel $K(x,y)$ grows as $x^(2 gamma)$ for large $x$, then the underlying potential satisfies $V(x) tilde x^(2 gamma)$.
 
-This is established through three classical results (File 8):
+*Admissible class.* The extraction applies to potentials in the _regular confining class_ $cal(V)_p$: real-valued $V in L^1_("loc")(RR_+)$ with $V(x) arrow +infinity$ as $x arrow infinity$, $V(x) >= 0$ for large $x$, and $V(x) = x^p dot (1 + o(1))$ for some $p > 0$. For this class, the Sturm--Liouville operator $L = -d^2 slash d x^2 + V(x)$ on $(0, infinity)$ with Dirichlet boundary condition at $x = 0$ is self-adjoint with purely discrete spectrum $lambda_1 < lambda_2 < dots arrow infinity$ (Rellich--Molchanov [10]). The Darboux-generated potentials $V_+(x) tilde c^2 x^(2 alpha)$ belong to $cal(V)_p$ with $p = 2 alpha$.
 
-+ The _Weyl semiclassical formula_ relates potential growth $V tilde x^p$ to the eigenvalue counting function $N(lambda) tilde lambda^alpha$ with $alpha = 1 slash 2 + 1 slash p$.
+The extraction chain uses three classical results:
 
-+ _Abel inversion_ and _Karamata's Tauberian theorem_ convert spectral asymptotics (heat kernel, spectral zeta function) to the counting function.
++ The _Weyl semiclassical formula_ [12] relates potential growth $V tilde x^p$ to the eigenvalue counting function $N(lambda) tilde lambda^alpha$ with $alpha = 1 slash 2 + 1 slash p$. This holds for $V in cal(V)_p$ (see Titchmarsh [20, Ch. 4]).
 
-+ The _Borg uniqueness theorem_ establishes that the potential is uniquely determined by its spectral data.
++ _Abel inversion_ and _Karamata's Tauberian theorem_ [14] convert spectral asymptotics (heat kernel, spectral zeta function) to the counting function. The Tauberian direction requires monotonicity of $N(lambda)$ (automatic for counting functions) and regular variation of the spectral zeta function.
+
++ The _Borg uniqueness theorem_ [13] establishes that $V in cal(V)_p$ is uniquely determined by its spectral data (eigenvalues + norming constants), in the tradition of Gel'fand--Levitan [21] and Marchenko [22] inverse spectral theory.
+
+*What D does not cover:* potentials with oscillatory tails (e.g. $V(x) = x^p sin(x)$) or potentials that grow but fail to be eventually monotone. The ITCM-derived potentials, being Darboux-generated from a smooth superpotential, satisfy the regular confining conditions.
+
+_Formal source:_ `pot_assumption_d_proof.kleis` (14 structures, 31 Z3 examples).
 
 == Assumption E: QFT Construction (Level C/D)
 
@@ -172,6 +196,41 @@ This decomposes into four sub-conditions:
 + _E4 (Dimensional bridge, Level C)._ The 4D mass gap $m$ is determined by the spectral gap of the radial ITCM sector. The partial-wave decomposition of the gauge-invariant two-point function $chevron.l "Tr" F^2(x) "Tr" F^2(0) chevron.r$ must yield the ITCM kernel $K(x,y;z)$.
 
 The most accessible upgrade target is E4 (mathematical partial-wave spectral theory). E1+E2 constitute the Clay problem's 'other half.'
+
+_Formal source:_ `pot_assumption_e_formalization.kleis` (13 structures, 23 Z3 examples).
+
+== Dependency Graph
+
+The five assumptions have a strict dependency structure. A feeds the chain; B, C, D form the scaffold; E bridges to the Clay problem. No assumption depends on a lower-numbered one except through the chain.
+
+#align(center)[
+#rect(stroke: 0.5pt, inset: 15pt, radius: 4pt)[
+#set text(size: 9.5pt)
+#grid(
+  columns: (1fr,),
+  rows: (auto, auto, auto, auto, auto),
+  gutter: 6pt,
+  align(center)[*A* ($gamma > 0$, Level C+) #h(2pt) $arrow.r.long$ #h(2pt) *B* (kernel $=$ resolvent, Level A/B)],
+  align(center)[$arrow.b$],
+  align(center)[*C* (Hankel regularity, Level A/B) #h(2pt) $+$ #h(2pt) *D* (inverse extraction, Level A/B)],
+  align(center)[$arrow.b$],
+  align(center)[*Conditional Spectral Theorem:* $Delta > 0$ in radial SL sector],
+)
+#v(6pt)
+#line(length: 100%, stroke: 0.3pt)
+#v(6pt)
+#grid(
+  columns: (1fr,),
+  rows: (auto, auto, auto),
+  gutter: 6pt,
+  align(center)[Conditional Spectral Theorem #h(2pt) $+$ #h(2pt) *E* (QFT bridge, Level C/D)],
+  align(center)[$arrow.b$],
+  align(center)[*Full Reduction:* 4D Yang--Mills mass gap $m > 0$],
+)
+]
+]
+
+The horizontal line separates the _Conditional Spectral Theorem_ (which the scaffold proves) from the _Full Reduction_ (which requires the additional external input E). Everything above the line is at Level A/B or better; everything below depends on the unresolved QFT existence problem.
 
 = The Mathematical Scaffold
 
@@ -258,7 +317,7 @@ $ Delta approx (0.18)^(2 slash 3) dot 1.750 approx 0.555 "GeV". $
 
 The formula's application to Yang--Mills is conditional on A+B+C+D. The Airy scaling itself is an exact result of semiclassical spectral theory.
 
-= Honest Scope Statement
+= Scope and Limitations
 
 We state precisely what has been proved, what has been reduced, and what has not been claimed.
 
@@ -285,21 +344,21 @@ The program's files, in logical order:
   columns: 3,
   stroke: 0.5pt,
   align: (left, left, center),
-  [*File*], [*Content*], [*Examples*],
-  [1. Spectral transfer], [Resolvent gap transfer theorem], [28],
-  [2. Green identification], [Anchor theorem, parameter matching], [33],
-  [3. Weight families], [IR classification, Rellich--Molchanov], [66],
-  [4. Darboux matching], [Universality family, gap scaling], [25],
-  [5. Dressing bridge], [Hankel duality, bridge eq. $alpha = gamma$], [34],
-  [6. Assumptions], [Isolation, conditional theorem], [22],
-  [7. Assumption C], [Hankel regularity (C $arrow$ A/B)], [22],
-  [8. Assumption D], [Inverse extraction (D $arrow$ A/B)], [31],
-  [9. Assumption B], [ITCM $=$ resolvent (structural)], [30],
-  [10. Normalization], [Green's function jump condition], [35],
-  [11. Theorem B], [Publishable resolvent theorem], [15],
-  [12. Assumption A], [Physics input formalization], [24],
-  [13. Assumption E], [QFT construction gap (E1--E4)], [23],
-  [14. Reduction], [Main Reduction Theorem (capstone)], [16],
+  [*Source file*], [*Content*], [*Z3*],
+  [`pot_spectral_transfer`], [Resolvent gap transfer theorem], [28],
+  [`pot_green_identification`], [Anchor theorem, parameter matching], [33],
+  [`pot_weight_families`], [IR classification, Rellich--Molchanov], [66],
+  [`pot_ym_darboux_matching`], [Universality family, gap scaling], [25],
+  [`pot_ir_dressing_bridge`], [Hankel duality, bridge eq. $alpha = gamma$], [34],
+  [`pot_ym_assumptions`], [Assumption isolation, conditional theorem], [22],
+  [`pot_assumption_c_proof`], [Hankel regularity (C $arrow$ A/B)], [22],
+  [`pot_assumption_d_proof`], [Inverse spectral extraction (D $arrow$ A/B)], [31],
+  [`pot_assumption_b_proof`], [ITCM kernel $=$ resolvent (structural)], [30],
+  [`pot_greens_normalization`], [Green's function jump condition], [35],
+  [`pot_theorem_b`], [Consolidated ITCM resolvent theorem], [15],
+  [`pot_assumption_a_formalization`], [Physics input formalization], [24],
+  [`pot_assumption_e_formalization`], [QFT construction gap (E1--E4)], [23],
+  [`pot_main_reduction_theorem`], [Main Reduction Theorem (capstone)], [16],
 )
 
 Total: over 400 Z3-verified examples. Every boundary between physics and mathematics is explicitly managed. The scaffold is stable. The reduction is complete.
@@ -344,6 +403,18 @@ Under Assumptions A--E, the Yang--Mills mass gap problem reduces to the existenc
 
 #par(hanging-indent: 1.5em)[\[17\] J. Derezinski and B. Karimi, 'Hypergeometric type functions and their symmetries,' Ann. Henri Poincare 25 (2024), 2781--2838.]
 
-#par(hanging-indent: 1.5em)[\[18\] Kleis: a formal verification language for mathematics and engineering. https://kleis.io]
+#par(hanging-indent: 1.5em)[\[18\] E. Atik, 'Confinement as fiber non-invariance: the admissibility boundary in projected ontology,' preprint, Kleis Research (2026). Volume IV of the POT series.]
+
+#par(hanging-indent: 1.5em)[\[19\] E. Atik, 'Renormalization as projected ontology: the theory that was never divergent,' preprint, Kleis Research (2026). Volume VII of the POT series.]
+
+#par(hanging-indent: 1.5em)[\[20\] E. C. Titchmarsh, 'Eigenfunction Expansions Associated with Second-Order Differential Equations,' Part I, 2nd ed., Oxford University Press (1962).]
+
+#par(hanging-indent: 1.5em)[\[21\] I. M. Gel'fand and B. M. Levitan, 'On the determination of a differential equation from its spectral function,' Izv. Akad. Nauk SSSR Ser. Mat. 15 (1951), 309--360; English transl. in Amer. Math. Soc. Transl. Ser. 2, 1 (1955), 253--304.]
+
+#par(hanging-indent: 1.5em)[\[22\] V. A. Marchenko, 'Sturm--Liouville Operators and Applications,' revised ed., AMS Chelsea Publishing (2011). Original Russian edition: Naukova Dumka, Kiev (1977).]
+
+#par(hanging-indent: 1.5em)[\[23\] S. M. Sitnik and E. L. Shishkina, 'Transmutations, Singular and Fractional Differential Equations with Applications to Mathematical Physics,' Academic Press (2020). See also S. M. Sitnik and I. Jebabli, Theorem 5 on Sonine--Poisson--Delsarte transmutation operators.]
+
+#par(hanging-indent: 1.5em)[\[24\] Kleis: a formal verification language for mathematics and engineering. https://kleis.io]
 
 
