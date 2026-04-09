@@ -1,6 +1,102 @@
 # Next Session Notes
 
-**Last Updated:** April 4, 2026 (session — Paper V research: all 6 theory files formalized, 42 Z3-verified examples pass)
+**Last Updated:** April 9, 2026 (session — Volume VII: "Renormalization as Projected Ontology: The Theory That Was Never Divergent" — complete with 4 figures and 40 Z3-verified examples)
+
+---
+
+## VOLUME VII: Renormalization as Projected Ontology — COMPLETE
+
+**Branch:** `feature/pot-renormalization-paper`
+**Paper file:** `examples/ontology/revised/pot_renormalization_paper.kleis`
+**Theory file:** `theories/pot_renormalization_kernel.kleis`
+**Published copies:** `docs/papers/pot_renormalization_paper.{kleis,pdf}`
+**PDF:** 34 pages, 4 figures, 40 Z3-verified examples
+
+### What the paper establishes
+
+1. Regularization (zeta, heat kernel, Pauli-Villars, dimensional) = projection kernels in POT
+2. Gauge group of admissible regulators: different schemes are gauge-equivalent
+3. Heat kernel is the physically fundamental regulator; zeta kernel inherits correctness via Mellin bridge
+4. **K_QFT = FP ∘ K_ren ∘ K_path** — the path integral + renormalization compose into a single integral transform (ITCM theorem of Sitnik et al.)
+5. The divergences were never real — artifacts of factorization, not properties of the theory
+6. Explicit hypergeometric kernel for QED via ITCM Hankel composition
+7. Euler factorization → universal Cauchy pole × regular hypergeometric correction R(z)
+8. Moduli space of weight functions W/≈ classifies physically distinct QFTs; RG flow acts on it
+9. Spectral Gap Conjecture: Δ > 0 ⟺ μ_YM ≠ ν_YM and w_YM satisfies IR regularity
+10. Numerical spectral demonstration: Bessel operator eigenvalues confirm gap mechanism
+
+### Key files
+
+| File | Content |
+|------|---------|
+| `theories/pot_renormalization_kernel.kleis` | 40 Z3 examples: RegularizationKernel, FinitePartOperator, RegulatorGaugeGroup, SpectralZeta, HeatKernelRegularization, RegulatorPhysicalKernel, QFTProjection, CompositeQFTKernel, ITCMTransmutation, QEDHypergeometricKernel, SpectralLocalization, DivergenceFreeComposite, YangMillsCompositeKernel, FlowAlgebra, WeightModuliSpace, SpectralGapParameters |
+| `examples/ontology/revised/pot_renormalization_paper.kleis` | Full paper with 4 ArxivDiagram figures, 34 pages |
+
+### Figures
+
+| # | Label | Content |
+|---|-------|---------|
+| 1 | `fig:dressing` | R(z) for δ=0,1,2,3,6 — interaction dressing family |
+| 2 | `fig:gauss` | R(1) vs δ — exact Gauss evaluation, super-linear growth |
+| 3 | `fig:spectrum` | Lowest 10 eigenvalues of Bessel operator L_μ for 5 δ values |
+| 4 | `fig:gap` | Spectral gap Δ(δ) = E₁(δ) - E₁(0) — monotonic opening |
+
+### Future research directions (from this paper)
+
+#### 1. Operator equivalence: ITCM kernel ↔ Sturm-Liouville (highest priority)
+
+Formalize the bridge between the ITCM composite kernel and the Bessel/Pöschl-Teller
+operator family via the Dereziński-Karimi classification (arXiv:2509.03235). If the YM
+composite kernel maps to an operator in the "hyperbolic" family, the mass gap becomes
+a computable condition on hypergeometric potential parameters. This would promote the
+numerical demonstration (Figures 3-4) from "compelling mechanism" to "intrinsic spectral
+result."
+
+**What's needed:** Show that the integral operator with kernel K(x,y) = x²/((x-y)(x+y)) · ₂F₁(a,b;c;y²/x²) is unitarily equivalent to a Schrödinger operator with hypergeometric potential. The Dereziński-Karimi paper classifies exactly solvable operators of this type.
+
+#### 2. Infinite-volume stabilization via IR-regularizing w_YM
+
+The finite-volume spectral gap (Figures 3-4) vanishes as L → ∞ for the simple centrifugal
+barrier. An IR-regularizing weight function w_YM(k) must modify the long-range kernel
+behavior to stabilize the gap. The key question: does the IR regularity constraint
+(Table 4, constraint 2) suffice to preserve the gap in infinite volume?
+
+**What's needed:** A concrete ansatz for w_YM (e.g., w(k) ~ k^α for small k with α > 0)
+that produces a confining potential in position space. Show the resulting composite kernel
+has normalizable eigenfunctions with a gap.
+
+#### 3. Lattice QCD validation (experimental backing)
+
+Extract w_YM(k) from lattice gluon propagators. Determine (μ_YM, ν_YM) from ITCM
+identification. Compute R(1) via Gauss formula. Compare predicted spectral gap with
+known glueball mass Δ ≈ 1.5 GeV. This is a falsifiable numerical prediction.
+
+**What's needed:** Access to lattice QCD propagator data (publicly available from several
+collaborations). Numerical fitting of w_YM(k) to ITCM parametrization.
+
+#### 4. Topology of the moduli space W/≈
+
+Open questions from Section 9.10: Is W connected? Does it admit a metric under which RG
+flow is a gradient flow (c-theorem)? Is the mass gap condition open/closed in W? These
+reduce Yang-Mills existence to topology of weight space.
+
+#### 5. Category-theoretic formulation of the shadow principle
+
+The projection Π and the "shadow" it casts (Section 10.3) may form an adjunction or
+Galois connection between source spaces and factored kernels. This could give a precise
+meaning to "compatible source" and characterize minimal ℋ_ont.
+
+### POT VUFT Series (updated)
+
+| Volume | Title | Kernel | Status |
+|--------|-------|--------|--------|
+| I | Flat Galactic Rotation Curves from Projected Ontology | Gravitational (logarithmic Green's function) | Published |
+| II | Quantum Entanglement as a Projection Artifact | Measurement (spinor projections) | Published |
+| III | Electrodynamics as a Theorem of Projected Ontology | Gauge (d\|_Ω¹, admissible, nilpotent) | Complete |
+| IV | Confinement as Fiber Non-Invariance | Non-admissible Yang-Mills (Lie bracket defect) | Complete |
+| V | Admissibility Restoration: Structural Necessity of SSB | Restored (coupling to Higgs restoring field) | Complete |
+| VI | The Kernel and the Fluid: An Epilogue | Biot-Savart (epilogue, all four forces) | Complete |
+| **VII** | **Renormalization as Projected Ontology: The Theory That Was Never Divergent** | **Composite (FP ∘ K_ren ∘ K_path), ITCM hypergeometric** | **Complete** |
 
 ---
 
@@ -679,6 +775,9 @@ The papers form a series, each adding a sector to the kernel framework:
 | II | Quantum Entanglement as a Projection Artifact | Measurement (spinor projections, detector angle) | Published |
 | III | Electrodynamics as a Theorem of Projected Ontology | Gauge (d\|_Ω¹, admissible, nilpotent) | Complete |
 | IV | Confinement as Fiber Non-Invariance: The Admissibility Boundary | Non-admissible Yang-Mills (Lie bracket defect) | Complete |
+| V | Admissibility Restoration: Structural Necessity of SSB | Restored (coupling to Higgs restoring field) | Complete |
+| VI | The Kernel and the Fluid: An Epilogue | Biot-Savart (epilogue, all four forces) | Complete |
+| VII | Renormalization as Projected Ontology: The Theory That Was Never Divergent | Composite (FP ∘ K_ren ∘ K_path), ITCM hypergeometric | Complete |
 
 Each volume is independently verifiable via `kleis test`. The substrate (stdlib) is shared.
 
