@@ -1,0 +1,908 @@
+// =============================================================================
+//
+//   ASSUMPTION E FORMALIZATION: THE QFT CONSTRUCTION GAP
+//
+//   File 13 of the Projected Ontology Theory program.
+//
+// =============================================================================
+//
+//  Assumption E states:
+//
+//    The Sturm–Liouville operator L extracted from the ITCM resolvent
+//    picture corresponds to a rigorous quantum Yang–Mills theory on R⁴
+//    satisfying the Wightman axioms (or their Euclidean counterpart,
+//    the Osterwalder–Schrader axioms), and the spectral gap Δ of L
+//    equals the mass gap m of the 4D theory.
+//
+//  This is the HARDEST assumption in the program and the one that
+//  connects the spectral-theory scaffold to the Clay Millennium
+//  Problem statement.
+//
+//  ARCHITECTURE OF THIS FILE:
+//
+//    LAYER 1 (§§1–2): WHAT THE PROGRAM NEEDS FROM E
+//      The minimal QFT construction conditions, stated in abstract
+//      form.  No physics beyond what the scaffold B+C+D requires.
+//
+//    LAYER 2 (§§3–6): THE FOUR SUB-CONDITIONS
+//      E1: Existence      (Wightman/OS theory on R⁴)
+//      E2: Consistency    (gauge invariance + Hilbert space)
+//      E3: Renormalizability  (non-perturbative definition)
+//      E4: Dimensional bridge (4D → 1D via radial ITCM)
+//
+//    LAYER 3 (§§7–8): WHAT IS KNOWN
+//      Partial results: 2D, 3D, lattice, perturbative.
+//      What works, what doesn't, where the hard walls are.
+//
+//    LAYER 4 (§§9–11): HONEST ASSESSMENT AND COROLLARY
+//      Level assignment for each sub-condition.
+//      Upgrade paths.
+//      Final program status: A + (B,C,D) + E.
+//
+//  No stdlib import — pure Z3 theory file.
+//
+// =============================================================================
+
+
+// =============================================================================
+//
+//                   L A Y E R   1 :   W H A T   T H E
+//                   P R O G R A M   N E E D S   F R O M   E
+//
+// =============================================================================
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §1  THE INTERFACE: SL GAP → 4D MASS GAP
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// The scaffold A+B+C+D produces:
+//
+//   OUTPUT 1:  An SL operator L on R₊ = (0,∞) with potential V(x) ~ x^{2γ}
+//   OUTPUT 2:  A spectral gap Δ > 0 for L  (Rellich–Molchanov)
+//   OUTPUT 3:  At γ = 1/2: Δ ~ σ^{2/3} · 1.750  (Airy scaling)
+//
+// The Clay Millennium Problem requires:
+//
+//   TARGET 1:  A quantum Yang–Mills theory on R⁴ with gauge group SU(N),
+//              N ≥ 2, satisfying the Wightman axioms
+//   TARGET 2:  A mass gap m > 0 in the spectrum of the Hamiltonian H
+//              (i.e., the spectrum of H is contained in {0} ∪ [m, ∞))
+//
+// Assumption E must bridge:
+//
+//   BRIDGE:  There exists a rigorous 4D YM theory (TARGET 1) whose
+//            radial ITCM sector has the same spectral gap as L, so
+//            that Δ(L) = m (the 4D mass gap).
+//
+// This is a COMPOUND assumption: it requires both existence of the
+// 4D theory AND identification of its radial spectral content with L.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+structure ProgramInterface {
+    // What A+B+C+D produces
+    element sl_gap : ℝ              // Δ > 0, the SL spectral gap
+    element sl_dimension : ℝ        // 1 (half-line R₊)
+
+    // What Clay requires
+    element ym_mass_gap : ℝ         // m > 0, the 4D mass gap
+    element clay_dimension : ℝ      // 4 (R⁴)
+
+    // What E must bridge
+    element bridge_holds : ℝ        // 1 if Δ(L) = m
+
+    axiom sl_pos : sl_gap > 0
+    axiom sl_dim : sl_dimension = 1
+    axiom clay_dim : clay_dimension = 4
+    axiom gap_bridge : bridge_holds = 1
+    axiom bridge_eq : ym_mass_gap = sl_gap
+}
+
+example "§1.1: the dimensional gap — 1D vs 4D (Z3)" {
+    assert(clay_dimension > sl_dimension)
+    assert(minus(clay_dimension, sl_dimension) = 3)
+}
+
+example "§1.2: the bridge — SL gap = YM mass gap (Z3)" {
+    assert(bridge_holds = 1)
+    assert(ym_mass_gap = sl_gap)
+    assert(ym_mass_gap > 0)
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §2  MINIMAL QFT CONSTRUCTION CONDITIONS
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Assumption E decomposes into four sub-conditions.  ALL four must
+// hold simultaneously for the bridge to work.
+//
+//   E1 (EXISTENCE):
+//     A quantum Yang–Mills theory on R⁴ exists as a Wightman theory
+//     (or, equivalently via Osterwalder–Schrader reconstruction,
+//     as a Euclidean QFT satisfying OS axioms).
+//
+//   E2 (CONSISTENCY):
+//     The theory is gauge-invariant in a non-perturbative sense.
+//     A physical Hilbert space H_phys can be constructed from the
+//     BRST cohomology (or equivalent mechanism), and the
+//     Hamiltonian is self-adjoint on H_phys.
+//
+//   E3 (RENORMALIZABILITY):
+//     The theory has a well-defined continuum limit.
+//     Specifically: the lattice regularization (Wilson action) has
+//     a non-perturbative continuum limit in the infinite-volume,
+//     zero-lattice-spacing limit, and this limit satisfies E1 and E2.
+//
+//   E4 (DIMENSIONAL BRIDGE):
+//     The 4D mass gap m is determined by the spectral gap of the
+//     radial ITCM sector.  Specifically: the two-point function
+//     ⟨Tr F²(x) Tr F²(0)⟩ has a spectral representation whose
+//     radial part, after partial-wave decomposition and Hankel
+//     transform, yields the ITCM kernel K(x,y;z) of the scaffold.
+//
+// The four sub-conditions are LOGICALLY ORDERED:
+//   E1 → E2 → E3 → E4
+//   (each presupposes the previous ones)
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+structure SubConditions {
+    element E1_existence : ℝ        // 1 if Wightman/OS theory exists
+    element E2_consistency : ℝ      // 1 if gauge-invariant Hilbert space
+    element E3_renormalizability : ℝ // 1 if continuum limit exists
+    element E4_bridge : ℝ           // 1 if radial sector ↔ SL operator
+
+    element all_hold : ℝ
+
+    axiom e1 : E1_existence = 1
+    axiom e2 : E2_consistency = 1
+    axiom e3 : E3_renormalizability = 1
+    axiom e4 : E4_bridge = 1
+    axiom all : all_hold = 1
+}
+
+example "§2.1: four sub-conditions, all needed (Z3)" {
+    assert(E1_existence = 1)
+    assert(E2_consistency = 1)
+    assert(E3_renormalizability = 1)
+    assert(E4_bridge = 1)
+    assert(all_hold = 1)
+}
+
+
+// =============================================================================
+//
+//                   L A Y E R   2 :   T H E   F O U R
+//                     S U B - C O N D I T I O N S
+//
+// =============================================================================
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §3  E1: EXISTENCE (Wightman/Osterwalder–Schrader)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// The Wightman axioms for a quantum field theory on R⁴ require:
+//
+//   W1. HILBERT SPACE:
+//     A separable Hilbert space H with a distinguished vacuum Ω.
+//
+//   W2. POINCARÉ COVARIANCE:
+//     A continuous unitary representation U(a,Λ) of the Poincaré
+//     group on H, with U(a,Λ)Ω = Ω.
+//
+//   W3. SPECTRAL CONDITION:
+//     The joint spectrum of the energy-momentum operators (H,P)
+//     is contained in the closed forward light cone V₊.
+//     In particular: H ≥ 0 (positivity of energy).
+//
+//   W4. LOCALITY:
+//     Fields at spacelike-separated points commute (or anti-commute
+//     for fermions):  [φ(x), φ(y)] = 0 for (x-y)² < 0.
+//
+//   W5. COMPLETENESS:
+//     The polynomials in the field operators applied to Ω are
+//     dense in H (cyclicity of the vacuum).
+//
+// The Osterwalder–Schrader (OS) axioms are the Euclidean equivalent:
+//   OS0 (temperedness), OS1 (Euclidean covariance), OS2 (reflection
+//   positivity), OS3 (symmetry), OS4 (cluster property).
+//
+// OS reconstruction theorem (Osterwalder–Schrader, 1973–75):
+//   OS axioms ⟹ Wightman axioms  (under technical conditions).
+//
+// For Yang–Mills: NO construction satisfying either set is known in 4D.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+structure WightmanAxioms {
+    element W1_hilbert : ℝ
+    element W2_poincare : ℝ
+    element W3_spectral : ℝ
+    element W4_locality : ℝ
+    element W5_completeness : ℝ
+
+    element axioms_count : ℝ
+
+    axiom w1 : W1_hilbert = 1
+    axiom w2 : W2_poincare = 1
+    axiom w3 : W3_spectral = 1
+    axiom w4 : W4_locality = 1
+    axiom w5 : W5_completeness = 1
+    axiom count : axioms_count = 5
+}
+
+structure OSAxioms {
+    element OS0_tempered : ℝ
+    element OS1_covariance : ℝ
+    element OS2_reflection_pos : ℝ
+    element OS3_symmetry : ℝ
+    element OS4_cluster : ℝ
+
+    axiom os0 : OS0_tempered = 1
+    axiom os1 : OS1_covariance = 1
+    axiom os2 : OS2_reflection_pos = 1
+    axiom os3 : OS3_symmetry = 1
+    axiom os4 : OS4_cluster = 1
+}
+
+example "§3.1: Wightman axioms — five conditions (Z3)" {
+    assert(axioms_count = 5)
+    assert(W1_hilbert = 1)
+    assert(W3_spectral = 1)
+    assert(W4_locality = 1)
+}
+
+example "§3.2: OS axioms — Euclidean counterpart (Z3)" {
+    assert(OS2_reflection_pos = 1)
+    assert(OS4_cluster = 1)
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §4  E2: CONSISTENCY (Gauge Invariance + Hilbert Space)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// The Wightman axioms assume a Hilbert space H with positive-definite
+// inner product.  In non-abelian gauge theory, this is non-trivial
+// because:
+//
+//   PROBLEM 1 (GRIBOV):
+//     The Landau gauge condition ∂·A = 0 does not uniquely fix the
+//     gauge — there are Gribov copies.  Different copies give
+//     different functional integrals.  The path integral is therefore
+//     not well-defined without restriction to a fundamental modular
+//     domain (Gribov region or its refinement, the first Gribov
+//     horizon).
+//
+//   PROBLEM 2 (BRST):
+//     Perturbative gauge invariance is encoded by BRST symmetry:
+//     physical states are BRST cohomology classes.  But:
+//     - BRST symmetry may be BROKEN non-perturbatively (Neuberger, 1987)
+//     - The Kugo–Ojima confinement criterion (which assumes unbroken
+//       BRST) is not proven in the non-perturbative regime
+//     - Without BRST, the construction of H_phys is unclear
+//
+//   PROBLEM 3 (POSITIVITY):
+//     The Euclidean correlators must satisfy reflection positivity (OS2)
+//     to reconstruct a Hilbert space.  But: lattice measurements show
+//     the gluon propagator VIOLATES positivity (Cucchieri et al., 2004),
+//     suggesting confined gluons are NOT physical particles.  This is
+//     consistent with confinement but complicates the axiom framework.
+//
+// WHAT E2 REQUIRES:
+//   A rigorous construction of H_phys for 4D YM, with the Hamiltonian
+//   self-adjoint on H_phys.  The physical spectrum lives in H_phys.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+structure GaugeConsistency {
+    element gribov_resolved : ℝ       // 0 = not resolved
+    element brst_nonpert : ℝ          // 0 = not proven non-perturbatively
+    element positivity_physical : ℝ   // 0 = not established for physical states
+    element H_phys_constructed : ℝ    // 0 = physical Hilbert space not built
+
+    axiom g : gribov_resolved = 0
+    axiom b : brst_nonpert = 0
+    axiom p : positivity_physical = 0
+    axiom h : H_phys_constructed = 0
+}
+
+example "§4.1: gauge consistency — all sub-problems open (Z3)" {
+    assert(gribov_resolved = 0)
+    assert(brst_nonpert = 0)
+    assert(H_phys_constructed = 0)
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §5  E3: RENORMALIZABILITY (Non-perturbative Continuum Limit)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// PERTURBATIVE RENORMALIZABILITY:
+//   Proven by 't Hooft–Veltman (1971, Nobel Prize 1999).
+//   YM is perturbatively renormalizable to all orders in g.
+//   This is Level A (theorem).
+//
+// ASYMPTOTIC FREEDOM:
+//   Proven by Gross–Wilczek and Politzer (1973, Nobel Prize 2004).
+//   The YM coupling g(μ) → 0 as μ → ∞ (UV).
+//   Consequence: the UV behavior is under perturbative control.
+//   This is Level A (theorem).
+//
+// NON-PERTURBATIVE CONTINUUM LIMIT:
+//   The Wilson lattice action (1974) provides a RIGOROUS definition
+//   of YM on a finite lattice Λ with spacing a.
+//   The theory is well-defined for any finite Λ and a > 0.
+//
+//   The continuum limit requires:
+//     (i)   a → 0 (continuum)
+//     (ii)  L → ∞ (infinite volume)
+//     (iii) the limit satisfies Wightman/OS axioms
+//
+//   What is known:
+//     Balaban (1984–89): constructed the continuum limit for 3D YM
+//     on a torus, with rigorous functional integral bounds.
+//     This is the deepest existing constructive result.
+//
+//     4D: no analogous construction exists.
+//     The difficulty is controlling the IR (strong coupling) regime
+//     while taking a → 0.  Asymptotic freedom helps in UV but
+//     says nothing about IR.
+//
+// WHAT E3 REQUIRES:
+//   The lattice YM theory has a non-perturbative continuum limit
+//   that defines a Euclidean QFT satisfying OS axioms.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+structure Renormalizability {
+    // Proven results (Level A)
+    element pert_renorm : ℝ         // 1 = perturbative renormalizability
+    element asymptotic_free : ℝ     // 1 = asymptotic freedom
+    element lattice_defined : ℝ     // 1 = well-defined on finite lattice
+
+    // Open problems
+    element continuum_4d : ℝ        // 0 = 4D continuum limit not proven
+    element infinite_volume : ℝ     // 0 = infinite-volume limit not proven
+
+    axiom pr : pert_renorm = 1
+    axiom af : asymptotic_free = 1
+    axiom ld : lattice_defined = 1
+    axiom c4 : continuum_4d = 0
+    axiom iv : infinite_volume = 0
+}
+
+structure ConstructiveResults {
+    element dim_solved_2d : ℝ       // 2D: exactly solvable (trivial)
+    element dim_solved_3d : ℝ       // 3D: Balaban's construction (partial)
+    element dim_solved_4d : ℝ       // 4D: open
+
+    axiom d2 : dim_solved_2d = 1
+    axiom d3 : dim_solved_3d = 1
+    axiom d4 : dim_solved_4d = 0
+}
+
+example "§5.1: perturbative results — Level A (Z3)" {
+    assert(pert_renorm = 1)
+    assert(asymptotic_free = 1)
+    assert(lattice_defined = 1)
+}
+
+example "§5.2: non-perturbative 4D — open (Z3)" {
+    assert(continuum_4d = 0)
+    assert(infinite_volume = 0)
+}
+
+example "§5.3: constructive QFT frontier — 2D,3D done, 4D open (Z3)" {
+    assert(dim_solved_2d = 1)
+    assert(dim_solved_3d = 1)
+    assert(dim_solved_4d = 0)
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §6  E4: DIMENSIONAL BRIDGE (4D → 1D Radial Sector)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Even assuming E1–E3, the connection between the 4D mass gap m and
+// the 1D SL spectral gap Δ is non-trivial.
+//
+// THE PHYSICAL PICTURE:
+//   The gauge-invariant two-point function of the lowest-dimension
+//   scalar operator (e.g., Tr F²(x) or the glueball interpolator)
+//   has a Källén–Lehmann spectral representation:
+//
+//       ⟨Tr F²(x) Tr F²(0)⟩ = ∫ ρ(m²) D_m(x) dm²
+//
+//   where D_m(x) is the free scalar propagator of mass m, and
+//   ρ(m²) is the spectral density.  The mass gap is:
+//
+//       m₀ = inf{ m : ρ(m²) ≠ 0 }
+//
+// THE BRIDGE:
+//   Step 1: Decompose the 4D correlator into radial and angular parts
+//           using O(4) partial waves (Euclidean rotation group).
+//   Step 2: The s-wave (ℓ=0) radial part involves a Hankel-type
+//           transform kernel.
+//   Step 3: Identify this radial kernel with the ITCM kernel K(x,y;z).
+//   Step 4: The mass gap m₀ is determined by the lowest eigenvalue
+//           of the operator L extracted from K.
+//
+// WHAT E4 REQUIRES:
+//   The identification in Step 3 is rigorous: the radial part of the
+//   4D two-point function IS the ITCM kernel constructed from the
+//   YM weight w_YM(k).
+//
+// WHY THIS IS NON-TRIVIAL:
+//   1. The partial-wave decomposition assumes rotational symmetry,
+//      which holds in Euclidean space but requires analytic
+//      continuation to Minkowski space.
+//   2. The ITCM kernel involves TWO different Hankel orders (μ ≠ ν),
+//      which encodes the mismatch between the free and interacting
+//      angular structure.  This mismatch must be derived, not assumed.
+//   3. The mass gap appears in the LOWEST partial wave.  Higher
+//      partial waves contribute to excited states.  The identification
+//      of the s-wave gap with the mass gap requires that no lower
+//      state appears in other sectors.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+structure DimensionalBridge {
+    element dim_source : ℝ       // 4D theory
+    element dim_target : ℝ       // 1D SL operator
+
+    element step1_decomposition : ℝ   // partial-wave decomposition
+    element step2_radial : ℝ          // s-wave extraction
+    element step3_identification : ℝ  // radial kernel = ITCM kernel
+    element step4_gap : ℝ             // lowest eigenvalue = mass gap
+
+    axiom ds : dim_source = 4
+    axiom dt : dim_target = 1
+    axiom s1 : step1_decomposition = 1
+    axiom s2 : step2_radial = 1
+    axiom s3 : step3_identification = 1
+    axiom s4 : step4_gap = 1
+}
+
+structure BridgeDifficulties {
+    // Three specific difficulties in E4
+    element analytic_continuation : ℝ    // Euclidean → Minkowski rotation
+    element hankel_order_mismatch : ℝ    // μ ≠ ν must be derived
+    element swave_dominance : ℝ          // lowest partial wave = gap
+
+    // All three are open
+    axiom ac : analytic_continuation = 0
+    axiom hom : hankel_order_mismatch = 0
+    axiom sw : swave_dominance = 0
+}
+
+example "§6.1: the dimensional bridge — four steps (Z3)" {
+    assert(dim_source = 4)
+    assert(dim_target = 1)
+    assert(minus(dim_source, dim_target) = 3)
+}
+
+example "§6.2: bridge difficulties — all three open (Z3)" {
+    assert(analytic_continuation = 0)
+    assert(hankel_order_mismatch = 0)
+    assert(swave_dominance = 0)
+}
+
+
+// =============================================================================
+//
+//                   L A Y E R   3 :   W H A T   I S   K N O W N
+//
+// =============================================================================
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §7  PARTIAL RESULTS IN CONSTRUCTIVE QFT
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// EXACTLY SOLVED:
+//   2D YM: exactly solvable via Migdal's area law and Witten's
+//   reformulation as a topological theory.  The continuum theory
+//   is trivial (free) and has no mass gap.
+//   This is instructive but NOT a model for 4D behavior.
+//
+// PARTIALLY CONSTRUCTED:
+//   3D YM: Balaban (1984–89) proved:
+//     - Existence of the lattice → continuum limit in a finite volume
+//     - Exponential decay of correlators (implies a mass gap in finite V)
+//     - UV renormalization is controlled
+//   Magnen–Rivasseau–Sénéor extended aspects of this.
+//   3D YM IS believed to have a mass gap, but the full Wightman
+//   construction in infinite volume is not complete.
+//
+// NUMERICAL (RIGOROUS BOUNDS FROM LATTICE):
+//   4D SU(3) lattice QCD: the glueball mass spectrum has been
+//   computed to high precision (Morningstar–Peardon, 1999):
+//     m(0⁺⁺) ≈ 1.73 GeV  (lightest scalar glueball)
+//     m(2⁺⁺) ≈ 2.40 GeV  (lightest tensor glueball)
+//   These are NUMERICAL results, not rigorous proofs.
+//   They strongly support the existence of a mass gap.
+//
+// WHAT HAS NOT BEEN DONE:
+//   - No rigorous 4D YM construction satisfying Wightman axioms
+//   - No proof that lattice 4D YM has a continuum limit
+//   - No proof that the continuum limit (if it exists) has a mass gap
+//   - No rigorous partial-wave connection between 4D correlators
+//     and 1D spectral problems
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+structure KnownResults {
+    // Level A (proven)
+    element pert_renorm_proven : ℝ       // 't Hooft–Veltman
+    element asymptotic_freedom_proven : ℝ // Gross–Wilczek, Politzer
+    element lattice_welldefined : ℝ       // Wilson
+    element balaban_3d : ℝ               // Balaban's 3D result
+
+    // Level B (strongly supported by numerics)
+    element lattice_gap_numerical : ℝ     // glueball spectrum
+
+    // Level C/D (open)
+    element wightman_4d_ym : ℝ           // 4D construction
+    element continuum_limit_4d : ℝ       // lattice → continuum
+    element mass_gap_rigorous : ℝ        // rigorous mass gap proof
+
+    axiom pr : pert_renorm_proven = 1
+    axiom af : asymptotic_freedom_proven = 1
+    axiom lw : lattice_welldefined = 1
+    axiom b3 : balaban_3d = 1
+    axiom lg : lattice_gap_numerical = 1
+    axiom w4 : wightman_4d_ym = 0
+    axiom cl : continuum_limit_4d = 0
+    axiom mg : mass_gap_rigorous = 0
+}
+
+example "§7.1: proven results — pert renorm, AF, lattice, Balaban (Z3)" {
+    assert(pert_renorm_proven = 1)
+    assert(asymptotic_freedom_proven = 1)
+    assert(lattice_welldefined = 1)
+    assert(balaban_3d = 1)
+}
+
+example "§7.2: numerical support — lattice glueball spectrum (Z3)" {
+    assert(lattice_gap_numerical = 1)
+}
+
+example "§7.3: open — no rigorous 4D construction or mass gap (Z3)" {
+    assert(wightman_4d_ym = 0)
+    assert(continuum_limit_4d = 0)
+    assert(mass_gap_rigorous = 0)
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §8  THE ASYMPTOTIC FREEDOM ADVANTAGE
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Asymptotic freedom is the SINGLE BIGGEST ADVANTAGE for constructing
+// 4D YM.  It means:
+//
+//   UV regime (short distances):  perturbation theory IS reliable.
+//   The coupling g(μ) → 0 as μ → ∞, so the theory is weakly coupled
+//   at short distances.  This gives rigorous control over the UV
+//   divergences (renormalization works).
+//
+//   IR regime (long distances):  perturbation theory FAILS.
+//   The coupling grows, and non-perturbative effects dominate.
+//   This is where confinement and the mass gap live.
+//
+// The constructive program for 4D YM would use AF as follows:
+//   1. Start from the lattice definition (rigorous for any a, L)
+//   2. Use AF to control the UV (a → 0) limit
+//   3. The hard part: control the IR (L → ∞) behavior
+//
+// Step 3 is exactly where our program contributes:
+//   IF the ITCM kernel captures the IR spectral content,
+//   THEN the mass gap follows from the scaffold B+C+D.
+//
+// This is NOT a circular argument:
+//   AF handles UV.  Our scaffold handles IR (given A).
+//   The missing piece is the rigorous connection (E4).
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+structure AsymptoticFreedomRole {
+    element uv_controlled : ℝ        // 1 = AF gives UV control
+    element ir_hard : ℝ              // 1 = IR requires non-perturbative methods
+    element our_contribution_ir : ℝ  // 1 = scaffold handles IR given A
+
+    axiom uv : uv_controlled = 1
+    axiom ir : ir_hard = 1
+    axiom ours : our_contribution_ir = 1
+}
+
+example "§8.1: AF controls UV, scaffold handles IR (Z3)" {
+    assert(uv_controlled = 1)
+    assert(ir_hard = 1)
+    assert(our_contribution_ir = 1)
+}
+
+
+// =============================================================================
+//
+//                   L A Y E R   4 :   H O N E S T
+//                     A S S E S S M E N T
+//
+// =============================================================================
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §9  LEVEL ASSIGNMENT FOR EACH SUB-CONDITION
+// ─────────────────────────────────────────────────────────────────────────────
+//
+//   E1 (Existence):         Level D
+//     No 4D YM Wightman theory has been constructed.
+//     The 3D case (Balaban) is the frontier.
+//     The jump from 3D to 4D is believed to be qualitatively hard.
+//
+//   E2 (Consistency):       Level D
+//     Non-perturbative BRST is unresolved.
+//     The Gribov problem has no rigorous solution.
+//     Physical Hilbert space construction is open.
+//
+//   E3 (Renormalizability): Level C
+//     Perturbative renormalizability is Level A.
+//     Lattice definition is Level A.
+//     Non-perturbative continuum limit is Level C
+//     (strongly supported by numerics, no rigorous proof).
+//
+//   E4 (Dimensional bridge): Level C
+//     The partial-wave picture is physically well-motivated.
+//     The Hankel-kernel identification is structurally consistent.
+//     But no rigorous derivation connects 4D correlators to
+//     the ITCM kernel of the scaffold.
+//
+// COMBINED: E is Level C/D (open — hardest problem in the program).
+//
+// Encoding: A=1, A/B=1.5, B=2, B/C=2.5, C=3, C/D=3.5, D=4
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+structure LevelAssignment {
+    element E1_level : ℝ      // 4.0 = Level D
+    element E2_level : ℝ      // 4.0 = Level D
+    element E3_level : ℝ      // 3.0 = Level C
+    element E4_level : ℝ      // 3.0 = Level C
+
+    element E_combined : ℝ    // 3.5 = Level C/D
+
+    axiom le1 : E1_level = 4
+    axiom le2 : E2_level = 4
+    axiom le3 : E3_level = 3
+    axiom le4 : E4_level = 3
+    axiom lec : E_combined = 3.5
+}
+
+example "§9.1: E1,E2 at Level D (hardest) (Z3)" {
+    assert(E1_level = 4)
+    assert(E2_level = 4)
+}
+
+example "§9.2: E3,E4 at Level C (supported but unproven) (Z3)" {
+    assert(E3_level = 3)
+    assert(E4_level = 3)
+}
+
+example "§9.3: E combined at Level C/D (Z3)" {
+    assert(E_combined = 3.5)
+    assert(E_combined > E3_level)
+    assert(E_combined < E1_level)
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §10  UPGRADE PATHS AND WHAT WOULD NOT HELP
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// MOST ACCESSIBLE (E4, dimensional bridge):
+//   Prove the partial-wave connection between 4D glueball correlators
+//   and the ITCM kernel.  This is a MATHEMATICAL problem (spectral
+//   theory of radial reductions), not a constructive QFT problem.
+//   It could be addressed within the existing scaffold.
+//   Upgrade: E4 from Level C → Level B.
+//
+// PARTIALLY ACCESSIBLE (E3, renormalizability):
+//   Extend Balaban's 3D program to 4D.  This is the most active
+//   constructive QFT frontier.  Asymptotic freedom provides the
+//   tool; the difficulty is IR control.
+//   Upgrade: E3 from Level C → Level B.
+//
+// VERY HARD (E1+E2, existence + consistency):
+//   Construct the physical Hilbert space and prove Wightman axioms.
+//   This IS the Clay Millennium Problem.
+//   Upgrade: E1, E2 from Level D → Level A.
+//
+// WHAT WOULD NOT UPGRADE E:
+//   More lattice data (doesn't prove the continuum limit).
+//   More perturbative calculations (doesn't reach the IR).
+//   More structural matching in the scaffold (B,C,D are already A/B).
+//   Numerical evidence for the glueball spectrum (already known).
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+structure UpgradePaths {
+    // E4: mathematical, most accessible
+    element E4_upgrade_target : ℝ     // 2 = Level B
+    element E4_method : ℝ             // 1 = partial-wave spectral theory
+
+    // E3: partially accessible (extend Balaban)
+    element E3_upgrade_target : ℝ     // 2 = Level B
+    element E3_method : ℝ             // 1 = constructive QFT
+
+    // E1+E2: the Clay problem itself
+    element E12_upgrade_target : ℝ    // 1 = Level A
+    element E12_difficulty : ℝ        // hardest open problem
+
+    axiom e4t : E4_upgrade_target = 2
+    axiom e4m : E4_method = 1
+    axiom e3t : E3_upgrade_target = 2
+    axiom e3m : E3_method = 1
+    axiom e12t : E12_upgrade_target = 1
+    axiom e12d : E12_difficulty = 4
+}
+
+example "§10.1: E4 most accessible upgrade — to Level B (Z3)" {
+    assert(E4_upgrade_target = 2)
+    assert(E4_upgrade_target < E4_level)
+}
+
+example "§10.2: E1+E2 = the Clay problem (Z3)" {
+    assert(E12_difficulty = 4)
+    assert(E12_upgrade_target = 1)
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §11  FALSIFIABILITY AND COROLLARY
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// FALSIFIABLE BY:
+//   (F1) A proof that 4D YM cannot satisfy the Wightman axioms
+//        (e.g., a triviality result analogous to φ⁴ in d ≥ 4).
+//   (F2) A proof that the mass gap in the lattice theory does NOT
+//        survive the continuum limit.
+//   (F3) Evidence that the glueball spectrum is continuous (no gap),
+//        contradicting lattice data.
+//   (F4) A proof that the radial ITCM sector does NOT capture the
+//        4D spectral content (e.g., the gap lives in angular modes).
+//
+// CURRENT STATUS: none of F1–F4 is supported.  All evidence
+// (lattice, DSE, perturbative) is consistent with E.
+//
+// COROLLARY (complete program summary):
+//
+//   The program has the structure:
+//
+//       A   +   (B, C, D)   +   E
+//      ───     ─────────       ───
+//      C+       A/B            C/D
+//    physics   scaffold        QFT
+//
+//   The conditional theorem:
+//     IF A + B + C + D, THEN mass gap exists.
+//     IF additionally E, THEN this IS the Clay mass gap.
+//
+//   Our contribution:
+//     The scaffold (B,C,D) is at Level A/B.
+//     The physics input (A) is robustly supported.
+//     The QFT bridge (E) is the open frontier.
+//
+//   What we have PROVEN:
+//     IF the 4D YM theory exists AND its radial ITCM sector is
+//     captured by the scaffold, THEN the mass gap exists and
+//     scales as σ^{2/3} · 1.750 for linear confinement.
+//
+//   What we have NOT proven:
+//     That the 4D theory exists.
+//     That its radial sector matches our operator.
+//     These are someone else's problems — but precisely stated.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+structure Falsifiability {
+    element falsified : ℝ
+    axiom not_falsified : falsified = 0
+}
+
+example "§11.1: E is not falsified by current evidence (Z3)" {
+    assert(falsified = 0)
+}
+
+
+// =============================================================================
+// SUMMARY OUTPUT
+// =============================================================================
+
+example "ASSUMPTION E: formal status" {
+    out("══════════════════════════════════════════════════════════")
+    out("  ASSUMPTION E: THE QFT CONSTRUCTION GAP")
+    out("══════════════════════════════════════════════════════════")
+    out("")
+    out("LAYER 1 — WHAT THE PROGRAM NEEDS:")
+    out("  Bridge: SL gap Δ on R₊ = mass gap m on R⁴")
+    out("  This requires E1 + E2 + E3 + E4 simultaneously.")
+    out("")
+    out("LAYER 2 — FOUR SUB-CONDITIONS:")
+    out(format("  E1 Existence (Wightman/OS):     Level D  ({:.0})", E1_level))
+    out(format("  E2 Consistency (gauge + H_phys): Level D  ({:.0})", E2_level))
+    out(format("  E3 Renormalizability (continuum): Level C  ({:.0})", E3_level))
+    out(format("  E4 Dimensional bridge (4D→1D):   Level C  ({:.0})", E4_level))
+    out("")
+    out("LAYER 3 — WHAT IS KNOWN:")
+    out("  Perturbative renormalizability:  PROVEN (Level A)")
+    out("  Asymptotic freedom:              PROVEN (Level A)")
+    out("  Lattice definition:              PROVEN (Level A)")
+    out("  Balaban 3D construction:         PROVEN (Level A)")
+    out("  Lattice glueball spectrum:       NUMERICAL (Level B)")
+    out("  4D Wightman construction:        OPEN")
+    out("  4D continuum limit:              OPEN")
+    out("  Rigorous mass gap:               OPEN")
+    out("")
+    out("UPGRADE PATHS:")
+    out("  E4 (bridge):  partial-wave spectral theory → Level B")
+    out("  E3 (renorm):  extend Balaban to 4D → Level B")
+    out("  E1+E2:        construct 4D YM = Clay problem itself")
+    out("")
+    out("FALSIFIABLE BY:")
+    out("  Triviality proof for 4D YM")
+    out("  Gap disappears in continuum limit")
+    out("  Continuous glueball spectrum")
+    out("  Radial sector misses the gap")
+    out("")
+    out("NOT FALSIFIED: all evidence consistent with E.")
+}
+
+example "PROGRAM: thirteen theory files" {
+    out("══════════════════════════════════════════════════════════")
+    out("  COMPLETE PROGRAM: 13 THEORY FILES")
+    out("══════════════════════════════════════════════════════════")
+    out("")
+    out("FILE  1: pot_spectral_transfer.kleis          (28 ex)")
+    out("FILE  2: pot_green_identification.kleis        (33 ex)")
+    out("FILE  3: pot_weight_families.kleis             (66 ex)")
+    out("FILE  4: pot_ym_darboux_matching.kleis         (25 ex)")
+    out("FILE  5: pot_ir_dressing_bridge.kleis          (34 ex)")
+    out("FILE  6: pot_ym_assumptions.kleis              (22 ex)")
+    out("FILE  7: pot_assumption_c_proof.kleis          (22 ex)")
+    out("FILE  8: pot_assumption_d_proof.kleis          (31 ex)")
+    out("FILE  9: pot_assumption_b_proof.kleis          (30 ex)")
+    out("FILE 10: pot_greens_normalization.kleis        (35 ex)")
+    out("FILE 11: pot_theorem_b.kleis                   (15 ex)")
+    out("FILE 12: pot_assumption_a_formalization.kleis   (24 ex)")
+    out("FILE 13: pot_assumption_e_formalization.kleis   (THIS)")
+    out("")
+    out("══════════════════════════════════════════════════════════")
+    out("  PROGRAM ARCHITECTURE:  A + (B,C,D) + E")
+    out("══════════════════════════════════════════════════════════")
+    out("")
+    out("  A  (physics input):  Level C+   (File 12)")
+    out("     Three independent lines: pert, lattice, DSE")
+    out("     γ > 0 robust under all systematics")
+    out("")
+    out("  B  (Theorem B):      Level A/B  (File 11)")
+    out("  C  (Hankel reg.):    Level A/B  (File 7)")
+    out("  D  (inverse extr.):  Level A/B  (File 8)")
+    out("     Scaffold uniformly Level A/B")
+    out("")
+    out("  E  (QFT bridge):     Level C/D  (File 13)")
+    out("     E1,E2 (existence): Level D = Clay problem")
+    out("     E3,E4 (renorm, bridge): Level C")
+    out("")
+    out("CONDITIONAL THEOREM:")
+    out("  A + B + C + D  →  mass gap exists")
+    out("  A + B + C + D + E  →  Clay Millennium mass gap")
+    out("")
+    out("OUR CONTRIBUTION:")
+    out("  The scaffold (B,C,D) is rigorous.")
+    out("  The physics input (A) is precisely isolated.")
+    out("  The QFT gap (E) is precisely decomposed.")
+    out("  Every boundary is explicitly managed.")
+}
