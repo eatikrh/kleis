@@ -1,6 +1,58 @@
 # Next Session Notes
 
-**Last Updated:** April 9, 2026 (session — Volume VII: "Renormalization as Projected Ontology: The Theory That Was Never Divergent" — complete with 4 figures and 40 Z3-verified examples)
+**Last Updated:** March 14, 2026 (session — 7 theory files complete, Assumption C upgraded)
+
+---
+
+## YANG-MILLS MASS GAP PROGRAM — 7 THEORY FILES, 230+ EXAMPLES
+
+### The conditional theorem
+
+**Under Assumptions A-D, the IR singularity of the YM weight forces the dressed resolvent into the α = γ = 1/2 Darboux asymptotic class, yielding linear confinement and gap scaling ~ σ^{2/3} · 1.750.**
+
+### Theory files
+
+| # | File | Examples | What it establishes |
+|---|------|----------|---------------------|
+| 1 | `pot_spectral_transfer.kleis` | 28 | Spectral mapping theorem, resolvent gap transfer |
+| 2 | `pot_green_identification.kleis` | 33 | Anchor theorem (free resolvent = ITCM kernel), parameter matching, Born series |
+| 3 | `pot_weight_families.kleis` | 66 | IR classification (β threshold), Rellich-Molchanov, Darboux bridge |
+| 4 | `pot_ym_darboux_matching.kleis` | 25 | Darboux universality family W_α, gap scaling, YM IR matching |
+| 5 | `pot_ir_dressing_bridge.kleis` | 34 | Hankel duality, Born dressing, bridge equation α = γ (derived) |
+| 6 | `pot_ym_assumptions.kleis` | 22 | Assumptions isolation, conditional theorem, falsifiability |
+| 7 | `pot_assumption_c_proof.kleis` | 22 | Watson's lemma, IR/UV convergence, ₂F₁ regularity → Assumption C upgraded |
+
+### The five assumptions
+
+| Assumption | Status | Statement | What closes it |
+|-----------|--------|-----------|----------------|
+| **A** (γ > 0) | Level C | w_YM(k) ~ k^{-2(1+γ)}, γ ≈ 0.5 | Derive γ from YM Lagrangian |
+| **B** (kernel = resolvent) | Level B/C | K_ITCM = (L-z)^{-1} for some SL operator L | Verify resolvent equation |
+| **C** (Hankel regularity) | **Level A/B** | Dressed kernel satisfies asymptotic conditions | Watson's lemma verified; mild condition μ+ν > 1 remains |
+| **D** (inverse extraction) | Level B | K ~ x^{2γ} ⟹ V ~ x^{2γ} | Apply Gel'fand-Levitan |
+| **E** (QFT construction) | Level C | SL operator ↔ rigorous 4D YM | Construct 4D YM (= Clay problem) |
+
+### Upgrade priority (next targets)
+
+1. **Assumption D** (inverse spectral extraction) — apply Gel'fand-Levitan to specific spectral measure
+2. **Assumption B** (kernel = resolvent) — verify resolvent equation for ITCM kernel — **the decisive step**
+3. **Assumption A** (γ from physics) — non-perturbative QCD input
+4. **Assumption E** (QFT construction) — the hardest open problem in mathematical physics
+
+### Key results from this session
+
+- **Bridge equation α = γ**: Derived (not posited) from dressed kernel asymptotics via Hankel duality
+- **Self-consistency loop**: w → V → L → resolvent → w closes at the exponent level
+- **Darboux universality family**: W_α(x) = (μ+1/2)/x + c·x^α spans all confining IR classes β > 1
+- **Watson's lemma proof**: Rigorous asymptotic extraction under conditions C1-C3, upgrading Assumption C
+- **Falsifiability checklist**: Each assumption has explicit conditions for disproof
+
+### Key technical lessons
+
+- Z3 `divide`/`rat_div` requires numeric arguments — encode as multiplications
+- Z3 `implies` with `element = 1` comparisons can fail — use separate structures with direct assertions
+- `let` variable names can conflict with structure elements — use distinct names
+- Self-contained theory files (no imports) avoid cross-file Z3 context issues
 
 ---
 
