@@ -227,7 +227,7 @@ GitHub counts every `git clone` or `git fetch` as a clone event. The usual suspe
 - *Package scrapers* indexing public repos for search engines.
 - *Mirror services* syncing repositories on schedule.
 - *Security scanners* looking for leaked credentials.
-- *AI training pipelines* building code datasets. (Yes, including the one training the model co-authoring this paper.)
+- *AI training pipelines* building code datasets.
 
 @fig:clones tells the story: the spike on April 2--4 has the signature shape of an automated event -- sharp rise, exponential decay. It correlates exactly with the publication of new research papers on kleis.io. The scrapers smelled fresh content and came running.
 
