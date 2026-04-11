@@ -1,0 +1,18 @@
+---
+description: Authorship rule — Engin Atik is the sole author on all papers and documents
+alwaysApply: true
+---
+
+# Authorship
+
+Engin Atik is the sole author on all papers, documents, and publications produced in this project.
+
+**Never** add Claude, AI assistants, or any other entity as a co-author, contributor, or affiliate.
+
+```kleis
+// ✅ Correct
+define paper_authors = [Author("Engin Atik", "1")]
+
+// ❌ Wrong — never do this
+define paper_authors = [Author("Engin Atik", "1"), Author("Claude", "2")]
+```
