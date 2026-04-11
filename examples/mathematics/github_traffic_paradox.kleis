@@ -23,13 +23,11 @@ import "stdlib/templates/arxiv_paper.kleis"
 define paper_title = "Caught Red-Handed: 181 Bots Exposed by Eight Axioms and a Theorem"
 
 define paper_authors = [
-    Author("Engin Atik", "1"),
-    Author("Claude", "2")
+    Author("Engin Atik", "1")
 ]
 
 define paper_affiliations = [
-    Affiliation(1, "Kleis Research", "https://kleis.io"),
-    Affiliation(2, "Anthropic", "https://anthropic.com")
+    Affiliation(1, "Kleis Research", "https://kleis.io")
 ]
 
 define paper_abstract = "Something was off. A small research repository -- five regular visitors, no viral moment, no Hacker News post -- woke up one morning to find that 186 distinct entities had cloned it 2,834 times in two weeks. We did what any reasonable person would do: we called Z3. Eight axioms, six unknowns, 3.6 seconds, and the solver delivered a verdict that is not a guess, not a heuristic, not a confidence interval, but a theorem: at least 181 of those 186 cloners are bots. The math leaves no room for debate. If you visited the page, you are one of five humans. If you cloned without visiting, you are caught. The proof is tight, the bound is sharp, and the bots -- as ever -- were just doing what they were told."
