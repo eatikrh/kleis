@@ -3681,3 +3681,137 @@ The next theorem-shaped target is to:
 - ~~**`check_no_inline_use`** flags `use` inside function bodies~~ — **DONE**: `rule_use_in_fn_body` uses `non_test_fns_containing(source, fns, "use ")`, skips test functions.
 
 ---
+
+### TODO: Integrate 3D Plotting in Kleis (plotsy-3d)
+
+**Priority:** Medium (no urgency) — enables 3D visualization in papers, Jupyter notebooks, and REPL.
+
+#### Context and Prototype
+
+We prototyped 3D surface plotting using the `plotsy-3d` Typst package (v0.2.1, built on CeTZ). The prototype renders the ITCM kernel decomposition (Pole x Shape) as two 3D surfaces with custom color gradients. Pure Typst/SVG output, compiles in ~1.4s.
+
+**Prototype file:** `examples/plotting/plotsy3d_itcm_kernel.typ` — fully working, do not start from scratch.
+
+**Target papers for figures once integration is done:**
+- Volume VII (`pot_renormalization_paper.kleis`) — ITCM kernel derivation
+- Epilogue (`pot_classical_spectral_essay.kleis`) — "kernel decomposition: pole x shape" visualization
+
+#### Key Architectural Finding: Lilaq and plotsy-3d Cannot Compose
+
+**Lilaq does NOT use CeTZ.** It renders with native Typst primitives (`box`, `place`, `curve`, `line`). There is no CeTZ canvas inside `lq.diagram()`.
+
+**plotsy-3d uses CeTZ.** Each plot function creates a self-contained `context[#canvas({ ... })]`.
+
+These are **two separate rendering stacks**. You cannot embed plotsy-3d content inside a lilaq diagram as a shared scene. Lilaq has **no plugin API** — its internal "plot contract" is an undocumented dict + render closure, and its coordinate system is strictly 2D. A lilaq plugin approach is not viable.
+
+However, **Kleis documents can contain both** — each `diagram()` and `diagram3d()` call produces independent SVG. In a Kleis paper, both 2D and 3D figures appear naturally as separate figures. This is the correct granularity.
+
+#### Pipeline (shared infrastructure)
+
+Both 2D and 3D paths share the same final step — `compile_to_svg()` in `src/plotting.rs` already takes arbitrary Typst code and runs `typst compile --format svg`. The Jupyter kernel picks up `PLOT_SVG:` markers from stdout regardless of what generated the SVG. No evaluator architecture changes needed for the rendering pipeline.
+
+```
+2D: diagram(plot(...)) → PlotElement structs → generate lilaq Typst    → compile_to_svg()
+3D: diagram3d(surface(...)) → [new structs]  → generate plotsy-3d Typst → compile_to_svg()
+                                                                              ↓
+                                                                    PLOT_SVG → Jupyter/REPL
+```
+
+#### Three Implementation Options
+
+##### Option A: Full Mirror (like lilaq integration)
+
+New Rust module `src/plotting3d.rs` mirroring `src/plotting.rs`:
+- `PlotElement3D` enum: `Surface`, `ParametricSurface`, `ParametricCurve`, `VectorField3D`
+- `Diagram3DOptions`: `scale_dim`, `rotation_matrix`, `axis_labels`, `axis_step`, etc.
+- `generate_plotsy3d_code()` produces Typst string with `#import "@preview/plotsy-3d:0.2.1": *`
+- New builtins in evaluator: `surface()`, `parametric_surface()`, `parametric_curve()`, `vector_field3d()`, `diagram3d()`
+- Must decide how to handle Kleis lambdas as plotsy-3d Typst functions (codegen or pre-compute)
+
+**Pro:** Cleanest API, matches lilaq integration 1:1 in style, full Kleis-native experience.
+**Con:** Most Rust work; lambda-to-Typst translation is fragile for complex functions (hyper2f1, etc.).
+
+##### Option B: Thin Data Wrapper (path of least resistance)
+
+Minimal `diagram3d()` that pre-evaluates Kleis functions on a grid **in Rust**, then bakes z-values into Typst as literal data arrays:
+
+```kleis
+diagram3d(
+    surface(lambda x y . hyper2f1(1.75, 1.25, 2, y*y/(x*x)),
+            xdomain = (1, 10), ydomain = (1, 10), samples = 20)
+)
+```
+
+Rust evaluates the lambda on a 20x20 grid, generates plotsy-3d Typst code with pre-computed z-point arrays. Avoids translating Kleis lambdas to Typst functions entirely.
+
+**Pro:** Much less Rust code; avoids the lambda-to-Typst translation problem; actually faster (Rust evaluates math, Typst just renders). Color presets (`heat`, `spectral`, `cool_warm`) are pre-written Typst functions baked into codegen.
+**Con:** Data must be pre-computed (no Typst-side evaluation); grid resolution fixed at call time.
+
+**This is the recommended starting point if we need 3D quickly.**
+
+##### Option C: Raw Typst Escape Hatch
+
+Expose a `typst_svg(code_string)` built-in that compiles arbitrary Typst to SVG. Users write plotsy-3d Typst directly. Zero new plotting infrastructure.
+
+```kleis
+let code = "
+#import \"@preview/plotsy-3d:0.2.1\": *
+#set page(width: auto, height: auto, margin: 0.5cm)
+#let func(x,y) = x*x + y*y
+#plot-3d-surface(func, xdomain: (0, 10), ydomain: (0, 10))
+"
+typst_svg(code)
+```
+
+**Pro:** Zero Rust changes beyond one new builtin; maximum flexibility.
+**Con:** Not "Kleis-native"; users must know Typst/plotsy-3d syntax; no compositional API.
+
+#### Gotchas from Prototyping (apply to all options)
+
+- `scale-dim` values must be tiny (0.01-0.05 range). `(1, 1, 0.5)` renders completely off-page.
+- `plotsy-3d` uses integer `range()` internally — domains should be integer-bounded.
+- `subdivision-mode: "decrease"` = coarser grid (step every N points), `"increase"` = finer (N samples per unit).
+- Color functions receive 9 args: `(x, y, z, x-lo, x-hi, y-lo, y-hi, z-lo, z-hi)`.
+- plotsy-3d's internal `render-*` functions (render-surface, render-rear-axis, etc.) ARE composable — they're plain CeTZ draw commands that can be called in a custom canvas. Multiple surfaces in one scene is feasible.
+
+#### Proposed Kleis API (for Option A or B)
+
+```kleis
+diagram3d(
+    surface(func, xdomain = (0, 10), ydomain = (0, 10), color = "heat"),
+    // or:
+    parametric_surface(xfunc, yfunc, zfunc, udomain = (0, pi), vdomain = (0, 2*pi)),
+    // or:
+    parametric_curve(xfunc, yfunc, zfunc, tdomain = (0, 10)),
+    // or:
+    vector_field3d(ifunc, jfunc, kfunc, xdomain, ydomain, zdomain),
+    // options:
+    rotation = ((-2, 2, 4), (0, -1, 0)),
+    axis_labels = ("x", "y", "z"),
+    title = "ITCM Kernel Surface"
+)
+```
+
+#### Option D: Wait for Lilaq Native 3D
+
+**[lilaq issue #31](https://github.com/lilaq-project/lilaq/issues/31)** (opened Apr 2025, labeled `long-term`):
+
+Mc-Zen (lilaq maintainer) confirmed 3D is "not totally out of scope" but has no timeline. As of Jan 2026, 3D will probably happen **after user-defined types** land, because both features hook deeply into the lilaq codebase. He's actively collecting design input from users (axis layout, rotation, API design).
+
+Key details from the issue:
+- Performance: Typst may be too slow for large meshes; Mc-Zen is considering a Rust plugin (`komet`) for triangle sorting/shaders
+- Design: likely a separate `lq.diagram-3d` or similar, not embedded in `lq.diagram`
+- Inspiration sources: Makie.jl (Julia), pgfplots 3D conventions
+- Contributors offered help with `komet` for 3D transforms; Mc-Zen says "not the right time yet"
+
+**If/when lilaq ships native 3D:** Integration into Kleis would be near-trivial — same `diagram()` pipeline, same evaluator path, same Jupyter rendering. Just add new `PlotType` variants and codegen for the new lilaq 3D functions. This is the "gimme" scenario.
+
+#### Decision: Deferred
+
+No urgency. Options ranked by effort vs payoff:
+- **Option D (wait for lilaq):** Zero effort, best long-term result — but no timeline. Monitor issue #31.
+- **Option B (thin data wrapper):** Fastest to ship if we need 3D before lilaq delivers.
+- **Option A (full mirror):** Cleanest standalone implementation, most Rust work.
+- **Option C (raw Typst):** Escape hatch, zero infrastructure, not Kleis-native.
+
+---
