@@ -2306,10 +2306,16 @@ impl<'r> Z3Backend<'r> {
                     return Ok(free_var.clone());
                 }
 
-                // 6. Create fresh constant for this free variable
-                // This allows equations like "A = Matrix(...)" to be verified
-                let fresh = Int::fresh_const(name);
-                let dynamic: Dynamic = fresh.into();
+                // 6. Create fresh constant with the correct sort from the registry
+                // Look up the declared type so `operation foo : ℝ` produces a Real
+                // constant, not an Int.
+                let sort = if let Some(sig) = self.registry.get_operation_signature(name).cloned() {
+                    let (_args, ret) = self.extract_signature_types(&sig);
+                    self.type_expr_to_sort(&ret)
+                } else {
+                    Sort::int()
+                };
+                let dynamic = Dynamic::fresh_const(name, &sort);
                 self.free_variables.insert(name.clone(), dynamic.clone());
                 Ok(dynamic)
             }
