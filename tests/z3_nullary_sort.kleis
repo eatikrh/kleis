@@ -1,0 +1,144 @@
+// Test: Z3 nullary operation sort correctness
+//
+// Verifies that nullary operations (`operation foo : T` with no arguments)
+// produce Z3 constants with the correct sort. Previously, the fallback in
+// kleis_to_z3 created Int constants regardless of the declared type, causing
+// AXIOM INCONSISTENCY when equating ℝ operations with non-integer reals.
+//
+// No stdlib import — keeps Z3 memory usage minimal.
+// Each test uses distinct operation names to avoid axiom conflicts.
+
+// ============================================================
+// FILE-SCOPE NULLARY OPERATIONS
+// ============================================================
+
+// TEST 1: ℝ equality with non-integer literal (the original bug)
+operation t1_real : ℝ
+
+// TEST 2: ℝ equality with integer-valued literal
+operation t2_real : ℝ
+
+// TEST 3: ℝ equality with negative non-integer literal
+operation t3_real : ℝ
+
+// TEST 4: ℝ inequality
+operation t4_real : ℝ
+
+// TEST 5: ℝ arithmetic
+operation t5_a : ℝ
+operation t5_b : ℝ
+operation t5_c : ℝ
+
+// TEST 6: ℤ equality
+operation t6_int : ℤ
+
+// TEST 7: ℤ inequality
+operation t7_int : ℤ
+
+// TEST 8: Bool
+operation t8_flag : Bool
+
+// TEST 9: Mixed sorts
+operation t9_real : ℝ
+operation t9_int  : ℤ
+
+// TEST 12: Transitive chain
+operation t12_a : ℝ
+operation t12_c : ℝ
+
+// ============================================================
+// STRUCTURES (define the axioms)
+// ============================================================
+
+structure Test1_RealNonIntegerEquality {
+    axiom val : t1_real = 0.6602
+}
+
+structure Test2_RealIntegerEquality {
+    axiom val : t2_real = 2.0
+}
+
+structure Test3_RealNegativeEquality {
+    axiom val : t3_real = -3.14159
+}
+
+structure Test4_RealInequality {
+    axiom bound : t4_real > 0.5
+}
+
+structure Test5_RealArithmetic {
+    axiom a_val : t5_a = 1.5
+    axiom b_val : t5_b = 2.3
+    axiom sum   : t5_c = t5_a + t5_b
+}
+
+structure Test6_IntEquality {
+    axiom val : t6_int = 42
+}
+
+structure Test7_IntInequality {
+    axiom bound : t7_int > 0
+}
+
+structure Test8_BoolOperation {
+    axiom flag_true : t8_flag
+}
+
+structure Test9_MixedSorts {
+    axiom r_val : t9_real = 0.6602
+    axiom i_val : t9_int = 42
+}
+
+structure Test10_StructureScopeElement {
+    element x : ℝ
+    element y : ℝ
+
+    axiom x_val : x = 0.123
+    axiom y_val : y = 0.456
+}
+
+structure Test11_StructureScopeOperation {
+    operation alpha : ℝ
+    operation beta : ℝ
+
+    axiom alpha_val : alpha = 1.618
+    axiom beta_val  : beta = 2.718
+}
+
+structure Test12_RealTransitive {
+    axiom a_val  : t12_a = 1.5
+    axiom c_is_a : t12_c = t12_a
+}
+
+// ============================================================
+// EXAMPLE BLOCKS (assertions)
+// ============================================================
+
+example "TEST 1: ℝ = non-integer literal (was the original bug)" {
+    assert(t1_real = 0.6602)
+}
+
+example "TEST 5: ℝ arithmetic sum" {
+    assert(t5_c = 3.8)
+}
+
+example "TEST 8: Bool flag is true" {
+    assert(t8_flag)
+}
+
+example "TEST 9: mixed ℝ and ℤ" {
+    assert(t9_real < 1.0)
+    assert(t9_int > 40)
+}
+
+example "TEST 10: element sum" {
+    assert(x + y = 0.579)
+}
+
+example "TEST 11: alpha < beta" {
+    assert(alpha < beta)
+}
+
+example "TEST 12: transitive real equality" {
+    assert(t12_c = 1.5)
+}
