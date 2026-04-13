@@ -1,6 +1,6 @@
 # Next Session Notes
 
-**Last Updated:** March 14, 2026 (session — 7 theory files complete, Assumption C upgraded)
+**Last Updated:** March 14, 2026 (session — block Jacobi refutation of Path A for twin primes)
 
 ---
 
@@ -53,6 +53,109 @@
 - Z3 `implies` with `element = 1` comparisons can fail — use separate structures with direct assertions
 - `let` variable names can conflict with structure elements — use distinct names
 - Self-contained theory files (no imports) avoid cross-file Z3 context issues
+- **BUG: Nullary `ℝ` operations + equality → Z3 inconsistency.** Declaring `operation foo : ℝ` at file scope and then constraining it with `axiom : foo = 0.6602` causes Z3 to report the entire axiom set as unsatisfiable (contradictory). All assertions become vacuously true. Nullary `ℤ` operations with equality work fine (`N_zeros = 10`), and nullary `ℝ` operations with inequalities work fine (`hankel_asymmetry > 0`). The bug is specific to nullary Real + equality to a real literal. **Workaround:** use `element foo : ℝ` inside the structure instead. Root cause is likely in the Z3 backend's sort resolution for uninterpreted nullary Real constants when compared via `=`. Found during `twin_prime_correlation.kleis` development.
+
+---
+
+## TWIN PRIME CONJECTURE — BLOCK JACOBI ANALYSIS
+
+### Files
+
+| File | Purpose |
+|------|---------|
+| `examples/mathematics/twin_prime_correlation.kleis` | Full formalization: arithmetic, spectral, comb bridge, heat kernel |
+| `examples/mathematics/jacobi_comb_operator.kleis` | Standalone operator-theory analysis with block Jacobi derivation |
+
+### Architecture (5 layers)
+
+1. **Arithmetic** — ground truth twin pairs, von Mangoldt pair correlation Σ Λ(n)Λ(n+2)
+2. **Spectral** — zeta zero imaginary parts, RH (σ_k = 1/2)
+3. **Comb bridge** — macroscopic overlap mechanism refuted; see below
+4. **Heat kernel** — Mellin bridge + ITCM (Volume VII), independent path (still open)
+5. **Bridge** — arithmetic = spectral = heat, Z3 goals
+
+### What is refuted (precise statement)
+
+The specific mechanism:
+
+> **eigenvector delocalization → macroscopic S_N(2) → nonvanishing 2-point spectral signal**
+
+is false for this operator. The hope that S_N(2) ≥ c > 0 could follow from delocalization / ac spectrum is refuted.
+
+### What is NOT refuted
+
+S_N(2) > 0 for every finite N, with S_N(2) ~ log⁴(N)/(4π²N). This is small but **structured** — a specific function of the zero spacing, not random noise. Whether this structured vanishing still encodes nontrivial spectral information is a separate question.
+
+### The block Jacobi derivation
+
+The spectral comb H = (1/2)I + A gives, via gauge U*AU = iJ, a Jacobi operator with off-diagonal entries alternating: a_{2k} = γ_k (large, growing) and a_{2k+1} = ε_N (small, → 0).
+
+**Block Jacobi elimination** of odd-indexed sites yields an effective Jacobi operator for even sites v_k = u_{2k}:
+
+- Off-diagonal: ã_k = ε·γ_{k+1} → ∞ (growing)
+- Diagonal: b̃_k = -(ε² + γ_{k+1}²) → -∞
+
+Yafaev's ratio: γ̃_k = b̃_k / (2√(ã_k·ã_{k-1})) ≈ -γ_{k+1}/(2ε) → -∞
+
+**|γ̃| → ∞ ≫ 1**: Yafaev's discrete-spectrum regime. This is a **classification result**, not perturbative — the effective operator satisfies Yafaev's hypotheses (all ã_k → ∞), unlike the original scalar comb.
+
+**Consequences:**
+
+1. Effective operator has **discrete spectrum** (eigenvalues λ_k = γ_k²)
+2. Eigenvectors are **localized** on peak pairs (2k, 2k+1)
+3. Coupling-to-gap ratio: ε_N/(γ_{k+1} - γ_k) ≈ log²(N)/(πN) → 0
+4. Per-eigenvector overlap: O(ε/gap) = O(log²(N)/N)
+5. Form factor **S_N(2) ~ log⁴(N)/(4π²N) → 0**
+
+### Literature match — rejected
+
+| Paper | Hypothesis | Comb satisfies? |
+|-------|-----------|----------------|
+| Yafaev (2023) | a_n → ∞ for ALL n | **NO** — a_{2k+1} = ε_N → 0 |
+| Swiderski-Trojan (2023) | Normalized 2-step transfer converges | **NOT CHECKED** — γ_k/ε_N → ∞ in 2-step product |
+
+After block elimination, the EFFECTIVE operator does satisfy Yafaev — confirming discrete spectrum.
+
+### The conceptual shift
+
+**What died:**
+- Macroscopic eigenvector overlap as mechanism for twin primes
+- Absolutely continuous spectrum as source of correlations
+- Random-matrix bulk universality intuition for the comb
+
+**What this reveals:**
+Twin-prime structure (if present in the comb) is **not a bulk phenomenon**. It cannot come from spatial overlap of eigenvectors. It would have to come from **fine-scale phase coherence** in a localized regime — alignment of eigenvalue phases under small shifts.
+
+### The redirected question
+
+The problem now lives entirely in the spectral pair sum:
+
+> S(T) = Σ_k exp(i γ_k · log(1 + 2/T)) ≈ Σ_k exp(i · 2γ_k / T)
+
+This is a **Fourier transform of the zero set**. The core theorem to prove:
+
+> **lim sup_{T→∞} |Σ_k exp(i γ_k · log(1 + 2/T))| > 0**
+
+This is Montgomery-type pair correlation territory, with the constraint that {γ_k} comes from a comb with contraction-mapping rigidity.
+
+### What survives
+
+- **RH from comb** (eigenvalue locations) is unaffected
+- **Path B** (heat kernel → ITCM → Mellin → spectral pair sum) is unaffected — bypasses eigenvectors entirely
+- **Spectral pair sum** is an eigenvalue-only observable, not eigenvector-dependent
+
+### Next steps
+
+1. **Stay spectral (recommended):** Prove lim sup |Σ_k exp(iγ_k·log(1+2/T))| > 0 using spacing statistics and RH rigidity
+2. **Strengthen Path B:** ITCM → Mellin → spectral sum bypasses localization entirely
+
+### Key technical lessons (twin primes)
+
+- **Block Jacobi elimination** converts a hypothesis-failing scalar comb into an effective operator that DOES satisfy Yafaev's hypotheses — a classification argument, not perturbative
+- **Eigenvector localization** is physical: each eigenvalue ±γ_k "lives" on its peak pair, with O(ε/gap) tails
+- **S_N(2) → 0** but is structured: the spectral pair sum is a separate eigenvalue-only observable
+- **Skolem element mismatch** in Kleis/Z3: axioms for generic `element k : ℤ` don't propagate to concrete literals in `assert`. Fix: add explicit ground truth axioms like `axiom lyap_at_1 : lyapunov(mu(1)) = 0`
+- **Bool sort mismatch**: `is_prime(4) = false` fails because Kleis interprets `false` as integer 0. Fix: use `not(is_prime(4))`
 
 ---
 
