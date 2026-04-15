@@ -526,6 +526,62 @@ define advise_no_self_referential_docs(source) =
     else "pass"
 
 // =============================================================================
+// Idiomatic Rust Advisories
+// =============================================================================
+
+define advise_no_json_value_field(source) =
+    if contains(source, ": serde_json::Value")
+    then "fail: serde_json::Value in struct field — prefer a concrete type (String, enum, or typed struct)"
+    else if contains(source, "serde_json")
+    then if contains(source, ": Value")
+         then "fail: serde_json::Value in struct field — prefer a concrete type (String, enum, or typed struct)"
+         else "pass"
+    else "pass"
+
+define advise_no_unnecessary_lifetime(source) =
+    if contains(source, "struct ")
+    then if contains(source, "<'a>")
+         then if contains(source, "&'a str")
+              then "fail: lifetime on struct with &'a str — prefer owned String unless borrowing is justified"
+              else "pass"
+         else "pass"
+    else "pass"
+
+define advise_no_builder_for_plain_struct(source) =
+    if contains(source, "fn builder(")
+    then if contains(source, "pub fn build(")
+         then "fail: builder pattern on struct — if all fields are pub, use struct literal syntax instead"
+         else "pass"
+    else "pass"
+
+define advise_boundary_escaping(source) =
+    if contains(source, "fn apply")
+    then if contains(source, ".replace(")
+         then "fail: escaping in apply/storage layer — validate and escape at the input boundary, not deep in business logic"
+         else "pass"
+    else if contains(source, "fn store")
+    then if contains(source, ".replace(")
+         then "fail: escaping in store layer — validate and escape at the input boundary, not deep in business logic"
+         else "pass"
+    else "pass"
+
+define advise_manual_vec_to_string(source) =
+    if contains(source, ".join(")
+    then if contains(source, "#[derive")
+         then if contains(source, "Serialize")
+              then "fail: manual Vec-to-string join near serde struct — consider #[serde(serialize_with = ...)] or a custom serializer"
+              else "pass"
+         else "pass"
+    else "pass"
+
+define advise_overqualified_names(source) =
+    if contains(source, "struct ")
+    then if contains(source, "PatchOperation")
+         then "fail: overqualified struct name — if the module provides context, shorten e.g. PatchOperation to Operation"
+         else "pass"
+    else "pass"
+
+// =============================================================================
 // Context-Aware Structural Checks (AST-based)
 // =============================================================================
 

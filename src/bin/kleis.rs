@@ -420,7 +420,11 @@ fn run_check(file: PathBuf) {
                 );
             }
             Err(e) => {
-                eprintln!("{}: parse error: {}", file.display(), e);
+                eprintln!(
+                    "{}: parse error:\n   {}",
+                    file.display(),
+                    e.format_with_source(&source)
+                );
                 std::process::exit(1);
             }
         },
@@ -455,7 +459,11 @@ fn run_test(file: PathBuf, example_filter: Option<String>, verbose: bool, raw_ou
     let program = match parse_kleis_program_with_file(&source, &file_path_str) {
         Ok(p) => p,
         Err(e) => {
-            eprintln!("{}: parse error: {}", file.display(), e);
+            eprintln!(
+                "{}: parse error:\n   {}",
+                file.display(),
+                e.format_with_source(&source)
+            );
             std::process::exit(1);
         }
     };

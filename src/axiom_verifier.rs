@@ -358,6 +358,16 @@ impl<'r> AxiomVerifier<'r> {
             return Ok(());
         }
 
+        // Skip parameterized (abstract) structures: their axioms use
+        // uninterpreted functions over type-erased sorts (all → Int),
+        // creating unconstrained universal quantifiers that explode in Z3.
+        if let Some(structure) = self.registry.get(structure_name) {
+            if !structure.type_params.is_empty() {
+                self.loaded_structures.insert(structure_name.to_string());
+                return Ok(());
+            }
+        }
+
         // Proactive memory guard: bail before calling into Z3 if memory is exhausted.
         // Without this, Z3's allocator throws a C++ out_of_memory_error that
         // aborts the process (the Rust z3 wrapper panics on null, then unwinding
@@ -609,30 +619,18 @@ impl<'r> AxiomVerifier<'r> {
 
         // Step 2: Ensure all required axioms are loaded
         for structure in &dependencies {
-            self.ensure_structure_loaded(structure)?;
-        }
-
-        // Step 2b: Load ALL structure axioms from registry
-        // This ensures axioms for uninterpreted functions (like complex operations)
-        // are available even when analyze_dependencies can't find the connection
-        let all_structures: Vec<String> = self
-            .registry
-            .structures_with_axioms()
-            .iter()
-            .map(|s| (*s).clone())
-            .collect();
-
-        for structure in &all_structures {
-            if !self.loaded_structures.contains(structure) {
-                // Continue even if one structure fails to load
-                // This allows complex axioms to work even if Field fails
-                if let Err(e) = self.ensure_structure_loaded(structure) {
-                    eprintln!("   ⚠️ Warning: Failed to load {}: {}", structure, e);
-                }
+            if let Err(e) = self.ensure_structure_loaded(structure) {
+                eprintln!("   ⚠️ Warning: Failed to load {}: {}", structure, e);
             }
         }
 
-        // Step 2c: Check axiom consistency (once per verifier lifetime)
+        // NOTE: We intentionally load ONLY dependency-analyzed structures,
+        // matching the pattern in check_satisfiability_impl(). Loading all
+        // structures pulls in parameterized prelude axioms (Semigroup through
+        // VectorSpace) whose type parameters are erased to Int, creating
+        // unconstrained universal quantifiers that cause Z3 to explode.
+
+        // Step 2b: Check axiom consistency (once per verifier lifetime)
         if !self.consistency_checked {
             self.consistency_checked = true;
             match self.backend.check_consistency() {

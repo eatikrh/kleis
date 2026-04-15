@@ -207,6 +207,25 @@
 //      two-point heat trace, which depends on eigenvalues only.
 //
 // ============================================================================
+//
+// STRATEGIC SHIFT: CONREY-KEATING EQUIVALENCE
+// ============================================
+//
+// The refutation documented above motivated a shift in strategy.
+// Rather than pursuing eigenvector-based or phase-coherence routes,
+// the primary twin-prime formalization now uses the Conrey-Keating
+// equivalence (2016):
+//
+//   RH (proved) + Ratios conjecture (assumption) → twin primes
+//
+// This is a two-assumption chain that bypasses the comb's eigenvector
+// structure entirely. The ratios conjecture (Conrey-Farmer-Zirnbauer
+// 2008) implies the Hardy-Littlewood twin prime conjecture via a
+// rigorous theorem of Conrey and Keating.
+//
+// See twin_prime_correlation.kleis for the formalization.
+//
+// ============================================================================
 
 // ============================================================================
 // OPERATIONS

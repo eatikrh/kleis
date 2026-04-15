@@ -220,6 +220,12 @@ fn z3_verify_monad_left_identity() {
     )
     .expect("parse monad left identity");
 
+    // Parameterized structures are skipped during bulk init; load on-demand
+    // for the specific operations this expression uses.
+    backend
+        .load_axioms_for_expression(&expr)
+        .expect("load monad axioms for expression");
+
     let result = backend
         .verify_axiom(&expr)
         .expect("verify monad left identity");
@@ -247,6 +253,10 @@ fn z3_verify_kleisli_left_identity() {
 
     let expr = parse_kleis("∀(A : Type, B : Type). ∀ f : A → M(B) . equals(kcomp(kid, f), f)")
         .expect("parse kleisli left identity");
+
+    backend
+        .load_axioms_for_expression(&expr)
+        .expect("load kleisli axioms for expression");
 
     let result = backend
         .verify_axiom(&expr)
