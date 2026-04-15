@@ -70,6 +70,42 @@ impl fmt::Display for KleisParseError {
 
 impl std::error::Error for KleisParseError {}
 
+impl KleisParseError {
+    /// Format with line/column context, given the original source text.
+    pub fn format_with_source(&self, source: &str) -> String {
+        let pos = self.position;
+        let lines: Vec<&str> = source.lines().collect();
+
+        let mut line_num = 1;
+        let mut col = 1;
+        let mut char_count = 0;
+
+        for (i, line) in lines.iter().enumerate() {
+            let line_len = line.len() + 1; // +1 for newline
+            if char_count + line_len > pos {
+                line_num = i + 1;
+                col = pos - char_count + 1;
+                break;
+            }
+            char_count += line_len;
+        }
+
+        let mut result = format!("Line {}, column {}: {}", line_num, col, self.message);
+
+        if line_num > 0 && line_num <= lines.len() {
+            let line = lines[line_num - 1];
+            result.push_str(&format!("\n\n   {} | {}", line_num, line));
+            result.push_str(&format!(
+                "\n   {} | {}^",
+                " ".repeat(line_num.to_string().len()),
+                " ".repeat(col.saturating_sub(1))
+            ));
+        }
+
+        result
+    }
+}
+
 // Re-export SourceSpan from ast.rs for backward compatibility
 pub use crate::ast::FullSourceLocation;
 pub use crate::ast::SourceSpan;

@@ -237,7 +237,7 @@ fn check_file_recursive(
         format!(
             "Parse error in '{}':\n   {}",
             path.display(),
-            format_parse_error(&e, &contents)
+            e.format_with_source(&contents)
         )
     })?;
 
@@ -297,7 +297,7 @@ fn load_file_recursive(
         format!(
             "Parse error in '{}':\n   {}",
             path.display(),
-            format_parse_error(&e, &contents)
+            e.format_with_source(&contents)
         )
     })?;
 
@@ -367,38 +367,3 @@ fn resolve_import_path(import_path: &str, base_dir: &Path) -> PathBuf {
     }
 }
 
-/// Format a parse error with line number context
-fn format_parse_error(error: &kleis::kleis_parser::KleisParseError, source: &str) -> String {
-    let pos = error.position;
-    let lines: Vec<&str> = source.lines().collect();
-
-    // Find line number and column
-    let mut line_num = 1;
-    let mut col = 1;
-    let mut char_count = 0;
-
-    for (i, line) in lines.iter().enumerate() {
-        let line_len = line.len() + 1; // +1 for newline
-        if char_count + line_len > pos {
-            line_num = i + 1;
-            col = pos - char_count + 1;
-            break;
-        }
-        char_count += line_len;
-    }
-
-    let mut result = format!("Line {}, column {}: {}", line_num, col, error.message);
-
-    // Show the offending line if available
-    if line_num > 0 && line_num <= lines.len() {
-        let line = lines[line_num - 1];
-        result.push_str(&format!("\n\n   {} | {}", line_num, line));
-        result.push_str(&format!(
-            "\n   {} | {}^",
-            " ".repeat(line_num.to_string().len()),
-            " ".repeat(col.saturating_sub(1))
-        ));
-    }
-
-    result
-}

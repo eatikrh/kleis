@@ -56,7 +56,10 @@ fn test_1b_cross_product_inside_list_map() {
     )
     .unwrap();
     // Expected: [1] (cross product of (1,0) and (0,1) = 1*1 - 0*0 = 1)
-    assert_eq!(result, "[1]", "BUG REPRO: cross product inside list_map should be [1]");
+    assert_eq!(
+        result, "[1]",
+        "BUG REPRO: cross product inside list_map should be [1]"
+    );
 }
 
 #[test]
@@ -99,7 +102,10 @@ fn test_1d_multiple_elements_cross_product() {
         "#,
     )
     .unwrap();
-    assert_eq!(result, "[-2, -2]", "Multiple cross products should all be -2");
+    assert_eq!(
+        result, "[-2, -2]",
+        "Multiple cross products should all be -2"
+    );
 }
 
 // =============================================================================
@@ -227,7 +233,10 @@ fn test_3a_individual_fst_snd_in_list_map() {
     .unwrap();
     // Should be [[2, 3, 4, 5]]
     assert!(
-        result.contains("2") && result.contains("3") && result.contains("4") && result.contains("5"),
+        result.contains("2")
+            && result.contains("3")
+            && result.contains("4")
+            && result.contains("5"),
         "fst/snd should extract correct values: got {}",
         result
     );
@@ -307,7 +316,12 @@ fn test_3d_beta_reduce_ast_inspection() {
     // The reduced body should be a Let chain.
     // Verify it's structurally a Let with ga binding.
     match &reduced {
-        Expression::Let { pattern: _, value, body, .. } => {
+        Expression::Let {
+            pattern: _,
+            value,
+            body,
+            ..
+        } => {
             // value should be list_nth(gs, 0)
             match value.as_ref() {
                 Expression::Operation { name, args, .. } => {
@@ -324,7 +338,11 @@ fn test_3d_beta_reduce_ast_inspection() {
 
             // body should be another Let (gb)
             match body.as_ref() {
-                Expression::Let { value: gb_val, body: inner, .. } => {
+                Expression::Let {
+                    value: gb_val,
+                    body: inner,
+                    ..
+                } => {
                     // gb value should be list_nth(gs, 0 + 1) or list_nth(gs, plus(0, 1))
                     match gb_val.as_ref() {
                         Expression::Operation { name, .. } => {
@@ -425,7 +443,10 @@ fn test_3f_cr_with_trivial_subsequent_let() {
         "#,
     )
     .unwrap();
-    assert_eq!(result, "[Pair(-2, 99)]", "cr with trivial subsequent let should be -2");
+    assert_eq!(
+        result, "[Pair(-2, 99)]",
+        "cr with trivial subsequent let should be -2"
+    );
 }
 
 #[test]
@@ -576,7 +597,11 @@ fn test_5c_parse_ast_standalone_vs_let_in() {
     // Verify standalone has correct structure: top = minus
     match &standalone_ast {
         Expression::Operation { name, .. } => {
-            assert_eq!(name, "minus", "Standalone top-op should be minus, got {}", name);
+            assert_eq!(
+                name, "minus",
+                "Standalone top-op should be minus, got {}",
+                name
+            );
         }
         other => panic!("Expected Operation, got {:?}", other),
     }
@@ -654,11 +679,7 @@ fn test_5d_parse_ast_with_function_calls() {
 fn test_5e_correct_parse_with_parentheses() {
     // Parenthesized version should work even with the broken parser.
     let evaluator = Evaluator::new();
-    let result = eval(
-        &evaluator,
-        "let x = (2*3) - (4*5) in x",
-    )
-    .unwrap();
+    let result = eval(&evaluator, "let x = (2*3) - (4*5) in x").unwrap();
     assert_eq!(result, "-14", "Parenthesized let-in should be -14");
 }
 
@@ -732,25 +753,40 @@ fn test_4c_eval_concrete_compound_with_pair_args() {
 
     let evaluator = Evaluator::new();
 
-    let pair1 = Expression::operation("Pair", vec![
-        Expression::Const("2".to_string()),
-        Expression::Const("3".to_string()),
-    ]);
-    let pair2 = Expression::operation("Pair", vec![
-        Expression::Const("4".to_string()),
-        Expression::Const("5".to_string()),
-    ]);
+    let pair1 = Expression::operation(
+        "Pair",
+        vec![
+            Expression::Const("2".to_string()),
+            Expression::Const("3".to_string()),
+        ],
+    );
+    let pair2 = Expression::operation(
+        "Pair",
+        vec![
+            Expression::Const("4".to_string()),
+            Expression::Const("5".to_string()),
+        ],
+    );
 
-    let expr = Expression::operation("minus", vec![
-        Expression::operation("times", vec![
-            Expression::operation("fst", vec![pair1.clone()]),
-            Expression::operation("snd", vec![pair2.clone()]),
-        ]),
-        Expression::operation("times", vec![
-            Expression::operation("snd", vec![pair1.clone()]),
-            Expression::operation("fst", vec![pair2.clone()]),
-        ]),
-    ]);
+    let expr = Expression::operation(
+        "minus",
+        vec![
+            Expression::operation(
+                "times",
+                vec![
+                    Expression::operation("fst", vec![pair1.clone()]),
+                    Expression::operation("snd", vec![pair2.clone()]),
+                ],
+            ),
+            Expression::operation(
+                "times",
+                vec![
+                    Expression::operation("snd", vec![pair1.clone()]),
+                    Expression::operation("fst", vec![pair2.clone()]),
+                ],
+            ),
+        ],
+    );
 
     let result = evaluator.eval_concrete(&expr).unwrap();
     let pp = PrettyPrinter::new();
