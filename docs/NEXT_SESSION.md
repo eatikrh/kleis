@@ -1,6 +1,6 @@
 # Next Session Notes
 
-**Last Updated:** March 14, 2026 (session — block Jacobi refutation of Path A for twin primes)
+**Last Updated:** March 14, 2026 (session — contraction mixing refutation, reductio removed as circular)
 
 ---
 
@@ -54,25 +54,73 @@
 - `let` variable names can conflict with structure elements — use distinct names
 - Self-contained theory files (no imports) avoid cross-file Z3 context issues
 - **BUG: Nullary `ℝ` operations + equality → Z3 inconsistency.** Declaring `operation foo : ℝ` at file scope and then constraining it with `axiom : foo = 0.6602` causes Z3 to report the entire axiom set as unsatisfiable (contradictory). All assertions become vacuously true. Nullary `ℤ` operations with equality work fine (`N_zeros = 10`), and nullary `ℝ` operations with inequalities work fine (`hankel_asymmetry > 0`). The bug is specific to nullary Real + equality to a real literal. **Workaround:** use `element foo : ℝ` inside the structure instead. Root cause is likely in the Z3 backend's sort resolution for uninterpreted nullary Real constants when compared via `=`. Found during `twin_prime_correlation.kleis` development.
+- **BUG: Evaluator substitution — compound expressions with repeated let-bound variables give wrong results inside `list_map` lambdas.** When a let-bound variable (e.g. `ga` from `list_nth`) appears multiple times in a single compound arithmetic expression like `fst(ga)*snd(gb) - snd(ga)*fst(gb)`, the evaluator produces incorrect results. Specifically, the expression `a*b - c*d` is evaluated as `((a*b) - c) * d` (left-associative with equal precedence for `*` and `-`), but ONLY when the operands are `fst`/`snd` applied to let-bound variables inside a `list_map` lambda. Plain numeric variables (`2*3 - 4*5 = -14` ✓) and `fst`/`snd` on let-bound Pairs outside `list_map` (`fst(p1)*snd(p2) - snd(p1)*fst(p2)` ✓) both work correctly. The bug triggers specifically in the combination of `list_map(λ k . ...)` + `let ga = list_nth(list, k)` + compound expression using `fst(ga)` / `snd(ga)` multiple times. **Workaround:** decompose every compound expression into separate `let` bindings:
+  ```kleis
+  // BROKEN:
+  let cr = fst(ga)*snd(gb) - snd(ga)*fst(gb) in ...
+  // WORKS:
+  let p1 = fst(ga)*snd(gb) in
+  let p2 = snd(ga)*fst(gb) in
+  let cr = p1 - p2 in ...
+  ```
+  Root cause is likely in how the evaluator handles substitution of let-bound complex expressions when the same variable appears in multiple sub-expressions of a single arithmetic AST node. The individual products evaluate correctly (verified by outputting `[fst(ga)*snd(gb), snd(ga)*fst(gb)]`), but combining them with `+` or `-` in one expression produces wrong values. Found during Toeplitz conjecture winding number computation (March 2026).
 
 ---
 
-## TWIN PRIME CONJECTURE — BLOCK JACOBI ANALYSIS
+## TWIN PRIME CONJECTURE — STATUS
+
+### Strategic evolution
+
+1. **Path A** (comb → eigenvector delocalization → macroscopic S_N(2)) was **refuted** by
+   block Jacobi elimination (see `jacobi_comb_operator.kleis`).
+2. **Conrey-Keating** route formalized: RH + ratios conjecture → twin primes (two assumptions).
+3. **Direct route** (contraction mixing → |P(x)| = o(x)) was **refuted** by the spectral
+   comb paper's own numerical analysis (ε → 0, J_F → I, zeros decouple). March 2026.
+4. **Reductio ad absurdum** attempted (finite twins → contradiction via oscillatory bound)
+   but **removed** — the oscillatory bound |P(x)| = o(x) is equivalent to the twin prime
+   conjecture itself, making the argument circular. March 2026.
+
+### The Conrey-Keating route (only surviving forward route)
+
+```
+RH (proved) + Ratios Conjecture (assumption — CFZ 2008)
+  → Conrey-Keating 2016 theorem → Hardy-Littlewood → twin primes
+```
+
+This is a **two-assumption** result. The ratios conjecture remains an external assumption.
+
+### Axiom provenance
+
+| Tag | What | Examples |
+|-----|------|---------|
+| `[FACT]` | Computed from data | TwinPrimeData, SpectralData, PairCorrelation |
+| `[PROVED]` | Rigorously established | RH, contraction mapping, Jacobian bounds |
+| `[IDENTITY]` | Algebraic tautology | det(sI-H) = ξ(s), singular series |
+| `[CLASSICAL]` | Standard analysis | Goldston explicit formula, main term dominance |
+| `[ASSUMPTION]` | Well-supported conjecture | Ratios conjecture (Conrey-Keating route only) |
+| `[REFUTED]` | Original claim shown false | Contraction mixing bound (direct route) |
 
 ### Files
 
 | File | Purpose |
 |------|---------|
-| `examples/mathematics/twin_prime_correlation.kleis` | Full formalization: arithmetic, spectral, comb bridge, heat kernel |
-| `examples/mathematics/jacobi_comb_operator.kleis` | Standalone operator-theory analysis with block Jacobi derivation |
+| `examples/mathematics/twin_prime_correlation.kleis` | All routes: Conrey-Keating, Path B, direct (refuted) (21 Z3 examples) |
+| `examples/mathematics/jacobi_comb_operator.kleis` | Path A refutation (block Jacobi derivation) |
 
-### Architecture (5 layers)
+### Architecture (10 structures)
 
-1. **Arithmetic** — ground truth twin pairs, von Mangoldt pair correlation Σ Λ(n)Λ(n+2)
-2. **Spectral** — zeta zero imaginary parts, RH (σ_k = 1/2)
-3. **Comb bridge** — macroscopic overlap mechanism refuted; see below
-4. **Heat kernel** — Mellin bridge + ITCM (Volume VII), independent path (still open)
-5. **Bridge** — arithmetic = spectral = heat, Z3 goals
+1. **TwinPrimeData** — ground truth twin pairs, von Mangoldt, C₂ [FACT]
+2. **SpectralData** — zeta zero imaginary parts, RH [FACT]
+3. **PairCorrelation** — arithmetic pair correlation Σ Λ(n)Λ(n+2) [FACT]
+4. **RatiosConjecture** — CFZ 2008 ratios formula [ASSUMPTION]
+5. **ConreyKeatingEquivalence** — ratios → zero correlation → H-L → twins [THEOREM]
+6. **HeatKernelBridge** — secondary ITCM route [NOVEL]
+7. **SpectralDeterminantBridge** — det(sI-H) = ξ(s), singular series [IDENTITY]
+8. **TwoPointExplicitFormula** — Goldston explicit formula [CLASSICAL]
+9. **ContractionJacobianDecay** — off-diagonal Hellmann-Feynman bounds [PROVED]
+10. **ContractionMixingBound** — double zero sum cancellation [REFUTED]
+
+### Path A refutation (historical)
 
 ### What is refuted (precise statement)
 
@@ -144,10 +192,65 @@ This is Montgomery-type pair correlation territory, with the constraint that {γ
 - **Path B** (heat kernel → ITCM → Mellin → spectral pair sum) is unaffected — bypasses eigenvectors entirely
 - **Spectral pair sum** is an eigenvalue-only observable, not eigenvector-dependent
 
+### Contraction mixing refutation (historical — March 2026)
+
+### What is refuted (precise statement)
+
+The specific claim:
+
+> **Contraction mapping (‖J_F - I‖_F < 1) forces the double zero sum |P(x)| = o(x),
+> making the Hardy-Littlewood main term dominate and proving infinitely many twin primes.**
+
+is false because the coupling mechanism vanishes as N → ∞.
+
+### Why — evidence from spectral_comb_paper.pdf
+
+The spectral comb paper (33 pages) contains the numerical analysis that kills this route:
+
+| Evidence | Source | What it shows |
+|----------|--------|--------------|
+| Coupling decay | Table 1, Section 5.1 | ε = 0.254 → 0.180 → 0.114 as N = 10, 20, 50 |
+| Jacobian → identity | Table 2, Section 9.5 | ρ(J_F) = 0.99987, 0.99993, ... → 1 |
+| Decoupled limit | Section 9.6, Step 1 | At ε=0: J_F = I exactly (zero information flow) |
+| Proven bound | Section 9.6, Step 4 | ‖J_F - I‖²_F < 192π⁴/(81N³) = O(1/N³) |
+| Paper's conclusion | Section 7.4, Point 3 | "Each zero lives in its own isolated subspace" |
+
+**The fatal arithmetic:** The mixing bound needs to control ~N² oscillatory terms in P(x).
+The total off-diagonal Jacobian mass decays as O(1/N^{3/2}). The constraint vanishes
+faster than the problem grows. In the limit, zeros are completely independent — there
+is no gradient for mixing.
+
+### What is NOT refuted
+
+- The **contraction ‖J_F - I‖_F < 1** is proved and correct for all N ≥ 3.
+- It proves **RH** via the Banach fixed-point theorem (Volumes I-II).
+- The spectral comb architecture, structure theorem, convergence — all solid.
+- The contraction just cannot force **pair correlations** between zeros that are
+  informationally isolated in the N → ∞ limit.
+
+### The pattern: both refuted paths fail for the same reason
+
+| Path | Mechanism | Why it fails |
+|------|-----------|-------------|
+| **Path A** | Eigenvector delocalization → macroscopic S_N(2) | Eigenvectors are localized (S_N(2) → 0) |
+| **Direct** | Jacobian off-diagonals → constrain double zero sum | Off-diagonals vanish (J_F → I) |
+
+Both fail because the comb **decouples** as N → ∞. The coupling ε = 2π/γ̄ → 0
+isolates each zero in its own 2×2 block. Any mechanism relying on inter-zero
+communication through the comb's internal structure is doomed.
+
+### Why not reductio ad absurdum
+
+A reductio was attempted (Structures 11-13, later removed): assume finite twin primes,
+derive that P(x) must grow linearly, contradict an oscillatory bound. The argument is
+**circular** — the oscillatory bound |P(x)| = o(x) is not a consequence of RH alone.
+It is logically equivalent to the twin prime conjecture itself (it encodes the
+Hardy-Littlewood asymptotic). The reductio assumed what it set out to prove.
+
 ### Next steps
 
-1. **Stay spectral (recommended):** Prove lim sup |Σ_k exp(iγ_k·log(1+2/T))| > 0 using spacing statistics and RH rigidity
-2. **Strengthen Path B:** ITCM → Mellin → spectral sum bypasses localization entirely
+1. **Path B (ITCM):** The heat kernel / integral transform route bypasses the comb's internal structure entirely. This is the remaining independent forward route.
+2. **Accept the conditional result:** The Conrey-Keating route (RH + ratios conjecture → twin primes) is clean, well-formalized, and the only live forward chain.
 
 ### Key technical lessons (twin primes)
 

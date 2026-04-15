@@ -2555,8 +2555,10 @@ impl KleisParser {
         self.expect_char('=')?;
         self.skip_whitespace();
 
-        // Parse the value expression (stops at 'in')
-        let value = self.parse_let_value()?;
+        // Parse the value expression using the full precedence-respecting parser.
+        // Previously this used parse_let_value() which had a flat left-to-right loop
+        // that broke operator precedence (e.g. `a*b - c*d` parsed as `((a*b)-c)*d`).
+        let value = self.parse_expression()?;
         self.skip_whitespace();
 
         // Expect 'in' keyword
@@ -2670,37 +2672,6 @@ impl KleisParser {
         }
     }
 
-    /// Parse the value part of a let binding (stops at 'in')
-    fn parse_let_value(&mut self) -> Result<Expression, KleisParseError> {
-        // Parse terms and operators until we hit 'in'
-        let mut left = self.parse_primary()?;
-
-        loop {
-            self.skip_whitespace();
-
-            // Check if we've hit 'in'
-            if self.peek_word("in") {
-                break;
-            }
-
-            // Try to parse an infix operator
-            if let Some(op) = self.try_parse_infix_operator() {
-                self.skip_whitespace();
-                let right = self.parse_primary()?;
-                left = Expression::Operation {
-                    name: op,
-                    args: vec![left, right],
-                    span: Some(self.current_span()),
-                };
-            } else {
-                // No more operators, stop
-                break;
-            }
-        }
-
-        Ok(left)
-    }
-
     /// Parse an expression that's part of a conditional (stops at 'then' or 'else')
     ///
     /// This is needed because `if a + b then` would otherwise try to parse
@@ -2788,81 +2759,6 @@ impl KleisParser {
         }
 
         Ok(expr)
-    }
-
-    /// Try to parse an infix operator, returning None if not found
-    fn try_parse_infix_operator(&mut self) -> Option<String> {
-        let start_pos = self.pos;
-
-        // Check for comparison operators first (two chars)
-        if self.pos + 1 < self.input.len() {
-            let two_chars: String = self.input[self.pos..self.pos + 2].iter().collect();
-            match two_chars.as_str() {
-                "==" => {
-                    self.pos += 2;
-                    return Some("equals".to_string());
-                }
-                "!=" | "≠" => {
-                    self.pos += 2;
-                    return Some("not_equals".to_string());
-                }
-                "<=" | "≤" => {
-                    self.pos += 2;
-                    return Some("leq".to_string());
-                }
-                ">=" | "≥" => {
-                    self.pos += 2;
-                    return Some("geq".to_string());
-                }
-                "&&" => {
-                    self.pos += 2;
-                    return Some("logical_and".to_string());
-                }
-                "||" => {
-                    self.pos += 2;
-                    return Some("logical_or".to_string());
-                }
-                _ => {}
-            }
-        }
-
-        // Single character operators
-        if let Some(ch) = self.peek() {
-            let op = match ch {
-                '+' => Some("plus".to_string()),
-                '-' => Some("minus".to_string()),
-                '*' | '×' => Some("times".to_string()),
-                '/' | '÷' => Some("divide".to_string()),
-                '^' => Some("power".to_string()),
-                '<' => Some("less_than".to_string()),
-                '>' => Some("greater_than".to_string()),
-                '=' => Some("equals".to_string()),
-                '∧' => Some("logical_and".to_string()),
-                '∨' => Some("logical_or".to_string()),
-                '→' | '⇒' | '⟹' => Some("implies".to_string()),
-                '↔' | '⟺' | '⇔' => Some("iff".to_string()),
-                _ => None,
-            };
-
-            if op.is_some() {
-                self.advance();
-                return op;
-            }
-        }
-
-        // Check for word operators (and, or)
-        if self.peek_word("and") {
-            self.expect_word("and").ok()?;
-            return Some("logical_and".to_string());
-        }
-        if self.peek_word("or") {
-            self.expect_word("or").ok()?;
-            return Some("logical_or".to_string());
-        }
-
-        // Restore position if nothing matched
-        self.pos = start_pos;
-        None
     }
 
     /// Parse a match expression
