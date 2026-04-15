@@ -1002,6 +1002,24 @@ impl<'r> Z3Backend<'r> {
                 continue;
             }
 
+            // Skip parameterized (abstract) structures during bulk init:
+            // their type parameters are erased to Int, creating unconstrained
+            // universal quantifiers that cause Z3 to explode. These can still
+            // be loaded on-demand via load_axioms_for_expression() which only
+            // picks axioms whose operations match the target expression.
+            if let Some(structure) = self.registry.get(&structure_name) {
+                if !structure.type_params.is_empty() {
+                    if z3_debug {
+                        eprintln!(
+                            "   [Z3 DEBUG] Skipping parameterized structure '{}' ({} type params) — load on demand",
+                            structure_name,
+                            structure.type_params.len()
+                        );
+                    }
+                    continue;
+                }
+            }
+
             let axioms = self.registry.get_axioms(&structure_name);
             if z3_debug {
                 eprintln!(
