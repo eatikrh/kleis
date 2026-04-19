@@ -220,21 +220,23 @@ impl<'r> Z3Backend<'r> {
             return Some(s);
         }
 
-        // Fallback: check if the sort is a set sort (Array with Bool range)
-        // and manually construct the Set
+        // Fallback: as_set() can fail on dynamically-created set constants
+        // even when the underlying sort is correct. Verify both that the sort
+        // is Array AND that the range sort is Bool (Z3 represents sets as
+        // Array<Element, Bool>). Without the range check, a plain
+        // Array<Int, Int> would be unsoundly wrapped as a Set.
         use z3::SortKind;
         let sort = d.get_sort();
         if sort.kind() == SortKind::Array {
-            // Z3 represents sets as Array from element type to Bool
-            // Use unsafe to wrap as Set since we've verified the sort
-            let ctx = &z3::Context::thread_local();
-            unsafe {
-                // The Dynamic has a set sort, so we can wrap it as a Set
-                Some(z3::ast::Set::wrap(ctx, d.get_z3_ast()))
+            if let Some(range) = sort.array_range() {
+                if range.kind() == SortKind::Bool {
+                    // SAFETY: sort is Array with Bool range, which is Z3's Set representation
+                    let ctx = &z3::Context::thread_local();
+                    return unsafe { Some(z3::ast::Set::wrap(ctx, d.get_z3_ast())) };
+                }
             }
-        } else {
-            None
         }
+        None
     }
 
     /// Helper function to convert a Dynamic to a String
@@ -246,11 +248,12 @@ impl<'r> Z3Backend<'r> {
             return Some(s);
         }
 
-        // Fallback: check if the sort is a string sort
-        use z3::SortKind;
+        // Fallback: as_string() can fail on dynamically-created string constants.
+        // Use Z3_is_string_sort (not just SortKind::Seq) to distinguish String
+        // from other Seq sorts like Seq<Int>.
         let sort = d.get_sort();
-        if sort.kind() == SortKind::Seq {
-            // Z3 String is a sequence sort
+        if sort.is_string() {
+            // SAFETY: sort is verified as Z3's string sort via Z3_is_string_sort
             let ctx = &z3::Context::thread_local();
             unsafe { Some(z3::ast::String::wrap(ctx, d.get_z3_ast())) }
         } else {

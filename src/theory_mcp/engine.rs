@@ -610,7 +610,33 @@ impl TheoryEngine {
             ));
         }
 
+        if save_name.contains('\0') {
+            return Err(format!(
+                "Invalid theory name '{}': contains null byte",
+                name
+            ));
+        }
+
         let save_path = self.save_dir.join(&save_name);
+
+        // Defense-in-depth: after joining, verify the canonical path is still
+        // inside save_dir. Catches anything the string checks above might miss
+        // (Unicode normalization tricks, symlink escapes, platform quirks).
+        let canonical_dir = self
+            .save_dir
+            .canonicalize()
+            .map_err(|e| format!("Cannot resolve save directory: {}", e))?;
+        let canonical_path = save_path
+            .parent()
+            .unwrap_or(&save_path)
+            .canonicalize()
+            .map_err(|e| format!("Cannot resolve save path: {}", e))?;
+        if !canonical_path.starts_with(&canonical_dir) {
+            return Err(format!(
+                "Invalid theory name '{}': resolved path escapes save directory",
+                name
+            ));
+        }
 
         let content = std::fs::read_to_string(&self.session_file)
             .map_err(|e| format!("Cannot read session file: {}", e))?;

@@ -244,6 +244,11 @@ impl Sort {
         self.kind() == SortKind::Array
     }
 
+    /// Return if this Sort is for a `String` (Z3's string sort).
+    pub fn is_string(&self) -> bool {
+        unsafe { Z3_is_string_sort(self.ctx.z3_ctx.0, self.z3_sort) }
+    }
+
     /// Return the `Sort` of the domain for `Array`s of this `Sort`.
     ///
     /// If this `Sort` is an `Array` or `Set`, it has a domain sort, so return it.
