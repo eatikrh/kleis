@@ -626,9 +626,7 @@ impl<'r> AxiomVerifier<'r> {
 
         // Step 2: Ensure all required axioms are loaded
         for structure in &dependencies {
-            if let Err(e) = self.ensure_structure_loaded(structure) {
-                eprintln!("   ⚠️ Warning: Failed to load {}: {}", structure, e);
-            }
+            self.ensure_structure_loaded(structure)?;
         }
 
         // NOTE: We intentionally load ONLY dependency-analyzed structures,
