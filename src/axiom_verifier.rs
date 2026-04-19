@@ -436,6 +436,10 @@ impl<'r> AxiomVerifier<'r> {
             self.ensure_structure_loaded(&field_name)?;
         }
 
+        // Set structure scope so element loading and axiom translation
+        // resolve bare names against this structure's scoped constants.
+        self.backend.set_structure_scope(Some(structure_name));
+
         // Phase 1: Load identity elements (nullary operations: zero, one, e, etc.)
         // This includes identity elements in nested structures!
         self.load_identity_elements_recursive(&structure.members);
@@ -455,6 +459,7 @@ impl<'r> AxiomVerifier<'r> {
             Err(e) => {
                 eprintln!("   ❌ ERROR loading axioms: {}", e);
                 self.backend.pop(1);
+                self.backend.set_structure_scope(None);
                 return Err(e);
             }
             Ok(()) => {
@@ -468,10 +473,12 @@ impl<'r> AxiomVerifier<'r> {
                         "   ❌ Unexpected error re-loading axioms for {}: {}",
                         structure_name, e
                     );
+                    self.backend.set_structure_scope(None);
                     return Err(e);
                 }
             }
         }
+        self.backend.set_structure_scope(None);
         eprintln!("   ✅ Axioms loaded successfully");
 
         // Mark as loaded

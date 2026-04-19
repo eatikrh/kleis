@@ -324,6 +324,15 @@ pub trait SolverBackend {
     /// ```
     fn load_identity_element(&mut self, name: &str, type_expr: &TypeExpr);
 
+    /// Set the current structure scope for element loading and axiom translation.
+    ///
+    /// When set, identity elements are stored per-structure, allowing different
+    /// structures to declare elements with the same name without collision.
+    /// Axiom translation resolves bare names against the scoped structure first.
+    ///
+    /// Pass `None` to clear the scope (e.g., for ADT constructor loading).
+    fn set_structure_scope(&mut self, structure_name: Option<&str>);
+
     /// Check if a name is a constructor in a declared data type
     ///
     /// Returns true if the name matches a nullary constructor in any
