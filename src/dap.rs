@@ -114,8 +114,6 @@ pub fn run_tcp_server_with_context_on_port(
     port: u16,
     ctx: Option<SharedContext>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    STDIO_MODE.store(false, Ordering::Relaxed);
-
     let listener = TcpListener::bind(format!("127.0.0.1:{}", port))?;
     run_tcp_server_with_listener(listener, ctx)
 }
