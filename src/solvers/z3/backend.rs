@@ -117,8 +117,24 @@ pub struct Z3Backend<'r> {
     /// Track which structures' axioms are currently loaded
     loaded_structures: HashSet<String>,
 
-    /// Identity elements (zero, one, e, etc.) mapped to Z3 constants
+    /// Identity elements (zero, one, e, etc.) mapped to Z3 constants.
+    /// This is the global (unscoped) map: first registration wins.
+    /// Used as fallback when no structure scope is active.
     identity_elements: HashMap<String, Dynamic>,
+
+    /// Per-structure identity elements: structure_name → (element_name → Z3 constant).
+    /// Each structure gets its own independent Z3 constant for each element,
+    /// preventing name collisions when different structures declare `element n : ℝ`.
+    structure_elements: HashMap<String, HashMap<String, Dynamic>>,
+
+    /// Tracks which structure first registered each global identity element name.
+    /// Used for collision warnings.
+    identity_element_owners: HashMap<String, String>,
+
+    /// Current structure scope for element loading and axiom translation.
+    /// When set, `kleis_to_z3` resolves bare names against this structure's
+    /// scoped elements first, falling back to the global map.
+    current_structure_scope: Option<String>,
 
     /// Free variables auto-created from undefined Object names
     free_variables: HashMap<String, Dynamic>,
@@ -418,6 +434,9 @@ impl<'r> Z3Backend<'r> {
             declared_ops: HashMap::new(),
             loaded_structures: HashSet::new(),
             identity_elements: HashMap::new(),
+            structure_elements: HashMap::new(),
+            identity_element_owners: HashMap::new(),
+            current_structure_scope: None,
             free_variables: HashMap::new(),
             converter: Z3ResultConverter,
             complex_datatype: Some(complex_datatype),
@@ -920,12 +939,36 @@ impl<'r> Z3Backend<'r> {
                     Self::collect_identity_elements(&structure.members);
 
                 for (name, type_expr) in elements {
+                    let sort = self.type_expr_to_sort(&type_expr);
+                    let z3_const: Dynamic = Dynamic::fresh_const(&name, &sort);
+
+                    // Always store in per-structure scoped map
+                    self.structure_elements
+                        .entry(structure_name.clone())
+                        .or_default()
+                        .insert(name.clone(), z3_const.clone());
+
+                    // Store in global map only if this name hasn't been claimed yet
                     if !self.identity_elements.contains_key(&name) {
-                        let sort = self.type_expr_to_sort(&type_expr);
-                        let z3_const: Dynamic = Dynamic::fresh_const(&name, &sort);
-                        self.identity_elements.insert(name, z3_const);
-                        count += 1;
+                        self.identity_elements.insert(name.clone(), z3_const);
+                        self.identity_element_owners
+                            .insert(name, structure_name.clone());
+                    } else {
+                        let owner = self
+                            .identity_element_owners
+                            .get(&name)
+                            .cloned()
+                            .unwrap_or_else(|| "<unknown>".to_string());
+                        if owner != structure_name {
+                            eprintln!(
+                                "   ⚠️  Element '{}' in structure '{}' collides with \
+                                 same-named element in '{}'. \
+                                 Each structure gets an independent Z3 constant.",
+                                name, structure_name, owner
+                            );
+                        }
                     }
+                    count += 1;
                 }
             }
         }
@@ -1029,6 +1072,10 @@ impl<'r> Z3Backend<'r> {
                 );
             }
 
+            // Set structure scope so axiom translation resolves bare element
+            // names against this structure's scoped constants.
+            self.current_structure_scope = Some(structure_name.clone());
+
             for (axiom_name, axiom_expr) in axioms {
                 if z3_debug {
                     eprintln!("   [Z3 DEBUG]   asserting '{}'...", axiom_name);
@@ -1052,6 +1099,8 @@ impl<'r> Z3Backend<'r> {
                     }
                 }
             }
+
+            self.current_structure_scope = None;
 
             if z3_debug {
                 eprintln!("   [Z3 DEBUG] ✅ Structure '{}' done", structure_name);
@@ -2269,7 +2318,16 @@ impl<'r> Z3Backend<'r> {
                     return Ok(var.clone());
                 }
 
-                // 2. Check identity elements
+                // 2. Check structure-scoped identity elements (if a scope is active)
+                if let Some(scope) = &self.current_structure_scope {
+                    if let Some(struct_map) = self.structure_elements.get(scope) {
+                        if let Some(scoped) = struct_map.get(name) {
+                            return Ok(scoped.clone());
+                        }
+                    }
+                }
+
+                // 3. Check global identity elements (fallback)
                 if let Some(identity) = self.identity_elements.get(name) {
                     return Ok(identity.clone());
                 }
@@ -5811,21 +5869,86 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         self.declared_ops.clear();
         self.loaded_structures.clear();
         self.identity_elements.clear();
+        self.structure_elements.clear();
+        self.identity_element_owners.clear();
+        self.current_structure_scope = None;
     }
 
     fn load_identity_element(&mut self, name: &str, type_expr: &TypeExpr) {
         if self.memout {
             return;
         }
-        if !self.identity_elements.contains_key(name) {
-            // Create constant with the correct sort based on the type expression
+
+        // If a structure scope is active, store in the per-structure map
+        if let Some(scope) = self.current_structure_scope.clone() {
+            // Check if already loaded in this structure's scope
+            if self
+                .structure_elements
+                .get(&scope)
+                .is_some_and(|m| m.contains_key(name))
+            {
+                return;
+            }
+
+            // Compute sort before borrowing the structure map
             let sort = self.type_expr_to_sort(type_expr);
             let z3_const: Dynamic = Dynamic::fresh_const(name, &sort);
 
-            // Assert this new constant is distinct from all existing identity elements of the SAME sort
-            // This is critical for symbolic ADT matching to work correctly!
+            // Collect distinctness constraints against same-structure elements
+            {
+                if let Some(struct_map) = self.structure_elements.get(&scope) {
+                    for existing_z3 in struct_map.values() {
+                        if z3_const.get_sort() == existing_z3.get_sort() {
+                            #[allow(deprecated)]
+                            let distinct = z3_const._eq(existing_z3).not();
+                            self.solver.assert(&distinct);
+                        }
+                    }
+                }
+            }
+
+            // Insert into per-structure map
+            self.structure_elements
+                .entry(scope.clone())
+                .or_default()
+                .insert(name.to_string(), z3_const.clone());
+
+            // Also register globally if no collision
+            if !self.identity_elements.contains_key(name) {
+                for existing_z3 in self.identity_elements.values() {
+                    if z3_const.get_sort() == existing_z3.get_sort() {
+                        #[allow(deprecated)]
+                        let distinct = z3_const._eq(existing_z3).not();
+                        self.solver.assert(&distinct);
+                    }
+                }
+                self.identity_elements.insert(name.to_string(), z3_const);
+                self.identity_element_owners.insert(name.to_string(), scope);
+            } else {
+                let owner = self
+                    .identity_element_owners
+                    .get(name)
+                    .cloned()
+                    .unwrap_or_else(|| "<unknown>".to_string());
+                if owner != scope {
+                    eprintln!(
+                        "   ⚠️  Element '{}' in structure '{}' collides with \
+                         same-named element in '{}'. \
+                         Each structure gets an independent Z3 constant.",
+                        name, scope, owner
+                    );
+                }
+            }
+            return;
+        }
+
+        // No scope active — global registration (original behavior for ADT constructors, etc.)
+        if !self.identity_elements.contains_key(name) {
+            let sort = self.type_expr_to_sort(type_expr);
+            let z3_const: Dynamic = Dynamic::fresh_const(name, &sort);
+
+            // Assert distinct from all existing global identity elements of the same sort
             for existing_z3 in self.identity_elements.values() {
-                // Only assert distinct if sorts are compatible
                 if z3_const.get_sort() == existing_z3.get_sort() {
                     #[allow(deprecated)]
                     let distinct = z3_const._eq(existing_z3).not();
@@ -5835,6 +5958,10 @@ impl<'r> SolverBackend for Z3Backend<'r> {
 
             self.identity_elements.insert(name.to_string(), z3_const);
         }
+    }
+
+    fn set_structure_scope(&mut self, structure_name: Option<&str>) {
+        self.current_structure_scope = structure_name.map(|s| s.to_string());
     }
 
     fn is_declared_constructor(&self, name: &str) -> bool {
