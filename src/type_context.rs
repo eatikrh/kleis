@@ -1172,9 +1172,19 @@ impl TypeContextBuilder {
 
     /// Convert a TypeExpr to a Type (for return type extraction)
     fn type_expr_to_type(&self, type_expr: &TypeExpr) -> Result<Type, String> {
+        let mut var_map = HashMap::new();
+        let mut next_id = usize::MAX / 2;
+        self.type_expr_to_type_inner(type_expr, &mut var_map, &mut next_id)
+    }
+
+    fn type_expr_to_type_inner(
+        &self,
+        type_expr: &TypeExpr,
+        var_map: &mut HashMap<String, usize>,
+        next_id: &mut usize,
+    ) -> Result<Type, String> {
         match type_expr {
             TypeExpr::Named(name) => {
-                // Normalize Unicode names
                 let normalized = Self::normalize_type_name(name);
                 Ok(Type::Data {
                     type_name: "Type".to_string(),
@@ -1183,8 +1193,10 @@ impl TypeContextBuilder {
                 })
             }
             TypeExpr::Parametric(name, params) => {
-                let param_types: Result<Vec<Type>, String> =
-                    params.iter().map(|p| self.type_expr_to_type(p)).collect();
+                let param_types: Result<Vec<Type>, String> = params
+                    .iter()
+                    .map(|p| self.type_expr_to_type_inner(p, var_map, next_id))
+                    .collect();
                 Ok(Type::Data {
                     type_name: "Type".to_string(),
                     constructor: name.clone(),
@@ -1192,30 +1204,30 @@ impl TypeContextBuilder {
                 })
             }
             TypeExpr::Function(from, to) => {
-                // First-class function types: A → B becomes Type::Function(A, B)
-                let from_type = self.type_expr_to_type(from)?;
-                let to_type = self.type_expr_to_type(to)?;
+                let from_type = self.type_expr_to_type_inner(from, var_map, next_id)?;
+                let to_type = self.type_expr_to_type_inner(to, var_map, next_id)?;
                 Ok(Type::Function(Box::new(from_type), Box::new(to_type)))
             }
             TypeExpr::Product(types) => {
                 if types.len() == 1 {
-                    // Single element product is just the element
-                    self.type_expr_to_type(&types[0])
+                    self.type_expr_to_type_inner(&types[0], var_map, next_id)
                 } else {
-                    // First-class product types: A × B × C becomes Type::Product([A, B, C])
-                    let converted: Result<Vec<Type>, String> =
-                        types.iter().map(|t| self.type_expr_to_type(t)).collect();
+                    let converted: Result<Vec<Type>, String> = types
+                        .iter()
+                        .map(|t| self.type_expr_to_type_inner(t, var_map, next_id))
+                        .collect();
                     Ok(Type::Product(converted?))
                 }
             }
-            TypeExpr::Var(_) => {
-                // Type variable - return as fresh variable
-                Ok(Type::Var(crate::type_inference::TypeVar::new(0)))
+            TypeExpr::Var(v) => {
+                let id = *var_map.entry(v.clone()).or_insert_with(|| {
+                    let id = *next_id;
+                    *next_id += 1;
+                    id
+                });
+                Ok(Type::Var(crate::type_inference::TypeVar::new(id)))
             }
-            TypeExpr::ForAll { body, .. } => {
-                // Quantified type - unwrap and interpret the body
-                self.type_expr_to_type(body)
-            }
+            TypeExpr::ForAll { body, .. } => self.type_expr_to_type_inner(body, var_map, next_id),
             TypeExpr::DimExpr(dim) => Ok(Type::NatExpr(dim.clone())),
         }
     }
