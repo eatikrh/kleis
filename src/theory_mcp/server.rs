@@ -78,6 +78,13 @@ impl TheoryMcpServer {
                 } else if let Some(len_str) = trimmed.strip_prefix("Content-Length:") {
                     self.log("Detected Content-Length transport (LSP-style)");
                     let content_length: usize = len_str.trim().parse().unwrap_or(0);
+                    const MAX_MSG_SIZE: usize = 64 * 1024 * 1024;
+                    if content_length > MAX_MSG_SIZE {
+                        return Err(format!(
+                            "Content-Length {} exceeds maximum {}",
+                            content_length, MAX_MSG_SIZE
+                        ));
+                    }
 
                     loop {
                         let mut header_line = String::new();

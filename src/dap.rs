@@ -114,13 +114,23 @@ pub fn run_tcp_server_with_context_on_port(
     port: u16,
     ctx: Option<SharedContext>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // TCP mode: console output is allowed
-    STDIO_MODE.store(false, Ordering::Relaxed);
-
     let listener = TcpListener::bind(format!("127.0.0.1:{}", port))?;
+    run_tcp_server_with_listener(listener, ctx)
+}
+
+/// Run the DAP server on a pre-bound `TcpListener`.
+///
+/// Avoids the TOCTOU race where `find_available_port` drops its listener
+/// and another process claims the port before we re-bind.
+pub fn run_tcp_server_with_listener(
+    listener: TcpListener,
+    ctx: Option<SharedContext>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    STDIO_MODE.store(false, Ordering::Relaxed);
+    let local_addr = listener.local_addr()?;
     dap_log!(
-        "🐛 Kleis DAP server listening on port {} (single session)",
-        port
+        "🐛 Kleis DAP server listening on {} (single session)",
+        local_addr
     );
 
     // Only accept one connection for this session
@@ -253,6 +263,17 @@ fn read_dap_message<R: BufRead>(reader: &mut R) -> io::Result<Option<String>> {
         .trim()
         .parse()
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
+    const MAX_MSG_SIZE: usize = 64 * 1024 * 1024;
+    if content_length > MAX_MSG_SIZE {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!(
+                "Content-Length {} exceeds maximum {}",
+                content_length, MAX_MSG_SIZE
+            ),
+        ));
+    }
 
     // Skip the blank line after headers
     let mut blank = String::new();

@@ -2051,24 +2051,30 @@ impl LanguageServer for KleisLanguageServer {
                     .log_message(MessageType::INFO, format!("Starting debug session for: {}", program_path))
                     .await;
                 
-                // Find an available port
-                let port = find_available_port().unwrap_or(0);
-                
-                if port == 0 {
-                    return Ok(Some(serde_json::json!({
-                        "error": "Could not find available port for DAP server"
-                    })));
-                }
-                
-                // Spawn DAP server in background
+                let listener = match std::net::TcpListener::bind("127.0.0.1:0") {
+                    Ok(l) => l,
+                    Err(e) => {
+                        return Ok(Some(serde_json::json!({
+                            "error": format!("Could not bind DAP listener: {}", e)
+                        })));
+                    }
+                };
+                let port = match listener.local_addr() {
+                    Ok(addr) => addr.port(),
+                    Err(e) => {
+                        return Ok(Some(serde_json::json!({
+                            "error": format!("Could not get DAP port: {}", e)
+                        })));
+                    }
+                };
+
                 let ctx = self.shared_ctx.clone();
                 std::thread::spawn(move || {
-                    if let Err(e) = crate::dap::run_tcp_server_with_context_on_port(port, ctx) {
+                    if let Err(e) = crate::dap::run_tcp_server_with_listener(listener, ctx) {
                         eprintln!("DAP server error: {}", e);
                     }
                 });
-                
-                // Give the server a moment to start
+
                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                 
                 self.client
@@ -2087,15 +2093,6 @@ impl LanguageServer for KleisLanguageServer {
             }
         }
     }
-}
-
-/// Find an available TCP port for the DAP server
-fn find_available_port() -> Option<u16> {
-    // Try to bind to port 0 to get an available port from the OS
-    std::net::TcpListener::bind("127.0.0.1:0")
-        .ok()
-        .and_then(|listener| listener.local_addr().ok())
-        .map(|addr| addr.port())
 }
 
 /// Tokenize Kleis source for semantic highlighting
