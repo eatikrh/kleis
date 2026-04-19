@@ -2276,12 +2276,17 @@ impl<'r> Z3Backend<'r> {
             let list_adt = self
                 .declared_data_types
                 .get("List")
-                .expect("List ADT enabled but not in declared_data_types");
-            // cons = variant 0, nil = variant 1
+                .ok_or_else(|| "List ADT enabled but not in declared_data_types".to_string())?;
+            if list_adt.variants.len() < 2 {
+                return Err("List ADT has fewer than 2 variants (expected cons + nil)".to_string());
+            }
             let mut result = list_adt.variants[1].constructor.apply(&[]);
             for item in items.iter().rev() {
                 let item_z3 = self.kleis_to_z3(item, vars)?;
-                let list_adt = self.declared_data_types.get("List").unwrap();
+                let list_adt = self
+                    .declared_data_types
+                    .get("List")
+                    .ok_or_else(|| "List ADT disappeared during translation".to_string())?;
                 result = list_adt.variants[0]
                     .constructor
                     .apply(&[&item_z3 as &dyn Ast, &result as &dyn Ast]);
@@ -5570,12 +5575,14 @@ impl<'r> SolverBackend for Z3Backend<'r> {
 
         if let Some(bool_val) = z3_expr.as_bool() {
             if let Some(value) = bool_val.as_bool() {
+                self.solver.pop(1);
                 return Ok(Expression::Const(value.to_string()));
             }
         }
 
         if let Some(real_val) = z3_expr.as_real() {
             if let Some((num, den)) = real_val.as_rational() {
+                self.solver.pop(1);
                 if den == 1 {
                     return Ok(Expression::Const(num.to_string()));
                 } else {
@@ -5605,13 +5612,21 @@ impl<'r> SolverBackend for Z3Backend<'r> {
                 std::time::Duration::from_millis((eval_timeout_ms as u64).saturating_add(2000));
             match solver_check_with_watchdog(&self.solver, eval_wall_timeout) {
                 SatResult::Sat => {
-                    if let Some(model) = self.solver.get_model() {
-                        if let Some(evaluated) = model.eval(&result_var, true) {
+                    let result = self
+                        .solver
+                        .get_model()
+                        .and_then(|model| model.eval(&result_var, true))
+                        .map(|evaluated| {
                             let z3_dynamic: Dynamic = evaluated.into();
-                            self.solver.pop(1);
-                            return self.converter.to_expression(&z3_dynamic);
+                            self.converter.to_expression(&z3_dynamic)
+                        });
+                    self.solver.pop(1);
+                    return match result {
+                        Some(r) => r,
+                        None => {
+                            Err("Z3 returned Sat but could not extract model value".to_string())
                         }
-                    }
+                    };
                 }
                 SatResult::Unsat => {
                     self.solver.pop(1);
@@ -5630,7 +5645,6 @@ impl<'r> SolverBackend for Z3Backend<'r> {
 
         self.solver.pop(1);
 
-        // Fallback: return string representation
         Ok(Expression::Const(z3_expr.to_string()))
     }
 
@@ -5680,14 +5694,24 @@ impl<'r> SolverBackend for Z3Backend<'r> {
     fn are_equivalent(&mut self, expr1: &Expression, expr2: &Expression) -> Result<bool, String> {
         self.solver.push();
 
-        let z3_expr1 = self.kleis_to_z3(expr1, &HashMap::new())?;
-        let z3_expr2 = self.kleis_to_z3(expr2, &HashMap::new())?;
+        let z3_expr1 = match self.kleis_to_z3(expr1, &HashMap::new()) {
+            Ok(e) => e,
+            Err(e) => {
+                self.solver.pop(1);
+                return Err(e);
+            }
+        };
+        let z3_expr2 = match self.kleis_to_z3(expr2, &HashMap::new()) {
+            Ok(e) => e,
+            Err(e) => {
+                self.solver.pop(1);
+                return Err(e);
+            }
+        };
 
-        // Check if expr1 ≠ expr2 is unsatisfiable
         let equality = if z3_expr1.sort_kind() == z3_expr2.sort_kind() {
             z3_expr1.eq(&z3_expr2)
         } else {
-            // Mixed types - try converting to Real
             let e1_real = z3_expr1
                 .as_real()
                 .or_else(|| z3_expr1.as_int().map(|i| i.to_real()));
@@ -5698,15 +5722,36 @@ impl<'r> SolverBackend for Z3Backend<'r> {
             if let (Some(r1), Some(r2)) = (e1_real, e2_real) {
                 r1.eq(&r2)
             } else {
+                self.solver.pop(1);
                 return Err("Cannot compare expressions of incompatible types".to_string());
             }
         };
 
         self.solver.assert(equality.not());
-        let result = matches!(self.solver.check(), SatResult::Unsat);
+
+        let timeout_ms: u32 = std::env::var("KLEIS_Z3_TIMEOUT_MS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(5000);
+        let wall_timeout =
+            std::time::Duration::from_millis((timeout_ms as u64).saturating_add(2000));
+        let check_result = solver_check_with_watchdog(&self.solver, wall_timeout);
         self.solver.pop(1);
 
-        Ok(result)
+        match check_result {
+            SatResult::Unsat => Ok(true),
+            SatResult::Sat => Ok(false),
+            SatResult::Unknown => {
+                let reason = self
+                    .solver
+                    .get_reason_unknown()
+                    .unwrap_or_else(|| "unknown".to_string());
+                Err(format!(
+                    "Equivalence check inconclusive (reason: {})",
+                    reason
+                ))
+            }
+        }
     }
 
     fn load_structure_axioms(

@@ -602,6 +602,14 @@ impl TheoryEngine {
         } else {
             format!("{}.kleis", name)
         };
+
+        if save_name.contains("..") || save_name.contains('/') || save_name.contains('\\') {
+            return Err(format!(
+                "Invalid theory name '{}': must be a plain filename (no path separators or '..')",
+                name
+            ));
+        }
+
         let save_path = self.save_dir.join(&save_name);
 
         let content = std::fs::read_to_string(&self.session_file)

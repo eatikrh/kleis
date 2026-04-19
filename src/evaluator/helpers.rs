@@ -314,7 +314,10 @@ impl Evaluator {
             return "[]".to_string();
         }
 
-        let num_cols = string_rows[0].len();
+        let num_cols = string_rows.iter().map(|r| r.len()).max().unwrap_or(0);
+        if num_cols == 0 {
+            return "[]".to_string();
+        }
         let col_widths: Vec<usize> = (0..num_cols)
             .map(|c| {
                 string_rows
@@ -331,10 +334,11 @@ impl Evaluator {
         );
 
         for row in &string_rows {
-            let cells: Vec<String> = row
-                .iter()
-                .enumerate()
-                .map(|(i, s)| format!("{:>width$}", s, width = col_widths[i]))
+            let cells: Vec<String> = (0..num_cols)
+                .map(|i| {
+                    let s = row.get(i).map(|s| s.as_str()).unwrap_or("");
+                    format!("{:>width$}", s, width = col_widths[i])
+                })
                 .collect();
             lines.push(format!("│ {} │", cells.join("  ")));
         }
