@@ -2,7 +2,7 @@
 // POT Projection Singularity — Worked Examples
 // =============================================================================
 //
-// Volume VIII Supplement: Concrete computational demonstrations of the
+// Volume X Supplement: Concrete computational demonstrations of the
 // Hadamard projection applied to explicit series.
 //
 // This file does NOT use Z3 axioms for the core properties. Every result
