@@ -1,6 +1,68 @@
 # Next Session Notes
 
-**Last Updated:** March 14, 2026 (session — contraction mixing refutation, reductio removed as circular)
+**Last Updated:** April 19, 2026 (session — HACKATHON code review, 13 fixes merged, 26 remaining)
+
+---
+
+## HACKATHON CODE REVIEW — IN PROGRESS
+
+### Context
+Applied the HACKATHON 5-angle AI code review methodology (convention, bugs, historical context, code quality, security) to the full Kleis codebase. Deep Claude review found **39 findings at confidence ≥ 80**.
+
+### Merged (PR #35 on origin, #33 on fork — branch `review/hackathon-code-review`)
+13 fixes across Z3 backend, type system, evaluator, MCP servers, DAP, LSP:
+- Z3 push/pop leaks in `evaluate()` and `are_equivalent()`
+- Watchdog timeout for `are_equivalent()` + explicit `Unknown` handling
+- `evaluate()` Sat path: explicit error when model extraction fails
+- `translate_list_to_cons` panic → proper Err return
+- `dynamic_to_set` type-unsoundness (verify Array range is Bool)
+- `dynamic_to_string` type-unsoundness (use `Z3_is_string_sort`)
+- `TypeExpr::Var` collapse to `TypeVar(0)` — unique ids per variable name
+- `pretty_print_matrix` panic on empty/ragged matrices
+- Path traversal defense in `save_theory` (null byte + canonicalize)
+- Content-Length cap (64 MiB) in all MCP servers + DAP
+- DAP ephemeral port race (pass pre-bound TcpListener)
+- Redundant `STDIO_MODE.store` removal
+
+### Current branch: `review/hackathon-code-review-2`
+1 fix so far:
+- `verify_axiom_impl` swallowed `ensure_structure_loaded` errors → now propagates with `?`
+
+### Remaining findings (26 items, by tier)
+
+**Tier 1 — Critical bugs (2):**
+- #6 (Conf 88): `foldLines` arg order swapped vs documentation in `evaluator/builtins.rs`
+- A (Conf 90): `check_consistency` error swallowed in `axiom_verifier.rs:649`
+
+**Tier 2 — Security (3):**
+- #10 (Conf 90): `readFile` arbitrary file read — no path restriction
+- #11 (Conf 88): Unescaped import strings inject into session file
+- #12 (Conf 88): `check_file` arbitrary file read — no workspace root restriction
+
+**Tier 3 — Important bugs (8):**
+- #13 (Conf 97): Lossy rational conversion via f64
+- #14 (Conf 96): `bind_pattern_variables` ignores ADT field types
+- #15 (Conf 96): `Type::Data` unification ignores constructor identity
+- #16 (Conf 96): `check_action` schema mismatch for `git_push`
+- #18 (Conf 95): Pattern guard default is `true`
+- #19 (Conf 94): `check_function_def` stores body type, not arrow
+- #20 (Conf 93): Unknown `TypeExpr::Named` silently becomes scalar
+- #21 (Conf 90): Equality uses sort_kind not sort identity
+
+**Tier 4 — Quality/DoS (13):**
+- #23–39: Recursion depth limits, stack overflow in cons lists, parser nesting limits, operation registry silent overwrites, `declare_uninterpreted` always Int→Int, `alpha_convert` doesn't descend into Quantifier/Match, type ascription ignored, fail-open policy, unknown types default to Int sort, and more.
+
+### Workflow
+Generic command: "Pick the next unfixed finding from the Claude code review triage (Tier 1 first, then Tier 2, then Tier 3, by descending confidence). Read the code, understand the bug, fix it. Run all ~2400 tests. Then do a proper deep Claude code review — read the changed code and surrounding context yourself, apply the 5-angle HACKATHON methodology, and produce findings with confidence scores. Not just the MCP lint tool. Commit, push to both origin and fork, and update the PR."
+
+### Key lesson
+The MCP `check_code` lint tool is NOT a Claude code review. A proper review means reading the code, understanding the semantics, and producing findings with confidence scores using the 5-angle HACKATHON methodology.
+
+---
+
+**Previous session notes below.**
+
+---
 
 ---
 
