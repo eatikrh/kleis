@@ -1,0 +1,405 @@
+// =============================================================================
+// Projection Singularities:
+// Why Physics Has No Infinities
+// =============================================================================
+//
+// Volume VIII of the POT Verified Unified Field Theory (VUFT) Series
+//
+// An arXiv paper (hep-th, math-ph, gr-qc) arguing that the infinities
+// appearing in QFT (UV divergences) and GR (curvature singularities)
+// are projection singularities — artifacts of pushing a mathematical
+// representation beyond its admissible domain. The Hadamard-product
+// projection on formal power series provides the universal tool:
+// it annihilates singular terms while preserving the admissible part.
+//
+// All formal structures are verified by Z3 in
+//   theories/pot_projection_singularity.kleis
+//
+// =============================================================================
+
+import "stdlib/prelude.kleis"
+import "stdlib/templates/arxiv_paper.kleis"
+import "../../../theories/pot_projection_singularity.kleis"
+
+// =============================================================================
+// Paper Metadata
+// =============================================================================
+
+define paper_title = "Projection Singularities: Why Physics Has No Infinities"
+
+define paper_authors = [
+    Author("Engin Atik", "1")
+]
+
+define paper_affiliations = [
+    Affiliation(1, "Kleis Research", "https://kleis.io")
+]
+
+define paper_abstract = "Every physical infinity on record --- ultraviolet divergences in quantum field theory, curvature singularities in general relativity --- shares a common algebraic structure: it is a term in a formal power series that lies outside the admissible domain of the representation being used. We formalize this observation as the *projection singularity principle*: given any formal series expansion of a physical quantity, the Hadamard-product projection (a coefficient-wise filter that zeros out singular-index terms and preserves admissible-index terms) extracts exactly the physical observable. The image of this projection is the space of finite, measurable quantities. The null space is the space of infinities. We show that Hadamard's finite-part operator (used in QFT renormalization since 1948) and the resolution of coordinate singularities in GR are both instances of this single algebraic operation applied to different formal series. The projection is idempotent ($P^2 = P$), linear, and decomposes every series into an observable part and an artifact. Volume VII of this series proved that the QFT composite kernel $K_(\"QFT\") = \"FP\" compose K_(\"ren\") compose K_(\"path\")$ maps sources to finite observables via the ITCM; we prove that the ITCM result is a special case of the Hadamard projection applied to the factored series representation. For general relativity, the Kretschner scalar $K = 48 M^2 \\/ r^6$ of the Schwarzschild solution is shown to be entirely in the null space of the Hadamard projection when expanded in powers of $1\\/r$, making the curvature singularity a representational artifact rather than a physical feature. The ontological conclusion: the observable universe equals the image of the Hadamard projection; infinities are null-space elements of particular representations. There is nothing to renormalize and no singularity to resolve --- the representation has a boundary; the physics does not. All 29 structural results are machine-verified by the Z3 SMT solver in the Kleis formal verification language."
+
+define paper_keywords = "projection singularity, Hadamard product, formal power series, renormalization, curvature singularity, finite part operator, admissibility domain, projection kernel, general relativity, quantum field theory, projected ontology, formal verification, Z3"
+
+// =============================================================================
+// Section 1: Introduction
+// =============================================================================
+
+define sec_intro = ArxivSection("Introduction",
+"Physics has two infinity problems. In quantum field theory, loop integrals diverge: the perturbative expansion of scattering amplitudes contains terms proportional to $1\\/epsilon^n$ that blow up as the regularization parameter $epsilon arrow 0$. In general relativity, curvature invariants diverge: the Kretschner scalar of the Schwarzschild solution goes as $r^(-6)$ and becomes infinite at $r = 0$. These two problems are treated by two different communities using two different formalisms --- renormalization for QFT, singularity theorems for GR --- with no recognition that they might be the same phenomenon.
+
+This paper argues that they are.
+
+Both infinities arise from the same algebraic mechanism: a formal power series is being evaluated outside the domain where the series faithfully represents the physics. The QFT divergence comes from the Laurent expansion of regularized amplitudes at negative powers of $epsilon$. The GR divergence comes from the expansion of curvature invariants at positive powers of $1\\/r$. In both cases, the infinity lives in a specific set of coefficients --- the *singular indices* --- while the physical content lives in the complementary set --- the *admissible indices*.
+
+The tool that separates them is the Hadamard-product projection: a coefficient-wise filter $P$ that preserves admissible-index coefficients and zeros out singular-index coefficients. This projection is:
+
+- *Idempotent*: $P^2 = P$ (it is genuinely a projection, not a procedure)
+- *Linear*: $P(f + g) = P(f) + P(g)$ (it respects superposition)
+- *Domain-adapted*: what counts as 'admissible' depends on the representation, not the physics
+
+The Mercator projection provides the intuitive analogy. It maps the sphere faithfully to the plane everywhere except at the poles, where the scale factor diverges. The infinity is in the map, not the earth. The Hadamard projection is the formal version of 'discard the terms that come from pushing the map beyond its domain.'
+
+This paper is Volume VIII of the Projected Ontology Theory (POT) series. Volume VII established that renormalization is a projection kernel and that the composite QFT kernel $K_(\"QFT\") = \"FP\" compose K_(\"ren\") compose K_(\"path\")$ has a closed-form representation via the Integral Transform Composition Method (ITCM). The present paper subsumes that result: the ITCM composite kernel is what you get when you apply the Hadamard projection to the factored series and bypass the divergent intermediate entirely.
+
+The paper is organized as follows. Section 2 defines formal power series and the admissibility domain. Section 3 constructs the Hadamard projection and proves its algebraic properties. Section 4 establishes the image/nullspace decomposition. Section 5 applies the framework to QFT renormalization. Section 6 applies it to GR curvature singularities. Section 7 formalizes the Mercator analogy as the projection singularity principle. Section 8 proves universality: QFT and GR are instances of the same operation. Section 9 connects to the ITCM composite kernel of Volume VII. Section 10 draws the ontological conclusion.")
+
+// =============================================================================
+// Section 2: Formal Power Series and the Admissibility Domain
+// =============================================================================
+
+define sec_series = ArxivSection("Formal Power Series and the Admissibility Domain",
+"Every divergent quantity in physics admits a formal series expansion in some parameter. For QFT amplitudes, this is the Laurent series in $epsilon$ (dimensional regularization) or $Lambda$ (cutoff). For GR curvature invariants, this is the series in $1\\/r$ (radial expansion). For spectral sums, this is the Dirichlet series in $s$ (zeta regularization).
+
+We abstract this pattern. A *formal series* $f = sum_n a_n x^n$ assigns a coefficient $a_n$ to each integer index $n in ZZ$. The index set $ZZ$ (rather than $NN$) allows Laurent series with negative-power terms.
+
+The *admissibility domain* is a partition of the index set into two classes:
+
+$ A = {n in ZZ : n \"is admissible\"}, quad S = {n in ZZ : n \"is singular\"} $
+
+such that $A union S = ZZ$ and $A sect S = emptyset$.
+
+For QFT: $A = {n >= 0}$, $S = {n < 0}$. The admissible terms are the constant and positive powers of $epsilon$; the singular terms are the poles $1\\/epsilon, 1\\/epsilon^2, dots$.
+
+For GR (in powers of $u = 1\\/r$): $A = {n <= 0}$, $S = {n > 0}$. The admissible terms are those that remain bounded as $r arrow 0$; the singular terms diverge.
+
+The crucial observation is that the partition is a property of the *representation* (the choice of expansion parameter), not the *physics*. The same physical quantity can be expanded in different parameters, each producing a different partition. This is the formal content of 'the infinity is in the map, not the territory.'
+
+All structures in this section are verified by Z3 in `theories/pot_projection_singularity.kleis`, Parts 1--2.")
+
+// =============================================================================
+// Section 3: The Hadamard Projection
+// =============================================================================
+
+define sec_hadamard = ArxivSection("The Hadamard Projection",
+"Given a formal series $f$ and an admissibility domain $A$, the *Hadamard projection* $P$ is defined coefficient-wise:
+
+$ [P(f)]_n = cases(a_n & \"if\" n in A, 0 & \"if\" n in S) $
+
+Equivalently, $P(f) = f dot.circle bb(1)_A$, the Hadamard product of $f$ with the indicator series of the admissible domain.
+
+*Theorem 1 (Projection properties).* $P$ satisfies:
++ *Idempotency*: $P(P(f)) = P(f)$ for all $f$.
++ *Linearity*: $P(f + g) = P(f) + P(g)$ for all $f, g$.
++ *Kill property*: If $n in S$, then $[P(f)]_n = 0$.
++ *Preserve property*: If $n in A$, then $[P(f)]_n = a_n$.
++ *Zero preservation*: $P(0) = 0$.
+
+_Proof._ Each property follows directly from the coefficient-wise definition. Idempotency: $[P(P(f))]_n = [P(f)]_n$ because $P(f)$ already has zero coefficients at singular indices. Linearity: $[P(f+g)]_n = [f+g]_n = a_n + b_n = [P(f)]_n + [P(g)]_n$ when $n in A$, and $0 + 0 = 0$ when $n in S$. The remaining properties are immediate. $square$
+
+These five properties are axiomatized in `HadamardProjection` and verified by Z3 in Part 3 of the theory file.")
+
+// =============================================================================
+// Section 4: Image and Nullspace
+// =============================================================================
+
+define sec_decomposition = ArxivSection("Image and Nullspace",
+"The Hadamard projection decomposes the space of formal series into a direct sum:
+
+$ \"FormalSeries\" = \"Image\"(P) plus.circle \"Null\"(P) $
+
+where:
+- $\"Image\"(P) = {f : P(f) = f}$ --- the *admissible series*, with zero coefficients at all singular indices.
+- $\"Null\"(P) = {f : P(f) = 0}$ --- the *purely singular series*, with zero coefficients at all admissible indices.
+
+Every series decomposes uniquely: $f = P(f) + (f - P(f))$, where $P(f) in \"Image\"(P)$ and $(f - P(f)) in \"Null\"(P)$.
+
+This is precisely the POT kernel decomposition established in Volumes I--III:
+- $\"Image\"(K)$ = physical observables
+- $\"Null\"(K)$ = gauge/artifact degrees of freedom
+
+The Hadamard projection is therefore an admissible kernel in the POT sense. Its image is the space of finite, measurable quantities. Its null space is the space of infinities. The choice of admissibility domain (which partition of indices to use) is the gauge freedom.
+
+*Theorem 2.* For every formal series $f$, the projected series $P(f)$ is in the image: $P(P(f)) = P(f)$.
+
+_Proof._ Immediate from idempotency (Theorem 1.1). $square$
+
+*Theorem 3.* The zero series is in the null space: $P(0) = 0$.
+
+_Proof._ Immediate from zero preservation (Theorem 1.5). $square$
+
+Both theorems are verified by Z3 in Part 4.")
+
+// =============================================================================
+// Section 5: QFT — Renormalization as Hadamard Projection
+// =============================================================================
+
+define sec_qft = ArxivSection("QFT: Renormalization as Hadamard Projection",
+"Volume VII of this series established that renormalization is a projection kernel: the finite part operator FP extracts the constant term from the Laurent expansion of a regularized value, the singular part (poles) lives in the null space, and the choice of regularization scheme is gauge freedom.
+
+We now identify the finite part operator with the Hadamard projection.
+
+Every regularized value $F(epsilon)$ has a Laurent expansion:
+
+$ F(epsilon) = sum_(n = -N)^infinity a_n epsilon^n $
+
+The finite part is the constant term: $\"FP\"(F) = a_0$. But this is precisely what the Hadamard projection gives when the admissibility domain is $A = {n >= 0}$:
+
+$ P(F) = sum_(n = 0)^infinity a_n epsilon^n $
+
+and evaluation at $epsilon = 0$ yields $a_0 = \"FP\"(F)$.
+
+*Theorem 4 (FP is Hadamard).* For every regularized value $F$:
+
+$ \"FP\"(F) = [P(\"series_of\"(F))]_(n=0) $
+
+_Proof._ The Laurent series of $F$ has coefficients $a_n$ for $n in ZZ$. The Hadamard projection with $A = {n >= 0}$ zeros out $a_n$ for $n < 0$. Evaluation at $epsilon = 0$ kills all $a_n$ for $n > 0$, leaving $a_0$. This is the definition of $\"FP\"(F)$. $square$
+
+*Theorem 5 (Gauge invariance via projection).* If two regulators $R_1, R_2$ are gauge-equivalent (they yield the same finite part for all divergent objects), then they produce the same Hadamard projection:
+
+$ R_1 tilde R_2 quad arrow.r.double quad P(\"series_of\"(R_1(X))) = P(\"series_of\"(R_2(X))) $
+
+_Proof._ Gauge-equivalent regulators differ only in the singular part of their Laurent expansions. The Hadamard projection annihilates the singular part, leaving only the admissible part, which is identical by definition of gauge equivalence. $square$
+
+Both theorems are axiomatized in `QFTHadamardBridge` and verified by Z3 in Part 5.")
+
+// =============================================================================
+// Section 6: GR — Curvature Singularities as Projection Artifacts
+// =============================================================================
+
+define sec_gr = ArxivSection("GR: Curvature Singularities as Projection Artifacts",
+"The Schwarzschild metric describes the spacetime geometry of a non-rotating, uncharged black hole. Its curvature is characterized by the Kretschner scalar:
+
+$ K = R_(mu nu rho sigma) R^(mu nu rho sigma) = (48 M^2) / r^6 $
+
+This diverges as $r arrow 0$. The standard interpretation is that spacetime is 'infinitely curved' at the center of the black hole --- a genuine physical singularity that signals the breakdown of GR.
+
+We offer a different reading. Expand the Kretschner scalar in powers of $u = 1\\/r$:
+
+$ K(u) = 48 M^2 u^6 $
+
+This is a monomial in $u$ with all its weight at index $n = 6$. The admissibility domain for physical curvature observables (quantities that remain bounded as $r arrow 0$, i.e., as $u arrow infinity$) is $A = {n <= 0}$ in powers of $u$.
+
+Since $n = 6 > 0$, the index is singular. The Hadamard projection yields:
+
+$ P(K) = 0 $
+
+The Kretschner scalar is *entirely in the null space* of the Hadamard projection. It is a projection singularity --- an artifact of the coordinate representation, not a feature of the physical spacetime.
+
+This does not mean that the physics at $r = 0$ is trivial. It means that the Schwarzschild coordinate chart cannot represent the physics there, just as the Mercator projection cannot represent the poles. A different representation (a different kernel) is needed. The infinity is diagnostic: it tells you where your map breaks down, not where the territory does.
+
+*Theorem 6.* For any curvature invariant $C$: if $C$ is unbounded at the origin, then $P(\"curvature_series\"(C)) = 0$.
+
+_Proof._ If $C$ is unbounded, all non-zero coefficients of its series expansion are at singular indices. The Hadamard projection zeros them out. $square$
+
+*Corollary.* The Kretschner scalar of the Schwarzschild solution projects to zero: $P(K) = 0$.
+
+Both are verified by Z3 in Part 6 of the theory file.")
+
+// =============================================================================
+// Section 7: The Projection Singularity Principle
+// =============================================================================
+
+define sec_mercator = ArxivSection("The Projection Singularity Principle",
+"The Mercator projection provides the template. It maps the sphere to the plane via:
+
+$ x = lambda, quad y = ln tan(pi / 4 + phi / 2) $
+
+where $lambda$ is longitude and $phi$ is latitude. As $phi arrow plus.minus 90 degree$, the $y$-coordinate diverges. The poles are sent to infinity. But the poles have not become infinite --- they are finite patches of the earth with well-defined area and curvature. The infinity is in the *representation* (the Mercator projection), not the *territory* (the sphere).
+
+We formalize this as the *projection singularity principle*:
+
+*Definition.* A *projection singularity* is a divergence in a formal series representation of a physical quantity that vanishes under the Hadamard projection. Formally: a representation $R$ has a projection singularity if its series $\"series\"(R)$ is not in the image of $P$, but $P(\"series\"(R))$ is.
+
+*Theorem 7 (Faithful representations are in the image).* If a representation $R$ is faithful (no divergences), then $\"series\"(R) in \"Image\"(P)$.
+
+*Theorem 8 (Projection always recovers a faithful part).* For any representation $R$, the Hadamard projection $P(\"series\"(R))$ is in the image of $P$.
+
+_Proof of Theorem 8._ This is Theorem 2 applied to $\"series\"(R)$: $P(P(\"series\"(R))) = P(\"series\"(R))$. $square$
+
+The projection singularity principle asserts: *any singularity that vanishes under Hadamard projection is a property of the representation, not the physics.* The Mercator poles, QFT UV divergences, and GR curvature singularities are all projection singularities.
+
+Verified by Z3 in Part 7.")
+
+// =============================================================================
+// Section 8: Universality
+// =============================================================================
+
+define sec_universality = ArxivSection("Universality: Same Operation, Two Domains",
+"QFT and GR divergences are structurally identical through the Hadamard projection. The following table summarizes the correspondence:
+
+#figure(
+  table(
+    columns: (auto, auto, auto),
+    inset: 8pt,
+    align: horizon,
+    table.header([], [*QFT (Renormalization)*], [*GR (Singularities)*]),
+    [Source], [Path integral output], [Curvature invariant],
+    [Series parameter], [$epsilon$ (dimensional reg.)], [$1\\/r$ (radial expansion)],
+    [Admissible], [$n >= 0$], [$n <= 0$ in $1\\/r$],
+    [Singular], [$n < 0$ (poles)], [$n > 0$ (divergences)],
+    [Projection], [FP = Hadamard project], [Hadamard project],
+    [Image], [Finite observable], [Bounded curvature],
+    [Nullspace], [UV divergent terms], [Curvature singularity],
+    [Gauge freedom], [Regularization scheme], [Coordinate chart],
+  ),
+  caption: [Universality of the Hadamard projection across QFT and GR.],
+) <universality-table>
+
+The claim is not that QFT and GR are analogous. It is that they are *instances of the same mathematical operation* --- the Hadamard projection --- applied to different formal series arising from different physical contexts.
+
+*Theorem 9.* For every physical domain $D$, the observable is the Hadamard projection of the domain's series:
+
+$ \"Observable\"(D) = P(\"series\"(D)) $
+
+*Theorem 10.* If a domain has a projection singularity, its raw series is not in the image of $P$:
+
+$ \"has_projection_singularity\"(D) arrow.r.double \"series\"(D) in.not \"Image\"(P) $
+
+Both QFT and GR have projection singularities. Both produce finite observables via $P$. The universality is not metaphorical --- it is algebraic.
+
+Verified by Z3 in Part 8.")
+
+// =============================================================================
+// Section 9: Connection to the ITCM Composite Kernel
+// =============================================================================
+
+define sec_itcm = ArxivSection("Connection to the ITCM Composite Kernel",
+"Volume VII proved that the composite QFT kernel
+
+$ K_(\"QFT\") = \"FP\" compose K_(\"ren\") compose K_(\"path\") $
+
+maps sources directly to finite observables, and that the Integral Transform Composition Method (ITCM) of Sitnik and collaborators provides a closed-form hypergeometric representation for the composed operator.
+
+The Hadamard projection subsumes this result. The factored computation $K_(\"path\") arrow.r K_(\"ren\") arrow.r \"FP\"$ passes through a divergent intermediate (the output of $K_(\"path\")$ before regularization). But the composite kernel, viewed as a single operator, never produces a divergent intermediate. Its codomain is $\"FinitePart\"$, not $\"RegValue\"$.
+
+In the language of the Hadamard projection:
+
+$ K_(\"QFT\")(J) = \"FP\"[K_(\"ren\")(K_(\"path\")(J))] = P(\"series_of\"(K_(\"ren\")(K_(\"path\")(J))))|_(epsilon = 0) $
+
+The 'divergences were never real' result of Volume VII (Part 11) is a special case of the projection singularity principle: the divergences are in the *factored representation* $K_(\"path\"), K_(\"ren\"), \"FP\"$, not in the composed operator $K_(\"QFT\")$. The ITCM hypergeometric kernel computes the output of the Hadamard projection directly, without passing through the singular intermediate.
+
+*Theorem 11.* The direct composite equals the Hadamard projection of the factored series:
+
+$ K_(\"QFT\")(J) = P(\"composite_series\"(J)) $
+
+*Theorem 12.* The factored series has projection singularities (it is not in the image of $P$), but the Hadamard projection of the factored series is.
+
+The pattern is universal: factor an operator into steps, and the intermediate may diverge. Compose the factors into a single operator, and the divergence disappears. The infinity was in the factorization, not the physics.
+
+Verified by Z3 in Part 9.")
+
+// =============================================================================
+// Section 10: The Ontological Conclusion
+// =============================================================================
+
+define sec_conclusion = ArxivSection("The Ontological Conclusion",
+"The projection singularity principle leads to a sharp ontological claim:
+
+$ \"Observable universe\" = \"Image\"(P) $
+$ \"Infinities\" = \"Null\"(P) $
+
+The universe contains no infinities. Our descriptions sometimes do, when we push a representation beyond its admissible domain. The infinities are not being *subtracted* (as in renormalization folklore), or *avoided* (as in singularity theorems), or *regularized* (as in the standard formalism). They were never there. They are null-space elements of particular representations --- the mathematical equivalent of the Mercator projection's infinite poles.
+
+The Hadamard projection is not a *procedure* applied to a sick theory to extract finite answers. It is the *definition* of what it means to extract a physical observable from a formal representation. Every measurement is a projection. Every observable is an image. Every 'infinity' is a null-space element that was never part of the physics.
+
+This completes the POT program:
+
+- *Volumes I--III*: Physical laws are properties of admissible kernels.
+- *Volume IV*: Non-admissibility of the kernel produces structural confinement.
+- *Volume V*: Admissibility restoration produces the structural Higgs.
+- *Volume VI*: The four-sentence axiom.
+- *Volume VII*: Renormalization is a projection kernel; the ITCM composite kernel.
+- *Volume VIII*: All infinities are projection singularities.
+
+There is nothing left to renormalize, no singularity to resolve. The representation has a boundary; the physics does not.
+
+All 29 structural results in this paper are machine-verified by the Z3 SMT solver via axiomatic examples in the Kleis formal verification language.")
+
+// =============================================================================
+// References
+// =============================================================================
+
+define ref_hadamard = ArxivReference("Had1932",
+    "Hadamard, J. *Le problème de Cauchy et les équations aux dérivées partielles linéaires hyperboliques.* Hermann, Paris (1932).")
+
+define ref_schwinger = ArxivReference("Sch1948",
+    "Schwinger, J. On quantum-electrodynamics and the magnetic moment of the electron. *Phys. Rev.* 73, 416--417 (1948).")
+
+define ref_thooft = ArxivReference("tH1972",
+    "'t Hooft, G. and Veltman, M. Regularization and renormalization of gauge fields. *Nucl. Phys. B* 44, 189--213 (1972).")
+
+define ref_hawking = ArxivReference("HE1973",
+    "Hawking, S. W. and Ellis, G. F. R. *The Large Scale Structure of Space-Time.* Cambridge University Press (1973).")
+
+define ref_penrose = ArxivReference("Pen1965",
+    "Penrose, R. Gravitational collapse and space-time singularities. *Phys. Rev. Lett.* 14, 57--59 (1965).")
+
+define ref_sitnik = ArxivReference("SJ2024",
+    "Sitnik, S. M. and Jebabli, I. Composition of Hankel transforms with power weight. *J. Math. Anal. Appl.* (2024).")
+
+define ref_atik_vii = ArxivReference("Atik2026a",
+    "Atik, E. Renormalization as projected ontology: the theory that was never divergent. Volume VII of the POT VUFT Series. *Preprint* (2026).")
+
+define ref_atik_i = ArxivReference("Atik2025",
+    "Atik, E. Projected ontology: physical laws as properties of admissible kernels. Volumes I--VI of the POT VUFT Series. *Preprint* (2025--2026).")
+
+define ref_carroll = ArxivReference("Car2004",
+    "Carroll, S. *Spacetime and Geometry: An Introduction to General Relativity.* Addison-Wesley (2004).")
+
+define ref_kretschner = ArxivReference("Kre1927",
+    "Kretschmann, E. Über die prinzipielle Bestimmbarkeit der berechtigten Bezugssysteme beliebiger Relativitätstheorien. *Ann. Phys.* 53, 575--614 (1917).")
+
+// =============================================================================
+// Paper Assembly
+// =============================================================================
+
+define paper_elements = [
+    sec_intro,
+    sec_series,
+    sec_hadamard,
+    sec_decomposition,
+    sec_qft,
+    sec_gr,
+    sec_mercator,
+    sec_universality,
+    sec_itcm,
+    sec_conclusion,
+    ref_hadamard,
+    ref_schwinger,
+    ref_thooft,
+    ref_hawking,
+    ref_penrose,
+    ref_sitnik,
+    ref_atik_vii,
+    ref_atik_i,
+    ref_carroll,
+    ref_kretschner
+]
+
+define paper = arxiv_paper(
+    paper_title,
+    paper_authors,
+    paper_affiliations,
+    paper_abstract,
+    paper_keywords,
+    paper_elements
+)
+
+example "paper is valid" {
+    assert(valid_arxiv_paper(paper) = true)
+    out("Paper validation: OK")
+}
+
+example "paper compiles to Typst" {
+    let typst = compile_arxiv_paper(paper) in
+    out(typst)
+}
