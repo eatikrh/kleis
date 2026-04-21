@@ -72,6 +72,8 @@ impl std::error::Error for KleisParseError {}
 
 impl KleisParseError {
     /// Format with line/column context, given the original source text.
+    /// Note: self.position is a char index (the parser works on Vec<char>),
+    /// so we must count chars, not bytes, when locating line/column.
     pub fn format_with_source(&self, source: &str) -> String {
         let pos = self.position;
         let lines: Vec<&str> = source.lines().collect();
@@ -81,13 +83,13 @@ impl KleisParseError {
         let mut char_count = 0;
 
         for (i, line) in lines.iter().enumerate() {
-            let line_len = line.len() + 1; // +1 for newline
-            if char_count + line_len > pos {
+            let line_char_len = line.chars().count() + 1; // +1 for newline
+            if char_count + line_char_len > pos {
                 line_num = i + 1;
                 col = pos - char_count + 1;
                 break;
             }
-            char_count += line_len;
+            char_count += line_char_len;
         }
 
         let mut result = format!("Line {}, column {}: {}", line_num, col, self.message);
@@ -95,10 +97,11 @@ impl KleisParseError {
         if line_num > 0 && line_num <= lines.len() {
             let line = lines[line_num - 1];
             result.push_str(&format!("\n\n   {} | {}", line_num, line));
+            let caret_offset = line.chars().take(col.saturating_sub(1)).count();
             result.push_str(&format!(
                 "\n   {} | {}^",
                 " ".repeat(line_num.to_string().len()),
-                " ".repeat(col.saturating_sub(1))
+                " ".repeat(caret_offset)
             ));
         }
 
