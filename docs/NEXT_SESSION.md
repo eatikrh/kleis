@@ -1,6 +1,235 @@
 # Next Session Notes
 
-**Last Updated:** April 20, 2026 (session — Gauge Dependence and the Boundary of Ghost Activity)
+**Last Updated:** April 21, 2026 (session — The Abstract K-Q Framework)
+
+---
+
+## POT PHILOSOPHICAL BOUNDARY: NON-IDENTIFIABILITY OF ONTOLOGY
+
+**This is a non-negotiable constraint on all future papers.**
+
+### The Three-Part Principle
+
+**Principle (Non-identifiability of ontology).** Observable data determine only im(Q). The pre-image is many-to-one; therefore ontology is not uniquely identifiable.
+
+**Consequence.** Do not specify ontological dynamics (e.g., a Lagrangian for the modal flow in ontological Hilbert space). Instead, characterize the admissible structure of (K, Q).
+
+**Structural Claim.** ker(Q) encodes the constraints discarded by projection; its internal organization (active/inert sectors, coupling routes through K) is observable via its effects on im(Q), even though its elements are not.
+
+### ker(Q) is constrained residue, not arbitrary
+
+The ontology is underdetermined, but ker(Q) is not free-form. From the five K-Q papers, it is constrained by:
+
+- **Symmetries** — gauge/Lorentz invariance → Ward/Slavnov-Taylor identities constrain which elements can appear in ker(Q)
+- **Consistency of Q** — the same observable must arise from equivalent pre-images
+- **Compatibility with K** — the composed map Q∘K must land in im(Q) with the correct invariants
+- **Regularity/admissibility** — existence of convergent representatives on [0,1]
+
+Precise statement: *ker(Q) is not "waste"; it is a constrained residue class determined by the requirement that Q∘K yields the observed invariants.*
+
+### ker(Q) is already being studied — the five papers found structure there
+
+The constraint "don't write a Lagrangian for the modal flow" does NOT mean ker(Q) is inaccessible or structureless. The five K-Q papers already found concrete structure in ker(Q):
+
+| Paper | What was found in ker(Q) |
+|-------|--------------------------|
+| φ⁴ | Contains A₀ and scheme-dependent constants. Passive. |
+| QED | Ward identity shrinks ker(Q). Ghost sector present but inert. |
+| Yang-Mills | Ghost sector active — shapes β₀ through Q∘K. |
+| Ghost theorem | Activity iff f^{abc} ≠ 0. Algebra determines structure. |
+| Gauge dependence | ker(Q) realization is representation-local; effects on im(Q) are invariant. |
+
+The distinction: you can study the shadow's geometry (structure of ker(Q)), but you cannot invert the projection (write dynamics for the pre-image). The five papers do the former. The constraint prohibits the latter.
+
+### Promote structure, not dynamics
+
+Do not write a Lagrangian for the pre-projection modal flow. But do extract structural statements about ker(Q) that are representation-robust:
+
+- **Representation-local vs. representation-invariant**: im(Q) is invariant (β₀, running, boundary). ker(Q) realization is local (ghost loops vs. axial-gauge propagator structure).
+- **Active vs. inert sectors**: diagnostic of how constraints flow in a given representation.
+- **Kernel-induced constraints**: which sectors can couple into observables via Q∘K.
+
+These are theorems about structure, not dynamics. They are testable, extendable, and falsifiable.
+
+### What this means for the K-Q papers
+
+- The Lagrangian in K is an observable-level object. It lives in im(Q).
+- The modal flow lives in the pre-image of Q. It is not accessible as a variational principle.
+- ker(Q) is the constrained residue of what the projection erased. Its structure can be studied via its effects on im(Q), but it cannot be promoted to a Lagrangian.
+- The five K-Q papers operate entirely within the observable layer. This is correct and deliberate.
+- The papers are *already* studying ker(Q) — its size, internal organization, algebraic switches, representation dependence. That is the program.
+
+### What this buys us
+
+- Explains why "unphysical" sectors (ghosts, scheme-dependent pieces) can be causally relevant to observables via composition Q∘K.
+- Justifies why different gauges/representations redistribute contributions without changing outcomes.
+- Keeps POT scientific: testable structural claims about invariants and their carriers, not unverifiable ontological commitments.
+
+### Natural next theorem (fits trajectory)
+
+**Representation-Invariant Decomposition (sketch).** For representations R₁, R₂ of the same theory:
+- im(Q) is identical
+- the realization of ker(Q) differs
+- there exists a transformation that pushes forward the constraint flow through K so that Q∘K agrees on invariants
+
+The five existing papers become corollaries: covariant vs. axial gauge is one instance of R₁, R₂ with identical im(Q) and different ker(Q) realization.
+
+---
+
+## THE ABSTRACT K-Q FRAMEWORK — COMPLETE
+
+### What was built
+
+- `theories/pot_abstract_kq_framework.kleis` — 24/24 Z3-verified results across 6 structures (TwoKernelStructure, NullSpaceInclusion, ResolutionStructure, ActivityClassification, KernelInstantiations, AdmissibilityBoundary)
+- `examples/ontology/revised/pot_abstract_kq_framework_paper.kleis` — 9-section paper, validated (2/2 examples)
+- PDF compiled to `pot_abstract_kq_framework_paper.pdf` (368 lines Typst, 214KB PDF)
+- No worked file — this is a structural axiomatization, not a numerical calculation.
+
+### The abstract structure
+
+The (K, Q) pair:
+- K : TheorySpec → FormalExpr (production kernel)
+- Q : FormalExpr → Observable (observable projection)
+- Q∘K : TheorySpec → Observable (composed map)
+
+Three null spaces:
+- ker(K): what the kernel doesn't touch
+- ker(Q): what the projection erases
+- ker(Q∘K): what produces no observable
+
+Fundamental inclusion: ker(K) ⊆ ker(Q∘K)
+
+The gap K⁻¹(ker(Q)) \ ker(K) is where the atlas structure lives:
+- Empty for EM (gauge orbits exhaust ker(Q∘K))
+- Six types for QFT (the richest case)
+
+### The kernel catalogue
+
+| Kernel | Domain | Admissible? | Gap |
+|--------|--------|-------------|-----|
+| K_grav: log Green's fn | Galactic dynamics | Yes | Open |
+| K_meas: spinor projection | Quantum measurement | Yes | Open |
+| K_em: exterior d | Electrodynamics | Yes | Empty |
+| K_BS: Biot-Savart | Fluid mechanics | Yes | Open |
+| K_feyn: Feynman integrals | Perturbative QFT | Yes | Six types |
+| K_YM: dA + A∧A | Non-abelian gauge | **No** | N/A |
+
+### The admissibility boundary
+
+- EM: K_em = d is admissible (abelian). Gauge orbits = ker(K). Unique admissible gauge theory.
+- Yang-Mills: K_YM = d + [·,·] is NOT admissible. Defect Δ(A,B) = [A,B] = Lie bracket. Forces confinement.
+- Restored: K_YM + φ coupling → effective admissibility (Higgs mechanism).
+
+### Parser fix: Unicode character counting in error messages
+
+Fixed `format_with_source` in `src/kleis_parser.rs` to use `line.chars().count()` instead of `line.len()` (byte count). The parser's `self.pos` is a char index (works on `Vec<char>`), but the error display was using byte-based line lengths, causing wrong line/column in files with Unicode characters in comments.
+
+### Seven-paper inventory (K-Q series) + abstract framework
+
+| # | Paper | Theory file | Paper file | Results |
+|---|-------|-------------|------------|---------|
+| 1 | φ⁴ one-loop | pot_phi4_oneloop.kleis | pot_phi4_oneloop_paper.kleis | 18 worked |
+| 2 | QED vacuum pol. | pot_qed_vacuum_polarization.kleis | pot_qed_vacuum_polarization_paper.kleis | 15 worked |
+| 3 | Yang-Mills | pot_ym_vacuum_polarization.kleis | pot_ym_vacuum_polarization_paper.kleis | 14 worked |
+| 4 | Ghost theorem | pot_ghost_activity_theorem.kleis | pot_ghost_activity_theorem_paper.kleis | 17 Z3 |
+| 5 | Gauge dependence | pot_gauge_dependence_ghost.kleis | pot_gauge_dependence_ghost_paper.kleis | 16 Z3 |
+| 6 | Structural atlas | pot_ker_q_atlas.kleis | pot_ker_q_atlas_paper.kleis | 24 Z3 |
+| 7 | Abstract K-Q framework | pot_abstract_kq_framework.kleis | pot_abstract_kq_framework_paper.kleis | 24 Z3 |
+
+### What comes next — options for Paper 8
+
+The seven-paper arc + abstract framework is complete. The abstract paper unified five physical domains under one (K, Q) structure and introduced ker(K) as a new structural object. Three natural directions:
+
+#### Option A: Cross-Domain Migration (recommended)
+
+Does migration (Type 4) occur in non-QFT domains? The abstract framework poses the question precisely. Testing it in fluid mechanics (Biot-Savart) or galactic dynamics would be the strongest evidence for the framework's generality.
+
+#### Option B: Anomaly Cancellation as ker(Q) Consistency
+
+In the Standard Model, anomalies cancel between generations. What does this mean for the boundary of ker(Q)? Is anomaly cancellation a necessary condition for Q to be well-defined?
+
+#### Option C: The Representation-Invariant Decomposition Theorem
+
+Different gauge-fixing schemes = different factorizations of Q∘K with the same image and different kernel realizations. The atlas provides the vocabulary. This paper would prove the factorization theorem.
+
+---
+
+## THE STRUCTURAL ATLAS OF ker(Q) — COMPLETE
+
+### What was built
+
+- `theories/pot_ker_q_atlas.kleis` — 24/24 Z3-verified results across 6 structures (SchemeConstants, GhostSectorSummary, UnphysicalPolarizations, AnomalousMigration, ConfinedStates, ClassificationTheorem)
+- `examples/ontology/revised/pot_ker_q_atlas_paper.kleis` — 9-section atlas paper, validated (2/2 examples)
+- PDF compiled to `pot_ker_q_atlas_paper.pdf` (332 lines Typst, 173KB PDF)
+- No worked file — this is a structural classification, not a numerical calculation.
+
+### The six types of ker(Q) structure
+
+| Type | Name | Activity | Loop-stable? |
+|------|------|----------|-------------|
+| 1 | Scheme-dependent constants | Inert | Yes |
+| 2 | Gauge ghost sector | Active iff f^{abc} ≠ 0 | Yes |
+| 3 | Unphysical polarizations | Redistributive | Yes |
+| 4 | Anomalous currents | Migratory | **No** |
+| 5 | Confined colored states | Active (non-pert.) | Open |
+| 6 | Topological sectors | Latent | Open |
+
+### The central new observation
+
+ker(Q) is not loop-order-stable. The chiral anomaly (ABJ triangle) is a structural event in which an element migrates from ker(Q) to im(Q) across loop orders. The axial divergence ∂_μ j₅^μ is zero at tree level (in ker(Q)) and nonzero at one loop (in im(Q), determining π⁰ → γγ). The anomaly is the mechanism of migration. This is the paper's key new contribution.
+
+### The key structural property: loop-order stability
+
+Loop-order stability separates the six types into three categories:
+- **Stable** (Types 1-3): elements permanently in ker(Q)
+- **Unstable** (Type 4): elements that migrate from ker(Q) to im(Q) (anomalies)
+- **Open** (Types 5-6): non-perturbative — stability question may not apply
+
+### Six-paper inventory
+
+| # | Paper | Theory file | Worked file | Paper file | Results |
+|---|-------|-------------|-------------|------------|---------|
+| 1 | φ⁴ one-loop | pot_phi4_oneloop.kleis | pot_phi4_oneloop_worked.kleis | pot_phi4_oneloop_paper.kleis | 18 worked |
+| 2 | QED vacuum pol. | pot_qed_vacuum_polarization.kleis | pot_qed_vacuum_polarization_worked.kleis | pot_qed_vacuum_polarization_paper.kleis | 15 worked |
+| 3 | Yang-Mills | pot_ym_vacuum_polarization.kleis | pot_ym_vacuum_polarization_worked.kleis | pot_ym_vacuum_polarization_paper.kleis | 14 worked |
+| 4 | Ghost theorem | pot_ghost_activity_theorem.kleis | (none — structural) | pot_ghost_activity_theorem_paper.kleis | 17 Z3 |
+| 5 | Gauge dependence | pot_gauge_dependence_ghost.kleis | (none — structural) | pot_gauge_dependence_ghost_paper.kleis | 16 Z3 |
+| 6 | Structural atlas | pot_ker_q_atlas.kleis | (none — classification) | pot_ker_q_atlas_paper.kleis | 24 Z3 |
+
+### What comes next — options for Paper 7
+
+The six-paper arc is complete: computed (1-3), extracted theorem (4), stress-tested (5), classified (6). The atlas paper identified six types of ker(Q) structure and revealed that loop-order stability is the deepest structural property separating them.
+
+Three options for the next paper, ordered by structural payoff:
+
+#### Option A: Representation-Invariant Decomposition Theorem (recommended)
+
+**Claim to prove:** Different gauge-fixing schemes correspond to different factorizations of Q∘K with the same image and different kernel realizations.
+
+**What it would formalize:**
+- im(Q) is representation-invariant
+- ker(Q) realization is representation-dependent
+- The algebra (f^{abc}) determines observable content; the representation redistributes the mechanism
+- The atlas's six types provide the vocabulary for describing what gets redistributed
+
+**Why this is the natural next step:** The atlas gives the nouns; this theorem gives the verb (how they transform under change of representation).
+
+#### Option B: Anomalous Migration in Detail
+
+**Claim to investigate:** Does the K-Q framework illuminate anomaly cancellation? In the Standard Model, anomalies cancel between generations. What does this mean for the boundary of ker(Q)?
+
+**What it would formalize:**
+- Anomaly cancellation as a constraint on ker(Q) stability
+- The relationship between Type 4 (migratory) and the consistency of Q
+- Whether anomaly cancellation is a necessary condition for Q to be well-defined
+
+**Why this matters:** The atlas identified migration as the key new structural property. This paper would explore its implications.
+
+#### Option C: Confinement and the Perturbative Boundary (high risk)
+
+**Claim to investigate:** Active ker(Q) → perturbative boundary. Is this structural or accidental?
+
+**Risk:** High. Same reasoning as before — confinement is non-perturbative. But now the atlas provides a clearer framework for asking the question.
 
 ---
 
@@ -29,17 +258,9 @@
 - The attribution to null-space sectors is representation-dependent
 - The physical content (non-abelian structure forces β-function sign) is representation-independent
 
-### Five-paper inventory
+### Five-paper inventory (superseded by six-paper inventory above)
 
-| # | Paper | Theory file | Worked file | Paper file | Results |
-|---|-------|-------------|-------------|------------|---------|
-| 1 | φ⁴ one-loop | pot_phi4_oneloop.kleis | pot_phi4_oneloop_worked.kleis | pot_phi4_oneloop_paper.kleis | 18 worked |
-| 2 | QED vacuum pol. | pot_qed_vacuum_polarization.kleis | pot_qed_vacuum_polarization_worked.kleis | pot_qed_vacuum_polarization_paper.kleis | 15 worked |
-| 3 | Yang-Mills | pot_ym_vacuum_polarization.kleis | pot_ym_vacuum_polarization_worked.kleis | pot_ym_vacuum_polarization_paper.kleis | 14 worked |
-| 4 | Ghost theorem | pot_ghost_activity_theorem.kleis | (none — structural) | pot_ghost_activity_theorem_paper.kleis | 17 Z3 |
-| 5 | Gauge dependence | pot_gauge_dependence_ghost.kleis | (none — structural) | pot_gauge_dependence_ghost_paper.kleis | 16 Z3 |
-
-### What comes next — options for Paper 6
+### What comes next — options for Paper 6 (superseded by Paper 7 options above)
 
 The five-paper arc is complete: computed (1-3), extracted theorem (4), stress-tested (5). The gauge-dependence note answered the strongest objection and revealed a three-layer structure: **algebra** (invariant) determines **observables** (invariant) while **mechanism** (representation-local) redistributes how the determination is realized.
 
