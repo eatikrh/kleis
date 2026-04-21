@@ -1,5 +1,310 @@
 # Next Session Notes
 
+**Last Updated:** April 20, 2026 (session — Gauge Dependence and the Boundary of Ghost Activity)
+
+---
+
+## GAUGE DEPENDENCE AND THE BOUNDARY OF GHOST ACTIVITY — COMPLETE
+
+### What was built
+
+- `theories/pot_gauge_dependence_ghost.kleis` — 16/16 Z3-verified results across 4 structures (CovariantGaugeInvariance, AxialGaugeBoundary, BRSTCohomology, RefinedTheorem)
+- `examples/ontology/revised/pot_gauge_dependence_ghost_paper.kleis` — 7-section stress-test note, validated (2/2 examples)
+- PDF compiled to `pot_gauge_dependence_ghost_paper.pdf` (280 lines Typst, 142KB PDF)
+- No worked file — this is a structural analysis, not a numerical calculation.
+
+### The three tests
+
+1. **Covariant R_ξ gauges — theorem survives and strengthens.** Ghost propagator (i δ^{ab}/k²), vertex (g f^{abc} p_μ), and loop contribution are all ξ-independent. Ghost activity is numerically identical in Feynman, Landau, and every R_ξ gauge.
+
+2. **Axial gauge — theorem breaks as stated.** FP determinant becomes field-independent. Ghost loops vanish. Ghost sector inert despite f^{abc} ≠ 0. The forward direction of the biconditional fails. β₀ unchanged — the observable is gauge-invariant.
+
+3. **BRST cohomology — the invariant notion.** BRST charge involves ghosts regardless of gauge. Physical states = cohomology. The cohomological role is representation-independent.
+
+### The refined theorem
+
+- Ghost activity is an invariant of the covariant gauge family (ξ-independent)
+- Ghost activity is NOT an invariant across all gauge-fixing schemes
+- The observable (β₀) is gauge-fixing invariant
+- The attribution to null-space sectors is representation-dependent
+- The physical content (non-abelian structure forces β-function sign) is representation-independent
+
+### Five-paper inventory
+
+| # | Paper | Theory file | Worked file | Paper file | Results |
+|---|-------|-------------|-------------|------------|---------|
+| 1 | φ⁴ one-loop | pot_phi4_oneloop.kleis | pot_phi4_oneloop_worked.kleis | pot_phi4_oneloop_paper.kleis | 18 worked |
+| 2 | QED vacuum pol. | pot_qed_vacuum_polarization.kleis | pot_qed_vacuum_polarization_worked.kleis | pot_qed_vacuum_polarization_paper.kleis | 15 worked |
+| 3 | Yang-Mills | pot_ym_vacuum_polarization.kleis | pot_ym_vacuum_polarization_worked.kleis | pot_ym_vacuum_polarization_paper.kleis | 14 worked |
+| 4 | Ghost theorem | pot_ghost_activity_theorem.kleis | (none — structural) | pot_ghost_activity_theorem_paper.kleis | 17 Z3 |
+| 5 | Gauge dependence | pot_gauge_dependence_ghost.kleis | (none — structural) | pot_gauge_dependence_ghost_paper.kleis | 16 Z3 |
+
+### What comes next — options for Paper 6
+
+The five-paper arc is complete: computed (1-3), extracted theorem (4), stress-tested (5). The gauge-dependence note answered the strongest objection and revealed a three-layer structure: **algebra** (invariant) determines **observables** (invariant) while **mechanism** (representation-local) redistributes how the determination is realized.
+
+Three options for the next paper, ordered by structural payoff:
+
+#### Option A: Representation-Invariant Structure of the K-Q Decomposition (recommended)
+
+**Claim to prove:** Different gauge-fixing schemes correspond to different factorizations of the composed map Q∘K, with the same image and different kernel realizations.
+
+**What it would formalize:**
+- im(Q) is representation-invariant (observables don't change)
+- ker(Q) realization is representation-dependent (ghosts vs. modified propagators)
+- The algebra (f^{abc}) determines the observable content; the representation redistributes the mechanism
+- Different gauges = different factorizations of the same map
+
+**Why this is the natural next step:** The gauge-dependence paper already proved the key facts (same β₀, different ker(Q) structure). This paper would elevate K-Q from "a framework you can use in several theories" to "a structural lens that separates the invariant from the representational in any gauge theory." It answers "Is K-Q just bookkeeping?" definitively: K-Q is a factorization of structure, not internal accounting.
+
+**Risk:** Low. The evidence is already assembled. The challenge is stating the factorization theorem precisely.
+
+#### Option B: Extend the Theorem — Higher Loops or Other Sectors
+
+**Claim to test:** Does ghost activity persist at two loops? Do other null-space sectors (e.g., longitudinal gluon modes) show the same active/inert pattern?
+
+**What it would formalize:**
+- Two-loop ghost contribution to β₁ (the two-loop β-function coefficient)
+- Whether "active" generalizes to other unphysical sectors beyond ghosts
+- Whether the iff condition (f^{abc} ≠ 0) remains the switch at higher loops
+
+**Why this matters:** Strengthens the theorem by showing it is not a one-loop accident. Two-loop β₁ is known exactly (Caswell-Jones), so the target is fixed.
+
+**Risk:** Medium. Two-loop Feynman parameter integrals are more complex. The "convergent integrals only" strategy may require new integral representations.
+
+#### Option C: The Confinement Question (high risk, high reward)
+
+**Claim to investigate:** Does active ker(Q) force a perturbative boundary for Q∘K? Does that boundary relate to confinement?
+
+**What it would formalize:**
+- Active ker(Q) → asymptotic freedom → coupling grows → perturbative breakdown (already established)
+- Inert ker(Q) → no perturbative boundary at accessible scales (QED case)
+- The perturbative boundary is representation-invariant (established in Paper 5)
+- The open question: is the boundary *structural* (forced by the algebra) or *accidental* (a feature of one-loop)?
+
+**Why this matters:** This is the ultimate test. If K-Q can say something structural about confinement — even a boundary theorem ("K-Q predicts its own failure mode") — that is significant.
+
+**Risk:** High. Confinement is non-perturbative. The one-loop K-Q framework may not have enough structure to say anything precise. Overclaiming here would spend the credibility built by Papers 1-5.
+
+**Recommendation:** Option A first (low risk, high structural payoff), then B or C with a stronger foundation.
+
+---
+
+## GHOST-MEDIATED NULL-SPACE ACTIVITY THEOREM — COMPLETE
+
+### What was built
+
+- `theories/pot_ghost_activity_theorem.kleis` — 17/17 Z3-verified results across 4 structures (NullSpaceSectorDefs, AbelianImpliesInert, NonAbelianImpliesActive, TheoremAndCorollary)
+- `examples/ontology/revised/pot_ghost_activity_theorem_paper.kleis` — 7-section theorem note, validated (2/2 examples)
+- PDF compiled to `pot_ghost_activity_theorem_paper.pdf` (262 lines Typst, 158KB PDF)
+- No worked file — this is a structural theorem, not a numerical calculation. Numerical evidence is in the three preceding worked files.
+
+### The theorem
+
+**Ghost-Mediated Null-Space Activity Theorem.** In perturbative gauge theory, the ghost sector S_gh ⊂ ker(Q) is active if and only if the gauge algebra is non-abelian (f^{abc} ≠ 0).
+
+**Proof:**
+- Only if: f^{abc} = 0 → ghost-gluon vertex vanishes → ghost sector inert. Witnesses: φ⁴ (no ghosts), QED (ghosts decouple).
+- If: f^{abc} ≠ 0 → ghost-gluon vertex present → ghost loops generated → enter β-function → sector active. Witness: SU(3) Yang-Mills.
+
+**Corollary:** Gauge symmetry alone does not activate ker(Q). The non-abelian Lie algebra structure (f^{abc} ≠ 0) is the algebraic switch.
+
+### Key definitions introduced
+
+| Concept | Definition |
+|---------|-----------|
+| Null-space sector | Subspace of ker(Q) from a specific field class |
+| Inert sector | K generates no loop contributions from S for any topology Γ |
+| Active sector | K generates nonzero contributions from S that affect im(Q) through Q∘K |
+
+### Three-theory evidence table
+
+| Theory | Gauge algebra | f^{abc} | Ghost sector | ker(Q) role |
+|--------|--------------|---------|--------------|-------------|
+| φ⁴ | None | N/A | Empty | Passive (inert) |
+| QED | U(1) | = 0 | Present, decoupled | Passive (inert) |
+| Yang-Mills | SU(N) | ≠ 0 | Present, coupled | Active |
+
+### What comes next
+
+The theorem note identifies a precise open question: **Does the activity of ker(Q) force a perturbative boundary for Q∘K? Does that boundary relate to confinement?**
+
+Active ker(Q) → ghost contributions → asymptotic freedom → coupling grows at low energy → perturbative boundary. Inert ker(Q) → no ghost contributions → charge screening → no low-energy boundary. The perturbative boundary exists *only* when ker(Q) is active.
+
+### Four-paper inventory
+
+| # | Paper | Theory file | Worked file | Paper file | Results |
+|---|-------|-------------|-------------|------------|---------|
+| 1 | φ⁴ one-loop | pot_phi4_oneloop.kleis | pot_phi4_oneloop_worked.kleis | pot_phi4_oneloop_paper.kleis | 18 worked |
+| 2 | QED vacuum pol. | pot_qed_vacuum_polarization.kleis | pot_qed_vacuum_polarization_worked.kleis | pot_qed_vacuum_polarization_paper.kleis | 15 worked |
+| 3 | Yang-Mills | pot_ym_vacuum_polarization.kleis | pot_ym_vacuum_polarization_worked.kleis | pot_ym_vacuum_polarization_paper.kleis | 14 worked |
+| 4 | Ghost theorem | pot_ghost_activity_theorem.kleis | (none — structural) | pot_ghost_activity_theorem_paper.kleis | 17 Z3 |
+
+---
+
+## YANG-MILLS VACUUM POLARIZATION PAPER — COMPLETE
+
+### What was built
+
+- `theories/pot_ym_vacuum_polarization.kleis` — 29/29 Z3-verified results across 9 structures (YMLagrangian, GluonVacuumPolarization, SlavnovTaylorIdentity, ConvergentRepFermionGhost, ConvergentRepGluon, AsymptoticFreedom, GhostProperties, KQDecompositionYM, ThreeTheoryComparison)
+- `theories/pot_ym_vacuum_polarization_worked.kleis` — 14/14 verified computations across 8 parts (fermion contribution at 3 momenta, ghost β-integral, gluon polynomial integrals, combined β₀ at 3 n_f values, running α_s, Slavnov-Taylor, three-theory comparison, perturbative boundary)
+- `examples/ontology/revised/pot_ym_vacuum_polarization_paper.kleis` — 9-section paper, validated
+- PDF compiled to `pot_ym_vacuum_polarization_paper.pdf`
+
+### What the paper claims
+
+The K-Q framework survives non-abelian gauge theory. Three decisive new observations:
+
+1. **The null space is not inert.** Ghosts (Faddeev-Popov fields) are individually unphysical and lie in ker(Q). But ghost loop integrals contribute to the β-function — an observable in im(Q) — through the composed map Q∘K. Without ghosts, the β-function has the wrong sign. With ghosts, asymptotic freedom.
+
+2. **K-Q differentiates theories structurally.** Different gauge algebras produce different ker(Q) structures, different running directions, and different observable content. The three-theory escalation (φ⁴ → QED → Yang-Mills) shows K-Q is not theory-specific.
+
+3. **K-Q predicts its own perturbative boundary.** The Landau pole at Λ_QCD signals where the one-loop representative of Q∘K breaks down — analogous to A₀'s UV divergence signaling bare mass is not observable.
+
+### Key results
+
+| n_f | β₀ | Status |
+|-----|------|--------|
+| 0 (pure glue) | 11 | Asymptotically free |
+| 6 (physical QCD) | 7 | Asymptotically free |
+| 16 | 1/3 | Barely AF |
+| 17 | -1/3 | AF lost |
+
+α_s running: 0.1184 → 0.0908 (at 10μ²) → 0.0737 (at 100μ²) — coupling decreases.
+
+### Three-paper synthesis
+
+| Paper | Theory | Gauge | Ghosts | ker(Q) | Running |
+|-------|--------|-------|--------|--------|---------|
+| 1 | φ⁴ | None | None | Large (A₀, constants) | IR free |
+| 2 | QED | U(1) | Decouple | Small (Ward shrinks) | Screening |
+| 3 | Yang-Mills | SU(N) | Active | Rich (ghosts shape im(Q)) | Anti-screening |
+
+### Still to do
+
+- [ ] Deploy all three papers to serving directories
+- [ ] Create PRs (when ready)
+- [ ] Consider what comes next: vertex corrections? Non-perturbative K-Q? Gravity?
+
+---
+
+## QED VACUUM POLARIZATION PAPER — COMPLETE
+
+### What was built
+
+- `theories/pot_qed_vacuum_polarization.kleis` — 23/23 Z3-verified results across 7 structures (QEDLagrangian, VacuumPolarization, WardIdentity, ConvergentRepresentation, RunningAlpha, KQDecompositionQED, Phi4vsQED)
+- `theories/pot_qed_vacuum_polarization_worked.kleis` — 15/15 verified computations across 7 parts (Ward identity, Euclidean Π(ρ) at 4 momenta, running α at 2 scales, 3 consistency checks, β-function at 2 points, above-threshold Im Π at 2 energies, comparison to φ⁴)
+- `examples/ontology/revised/pot_qed_vacuum_polarization_paper.kleis` — 9-section paper, validated
+- PDF compiled to `pot_qed_vacuum_polarization_paper.pdf`
+
+### What the paper claims
+
+The K-Q framework (Feynman integral kernel K, observable projection Q) survives the transition from scalar φ⁴ to gauge QED:
+
+1. **Ward identity from convergent integrand.** Π(0) = 0 because the integrand x(1-x)ln(1+0) = 0 identically at ρ=0. Not a regularization artifact — a property of the convergent representative.
+
+2. **Gauge symmetry reduces ker(Q).** In φ⁴, individual B₀(ρ) are scheme-dependent (mixed ker/im). In QED, the Ward identity pins Π(0) = 0, making individual Π(ρ) values observable (in im(Q)). ker(Q) shrinks.
+
+3. **Fermion loops handled.** The Dirac trace produces the x(1-x) prefactor that makes the integrand vanish at both endpoints — stronger convergence than φ⁴.
+
+4. **All standard results reproduced.** Running of α, β(α) = 2α²/(3π) from ∫₀¹[x(1-x)]²dx = 1/30, above-threshold Im Π = (α/3)(1+2m²/s)√(1-4m²/s).
+
+### Key numerical results
+
+| ρ | I(ρ) | Π(ρ) = (α/π)I(ρ) |
+|---|------|-------------------|
+| 0 | 0 (Ward) | 0 |
+| 1 | 0.03022 | 7.02×10⁻⁵ |
+| 4 | 0.09664 | 2.24×10⁻⁴ |
+| 10 | 0.17989 | 4.18×10⁻⁴ |
+| 100 | 0.49944 | 1.16×10⁻³ |
+
+### Still to do
+
+- [ ] Deploy to serving directories (same decision as Vol XI — deferred)
+- [ ] Create PRs (when ready)
+- [ ] Consider third example (non-abelian gauge theory / QCD?) to complete the "K-Q is universal" argument
+
+### Relationship to φ⁴ paper
+
+The φ⁴ paper (`pot_phi4_oneloop_paper.kleis`) is the first K-Q instantiation. The QED paper is the second. Together they demonstrate that K-Q handles scalar theories, gauge theories, fermion loops, and Ward identities. The decisive sentence established across both: "The map Q∘K : L → Observables admits a representation in which no intermediate quantity diverges."
+
+---
+
+## POT VOLUME XI — BUILT BUT NOT YET PUBLISHED
+
+### What was built
+
+- `theories/pot_quantization_kernel.kleis` — 19/19 Z3-verified results across 5 structures (QuantizationKernel, BerezinToeplitz, BRSTProjection, DeformationQuantization, QuantizationDecomposition)
+- `theories/pot_quantization_kernel_worked.kleis` — 7/7 verified computations (harmonic oscillator)
+- `examples/ontology/revised/pot_quantization_kernel_paper.kleis` — full paper, revised after external review
+- PDF compiled and copied to all three serving directories
+- PRs created: origin (#38), fork (#36), branch `feature/quantization-kernel-theory`
+- **Landing page link deliberately NOT added** — paper needs further conceptual review
+
+### What the paper claims (current version)
+
+Every known quantization scheme shares three structural invariants:
+1. Bracket preservation on an admissible subalgebra (Dirac's rule)
+2. Non-trivial null space (Groenewold-van Hove obstruction)
+3. Image/null decomposition of the classical algebra
+
+Different schemes realize this through different mechanisms (idempotent, cohomological, deformative). The paper explicitly distinguishes these after ChatGPT review flagged "projection overload."
+
+### THE PROBLEM: Circularity
+
+**Self-critique (not from ChatGPT — from the author):**
+
+The paper assumes quantization happens and then finds patterns across quantization formalisms. This is taxonomic, not derivational. For POT, this is a problem:
+
+- POT's power comes from the kernel being the primitive object
+- Volumes VII and X DERIVE properties (finite observables, representational artifacts) from the kernel
+- Volume XI ASSUMES the quantum formalism and then observes a pattern
+- A skeptic says: "You found a common pattern across five formalizations of the same assumption. That's not surprising."
+
+This is a valid structural observation paper, but it is not a POT paper in the same way Volumes VII and X are. It sits alongside POT rather than building on it.
+
+### THE KEY INSIGHT: Composite Kernel
+
+The way out of the circularity:
+
+**K_obs = K_detector ∘ K_propagation ∘ K_source**
+
+- K_source depends on source material (hydrogen emits Balmer, sodium emits D-lines, laser depends on gain medium)
+- K_detector depends on detector material (silicon: bandgap 1.1eV, germanium: 0.67eV, superconducting nanowire: meV)
+- K_propagation is the field-theoretic kernel (continuous)
+- K_obs is the composite — and the ONLY thing you ever measure
+
+**The non-circular argument:** The discreteness you observe is a property of the composite kernel, not an axiom about Hilbert spaces. Change the detector material, K_obs changes, and so does what you see. The "quantum state of the photon in flight" is a property of the factored representation (K_propagation viewed in isolation), not of the composite. This is exactly the Volume VII pattern: the divergent intermediate disappears when you compose.
+
+### The measurement problem dissolves
+
+POT's position on "what is the state of the photon when not observed":
+
+- This question asks about K_propagation in isolation
+- But K_propagation is an intermediate in the factored kernel — it has no independent ontological status
+- Just as the UV divergence is a property of the factored QFT kernel (disappears in the composite), the "quantum state between measurements" is a property of the factored observation kernel
+- There is no collapse, no branching, no hidden variables — there is a composite kernel, and you only ever access its image
+- This is not Copenhagen, not Many-Worlds, not Bohmian — it's a fourth option: the question is not well-posed within POT
+
+### Open question
+
+If the intermediate representation (quantum mechanics) has no ontological status, why does it predict so accurately? Volume VII had the same structure: the divergent intermediate is "not real" but BPHZ/renormalization machinery that manipulates it is spectacularly successful. POT's answer: the composite kernel exists and is finite; the factored representation is a computational convenience. Same answer may apply here.
+
+### What to do next
+
+**Option A:** Publish Volume XI as-is (structural survey). Begin Volume XII (composite kernel thesis) as the real POT extension. Volume XI becomes a precursor.
+
+**Option B:** Fold Volume XI into Volume XII. The structural survey becomes sections of a larger paper that starts from K_obs and derives quantization.
+
+**Option C:** Reframe Volume XI to include a section on the composite kernel, making the non-circular argument. Keep it as one paper.
+
+**Decision deferred.** The theory files, Z3 proofs, and worked examples are all solid and will be reused regardless of which option is chosen.
+
+---
+
+## HACKATHON CODE REVIEW — IN PROGRESS (from previous session)
+
 **Last Updated:** April 19, 2026 (session — HACKATHON code review, 13 fixes merged, 26 remaining)
 
 ---

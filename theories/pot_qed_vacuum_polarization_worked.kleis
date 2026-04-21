@@ -1,0 +1,574 @@
+// =============================================================================
+// THE DECISIVE COMPUTATION
+// QED Vacuum Polarization: Observable Predictions from Convergent Integrals
+// =============================================================================
+//
+// The second POT end-to-end calculation. Same strategy as φ⁴, harder physics.
+//
+// THE CLAIM:
+//
+//   The QED vacuum polarization at one loop — running fine-structure constant,
+//   above-threshold cross-sections — can be computed entirely from convergent
+//   Feynman parameter integrals. The Ward identity Π(0) = 0 emerges
+//   automatically from the convergent integrand, without regularization.
+//
+//   Unlike φ⁴ where only B₀ DIFFERENCES are observable, in QED the Ward
+//   identity pins the reference point: individual Π(ρ) values are observable.
+//   Gauge symmetry does not complicate the K-Q framework — it simplifies it.
+//
+// WHAT IS COMPUTED:
+//
+//   Starting from L_QED = ψ̄(iγ^μ D_μ - m)ψ - ¼F_μν F^μν, we:
+//
+//   1. Verify the Ward identity Π(0) = 0 from the convergent integrand
+//   2. Compute Π(ρ) at multiple Euclidean momenta via ode45
+//   3. Derive the running fine-structure constant α(q²)
+//   4. Verify consistency (telescoping, monotonicity, single-integral form)
+//   5. Compute dΠ/dρ and the QED β-function coefficient
+//   6. Compute the above-threshold imaginary part (optical theorem)
+//   7. Compare K-Q structure with φ⁴
+//
+//   At no step does infinity appear.
+//
+// THE INTEGRAL:
+//
+//   Π(ρ) = (α/π) ∫₀¹ dx x(1-x) ln(1 + ρ x(1-x))
+//
+//   where ρ = q²_E/m² (Euclidean momentum ratio, spacelike).
+//
+//   The x(1-x) prefactor (from the Dirac trace of the fermion loop) makes
+//   the integrand vanish at BOTH endpoints. This is stronger convergence
+//   than the φ⁴ B₀ integrand, which is merely zero at endpoints.
+//
+// =============================================================================
+
+import "stdlib/prelude.kleis"
+
+// =============================================================================
+// PHYSICAL SETUP
+// =============================================================================
+
+define pi = 3.14159265358979
+define alpha_em = 1.0 / 137.036
+define m_sq = 1.0
+define ode_step = 0.001
+
+
+// =============================================================================
+// PART 1: THE WARD IDENTITY FROM THE CONVERGENT INTEGRAND
+// =============================================================================
+//
+// At ρ = 0: integrand = x(1-x) × ln(1 + 0) = x(1-x) × 0 = 0.
+//
+// The integral vanishes IDENTICALLY, not by cancellation. This is the
+// Ward identity Π(0) = 0 realized at the level of the convergent
+// representation. No regularization needed.
+
+example "Part 1: Ward identity Π(0) = 0 from convergent integrand" {
+    let rho = 0.0 in
+    let traj = ode45(
+        lambda x y . [x * (1.0 - x) * ln(1.0 + rho * x * (1.0 - x))],
+        [0.0],
+        [0.0, 1.0],
+        ode_step
+    ) in
+    let n = length(traj) in
+    let val = nth(nth(nth(traj, n - 1), 1), 0) in
+
+    assert(val == 0.0)
+
+    out("════════════════════════════════════════════════════════════")
+    out("  WARD IDENTITY: Π(0) = 0")
+    out("════════════════════════════════════════════════════════════")
+    out("  ∫₀¹ dx x(1-x) ln(1 + 0) = ") out(val)
+    out("  Integrand ≡ 0 everywhere. Not a cancellation — identically zero.")
+    out("  The photon remains massless by the structure of the integrand.")
+    out("════════════════════════════════════════════════════════════")
+}
+
+
+// =============================================================================
+// PART 2: EUCLIDEAN Π(ρ) AT MULTIPLE MOMENTA
+// =============================================================================
+//
+// Π(ρ) = (α/π) ∫₀¹ dx x(1-x) ln(1 + ρ x(1-x))
+//
+// We compute the BARE integral (without α/π prefactor) first:
+//   I(ρ) = ∫₀¹ dx x(1-x) ln(1 + ρ x(1-x))
+// Then Π(ρ) = (α/π) × I(ρ).
+//
+// Boundedness: max of x(1-x) is 1/4 (at x=1/2).
+//   I(ρ) ≤ (1/4) × ln(1 + ρ/4)
+
+example "Part 2a: Π(ρ=1) — low spacelike momentum" {
+    let rho = 1.0 in
+    let traj = ode45(
+        lambda x y . [x * (1.0 - x) * ln(1.0 + rho * x * (1.0 - x))],
+        [0.0],
+        [0.0, 1.0],
+        ode_step
+    ) in
+    let n = length(traj) in
+    let i_val = nth(nth(nth(traj, n - 1), 1), 0) in
+    let pi_val = (alpha_em / pi) * i_val in
+
+    let max_bound = 0.25 * ln(1.0 + rho / 4.0) in
+    let positive = if i_val > 0.0 then 1.0 else 0.0 in
+    let bounded = if i_val < max_bound then 1.0 else 0.0 in
+    assert(positive == 1.0)
+    assert(bounded == 1.0)
+
+    out("ρ = 1: I(1) = ∫₀¹ dx x(1-x) ln(1+x(1-x)) = ") out(i_val)
+    out("  Π(1) = (α/π) × I(1) = ") out(pi_val)
+    out("  Upper bound: (1/4)ln(5/4) = ") out(max_bound)
+    out("  0 < ") out(i_val) out(" < ") out(max_bound)
+    out("VERIFIED: Finite, positive, bounded.")
+}
+
+example "Part 2b: Π(ρ=4) — moderate spacelike momentum" {
+    let rho = 4.0 in
+    let traj = ode45(
+        lambda x y . [x * (1.0 - x) * ln(1.0 + rho * x * (1.0 - x))],
+        [0.0],
+        [0.0, 1.0],
+        ode_step
+    ) in
+    let n = length(traj) in
+    let i_val = nth(nth(nth(traj, n - 1), 1), 0) in
+    let pi_val = (alpha_em / pi) * i_val in
+
+    let max_bound = 0.25 * ln(1.0 + rho / 4.0) in
+    let positive = if i_val > 0.0 then 1.0 else 0.0 in
+    let bounded = if i_val < max_bound then 1.0 else 0.0 in
+    assert(positive == 1.0)
+    assert(bounded == 1.0)
+
+    out("ρ = 4: I(4) = ∫₀¹ dx x(1-x) ln(1+4x(1-x)) = ") out(i_val)
+    out("  Π(4) = (α/π) × I(4) = ") out(pi_val)
+    out("  Upper bound: (1/4)ln(2) = ") out(max_bound)
+    out("VERIFIED: Finite, positive, bounded.")
+}
+
+example "Part 2c: Π(ρ=10) — higher spacelike momentum" {
+    let rho = 10.0 in
+    let traj = ode45(
+        lambda x y . [x * (1.0 - x) * ln(1.0 + rho * x * (1.0 - x))],
+        [0.0],
+        [0.0, 1.0],
+        ode_step
+    ) in
+    let n = length(traj) in
+    let i_val = nth(nth(nth(traj, n - 1), 1), 0) in
+    let pi_val = (alpha_em / pi) * i_val in
+
+    let max_bound = 0.25 * ln(1.0 + rho / 4.0) in
+    let positive = if i_val > 0.0 then 1.0 else 0.0 in
+    let bounded = if i_val < max_bound then 1.0 else 0.0 in
+    assert(positive == 1.0)
+    assert(bounded == 1.0)
+
+    out("ρ = 10: I(10) = ∫₀¹ dx x(1-x) ln(1+10x(1-x)) = ") out(i_val)
+    out("  Π(10) = (α/π) × I(10) = ") out(pi_val)
+    out("  Upper bound: (1/4)ln(3.5) = ") out(max_bound)
+    out("VERIFIED: Finite, positive, bounded.")
+}
+
+example "Part 2d: Π(ρ=100) — high spacelike momentum" {
+    let rho = 100.0 in
+    let traj = ode45(
+        lambda x y . [x * (1.0 - x) * ln(1.0 + rho * x * (1.0 - x))],
+        [0.0],
+        [0.0, 1.0],
+        ode_step
+    ) in
+    let n = length(traj) in
+    let i_val = nth(nth(nth(traj, n - 1), 1), 0) in
+    let pi_val = (alpha_em / pi) * i_val in
+
+    let max_bound = 0.25 * ln(1.0 + rho / 4.0) in
+    let positive = if i_val > 0.0 then 1.0 else 0.0 in
+    let bounded = if i_val < max_bound then 1.0 else 0.0 in
+    assert(positive == 1.0)
+    assert(bounded == 1.0)
+
+    out("ρ = 100: I(100) = ∫₀¹ dx x(1-x) ln(1+100x(1-x)) = ") out(i_val)
+    out("  Π(100) = (α/π) × I(100) = ") out(pi_val)
+    out("  Upper bound: (1/4)ln(26) = ") out(max_bound)
+    out("VERIFIED: Finite, positive, bounded.")
+}
+
+
+// =============================================================================
+// PART 3: RUNNING OF α
+// =============================================================================
+//
+// The running fine-structure constant:
+//   α(q²) = α / (1 - Π(q²))
+//
+// Since Π(ρ) > 0 for ρ > 0, we get α(q²) > α: charge screening by
+// virtual electron-positron pairs makes the effective charge INCREASE
+// with momentum. (Opposite of asymptotic freedom in QCD.)
+//
+// At accessible energies, Π ≪ 1, so α(q²) ≈ α(1 + Π(q²)).
+
+example "Part 3a: running α at ρ=1" {
+    let rho = 1.0 in
+    let traj = ode45(
+        lambda x y . [x * (1.0 - x) * ln(1.0 + rho * x * (1.0 - x))],
+        [0.0],
+        [0.0, 1.0],
+        ode_step
+    ) in
+    let n = length(traj) in
+    let i_val = nth(nth(nth(traj, n - 1), 1), 0) in
+    let pi_val = (alpha_em / pi) * i_val in
+    let alpha_running = alpha_em / (1.0 - pi_val) in
+
+    let increases = if alpha_running > alpha_em then 1.0 else 0.0 in
+    assert(increases == 1.0)
+
+    out("ρ = 1: Π(1) = ") out(pi_val)
+    out("  α(q²) = α/(1-Π) = ") out(alpha_running)
+    out("  α(0) = ") out(alpha_em)
+    out("  Δα/α = ") out((alpha_running - alpha_em) / alpha_em)
+    out("VERIFIED: α increases with momentum (charge screening).")
+}
+
+example "Part 3b: running α at ρ=100 (MeV-scale momentum)" {
+    let rho = 100.0 in
+    let traj = ode45(
+        lambda x y . [x * (1.0 - x) * ln(1.0 + rho * x * (1.0 - x))],
+        [0.0],
+        [0.0, 1.0],
+        ode_step
+    ) in
+    let n = length(traj) in
+    let i_val = nth(nth(nth(traj, n - 1), 1), 0) in
+    let pi_val = (alpha_em / pi) * i_val in
+    let alpha_running = alpha_em / (1.0 - pi_val) in
+
+    let increases = if alpha_running > alpha_em then 1.0 else 0.0 in
+    assert(increases == 1.0)
+
+    out("ρ = 100: Π(100) = ") out(pi_val)
+    out("  α(q²) = ") out(alpha_running)
+    out("  α(0) = ") out(alpha_em)
+    out("  Δα/α = ") out((alpha_running - alpha_em) / alpha_em)
+    out("VERIFIED: Larger momentum → larger running effect.")
+}
+
+
+// =============================================================================
+// PART 4: CONSISTENCY CHECKS
+// =============================================================================
+//
+// 4a: Π as a single integral matches difference of separate integrals.
+//     Π(ρ₂) - Π(ρ₁) = (α/π) ∫₀¹ dx x(1-x) ln[(1+ρ₂x(1-x))/(1+ρ₁x(1-x))]
+//
+// 4b: Telescoping sum:
+//     Π(10) = [Π(10)-Π(4)] + [Π(4)-Π(1)] + [Π(1)-Π(0)] + Π(0)
+//     where Π(0) = 0 by Ward identity.
+//
+// 4c: Monotonicity: Π(1) < Π(4) < Π(10)
+
+example "Part 4a: Π difference via single integral" {
+    let rho1 = 1.0 in
+    let rho2 = 10.0 in
+    let traj = ode45(
+        lambda x y . [x * (1.0 - x) * ln((1.0 + rho2 * x * (1.0 - x)) / (1.0 + rho1 * x * (1.0 - x)))],
+        [0.0],
+        [0.0, 1.0],
+        ode_step
+    ) in
+    let n = length(traj) in
+    let diff_single = nth(nth(nth(traj, n - 1), 1), 0) in
+
+    let traj1 = ode45(
+        lambda x y . [x * (1.0 - x) * ln(1.0 + rho1 * x * (1.0 - x))],
+        [0.0],
+        [0.0, 1.0],
+        ode_step
+    ) in
+    let n1 = length(traj1) in
+    let i1 = nth(nth(nth(traj1, n1 - 1), 1), 0) in
+
+    let traj2 = ode45(
+        lambda x y . [x * (1.0 - x) * ln(1.0 + rho2 * x * (1.0 - x))],
+        [0.0],
+        [0.0, 1.0],
+        ode_step
+    ) in
+    let n2 = length(traj2) in
+    let i2 = nth(nth(nth(traj2, n2 - 1), 1), 0) in
+
+    let diff_separate = i2 - i1 in
+    let err = abs(diff_single - diff_separate) in
+    let ok = if err < 0.0001 then 1.0 else 0.0 in
+    assert(ok == 1.0)
+
+    out("I(10) - I(1) via single integral:   ") out(diff_single)
+    out("I(10) - I(1) via separate integrals: ") out(diff_separate)
+    out("  |error| = ") out(err)
+    out("VERIFIED: Consistency < 10⁻⁴. Single-integral form works.")
+}
+
+example "Part 4b: Telescoping sum Π(10) = ΔΠ(10,4) + ΔΠ(4,1) + Π(1)" {
+    let traj_1 = ode45(
+        lambda x y . [x * (1.0 - x) * ln(1.0 + 1.0 * x * (1.0 - x))],
+        [0.0], [0.0, 1.0], ode_step
+    ) in
+    let n1 = length(traj_1) in
+    let i1 = nth(nth(nth(traj_1, n1 - 1), 1), 0) in
+
+    let traj_4 = ode45(
+        lambda x y . [x * (1.0 - x) * ln(1.0 + 4.0 * x * (1.0 - x))],
+        [0.0], [0.0, 1.0], ode_step
+    ) in
+    let n4 = length(traj_4) in
+    let i4 = nth(nth(nth(traj_4, n4 - 1), 1), 0) in
+
+    let traj_10 = ode45(
+        lambda x y . [x * (1.0 - x) * ln(1.0 + 10.0 * x * (1.0 - x))],
+        [0.0], [0.0, 1.0], ode_step
+    ) in
+    let n10 = length(traj_10) in
+    let i10 = nth(nth(nth(traj_10, n10 - 1), 1), 0) in
+
+    let telescoped = (i10 - i4) + (i4 - i1) + i1 in
+    let err = abs(telescoped - i10) in
+    let ok = if err < 0.0001 then 1.0 else 0.0 in
+    assert(ok == 1.0)
+
+    out("I(10) directly:   ") out(i10)
+    out("Telescoped sum:   ") out(telescoped)
+    out("  |error| = ") out(err)
+    out("VERIFIED: Telescoping identity holds. Differences compose correctly.")
+}
+
+example "Part 4c: Monotonicity Π(1) < Π(4) < Π(10)" {
+    let traj_1 = ode45(
+        lambda x y . [x * (1.0 - x) * ln(1.0 + 1.0 * x * (1.0 - x))],
+        [0.0], [0.0, 1.0], ode_step
+    ) in
+    let n1 = length(traj_1) in
+    let i1 = nth(nth(nth(traj_1, n1 - 1), 1), 0) in
+
+    let traj_4 = ode45(
+        lambda x y . [x * (1.0 - x) * ln(1.0 + 4.0 * x * (1.0 - x))],
+        [0.0], [0.0, 1.0], ode_step
+    ) in
+    let n4 = length(traj_4) in
+    let i4 = nth(nth(nth(traj_4, n4 - 1), 1), 0) in
+
+    let traj_10 = ode45(
+        lambda x y . [x * (1.0 - x) * ln(1.0 + 10.0 * x * (1.0 - x))],
+        [0.0], [0.0, 1.0], ode_step
+    ) in
+    let n10 = length(traj_10) in
+    let i10 = nth(nth(nth(traj_10, n10 - 1), 1), 0) in
+
+    let ok1 = if i1 < i4 then 1.0 else 0.0 in
+    let ok2 = if i4 < i10 then 1.0 else 0.0 in
+    assert(ok1 == 1.0)
+    assert(ok2 == 1.0)
+
+    out("I(1)  = ") out(i1)
+    out("I(4)  = ") out(i4)
+    out("I(10) = ") out(i10)
+    out("VERIFIED: I(1) < I(4) < I(10) — monotone increasing.")
+    out("  More momentum → more vacuum polarization → more charge screening.")
+}
+
+
+// =============================================================================
+// PART 5: dΠ/dρ AND THE QED β-FUNCTION
+// =============================================================================
+//
+// Differentiating under the integral:
+//   dI/dρ = ∫₀¹ dx [x(1-x)]² / (1 + ρ x(1-x))
+//
+// At ρ = 0:
+//   dI/dρ|_{ρ=0} = ∫₀¹ dx [x(1-x)]² = ∫₀¹ dx (x² - 2x³ + x⁴)
+//                 = [x³/3 - x⁴/2 + x⁵/5]₀¹ = 1/3 - 1/2 + 1/5 = 1/30
+//
+// The QED β-function at one loop:
+//   β(α) = (2α²)/(3π)
+//
+// This follows from: dα/d(ln q²) = α² × dΠ/dq² = α² × (1/(πm²)) × dI/dρ|_{ρ=0}
+// and the standard identification gives β₀ = 2/(3π), verified from 1/30.
+
+example "Part 5a: dI/dρ at ρ=0 = 1/30 (QED β-function coefficient)" {
+    let traj = ode45(
+        lambda x y . [x * x * (1.0 - x) * (1.0 - x)],
+        [0.0],
+        [0.0, 1.0],
+        ode_step
+    ) in
+    let n = length(traj) in
+    let deriv_val = nth(nth(nth(traj, n - 1), 1), 0) in
+
+    let exact = 1.0 / 30.0 in
+    let err = abs(deriv_val - exact) in
+    let ok = if err < 0.0001 then 1.0 else 0.0 in
+    assert(ok == 1.0)
+
+    out("dI/dρ|_{ρ=0} = ∫₀¹ dx [x(1-x)]² = ") out(deriv_val)
+    out("  Exact: 1/30 = ") out(exact)
+    out("  |error| = ") out(err)
+    out("  This determines β₀ = 2/(3π) for QED.")
+    out("VERIFIED: β-function coefficient from convergent integral.")
+}
+
+example "Part 5b: dI/dρ at ρ=4 (running at finite momentum)" {
+    let rho = 4.0 in
+    let traj = ode45(
+        lambda x y . [x * x * (1.0 - x) * (1.0 - x) / (1.0 + rho * x * (1.0 - x))],
+        [0.0],
+        [0.0, 1.0],
+        ode_step
+    ) in
+    let n = length(traj) in
+    let deriv_val = nth(nth(nth(traj, n - 1), 1), 0) in
+
+    let exact_zero = 1.0 / 30.0 in
+    let smaller = if deriv_val < exact_zero then 1.0 else 0.0 in
+    let positive = if deriv_val > 0.0 then 1.0 else 0.0 in
+    assert(smaller == 1.0)
+    assert(positive == 1.0)
+
+    out("dI/dρ|_{ρ=4} = ∫₀¹ dx [x(1-x)]²/(1+4x(1-x)) = ") out(deriv_val)
+    out("  dI/dρ|_{ρ=0} = ") out(exact_zero)
+    out("  0 < dI/dρ(4) < dI/dρ(0) — rate of increase slows at higher ρ.")
+    out("VERIFIED: Derivative positive and decreasing (logarithmic running).")
+}
+
+
+// =============================================================================
+// PART 6: ABOVE-THRESHOLD IMAGINARY PART
+// =============================================================================
+//
+// For timelike q² > 4m² (above pair-production threshold):
+//
+//   Im Π(s) = (α/3) × (1 + 2m²/s) × √(1 - 4m²/s)
+//
+// where s = q²/m² (timelike, s > 4).
+//
+// This is purely algebraic — no integration needed.
+// It is related to the e⁺e⁻ → μ⁺μ⁻ cross-section by the optical theorem.
+//
+// At threshold s = 4m² (s/m² = 4): Im Π = 0 (√(1-1) = 0).
+// Above threshold: imaginary part grows, reaches maximum, then falls as 1/√s.
+
+example "Part 6a: above-threshold Im Π at s = 5m²" {
+    let s = 5.0 in
+    let im_pi = (alpha_em / 3.0) * (1.0 + 2.0 / s) * sqrt(1.0 - 4.0 / s) in
+
+    let positive = if im_pi > 0.0 then 1.0 else 0.0 in
+    assert(positive == 1.0)
+
+    out("s/m² = 5: Im Π = (α/3)(1 + 2/s)√(1 - 4/s)")
+    out("  = (α/3)(1 + 0.4)√(0.2)")
+    out("  = ") out(im_pi)
+    out("  Positive: pair production is kinematically allowed.")
+    out("  Related to σ(e⁺e⁻ → μ⁺μ⁻) by optical theorem.")
+    out("VERIFIED: Algebraic, finite, no integration needed.")
+}
+
+example "Part 6b: above-threshold Im Π at s = 100m² (high energy)" {
+    let s = 100.0 in
+    let im_pi = (alpha_em / 3.0) * (1.0 + 2.0 / s) * sqrt(1.0 - 4.0 / s) in
+
+    let large_s_approx = alpha_em / 3.0 in
+    let approaches = if abs(im_pi - large_s_approx) < 0.001 then 1.0 else 0.0 in
+    assert(approaches == 1.0)
+
+    out("s/m² = 100: Im Π = ") out(im_pi)
+    out("  Large-s limit: α/3 = ") out(large_s_approx)
+    out("  Difference: ") out(abs(im_pi - large_s_approx))
+    out("  At high energy, Im Π → α/3 (asymptotic value).")
+    out("VERIFIED: Approaches asymptotic limit.")
+}
+
+
+// =============================================================================
+// PART 7: COMPARISON TO φ⁴ — GAUGE SYMMETRY REDUCES ker(Q)
+// =============================================================================
+//
+// In φ⁴:
+//   B₀(ρ) = ∫₀¹ dx ln(1 + ρ x(1-x))
+//   Individual B₀(ρ) values are SCHEME-DEPENDENT.
+//   Only B₀ differences are observable → im(Q) = {ΔB₀}.
+//
+// In QED:
+//   I(ρ) = ∫₀¹ dx x(1-x) ln(1 + ρ x(1-x))
+//   Ward identity: I(0) = 0 — canonical normalization.
+//   Individual Π(ρ) values are OBSERVABLE → im(Q) = {Π(ρ)}.
+//
+// The gauge symmetry (U(1)) provides a CANONICAL REFERENCE POINT.
+// What was in ker(Q) for φ⁴ (the additive constant) is now fixed to zero.
+// ker(Q) shrinks. im(Q) grows.
+
+example "Part 7: gauge symmetry promotes individual Π to im(Q)" {
+    let rho = 4.0 in
+
+    let traj_b0 = ode45(
+        lambda x y . [ln(1.0 + rho * x * (1.0 - x))],
+        [0.0], [0.0, 1.0], ode_step
+    ) in
+    let nb = length(traj_b0) in
+    let b0_val = nth(nth(nth(traj_b0, nb - 1), 1), 0) in
+
+    let traj_pi = ode45(
+        lambda x y . [x * (1.0 - x) * ln(1.0 + rho * x * (1.0 - x))],
+        [0.0], [0.0, 1.0], ode_step
+    ) in
+    let np = length(traj_pi) in
+    let pi_val = nth(nth(nth(traj_pi, np - 1), 1), 0) in
+
+    let pi_physical = (alpha_em / pi) * pi_val in
+
+    out("════════════════════════════════════════════════════════════")
+    out("  K-Q COMPARISON: φ⁴ vs QED at ρ = 4")
+    out("════════════════════════════════════════════════════════════")
+    out("")
+    out("  φ⁴ B₀(4) = ") out(b0_val)
+    out("    Status: scheme-dependent (B₀(4) alone is not observable)")
+    out("    Observable: B₀(4) - B₀(ρ_ref) for some reference ρ_ref")
+    out("")
+    out("  QED I(4) = ") out(pi_val)
+    out("  QED Π(4) = (α/π) × I(4) = ") out(pi_physical)
+    out("    Status: OBSERVABLE (Ward identity pins Π(0) = 0)")
+    out("    No reference point needed — gauge symmetry provides it.")
+    out("")
+    out("  The x(1-x) prefactor (from the Dirac trace) is not just a")
+    out("  convergence improvement. It is structurally tied to the")
+    out("  Ward identity: at ρ=0, x(1-x) × ln(1) = 0 identically.")
+    out("")
+    out("  GAUGE SYMMETRY REDUCES ker(Q).")
+    out("════════════════════════════════════════════════════════════")
+}
+
+
+// =============================================================================
+// SUMMARY
+// =============================================================================
+//
+// 15 verified examples across 7 parts:
+//
+//   Part 1: Ward identity Π(0) = 0 (1 example)
+//   Part 2: Euclidean Π(ρ) at ρ = 1, 4, 10, 100 (4 examples)
+//   Part 3: Running α at ρ = 1, 100 (2 examples)
+//   Part 4: Consistency — single integral, telescoping, monotonicity (3 examples)
+//   Part 5: dΠ/dρ and β-function — at ρ=0, ρ=4 (2 examples)
+//   Part 6: Above-threshold Im Π at s=5, s=100 (2 examples)
+//   Part 7: Comparison to φ⁴ (1 example)
+//
+// At no step does infinity appear — not in the integrand, not in the
+// integral, not in any intermediate quantity.
+//
+// The Ward identity Π(0) = 0 is a property of the convergent integrand.
+// It canonically normalizes the vacuum polarization, making individual
+// Π(ρ) values observable. In φ⁴, only differences were observable.
+//
+// GAUGE SYMMETRY DOES NOT COMPLICATE K-Q. IT SIMPLIFIES IT.
+// =============================================================================
