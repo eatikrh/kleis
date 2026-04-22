@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-4MJCXLSP8V"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-4MJCXLSP8V');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Research papers produced with Kleis — machine-verified axioms, proofs, numerics, and typesetting from a single reproducible source.">
+    <title>Research Papers - Kleis</title>
+    <link rel="canonical" href="https://kleis.io/papers">
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png">
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #e0e5ec 0%, #d0d5dc 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            padding: 60px;
+            max-width: 960px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 2.5em;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            font-size: 1.15em;
+            color: #555;
+            margin-bottom: 30px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 30px;
+            color: #2c3e50;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .back-link:hover { text-decoration: underline; }
+        .section-title {
+            font-size: 1.4em;
+            color: #2c3e50;
+            margin: 40px 0 16px 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e0e5ec;
+        }
+        .paper {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #2c3e50;
+            margin-bottom: 12px;
+        }
+        .paper a.title {
+            color: #2c3e50;
+            font-weight: 600;
+            text-decoration: none;
+            font-size: 1.02em;
+        }
+        .paper a.title:hover { text-decoration: underline; }
+        .paper p {
+            color: #666;
+            margin-top: 6px;
+            font-size: 0.93em;
+        }
+        .paper a.source {
+            color: #555;
+            margin-left: 8px;
+            font-size: 0.88em;
+        }
+        .tag {
+            display: inline-block;
+            color: white;
+            font-size: 0.72em;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+        .tag-red { background: #e74c3c; }
+        .tag-dark { background: #2c3e50; }
+        @media (max-width: 640px) {
+            .container { padding: 30px 20px; }
+            h1 { font-size: 1.8em; }
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <a href="/" class="back-link">&larr; Back to home</a>
+        <h1>Research Papers</h1>
+        <p class="subtitle">Machine-verified papers produced entirely in Kleis &mdash; axioms, proofs, numerics, and typesetting from a single reproducible source.</p>
+
+        <!-- ═══════════════ Riemann Hypothesis ═══════════════ -->
+        <h2 class="section-title">Riemann Hypothesis</h2>
+
+        <div class="paper">
+            <a class="title" href="/docs/papers/spectral_comb_proof.pdf">The Spectral Comb and the Riemann Hypothesis: A Proof via Fixed-Point Theory</a>
+            <p>Identifies the completed zeta function &xi;(s) with the characteristic polynomial of an antisymmetric matrix. Six theorems, machine-checked in Lean 4, verified by Z3. 11 pages.
+                <a class="source" href="/docs/papers/spectral_comb_proof.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <a class="title" href="/docs/papers/transfer_function_paper.pdf">The Riemann Zeta Function as a Transfer Function: A State-Space Perspective on Hilbert&ndash;P&oacute;lya</a>
+            <p>Reframes the spectral comb as a state-space realization of 1/&zeta;(s). Antisymmetry forces Re = 1/2 by a one-line identity; convergence covered by Connes' theorem and six published spectral approximation results. 18 references, 13 executable tests.
+                <a class="source" href="/docs/papers/transfer_function_paper.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <a class="title" href="/docs/papers/selberg_universality_paper.pdf">Selberg Universality</a>
+            <p>
+                <a class="source" href="/docs/papers/selberg_universality_paper.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <a class="title" href="/docs/papers/gl3_spectral_comb.kleis">GL(3) Spectral Comb</a>
+            <p>Kleis source only (no PDF).
+                <a class="source" href="/docs/papers/gl3_spectral_comb.kleis">View source (.kleis)</a></p>
+        </div>
+
+        <!-- ═══════════════ Projected Ontology Theory ═══════════════ -->
+        <h2 class="section-title">Projected Ontology Theory (POT)</h2>
+
+        <div class="paper">
+            <a class="title" href="/docs/papers/pot_flat_rotation_curves.pdf">Flat Galactic Rotation Curves from Projected Ontology</a>
+            <p>Derives flat rotation curves and the Tully&ndash;Fisher relation (M &prop; v&sup4;) without dark matter. 14 axioms, 4 theorems, all verified by Z3.
+                <a class="source" href="/docs/papers/pot_flat_rotation_curves.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <a class="title" href="/docs/papers/pot_entanglement_paper.pdf">Quantum Entanglement as Projected Ontology</a>
+            <p>Spinor projection kernel for quantum measurement. Identifies entanglement as a projection artifact.</p>
+        </div>
+        <div class="paper">
+            <a class="title" href="/docs/papers/pot_electrodynamics_paper.pdf">Electrodynamics as a Theorem of Projected Ontology</a>
+            <p>Derives Maxwell's equations from two axioms and d&sup2;=0 on a Lorentzian manifold. Identifies the exterior derivative as an admissible POT kernel; classifies electrodynamics as the unique admissible gauge sector. 14 verified examples, 15 pages.
+                <a class="source" href="/docs/papers/pot_electrodynamics_paper.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <a class="title" href="/docs/papers/pot_yang_mills_paper.pdf">Confinement as Fiber Non-Invariance: The Admissibility Boundary in Projected Ontology</a>
+            <p>Derives structural confinement from kernel non-admissibility without assuming quantum mechanics. Identifies the admissibility defect with the Lie bracket; connects to Wilson loops, the Gauss law, and color singlets. 6 theorems, 19 Z3-verified examples.
+                <a class="source" href="/docs/papers/pot_yang_mills_paper.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <a class="title" href="/docs/papers/pot_admissibility_restoration_paper.pdf">Admissibility Restoration: The Structural Necessity of Symmetry-Breaking Fields in Projected Ontology</a>
+            <p>Derives the necessity of Higgs-like fields from kernel admissibility. Shows that mass vs. confinement reduces to whether algebraic non-linearity is compensable. 7 theorems, 3 figures, 16 Z3-verified examples.
+                <a class="source" href="/docs/papers/pot_admissibility_restoration_paper.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <a class="title" href="/docs/papers/technical_brief_realization_tautology.pdf">Technical Brief: The Realization Tautology</a>
+        </div>
+
+        <!-- ═══════════════ POT: Renormalization & Mass Gap ═══════════════ -->
+        <h2 class="section-title">POT: Renormalization &amp; Mass Gap</h2>
+
+        <div class="paper">
+            <span class="tag tag-red">VOLUME VII</span>
+            <a class="title" href="/docs/papers/pot_renormalization_paper.pdf">Renormalization as Projected Ontology: The Theory That Was Never Divergent</a>
+            <p>Formalizes QFT renormalization as projection kernels composable via ITCM. Reduces the Yang&ndash;Mills mass gap to a spectral condition on Hankel-order asymmetry. 34 pages, 4 figures, 40 Z3-verified examples.
+                <a class="source" href="/docs/papers/pot_renormalization_paper.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <span class="tag tag-red">VOLUME VIII</span>
+            <a class="title" href="/docs/papers/pot_reduction_paper.pdf">A Conditional Reduction of the Yang&ndash;Mills Mass Gap Problem via Integral Transform Composition</a>
+            <p>Capstone of the 14-file POT program. States the Main Reduction Theorem: under five assumptions A&ndash;E, 4D Yang&ndash;Mills has a positive mass gap. 14 theory files, 400+ Z3-verified examples.
+                <a class="source" href="/docs/papers/pot_reduction_paper.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <span class="tag tag-red">VOLUME IX</span>
+            <a class="title" href="/docs/papers/ym_vacuum_stability_paper.pdf">Yang&ndash;Mills Vacuum Stability as a Classical Spectral Property</a>
+            <p>Z3-verified proof that &gamma; &gt; 0 implies a positive spectral gap for the Bessel&ndash;Sturm&ndash;Liouville operator. 12 structures, 34 Z3-checked examples. All mathematics pre-1953.
+                <a class="source" href="/docs/papers/ym_vacuum_stability_paper.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <span class="tag tag-dark">EPILOGUE</span>
+            <a class="title" href="/docs/papers/pot_classical_spectral_essay.pdf">The Mass Gap as a Classical Spectral Phenomenon: A Reinterpretation</a>
+            <p>The mass gap decomposes into a classical spectral mechanism (Sturm&ndash;Liouville, Watson, Weyl, Borg &mdash; all pre-1946) and a quantum realization problem.
+                <a class="source" href="/docs/papers/pot_classical_spectral_essay.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <span class="tag tag-red">VOLUME X</span>
+            <a class="title" href="/docs/papers/pot_projection_singularity_paper.pdf">Projection Singularities: Why Physics Has No Infinities</a>
+            <p>All physical infinities are projection singularities. The Hadamard projection is the unique linear idempotent that extracts the observable and annihilates the infinity. Two end-to-end worked examples on real QFT loop integrals. 20 references, 29 Z3-verified structural results, 13 machine-verified computations.
+                <a class="source" href="/docs/papers/pot_projection_singularity_paper.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <span class="tag tag-red">VOLUME XI</span>
+            <a class="title" href="/docs/papers/pot_quantization_kernel_paper.pdf">Quantization as Projection Kernel</a>
+            <p>Treats quantization itself as a kernel in the K-Q framework.
+                <a class="source" href="/docs/papers/pot_quantization_kernel_paper.kleis">View source (.kleis)</a></p>
+        </div>
+
+        <!-- ═══════════════ Navier-Stokes Regularity ═══════════════ -->
+        <h2 class="section-title">Navier&ndash;Stokes Regularity</h2>
+
+        <div class="paper">
+            <a class="title" href="/docs/papers/ns_smoothness_paper.pdf">The Half-Derivative Gap: Machine-Verified Structural Diagnosis of Navier-Stokes Smoothness</a>
+            <p>Proves that no scalar Sobolev inequality chain can exclude Navier-Stokes blow-up. 13 Z3-verified tests, 2 figures, 6 tables.
+                <a class="source" href="/docs/papers/ns_smoothness_paper.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <a class="title" href="/docs/papers/ns_geometric_depletion_paper.pdf">Geometric Depletion of Vortex Stretching: Machine-Verified Conditions for Navier-Stokes Regularity</a>
+            <p>Reduces Navier-Stokes regularity to the sign of a single scalar observable Q. 16-step reduction chain, 5 figures, 7 tables, Z3-verified thresholds.
+                <a class="source" href="/docs/papers/ns_geometric_depletion_paper.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <a class="title" href="/docs/papers/ns_bent_tube_paper.pdf">From Self-Protection to Interaction Depletion: The Pressure-Hessian Sign in Curved and Interacting Vortex Tubes</a>
+            <p>Computes Q for curved vortex tubes and interacting configurations. 13-step reduction chain, 3 Z3-verified theory files, 15 pages.
+                <a class="source" href="/docs/papers/ns_bent_tube_paper.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <a class="title" href="/docs/papers/ns_dynamical_closure_paper.pdf">From Interaction Depletion to Conditional Regularity: Angular Averaging, Many-Body Locality, and the Dynamical Closure of the Pressure-Hessian Sign</a>
+            <p>Closes three remaining gaps in the NS regularity program. States a conditional regularity theorem. Complete 16-step reduction chain, 4 Z3-verified theory files.
+                <a class="source" href="/docs/papers/ns_dynamical_closure_paper.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <span class="tag tag-red">GRAND FINALE</span>
+            <a class="title" href="/docs/papers/ns_tube_inevitability_paper.pdf">The Self-Undermining Singularity: Unconditional Regularity of 3D Navier-Stokes Solutions</a>
+            <p>Proves that smooth Navier-Stokes solutions remain smooth for all time. 214 machine-verified examples across 23 theory files, 153 Z3-verified theorems. 33 pages.
+                <a class="source" href="/docs/papers/ns_tube_inevitability_paper.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <span class="tag tag-dark">EPILOGUE</span>
+            <a class="title" href="/docs/papers/pot_ns_epilogue_paper.pdf">The Kernel and the Fluid: Navier-Stokes Regularity as Projected Ontology</a>
+            <p>The Biot-Savart kernel K(x) = x/(4&pi;|x|&sup3;) is a concrete instance of POT's Green's function projection. The framework reduces to four statements. 8 pages.
+                <a class="source" href="/docs/papers/pot_ns_epilogue_paper.kleis">View source (.kleis)</a></p>
+        </div>
+
+        <!-- ═══════════════ K-Q Framework (One-Loop Arc) ═══════════════ -->
+        <h2 class="section-title">K-Q Framework (One-Loop Arc)</h2>
+
+        <div class="paper">
+            <a class="title" href="/docs/papers/pot_phi4_oneloop_paper.pdf">&phi;&sup4; One-Loop: Convergent Integrals Without Infinities</a>
+            <p>Demonstrates renormalization of &phi;&sup4; scalar field theory using convergent Feynman parameter integrals. No subtraction of infinities &mdash; the first concrete instantiation of POT at loop level. 18 worked examples.
+                <a class="source" href="/docs/papers/pot_phi4_oneloop_paper.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <a class="title" href="/docs/papers/pot_qed_vacuum_polarization_paper.pdf">QED Vacuum Polarization: The K-Q Architecture with Gauge Constraints</a>
+            <p>Extends the K-Q framework to QED with the Ward identity and fermion loops. Shows how gauge symmetry reduces ker(Q) by providing canonical normalization. 15 worked examples.
+                <a class="source" href="/docs/papers/pot_qed_vacuum_polarization_paper.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <a class="title" href="/docs/papers/pot_ym_vacuum_polarization_paper.pdf">Yang&ndash;Mills One-Loop Gluon Self-Energy: Ghosts, Asymptotic Freedom, and Null-Space Activity</a>
+            <p>Tests the K-Q architecture against non-abelian gauge theory. Demonstrates that the ghost sector contributes to &beta;&#8320; through Q&compfn;K, even though ghosts are in ker(Q). 14 worked examples.
+                <a class="source" href="/docs/papers/pot_ym_vacuum_polarization_paper.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <a class="title" href="/docs/papers/pot_ghost_activity_theorem_paper.pdf">Ghost-Mediated Null-Space Activity Theorem</a>
+            <p>Ghost sector contributes nontrivially to observables through Q&compfn;K if and only if the gauge algebra is non-abelian (f<sup>abc</sup> &ne; 0). Constructive proof by abelian/non-abelian comparison. 17 Z3-verified results.
+                <a class="source" href="/docs/papers/pot_ghost_activity_theorem_paper.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <a class="title" href="/docs/papers/pot_gauge_dependence_ghost_paper.pdf">Gauge Dependence and the Boundary of Ghost Activity</a>
+            <p>Stress-tests the ghost activity theorem across gauge-fixing schemes. Ghost activity is representation-local; its effect on observables is representation-invariant. 16 Z3-verified results.
+                <a class="source" href="/docs/papers/pot_gauge_dependence_ghost_paper.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <a class="title" href="/docs/papers/pot_ker_q_atlas_paper.pdf">The Structural Atlas of ker(Q)</a>
+            <p>Classifies six types of null-space structure with loop-order stability as a new structural property. Discovers that ker(Q) is not loop-order-stable &mdash; anomalous migration crosses the observable boundary. 24 Z3-verified axioms.
+                <a class="source" href="/docs/papers/pot_ker_q_atlas_paper.kleis">View source (.kleis)</a></p>
+        </div>
+        <div class="paper">
+            <a class="title" href="/docs/papers/pot_abstract_kq_framework_paper.pdf">The Abstract K-Q Framework: Kernels, Projections, and Null-Space Structure Across Domains</a>
+            <p>Domain-independent (K, Q) structure instantiated across Feynman, Biot-Savart, exterior derivative, spinor projection, and logarithmic Green's function kernels. Introduces the gap K&sup1;(ker(Q)) &setminus; ker(K) and the admissibility boundary. 24 Z3-verified axioms.
+                <a class="source" href="/docs/papers/pot_abstract_kq_framework_paper.kleis">View source (.kleis)</a></p>
+        </div>
+
+        <p style="margin-top: 40px; color: #999; font-size: 0.85em; text-align: center;">All papers are authored by Engin Atik. Source files are executable Kleis programs.</p>
+    </main>
+</body>
+</html>
