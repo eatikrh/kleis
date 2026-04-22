@@ -49,6 +49,7 @@ rm -rf "$SITE_DIR"
 mkdir -p "$SITE_DIR"
 
 cp index.html "$SITE_DIR/"
+cp papers.html "$SITE_DIR/"
 cp favicon.svg "$SITE_DIR/"
 cp favicon.ico "$SITE_DIR/" 2>/dev/null || true
 cp favicon-48.png "$SITE_DIR/" 2>/dev/null || true

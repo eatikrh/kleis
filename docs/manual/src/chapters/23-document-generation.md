@@ -873,6 +873,7 @@ MITEquation("eq:main", "...")  // Define
 
 ## Next Steps
 
+- Browse all papers produced with Kleis: [Research Papers](https://kleis.io/papers.html)
 - See how documents combine with verification: [Applications](13-applications.md)
 - See full examples in `examples/documents/`
 - Explore Typst documentation: [typst.app/docs](https://typst.app/docs)

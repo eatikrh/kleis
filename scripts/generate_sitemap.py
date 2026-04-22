@@ -68,6 +68,34 @@ EXTRA_ENTRIES = [
      "/docs/papers/ns_dynamical_closure_paper.pdf", 1.0),
     ("docs/papers/ns_tube_inevitability_paper.pdf",
      "/docs/papers/ns_tube_inevitability_paper.pdf", 1.0),
+    ("docs/papers/pot_ns_epilogue_paper.pdf",
+     "/docs/papers/pot_ns_epilogue_paper.pdf", 1.0),
+    ("docs/papers/pot_renormalization_paper.pdf",
+     "/docs/papers/pot_renormalization_paper.pdf", 1.0),
+    ("docs/papers/pot_reduction_paper.pdf",
+     "/docs/papers/pot_reduction_paper.pdf", 1.0),
+    ("docs/papers/ym_vacuum_stability_paper.pdf",
+     "/docs/papers/ym_vacuum_stability_paper.pdf", 1.0),
+    ("docs/papers/pot_classical_spectral_essay.pdf",
+     "/docs/papers/pot_classical_spectral_essay.pdf", 1.0),
+    ("docs/papers/pot_projection_singularity_paper.pdf",
+     "/docs/papers/pot_projection_singularity_paper.pdf", 1.0),
+    ("docs/papers/pot_quantization_kernel_paper.pdf",
+     "/docs/papers/pot_quantization_kernel_paper.pdf", 1.0),
+    ("docs/papers/pot_phi4_oneloop_paper.pdf",
+     "/docs/papers/pot_phi4_oneloop_paper.pdf", 1.0),
+    ("docs/papers/pot_qed_vacuum_polarization_paper.pdf",
+     "/docs/papers/pot_qed_vacuum_polarization_paper.pdf", 1.0),
+    ("docs/papers/pot_ym_vacuum_polarization_paper.pdf",
+     "/docs/papers/pot_ym_vacuum_polarization_paper.pdf", 1.0),
+    ("docs/papers/pot_ghost_activity_theorem_paper.pdf",
+     "/docs/papers/pot_ghost_activity_theorem_paper.pdf", 1.0),
+    ("docs/papers/pot_gauge_dependence_ghost_paper.pdf",
+     "/docs/papers/pot_gauge_dependence_ghost_paper.pdf", 1.0),
+    ("docs/papers/pot_ker_q_atlas_paper.pdf",
+     "/docs/papers/pot_ker_q_atlas_paper.pdf", 1.0),
+    ("docs/papers/pot_abstract_kq_framework_paper.pdf",
+     "/docs/papers/pot_abstract_kq_framework_paper.pdf", 1.0),
 ]
 
 
@@ -125,6 +153,10 @@ def get_static_pages() -> List[Tuple[str, str]]:
     # Landing page
     if (REPO_ROOT / "index.html").exists():
         pages.append(("index.html", "/"))
+    
+    # Papers page (clean URL — Cloudflare strips .html)
+    if (REPO_ROOT / "papers.html").exists():
+        pages.append(("papers.html", "/papers"))
     
     # Manual index (clean URL = directory root)
     pages.append(("docs/manual/src/SUMMARY.md", "/docs/manual/book/"))
