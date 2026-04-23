@@ -1425,6 +1425,38 @@ define production_code(source: String) : String =
     let final_state = foldLines(prod_step, init, source) in
     match final_state { PS(d, sd, it, sa, result) => result }
 
+// Inverse of production_code: extracts only lines INSIDE test contexts
+// (#[test] functions or #[cfg(test)] modules).
+define test_step(line: String, state: ProdState) : ProdState =
+    match state {
+        PS(depth, skip_depth, in_test, saw_attr, result) =>
+            let trimmed = trimLeft(line) in
+            let delta = brace_delta(line) in
+            let new_depth = depth + delta in
+            if and(in_test, le(new_depth, skip_depth))
+            then PS(new_depth, 0, false, false, result)
+            else if in_test
+            then
+                let new_result = if eq(result, "") then line
+                                 else concat(result, concat("\n", line)) in
+                PS(new_depth, skip_depth, true, false, new_result)
+            else if and(saw_attr, gt(new_depth, depth))
+            then PS(new_depth, depth, true, false, result)
+            else if saw_attr
+            then PS(new_depth, skip_depth, false, true, result)
+            else if or(hasPrefix(trimmed, "#[test]"), hasPrefix(trimmed, "#[cfg(test)]"))
+            then
+                if gt(new_depth, depth)
+                then PS(new_depth, depth, true, false, result)
+                else PS(new_depth, depth, false, true, result)
+            else PS(new_depth, 0, false, false, result)
+    }
+
+define test_code(source: String) : String =
+    let init = PS(0, 0, false, false, "") in
+    let final_state = foldLines(test_step, init, source) in
+    match final_state { PS(d, sd, it, sa, result) => result }
+
 // --- Check a pattern against only non-test function bodies ---
 
 define any_non_test_fn_contains(source: String, fns: List(Function), pattern: String) : Bool =

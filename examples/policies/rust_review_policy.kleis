@@ -485,6 +485,23 @@ define advise_no_client_layer_filtering(source) =
     then "fail: get_used_ with .filter() — derived views belong in application layer"
     else "pass"
 
+// --- Flaky test: index-based assertions depend on non-deterministic order ---
+// Accessing collection results by numeric index (e.g. .unwrap()[0]) in
+// assert_eq! creates tests that break when data ordering changes.
+// Use .contains(), .iter().find(), or sort before comparing.
+// Uses test_code() to cover both #[test] functions and helpers inside
+// #[cfg(test)] modules, not just directly-annotated test functions.
+
+define advise_no_test_index_assertion(source) =
+    let tc = test_code(source) in
+    let has_index = or(contains(tc, "[0]"),
+                    or(contains(tc, "[1]"),
+                    or(contains(tc, "[2]"),
+                       contains(tc, "[3]")))) in
+    if and(has_index, contains(tc, "assert"))
+    then "fail: index-based test assertion — collection order may be non-deterministic, use .contains(), .iter().find(), or sort before comparing"
+    else "pass"
+
 // --- AI-generated artifacts (gpt-5.3-codex style signatures) ---
 
 define advise_no_step_comments(source) =
@@ -1021,6 +1038,28 @@ example "secure_password_in_test_ok" {
 example "sql_safe_format_in_test_ok" {
     let source = "fn query_db() {\n    sqlx::query!(\"SELECT id FROM users WHERE id = ?\");\n}\n\n#[test]\nfn test_query() {\n    let q = format!(\"SELECT * FROM test\");\n}" in
     out(check_sql_safe_structural(source))
+}
+
+// --- Flaky test: index-based assertion tests ---
+
+example "test_index_assertion_flagged" {
+    let source = "#[test]\nfn test_list_users() {\n    let users = repo.list_users().unwrap();\n    assert_eq!(users[0].name, \"alice\");\n}" in
+    out(advise_no_test_index_assertion(source))
+}
+
+example "test_index_assertion_in_helper" {
+    let source = "#[cfg(test)]\nmod tests {\n    fn check_first(items: &[Item]) {\n        assert_eq!(items[0].id, 1);\n    }\n    #[test]\n    fn test_it() {\n        check_first(&get_items());\n    }\n}" in
+    out(advise_no_test_index_assertion(source))
+}
+
+example "test_index_assertion_safe" {
+    let source = "#[test]\nfn test_list_users() {\n    let users = repo.list_users().unwrap();\n    assert!(users.iter().any(|u| u.name == \"alice\"));\n}" in
+    out(advise_no_test_index_assertion(source))
+}
+
+example "test_index_in_production_ok" {
+    let source = "fn get_first(items: &[Item]) -> &Item {\n    &items[0]\n}" in
+    out(advise_no_test_index_assertion(source))
 }
 
 // ============================================================================
