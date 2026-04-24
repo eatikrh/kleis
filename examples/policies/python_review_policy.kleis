@@ -84,6 +84,16 @@ define check_no_optional_type(source) =
     if contains(source, "Optional[") then "fail: Optional[X] is deprecated — use X | None (PEP 604)"
     else "pass"
 
+// --- Commented-out code with "uncomment" instructions ---
+// Code that says "uncomment to enable" should not be committed.
+// Either enable it properly or remove it.
+define check_no_uncomment_instructions(source) =
+    if contains(source, "# Uncomment")
+    then "fail: 'Uncomment' instruction in comment — remove commented-out code or enable it properly"
+    else if contains(source, "# uncomment")
+    then "fail: 'uncomment' instruction in comment — remove commented-out code or enable it properly"
+    else "pass"
+
 // ============================================================================
 // Structural Checks (use scan_python AST)
 // ============================================================================
