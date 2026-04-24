@@ -140,6 +140,22 @@ define advise_metadata_wildcard(query) =
     if contains(query, "_sourceName=\"*") then "fail: _sourceName with wildcards may not match as expected — use exact paths when possible"
     else "pass"
 
+// Numeric comparison on JSON-extracted fields needs num()
+define advise_num_for_comparison(query) =
+    if and(contains(query, "statusCode"), or(contains(query, "statusCode>"), contains(query, "statusCode<")))
+    then if not(contains(query, "num(statusCode)"))
+         then "fail: statusCode from JSON is a string — use 'num(statusCode)' for numeric comparison (e.g. num(statusCode) >= 500)"
+         else "pass"
+    else "pass"
+
+// Prefer json auto over multiple json field=_raw for Akamai indexes
+define advise_json_auto_for_akamai(query) =
+    if and(contains(query, "_index=\"rh_akamai\""), contains(query, "json field=_raw"))
+    then "fail: rh_akamai is pure JSON — prefer '| json auto' over multiple '| json field=_raw' calls (extracts all fields in one shot)"
+    else if and(contains(query, "_index=rh_akamai"), contains(query, "json field=_raw"))
+    then "fail: rh_akamai is pure JSON — prefer '| json auto' over multiple '| json field=_raw' calls (extracts all fields in one shot)"
+    else "pass"
+
 // SPL dedup without by keyword
 define advise_no_spl_dedup_syntax(query) =
     if contains(query, "| dedup ") then
