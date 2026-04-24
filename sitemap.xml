@@ -7,7 +7,7 @@
   </url>
   <url>
     <loc>https://kleis.io/papers</loc>
-    <lastmod>2026-04-23</lastmod>
+    <lastmod>2026-04-24</lastmod>
     <priority>0.5</priority>
   </url>
   <url>
@@ -348,6 +348,51 @@
   <url>
     <loc>https://kleis.io/docs/papers/pot_abstract_kq_framework_paper.pdf</loc>
     <lastmod>2026-04-21</lastmod>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://kleis.io/docs/papers/projection_fibers_paper.pdf</loc>
+    <lastmod>2026-04-24</lastmod>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://kleis.io/docs/papers/fiber_dimension_paper.pdf</loc>
+    <lastmod>2026-04-24</lastmod>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://kleis.io/docs/papers/pot_gr_lensing_paper.pdf</loc>
+    <lastmod>2026-04-24</lastmod>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://kleis.io/docs/papers/toeplitz_paper.pdf</loc>
+    <lastmod>2026-04-24</lastmod>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://kleis.io/docs/papers/transfer_function_bc_paper.pdf</loc>
+    <lastmod>2026-04-24</lastmod>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://kleis.io/docs/papers/forced_localization_paper.pdf</loc>
+    <lastmod>2026-04-24</lastmod>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://kleis.io/docs/papers/schanuel_conjecture_paper.pdf</loc>
+    <lastmod>2026-04-24</lastmod>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://kleis.io/docs/papers/divergence_kernels_paper.pdf</loc>
+    <lastmod>2026-04-24</lastmod>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://kleis.io/docs/papers/moonlight_paper.pdf</loc>
+    <lastmod>2026-04-24</lastmod>
     <priority>1.0</priority>
   </url>
 </urlset>
