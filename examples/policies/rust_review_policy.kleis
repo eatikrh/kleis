@@ -502,6 +502,22 @@ define advise_no_test_index_assertion(source) =
     then "fail: index-based test assertion — collection order may be non-deterministic, use .contains(), .iter().find(), or sort before comparing"
     else "pass"
 
+// --- Commented-out code with "uncomment" instructions ---
+// Code that says "uncomment to enable" should not be committed.
+// Either enable it properly or remove it. Commented-out code with
+// reactivation instructions is dead code that confuses reviewers.
+
+define advise_no_uncomment_instructions(source) =
+    if contains(source, "// Uncomment")
+    then "fail: 'Uncomment' instruction in comment — remove commented-out code or enable it properly"
+    else if contains(source, "// uncomment")
+    then "fail: 'uncomment' instruction in comment — remove commented-out code or enable it properly"
+    else if contains(source, "/* Uncomment")
+    then "fail: 'Uncomment' instruction in block comment — remove commented-out code or enable it properly"
+    else if contains(source, "/* uncomment")
+    then "fail: 'uncomment' instruction in block comment — remove commented-out code or enable it properly"
+    else "pass"
+
 // --- AI-generated artifacts (gpt-5.3-codex style signatures) ---
 
 define advise_no_step_comments(source) =
@@ -1060,6 +1076,16 @@ example "test_index_assertion_safe" {
 example "test_index_in_production_ok" {
     let source = "fn get_first(items: &[Item]) -> &Item {\n    &items[0]\n}" in
     out(advise_no_test_index_assertion(source))
+}
+
+example "uncomment_instruction_flagged" {
+    let source = "pub(crate) mod config;\n// Uncomment for local integration testing (file is .gitignored):\n// pub(crate) mod search_test;" in
+    out(advise_no_uncomment_instructions(source))
+}
+
+example "uncomment_instruction_clean" {
+    let source = "pub(crate) mod config;\npub(crate) mod generate;\npub(crate) mod restcall;" in
+    out(advise_no_uncomment_instructions(source))
 }
 
 // ============================================================================
