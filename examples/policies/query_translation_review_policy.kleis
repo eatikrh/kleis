@@ -1,0 +1,253 @@
+// SPL -> Sumo Logic Query Translation Review Policy
+//
+// Validates translated Sumo Logic queries for common migration mistakes.
+// Each check_* function catches untranslated SPL artifacts that should not
+// appear in a valid Sumo query. Each advise_* function flags best-practice
+// issues that are non-blocking but worth reviewing.
+//
+// Usage: kleis review-mcp --policy examples/policies/query_translation_review_policy.kleis
+
+// =============================================================================
+// Blocking Checks — untranslated SPL artifacts
+// =============================================================================
+
+// Target scope: every Sumo query must specify a partition
+define check_target_scope_present(query) =
+    if contains(query, "_index=") then "pass"
+    else "fail: missing _index= — every Sumo query must specify a partition (Flex license requirement)"
+
+// SPL-only operators that must be translated
+define check_no_spl_eval(query) =
+    if contains(query, "| eval ") then "fail: '| eval' is SPL-only — use 'expr as alias' syntax in Sumo (e.g. '| (a - b) as diff')"
+    else "pass"
+
+define check_no_spl_rex(query) =
+    if contains(query, "| rex ") then "fail: '| rex' is SPL-only — use '| parse regex \"pattern\" nodrop' in Sumo"
+    else "pass"
+
+define check_no_spl_timechart(query) =
+    if contains(query, "timechart") then "fail: 'timechart' is SPL-only — use '| timeslice N' + aggregation in Sumo"
+    else "pass"
+
+define check_no_spl_table(query) =
+    if contains(query, "| table ") then "fail: '| table' is SPL-only — use '| fields' in Sumo"
+    else "pass"
+
+define check_no_spl_foreach(query) =
+    if contains(query, "foreach") then "fail: 'foreach' has no Sumo equivalent — use if()+max() for multi-column pivot or concat+transpose for single-column"
+    else "pass"
+
+define check_no_spl_time_range(query) =
+    if contains(query, "earliest=") then "fail: 'earliest=' is SPL-only — remove it, use time picker or API from/to parameters"
+    else if contains(query, "latest=") then "fail: 'latest=' is SPL-only — remove it, use time picker or API from/to parameters"
+    else "pass"
+
+define check_no_spl_search(query) =
+    if contains(query, "| search ") then "fail: '| search' is not valid Sumo syntax — scope goes on the first line without a search keyword"
+    else "pass"
+
+define check_no_spl_rename(query) =
+    if contains(query, "| rename ") then "fail: '| rename' is not valid Sumo syntax — use 'field as alias' or '%\"name with spaces\"' pattern"
+    else "pass"
+
+// Untranslated SPL metadata fields
+define check_no_bare_index(query) =
+    if contains(query, "_index=") then
+        if contains(query, "index=") then
+            if contains(query, "_index=") then "pass"
+            else "fail: bare 'index=' without '_' prefix — use '_index=' for Sumo partitions"
+        else "pass"
+    else "fail: missing _index= — every Sumo query must specify a partition"
+
+define check_no_bare_sourcetype(query) =
+    if contains(query, "sourcetype=") then "fail: bare 'sourcetype=' is SPL metadata — use '_sourceCategory=' in Sumo"
+    else "pass"
+
+define check_no_bare_host(query) =
+    if and(contains(query, "host="), not(contains(query, "_sourceHost=")))
+    then "fail: bare 'host=' is SPL metadata — use '_sourceHost=' in Sumo"
+    else "pass"
+
+// SPL patterns that silently fail in Sumo
+define check_no_count_event(query) =
+    if contains(query, "count(event)") then "fail: 'count(event)' references undefined field — use 'count' or 'count as total' in Sumo"
+    else "pass"
+
+// =============================================================================
+// Non-Blocking Advisories — best practices
+// =============================================================================
+
+// Safety: parse/json operators should preserve non-matching events
+define advise_parse_has_nodrop(query) =
+    if contains(query, "| parse ") then
+        if not(contains(query, "nodrop")) then "fail: '| parse' without 'nodrop' — non-matching events will be silently dropped (unlike Splunk)"
+        else "pass"
+    else if contains(query, "| json field=") then
+        if not(contains(query, "nodrop")) then "fail: '| json field=' without 'nodrop' — non-matching events will be silently dropped"
+        else "pass"
+    else "pass"
+
+// SPL stats prefix is not needed in Sumo
+define advise_no_spl_stats_prefix(query) =
+    if contains(query, "| stats ") then "fail: '| stats' prefix is SPL — Sumo aggregates are direct operators (e.g. '| count by', '| avg(x) by')"
+    else "pass"
+
+// Sumo now() returns milliseconds, Splunk returns seconds
+define advise_now_units(query) =
+    if and(contains(query, "now()"), contains(query, "- _messageTime"))
+    then if not(contains(query, "/ 1000"))
+         then "fail: now() - _messageTime gives milliseconds in Sumo (Splunk gives seconds) — divide by 1000 for time comparisons"
+         else "pass"
+    else "pass"
+
+// SPL head -> Sumo limit
+define advise_no_spl_head(query) =
+    if contains(query, "| head ") then "fail: '| head N' is SPL — use '| limit N' in Sumo"
+    else "pass"
+
+// SPL sort syntax
+define advise_no_spl_sort_syntax(query) =
+    if contains(query, "| sort -") then "fail: '| sort -field' is SPL syntax — use '| sort by field desc' in Sumo"
+    else "pass"
+
+// Column naming: Sumo default _count vs Splunk default count
+define advise_column_naming(query) =
+    if and(contains(query, "| count"), not(contains(query, "count as ")))
+    then "fail: Sumo produces '_count' column by default — use 'count as count' to match Splunk output"
+    else "pass"
+
+// JSON fields must be parsed before filtering
+define advise_json_before_where(query) =
+    if and(contains(query, "| where "), not(or(contains(query, "| json"), contains(query, "| parse"))))
+    then "fail: '| where' references fields but no '| json' or '| parse' precedes it — Sumo does not auto-extract fields like Splunk"
+    else "pass"
+
+// SPL coalesce has no Sumo equivalent
+define advise_no_spl_coalesce(query) =
+    if contains(query, "coalesce(") then "fail: 'coalesce()' does not exist in Sumo — use 'if(isEmpty(a), b, a)' instead"
+    else "pass"
+
+// _timeslice is epoch milliseconds, not human-readable
+define advise_format_date_for_time(query) =
+    if and(contains(query, "_timeslice"), contains(query, "| fields"))
+    then if not(contains(query, "formatDate"))
+         then "fail: _timeslice is epoch milliseconds — use 'formatDate(_timeslice, \"yyyy-MM-dd HH:mm:ss\") as _time' for readability"
+         else "pass"
+    else "pass"
+
+// Metadata wildcards may not behave as expected
+define advise_metadata_wildcard(query) =
+    if contains(query, "_sourceName=\"*") then "fail: _sourceName with wildcards may not match as expected — use exact paths when possible"
+    else "pass"
+
+// SPL dedup without by keyword
+define advise_no_spl_dedup_syntax(query) =
+    if contains(query, "| dedup ") then
+        if not(or(contains(query, "dedup by "), contains(query, "dedup 1 ")))
+        then "fail: '| dedup' without 'by' keyword — Sumo syntax is '| dedup by field'"
+        else "pass"
+    else "pass"
+
+// =============================================================================
+// Formal Properties (Z3-verified)
+// =============================================================================
+
+structure TranslatedQuery {
+    operation is_valid : String -> Bool
+    operation has_target_scope : String -> Bool
+    operation has_spl_artifacts : String -> Bool
+
+    axiom valid_requires_scope : forall(q : String).
+        implies(is_valid(q), has_target_scope(q))
+
+    axiom valid_no_artifacts : forall(q : String).
+        implies(is_valid(q), not(has_spl_artifacts(q)))
+
+    axiom scope_means_index : forall(q : String).
+        iff(has_target_scope(q), contains(q, "_index="))
+
+    axiom artifacts_include_eval : forall(q : String).
+        implies(contains(q, "| eval "), has_spl_artifacts(q))
+
+    axiom artifacts_include_rex : forall(q : String).
+        implies(contains(q, "| rex "), has_spl_artifacts(q))
+
+    axiom artifacts_include_timechart : forall(q : String).
+        implies(contains(q, "timechart"), has_spl_artifacts(q))
+
+    axiom artifacts_include_table : forall(q : String).
+        implies(contains(q, "| table "), has_spl_artifacts(q))
+
+    axiom artifacts_include_earliest : forall(q : String).
+        implies(contains(q, "earliest="), has_spl_artifacts(q))
+
+    axiom completeness : forall(q : String).
+        implies(
+            and(has_target_scope(q),
+                not(has_spl_artifacts(q))),
+            is_valid(q))
+}
+
+// =============================================================================
+// Example Tests
+// =============================================================================
+
+example "clean_translated_query" {
+    let q = "_index=app_logs\n| json auto\n| where statusCode >= 400\n| count as count by reqHost\n| sort by count desc\n| limit 10" in
+    out(check_target_scope_present(q))
+}
+
+example "missing_index" {
+    let q = "| json auto\n| where statusCode >= 400\n| count by reqHost" in
+    out(check_target_scope_present(q))
+}
+
+example "untranslated_eval" {
+    let q = "_index=app_logs\n| eval status = if(code >= 200, \"ok\", \"error\")" in
+    out(check_no_spl_eval(q))
+}
+
+example "untranslated_rex" {
+    let q = "_index=app_logs\n| rex field=_raw \"(?<method>[A-Z]+) (?<path>[^ ]+)\"" in
+    out(check_no_spl_rex(q))
+}
+
+example "untranslated_table" {
+    let q = "_index=app_logs\n| table host, status, count" in
+    out(check_no_spl_table(q))
+}
+
+example "bare_sourcetype" {
+    let q = "_index=app_logs sourcetype=access_combined\n| count" in
+    out(check_no_bare_sourcetype(q))
+}
+
+example "parse_missing_nodrop" {
+    let q = "_index=app_logs\n| parse regex \"(?<method>[A-Z]+) (?<path>[^ ]+)\"" in
+    out(advise_parse_has_nodrop(q))
+}
+
+example "parse_with_nodrop_ok" {
+    let q = "_index=app_logs\n| parse regex \"(?<method>[A-Z]+) (?<path>[^ ]+)\" nodrop" in
+    out(advise_parse_has_nodrop(q))
+}
+
+example "now_units_advisory" {
+    let q = "_index=app_logs\n| (now() - _messageTime) as timeDiff\n| where timeDiff < 3600" in
+    out(advise_now_units(q))
+}
+
+example "now_units_fixed" {
+    let q = "_index=app_logs\n| (now() - _messageTime) / 1000 as timeDiff\n| where timeDiff < 3600" in
+    out(advise_now_units(q))
+}
+
+example "spl_stats_prefix" {
+    let q = "_index=app_logs\n| stats count by host" in
+    out(advise_no_spl_stats_prefix(q))
+}
+
+example "column_naming_advisory" {
+    let q = "_index=app_logs\n| count by host" in
+    out(advise_column_naming(q))
+}
