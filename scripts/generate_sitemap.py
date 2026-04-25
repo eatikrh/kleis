@@ -116,6 +116,8 @@ EXTRA_ENTRIES = [
      "/docs/papers/moonlight_paper.pdf", 1.0),
     ("docs/papers/pot_gr_projection_kernel_paper.pdf",
      "/docs/papers/pot_gr_projection_kernel_paper.pdf", 1.0),
+    ("docs/papers/pot_kernel_factorization_paper.pdf",
+     "/docs/papers/pot_kernel_factorization_paper.pdf", 1.0),
 ]
 
 
