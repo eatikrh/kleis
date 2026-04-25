@@ -33,7 +33,7 @@ import "../../../theories/gr_projection_kernel.kleis"
 // Paper Metadata
 // =============================================================================
 
-define paper_title = "The Gravitational Projection Kernel: Non-Admissibility from Cartan Self-Coupling"
+define paper_title = "Reading General Relativity Through the Projection Kernel: Non-Admissibility, Formulation Fibers, and the Evidentiary Gap"
 
 define paper_authors = [
     Author("Engin Atik", "1")
@@ -43,9 +43,19 @@ define paper_affiliations = [
     Affiliation(1, "Kleis Research", "https://kleis.io")
 ]
 
-define paper_abstract = "We prove that the General Relativity projection kernel is non-admissible by computing the admissibility defect in the Cartan geometry pipeline. The curvature formula $R^a_b = d omega^a_b + omega^a_c and omega^c_b$ has the same algebraic structure as the Yang--Mills field strength $F = d A + A and A$: both contain a quadratic self-coupling term that breaks kernel admissibility. Using Kleis's symbolic Cartan pipeline, we compute the defect $Delta(e_A, e_B) = K(e_A + e_B) - K(e_A) - K(e_B)$ on the Schwarzschild tetrad and verify it is nonzero, isolating the $omega and omega$ term as the source. We develop the full fiber interpretation: diffeomorphism orbits are the projection fibers of GR, and non-admissibility produces gravitational energy non-localizability via the Main Theorem of projection fiber theory. We compute the Weyl tensor as the content of $\"ker\"(Q_(\"GR\"))$ and prove that the Schwarzschild singularity lives entirely in $\"ker\"(Q)$: the curvature diverges but $Q$ maps it to zero. The central conceptual result is a re-interpretation of the observable projection $Q$. In Yang--Mills, non-admissibility confines charges, requiring the Higgs mechanism to restore observability. In GR, the same algebraic non-admissibility makes energy non-localizable but does not hide geometric observables (tidal forces, gravitational waves, frame-dragging). The distinction is structural: Yang--Mills gauge symmetry acts on internal charge space, while GR gauge symmetry acts on spacetime itself. We formulate a Projection Sufficiency Principle: non-admissibility requires dynamical restoration if and only if the essential observables lie in the sector it hides. We then confront an admissibility dilemma: the three gravitational observations commonly cited as confirming full GR --- binary pulsar decay, frame-dragging, and gravitational waves --- are all predictions of linearized GR, which is admissible. The only claimed evidence for the nonlinear $omega and omega$ term is the LIGO merger waveform, extracted via matched filtering against GR-derived templates. Meanwhile, the admissible logarithmic kernel (Volume III) explains flat rotation curves without dark matter, where both GR and Newton fail --- but this success is regime-specific (patched at a core radius $R_c$, structurally analogous to MOND). Whether the universe operates through admissible kernels remains genuinely open. All 50 results are verified: 17 by Kleis evaluation and 33 by the Z3 SMT solver."
+define paper_abstract = "Many longstanding problems in general relativity --- the non-localizability of gravitational energy, the problem of time, the status of singularities --- arise from treating intermediate mathematical structures as physical. We show that the Projected Ontology (POT) framework separates what is physical from what is formulation-dependent, and what is empirically established from what remains open.
 
-define paper_keywords = "general relativity, Cartan geometry, admissible kernel, projected ontology, non-admissibility, connection self-coupling, gravitational energy, linearized gravity, diffeomorphism fibers, Weyl tensor, projection sufficiency, Higgs mechanism, singularity annihilation, logarithmic kernel, rotation curves, formal verification, Z3 theorem prover"
+The technical foundation is a computation: the GR production kernel (tetrad $arrow.r$ curvature via $R = d omega + omega and omega$) is non-admissible, proved by evaluating the admissibility defect $Delta eq.not 0$ on the Schwarzschild tetrad using the Kleis symbolic pipeline. This parallels Yang--Mills ($F = d A + A and A$), with the $omega and omega$ self-coupling as the source.
+
+Three results follow. First, a *Projection Sufficiency Principle*: non-admissibility requires dynamical restoration (a Higgs mechanism) if and only if the essential observables lie in the sector it hides. In Yang--Mills, charges are hidden, so the Higgs is needed. In GR, geometry survives intact --- no restoration is needed. The observable projection $Q$ is not a passive filter but the arbiter of whether non-admissibility has physical consequences.
+
+Second, a *formulation-independence* result: in every formulation of full GR --- Cartan, Palatini, self-coupled spin-2, teleparallel --- the $K$--$Q$ pipeline contains a non-admissible step. The teleparallel formulation is the critical case: its production kernel ($T = d e$) is admissible, but the non-admissibility moves to $Q$. This reveals a *formulation fiber*: properties like energy localizability, $K$-admissibility, and background-dependence vary across physically equivalent formulations. They are fiber artifacts, not physics --- in exactly the sense that the Continuum Hypothesis is independent of ZFC (Volume III). The century-old ``problem of gravitational energy'' is a fiber question mistaken for a physics question.
+
+Third, an *evidentiary gap*: the three cleanest gravitational confirmations (binary pulsar decay, frame-dragging, gravitational waves) are all predictions of linearized GR, which is admissible. The only evidence for the non-admissible $omega and omega$ term is the LIGO merger waveform, extracted via matched filtering against GR-derived templates. The Deser construction shows that non-admissibility is binary --- no consistent theory lies between the admissible linearized theory and the non-admissible full theory --- so the physical status of the nonlinear sector remains genuinely open.
+
+All results are formally verified: 17 by Kleis evaluation, 33 by Z3 structural verification, and 67 by Z3 formulation and truncation analysis."
+
+define paper_keywords = "general relativity, Cartan geometry, admissible kernel, projected ontology, non-admissibility, connection self-coupling, teleparallel gravity, linearized gravity, diffeomorphism fibers, Weyl tensor, projection sufficiency, Higgs mechanism, singularity annihilation, logarithmic kernel, rotation curves, formulation independence, formal verification, Z3 theorem prover"
 
 // =============================================================================
 // Section 1: Introduction
@@ -66,7 +76,7 @@ The linearized theory provides the control case. When the background is flat, $o
 
 A striking consequence emerges from the Weyl tensor analysis: the Schwarzschild singularity at $r = 0$ --- a genuine curvature singularity where $R_(a b c d) R^(a b c d) arrow.r infinity$ --- lives entirely in $\"ker\"(Q_(\"GR\"))$. The observable projection maps this divergent curvature to zero ($R_(a b) = 0$). In the POT framework, where physical observables are identified with $\"im\"(Q)$, the vacuum singularity is not an observable divergence but a structural artifact of the production kernel --- following the same pattern as UV divergence annihilation in quantum field theory.
 
-All 50 results are verified: 17 by the Kleis evaluator (symbolic Cartan computations) and 33 by the Z3 SMT solver (structural consequences).")
+All results are formally verified: 17 by the Kleis evaluator (symbolic Cartan computations), 33 by the Z3 SMT solver (structural consequences), and 67 by Z3 formulation and truncation analysis.")
 
 
 // =============================================================================
@@ -293,7 +303,7 @@ In Yang--Mills, non-admissibility pushes charges into $ker(Q)$, and $\"im\"(Q)$ 
 
 But the rotation curve problem does not fit neatly into either the Higgs question or the kernel-range question. It is not that non-admissibility *hides* the flat rotation curves --- the Newtonian kernel is admissible and also fails. It is that the *specific form* of the GR kernel (and its Newtonian limit) produces the wrong potential at galactic scales. Whether this points to a different kernel, a modification of GR, or genuinely invisible matter remains an open question --- one that the POT framework identifies precisely but does not resolve.
 
-*Linearization is an approximation, not a mechanism.* Writing $g_(mu nu) = eta_(mu nu) + h_(mu nu)$ and linearizing does produce an admissible kernel $K_(\"eff\")(h)$, formally analogous to Higgs restoration. But linearization is something physicists do, not something nature does. The background $eta$ is a human choice. That said, the fact that the cleanest gravitational observations (binary pulsar, frame-dragging, gravitational waves) are all predictions of the linearized theory raises a genuine question about whether the nonlinear $omega and omega$ term is physically realized or merely a mathematical extension.
+*Linearization and the status of the nonlinear term.* Writing $g_(mu nu) = eta_(mu nu) + h_(mu nu)$ and linearizing produces an admissible kernel $K_(\"eff\")(h)$. The standard view treats this as an approximation --- a human simplification of the full nonlinear theory. But the evidentiary situation is less clear than this framing suggests. The cleanest gravitational observations (binary pulsar, frame-dragging, gravitational waves) are all predictions of the linearized theory. The only claimed evidence for the nonlinear $omega and omega$ term is the specific merger waveform in LIGO data, extracted through matched filtering against templates built from the nonlinear theory. Whether the linearized kernel is an approximation to the full theory, or the full theory is a mathematical extension of the physical kernel, is an open question.
 
 *What we can and cannot conclude.* The distinction between internal and external gauge symmetry is structural: Yang--Mills gauge symmetry acts on internal charge space (can confine charges), while GR gauge symmetry acts on spacetime itself (cannot confine geometry). This explains why non-admissibility requires a Higgs in Yang--Mills but does not hide geometric observables in GR.
 
@@ -303,7 +313,66 @@ Results R1--R4 verify the formal linearization claims in Z3.")
 
 
 // =============================================================================
-// Section 8: The Content of ker(Q_GR) — The Weyl Tensor
+// Section 8: Formulation Independence of Non-Admissibility
+// =============================================================================
+
+define sec_formulations = ArxivSection("Formulation Independence of Non-Admissibility",
+"The analysis so far uses the Cartan formulation of GR: the production kernel $K$ maps a tetrad $e^a$ to the Riemann curvature via $R = d omega + omega and omega$, and the observable projection $Q$ extracts the Ricci tensor. In this formulation, $K$ is non-admissible (due to $omega and omega$) and $Q$ is admissible (Ricci contraction is linear). A natural question arises: is non-admissibility a property of *GR itself*, or of the *Cartan formulation specifically*? If a different formulation has an admissible $K$, the claims of this paper would need revision.
+
+We analyze four formulations. All produce the same field equations and the same physical predictions (except the linearized theory, which is an approximation).
+
+*1. Cartan* (this paper). $K$: tetrad $arrow.r$ connection $arrow.r$ curvature $R = d omega + omega and omega$. $Q$: Riemann $arrow.r$ Ricci. $K$ non-admissible, $Q$ admissible. Non-admissibility is in $K$.
+
+*2. Spin-2 field on flat spacetime* (Fierz--Pauli, Deser 1970). The free theory --- a massless spin-2 field on Minkowski background --- is exactly linearized GR: $K$ maps the perturbation $h_(mu nu)$ to the linearized Riemann tensor. This $K$ is admissible (linear in $h$). Requiring consistent self-coupling --- gravity must couple to its own energy --- introduces cubic, quartic, and higher terms. Deser showed the infinite series sums to the full Einstein--Hilbert action. The fully self-coupled $K$ is non-admissible. $Q$ remains admissible (Ricci contraction). Non-admissibility is in $K$.
+
+The Deser construction has a fine structure that reveals the nature of the admissibility boundary. Label the truncation of the self-coupling series at order $n$. At $n = 0$ (free spin-2), $K$ is admissible and the theory is self-consistent. At $n = infinity$ (full GR), $K$ is non-admissible and the theory is again self-consistent --- the infinite sum closes on itself, restoring diffeomorphism invariance. But at any finite $n >= 1$, the truncation is *both non-admissible and inconsistent*: the self-coupling at order $n$ generates source terms at order $n + 1$ that the truncation cannot account for, breaking gauge invariance. The admissibility boundary between linearized and full GR is not a threshold that can be approached gradually --- it is a *gap*. Non-admissibility is binary: any nonzero coupling order makes $K$ non-admissible. And every finite truncation with self-coupling is physically inconsistent. Only the full infinite sum restores consistency, but at the price of non-admissibility. Self-gravitation (coupling to gravitational energy) and non-admissibility are inseparable: you cannot have one without the other. This also clarifies the status of post-Newtonian approximations (1PN, 2PN, etc.): they are finite truncations used as calculational tools, borrowing their validity from the full non-admissible theory, not self-consistent field theories in their own right.
+
+*3. Teleparallel Equivalent of GR (TEGR)*. This is the critical case. The Weitzenböck connection is flat: curvature vanishes identically. The gravitational field strength is *torsion* $T^a = d e^a$ (in the Weitzenböck gauge where the spin connection vanishes). The production kernel $K$: tetrad $arrow.r$ torsion is *admissible* --- $d e^a$ is linear in $e$. But the observable projection $Q$ extracts the torsion scalar $T = S_a^(mu nu) T^a_(mu nu)$, which is quadratic in torsion. $Q$ is *non-admissible*. The non-admissibility moves from $K$ to $Q$: same physics, different pipeline.
+
+*4. Palatini formulation*. The connection $Gamma^lambda_(mu nu)$ is treated as an independent variable, not derived from the metric. The Riemann tensor is still $R = d Gamma + Gamma and Gamma$: the $Gamma and Gamma$ self-coupling persists. $K$ is non-admissible. $Q$ (Ricci contraction) is admissible. Varying the action with respect to $Gamma$ recovers the Levi-Civita connection and the standard metric formulation. Non-admissibility is in $K$.
+
+#table(
+  columns: (1fr, 1fr, 1fr, 1fr),
+  [*Formulation*], [*$K$ admissible?*], [*$Q$ admissible?*], [*Non-admissibility in*],
+  [Cartan], [No ($omega and omega$)], [Yes (Ricci trace)], [$K$],
+  [Spin-2 free], [Yes (linear in $h$)], [Yes], [Nowhere],
+  [Spin-2 full], [No (self-coupling)], [Yes], [$K$],
+  [TEGR], [Yes ($T = d e$, linear)], [No ($T$ scalar quadratic)], [$Q$],
+  [Palatini], [No ($Gamma and Gamma$)], [Yes], [$K$],
+)
+
+*The invariant.* Every formulation of full (non-linearized) GR has at least one non-admissible step in the $K$--$Q$ pipeline. The formulation determines *where* it appears --- in $K$ for Cartan, Palatini, and the self-coupled spin-2 theory; in $Q$ for TEGR --- but it cannot be eliminated. Non-admissibility is a property of GR itself, not of any particular choice of variables.
+
+The sole exception is the free spin-2 theory (linearized GR), in which both $K$ and $Q$ are admissible. But this is not physically equivalent to full GR --- it is an approximation that discards the self-coupling.
+
+*Implication for the Projection Sufficiency Principle.* The claim stated earlier --- that the obstruction in GR resides in $K$, not in $Q$ --- is formulation-dependent. In the Cartan formulation it is true. In TEGR it is reversed: $K$ is admissible and $Q$ carries the non-admissibility. The formulation-independent statement is: *the $K$--$Q$ pipeline for GR necessarily contains a non-admissible step; changing variables can move it between $K$ and $Q$, but cannot remove it.*
+
+This is a stronger result than the Cartan-specific claim. It means that any attempt to reformulate GR so that both $K$ and $Q$ are admissible must change the physics --- as linearization does, losing the self-coupling and the strong-field effects it predicts.
+
+*Observational versus structural comparison.* All full GR formulations are physically equivalent: they make the same predictions. For the weak-field observables --- frame-dragging, gravitational waves, binary pulsar decay --- the linearized theory agrees with the full formulations (these are linearized GR results). All formulations fail at flat rotation curves. The discriminator is the *strong-field regime*: only the full formulations predict specific merger waveforms (the nonlinear chirp and ringdown). The linearized theory has no strong-field regime. The *structural* comparison reveals the pipeline differences:
+
+#table(
+  columns: (1.3fr, 1fr, 1fr, 1fr, 1fr, 1fr),
+  [*Property*], [*Cartan*], [*Spin-2 free*], [*Spin-2 full*], [*TEGR*], [*Palatini*],
+  [Admissible $K$?], [No], [Yes], [No], [Yes], [No],
+  [Admissible $Q$?], [Yes], [Yes], [Yes], [No], [Yes],
+  [Non-admissibility in], [$K$], [Nowhere], [$K$], [$Q$], [$K$],
+  [Energy localizable?], [No], [Yes], [No], [Yes], [No],
+  [Merger waveforms?], [Yes], [No], [Yes], [Yes], [Yes],
+  [Background needed?], [No], [Yes], [Yes], [No], [No],
+  [Dynamical variable], [Tetrad $e^a$], [$h_(mu nu)$], [$h_(mu nu)$], [Tetrad $e^a$], [Connection $Gamma$],
+  [Equiv. to full GR?], [Yes], [No], [Yes], [Yes], [Yes],
+)
+
+The energy-localizability row is the structural fingerprint of $K$-admissibility: when $K$ is admissible (TEGR, linearized), its image is gauge-invariant, and gravitational energy density can be defined. When $K$ is non-admissible (Cartan, Palatini, spin-2 full), the image varies across diffeomorphism orbits, and gravitational energy is non-localizable. Result V3 is striking: Cartan and TEGR are physically equivalent, yet energy is localizable in TEGR and not in Cartan --- the same physics, formulated so that the pipeline's non-admissibility sits in a different place, yields different intermediate structure while agreeing on all observables.
+
+*The formulation fiber.* This observation has a deeper consequence. Apply the POT framework at a meta-level: the ``configurations'' are the formulations themselves, the ``projection'' maps formulations to physical predictions, and the ``fiber'' is the set of formulations producing identical physics. A property that is constant on fibers is *physical*; a property that varies across fibers is a *fiber artifact*. Energy localizability varies across the fiber $brace.l$Cartan, TEGR$brace.r$: Cartan says energy is not localizable, TEGR says it is, yet both produce the same field equations, the same gravitational waves, the same frame-dragging. Therefore energy localizability is a fiber artifact --- it is not a property of gravity, but a property of the formulation. Similarly, $K$-admissibility, $Q$-admissibility, and background-dependence are fiber properties. The only admissibility property that is physical (constant on all fibers) is pipeline non-admissibility: every full GR formulation agrees that the $K$--$Q$ pipeline contains a non-admissible step. The century-old ``problem of gravitational energy'' --- whether gravitational energy can be localized --- is, in the language of projection fiber theory, a question about where one sits in the formulation fiber, not a question about physics. This is an instance of the general principle established in Volume III: a statement is independent of a theory if and only if it varies across models within the same projection fiber. Energy localizability varies across the formulation fiber, so it is *independent* of the physics of GR --- undecidable from the field equations alone, exactly as the Continuum Hypothesis is undecidable from the axioms of ZFC.
+
+All 67 results --- 49 formulation comparisons and 18 truncation-ladder properties --- are Z3-verified in the companion theory file.")
+
+
+// =============================================================================
+// Section 9: The Content of ker(Q_GR) — The Weyl Tensor
 // =============================================================================
 
 define sec_weyl = ArxivSection("The Content of ker(Q): The Weyl Tensor",
@@ -327,7 +396,7 @@ We compute this explicitly using the Kleis Cartan pipeline: the Weyl component $
 
 All of these are physical effects that are *not* constrained by local matter --- they are the content of the kernel of $Q$. In POT language: $\"ker\"(Q_(\"GR\"))$ is non-empty and physically rich, containing the degrees of freedom that propagate freely through vacuum.
 
-*The obstruction is in $K$, not $Q$.* This computation clarifies a subtle point. $Q_(\"GR\")$ is well-defined and computable: it is the Ricci contraction, and we verified it on Schwarzschild (producing $R_(mu nu) = 0$) and Minkowski ($R_(mu nu) = 0$). The structural problems of GR --- non-localizability, problem of time, coordinate singularities --- do not arise from $Q$. They arise from $K$: the map from tetrads to curvature, where the $omega and omega$ self-coupling introduces non-admissibility. The quantum gravity community's search for ``the right quantization'' is, in POT language, a search for a $Q$ to solve a problem that lives in $K$.")
+*Where is the obstruction?* In the Cartan formulation, $Q_(\"GR\")$ is well-defined and computable: it is the Ricci contraction, and we verified it on Schwarzschild ($R_(mu nu) = 0$) and Minkowski ($R_(mu nu) = 0$). The non-admissibility resides in $K$: the $omega and omega$ self-coupling. However, as shown in Section 8, this assignment is formulation-dependent. In the teleparallel equivalent of GR, $K$ (torsion $T = d e$) is admissible and the non-admissibility moves to $Q$ (the torsion scalar is quadratic). The formulation-independent statement is: the $K$--$Q$ pipeline necessarily contains a non-admissible step. For the Weyl tensor analysis here, the relevant point is that $Q$ (Ricci contraction) is admissible in the Cartan formulation, so $\"ker\"(Q)$ is well-defined and computable regardless of where the pipeline's non-admissibility resides.")
 
 
 // =============================================================================
@@ -371,7 +440,7 @@ The mechanism is identical to the annihilation of UV divergences in QFT. In the 
 
 For vacuum singularities, the entire curvature is Weyl: $R_(a b c d) = C_(a b c d)$ when $R_(a b) = 0$. The observable projection sees nothing but ``vacuum'' ($T_(a b) = 0$). The singularity --- the divergent tidal stretching, the infinite curvature --- is invisible to $Q$. It is a *structural artifact of the production kernel*, not a feature of the observable output.
 
-To be precise: the Schwarzschild singularity at $r = 0$ is *not* a coordinate artifact --- the curvature invariant $R_(a b c d) R^(a b c d) arrow.r infinity$ is diffeomorphism-invariant and cannot be removed by coordinate choice (unlike the coordinate singularity at $r = 2 M$, which is removable). What the POT framework establishes is a different and stronger claim: *the singularity is a projection artifact*. The divergent curvature is geometrically real, but it resides entirely in $\"ker\"(Q_(\"GR\"))$ --- the sector that the observable projection discards. The shift is not from geometry to coordinates, but from geometry to the production--observation distinction: the singularity is produced by $K$ but erased by $Q$.
+To be precise: the Schwarzschild singularity at $r = 0$ is *not* a coordinate artifact --- the curvature invariant $R_(a b c d) R^(a b c d) arrow.r infinity$ is diffeomorphism-invariant and cannot be removed by coordinate choice (unlike the coordinate singularity at $r = 2 M$, which is removable). What the POT framework establishes is a different and stronger claim: *the singularity is a projection artifact*. The divergent curvature is geometrically real, but it resides entirely in $\"ker\"(Q_(\"GR\"))$ --- the sector that the observable projection discards. The shift is not from geometry to coordinates, but from geometry to the production--observation distinction: the singularity is produced by $K$ but erased by $Q$. A subtlety: in the teleparallel formulation (Section 8), $K$ is admissible and gravitational energy is localizable, so the singularity corresponds to a well-defined infinite energy concentration --- not merely undefined divergent curvature. $Q$ still annihilates it (the field equations still yield vacuum), but what is being annihilated is richer in TEGR than in Cartan. Whether the singularity is ``just geometry'' or ``localized infinite energy'' is a formulation fiber property (Section 8); its annihilation by $Q$ is not.
 
 *The observability criterion.* Within Projected Ontology Theory, physical observables are identified with $\"im\"(Q)$: a quantity is physically accessible if and only if it survives the observable projection. This criterion formalizes standard practice in field theory, where gauge-dependent quantities (Yang--Mills), coordinate-dependent quantities (GR), and scheme-dependent quantities (QFT renormalization) are not regarded as physical. Consequently, divergences that lie entirely in $\"ker\"(Q)$ do not correspond to observable singularities but to structural features of the production kernel.
 
@@ -419,6 +488,8 @@ We can state this as a principle:
 
 For Yang--Mills: essential observables include charges $arrow.r$ charges confined by non-admissibility $arrow.r$ restoration required. For GR: essential observables are geometric $arrow.r$ geometry survives non-admissibility $arrow.r$ no restoration required.
 
+A subtlety: the Projection Sufficiency Principle refers to the $K$--$Q$ pipeline as a whole. As shown in Section 8, the location of non-admissibility within the pipeline is formulation-dependent: in the Cartan formulation it resides in $K$; in the teleparallel formulation it resides in $Q$. The principle applies regardless of where the non-admissible step sits, because it asks whether the *composite* pipeline $Q compose K$ hides essential observables.
+
 This reframes the relationship between the Higgs mechanism and GR. The question is not ``where is the gravitational Higgs?'' The question is ``does $Q_(\"GR\")$ need one?'' For the Higgs question specifically --- does non-admissibility hide essential observables? --- the answer is no. The binary pulsar, frame-dragging measurements, and gravitational wave detections are all consistent with geometric predictions of GR. Non-admissibility does not confine geometric observables in the way it confines charges in Yang--Mills.
 
 But the flat rotation curve problem introduces a deeper uncertainty. The admissible logarithmic kernel (Volume III) explains galactic rotation curves without dark matter, where the non-admissible GR kernel cannot. Read one way, this is evidence that the universe prefers admissible kernels --- that non-admissibility in GR is a genuine obstruction. But the Newtonian kernel is also admissible and also fails at rotation curves, producing Keplerian decline just like GR's weak-field limit. Admissibility does not select the correct kernel; the specific form of the Green's function does. We therefore cannot conclude that the universe systematically honors or violates admissibility. The data underdetermines the principle.
@@ -443,7 +514,9 @@ The admissible theories do not raise the question of restoration at all --- thei
 
 *The evidentiary status of non-admissibility in GR.* A further complication deserves emphasis. The three gravitational observations cited above --- binary pulsar decay, frame-dragging, and gravitational waves --- are all predictions of *linearized* GR, which is admissible. The quadrupole formula is a linearized/post-Newtonian result. The Lense--Thirring effect is derived from the gravitomagnetic potential $h_(0 i)$ of the linearized metric. The gravitational wave equation is the linearized Einstein equation. The only claimed observation that requires the nonlinear $omega and omega$ self-coupling is the specific merger waveform shape in LIGO data, extracted via matched filtering against templates derived from the nonlinear theory. The evidence for the non-admissible part of GR --- the very structure this paper analyzes --- is therefore thinner than commonly presented. The cleanest gravitational measurements do not distinguish between linearized and full GR.
 
-*What this paper does not do.* We do not derive the Einstein field equations from first principles, nor do we resolve the problem of time dynamically, nor do we provide a concrete quantum kernel $K$ that resolves the Schwarzschild singularity. These require physical content beyond the algebraic framework developed here. What we establish is the structural layer beneath: the non-admissibility of the GR kernel, the role of $Q$ as the arbiter of whether non-admissibility requires dynamical correction, and the classification of singularities by their position relative to $\"ker\"(Q)$.")
+*Formulation independence.* The non-admissibility result is not an artifact of the Cartan variables. We analyze four formulations of GR (Cartan, Palatini, self-coupled spin-2, teleparallel) and find that every one has a non-admissible step in the $K$--$Q$ pipeline. The teleparallel formulation is the illuminating case: the production kernel ($T = d e$, torsion) is admissible, but the non-admissibility moves to the observable projection (the torsion scalar is quadratic in $T$). The non-admissibility cannot be eliminated; it can only be moved between $K$ and $Q$. This strengthens the paper's claims from the Cartan-specific ``$K$ is non-admissible'' to the formulation-independent ``the $K$--$Q$ pipeline is non-admissible.''
+
+*What this paper does not do.* We do not derive the Einstein field equations from first principles, nor do we resolve the problem of time dynamically, nor do we provide a concrete quantum kernel $K$ that resolves the Schwarzschild singularity. These require physical content beyond the algebraic framework developed here. What we establish is the structural layer beneath: the non-admissibility of the GR $K$--$Q$ pipeline (shown to be formulation-independent), the role of $Q$ as the arbiter of whether non-admissibility requires dynamical correction, and the classification of singularities by their position relative to $\"ker\"(Q)$.")
 
 
 // =============================================================================
@@ -451,25 +524,25 @@ The admissible theories do not raise the question of restoration at all --- thei
 // =============================================================================
 
 define sec_conclusion = ArxivSection("Conclusion",
-"We have shown, using the Kleis Cartan geometry pipeline, that the General Relativity production kernel is non-admissible. The proof is computational: we evaluate the admissibility defect $Delta(e_A, e_B) = K(e_A + e_B) - K(e_A) - K(e_B)$ on the Schwarzschild tetrad and a radial perturbation, obtaining a nonzero symbolic expression. We isolate the $omega and omega$ self-coupling as the source, paralleling the $A and A$ term in Yang--Mills.
+"This paper is not primarily about the non-admissibility of GR --- it is about how to read GR correctly: how to distinguish what is physical from what is formulation-dependent, and what is empirically established from what remains open. The $K$--$Q$ framework provides the coordinate system for this classification.
 
-Beyond the initial proof, we established the full fiber interpretation: diffeomorphism orbits are the projection fibers of GR, and non-admissibility forces the kernel image to vary across these fibers, producing non-localizability as a consequence of the Main Theorem of projection fiber theory. We identified the Gribov analog, the observable hierarchy, and the admissibility boundary between full and linearized GR. The Weyl tensor was computed as the explicit content of $\"ker\"(Q_(\"GR\"))$.
+*The computation.* The GR production kernel is non-admissible: the admissibility defect $Delta eq.not 0$ on the Schwarzschild tetrad, with the $omega and omega$ self-coupling as the source. This parallels the $A and A$ term in Yang--Mills. The Weyl tensor is the explicit content of $\"ker\"(Q_(\"GR\"))$, and the Schwarzschild singularity lives entirely within it --- a production artifact that the observable projection annihilates.
 
-The most significant result is the re-interpretation of the observable projection $Q$. In the Yang--Mills case, we argued that the Higgs mechanism is admissibility restoration --- a dynamical field that moves confined charges from $\"ker\"(Q)$ back into $\"im\"(Q)$. The GR case reveals that this is only half the story. The full principle is:
+*The projection question.* The same algebraic non-admissibility produces different physical consequences depending on what $Q$ requires. In Yang--Mills, $Q$ needs charges, non-admissibility hides them, and the Higgs is required. In GR, $Q$ needs geometry, geometry survives non-admissibility, and no restoration is needed. The Projection Sufficiency Principle: non-admissibility requires dynamical restoration if and only if the essential observables lie in the sector it hides. This makes $Q$ the arbiter, not a passive filter.
 
-*Non-admissibility of $K$ requires dynamical restoration if and only if $\"im\"(Q)$ is insufficient for observation.*
+*The formulation question.* Non-admissibility is a property of GR itself, not of Cartan variables. In every full formulation --- Cartan, Palatini, self-coupled spin-2, teleparallel --- the $K$--$Q$ pipeline contains a non-admissible step. But *where* it sits (in $K$ or $Q$), whether energy is localizable, and whether a background is needed are formulation fiber properties: they vary across physically equivalent formulations and are therefore not physical. The century-old problem of gravitational energy is a fiber question --- undecidable from the field equations --- in the same formal sense as the Continuum Hypothesis is undecidable from ZFC.
 
-In Yang--Mills, the essential observables (charges, masses) are hidden by non-admissibility, so the Higgs is required. In GR, the geometric observables (tidal forces, gravitational waves, frame-dragging) survive non-admissibility intact. Non-admissibility does not hide the observables that $Q_(\"GR\")$ projects onto in the way it hides charges in Yang--Mills.
+*The empirical question.* The three cleanest gravitational confirmations --- binary pulsar decay, frame-dragging, gravitational waves --- are predictions of linearized GR, which is admissible. The only evidence for the nonlinear $omega and omega$ self-coupling is the LIGO merger waveform, the most model-dependent of all gravitational measurements. The Deser construction shows that non-admissibility is binary: no consistent theory lies between the admissible linearized theory ($n = 0$) and the non-admissible full theory ($n = infinity$). The physical necessity of the nonlinear sector is not yet cleanly established.
 
-This promotes $Q$ from a passive algebraic filter to the *arbiter* of whether non-admissibility has physical consequences. The kernel $K$ is non-admissible in both cases for the same algebraic reason ($omega and omega$ versus $A and A$). But the universe responds to the pair $(K, Q)$, not to $K$ alone. Where projection is sufficient (GR geometric observables), non-admissibility is tolerated; where it is insufficient (Yang--Mills charges), nature provides a dynamical fix.
+*What the framework provides.* The $K$--$Q$ pipeline, combined with projection fiber theory, yields a three-way classification:
 
-A complication sharpens the picture. The three gravitational observations commonly cited as confirming GR --- binary pulsar decay, frame-dragging, and gravitational waves --- are all predictions of *linearized* GR, which is admissible. The only claimed evidence for the nonlinear $omega and omega$ term is the specific merger waveform in LIGO data, extracted via matched filtering against GR-derived templates. The evidence for full non-admissible GR, as distinct from its admissible linearization, rests on a narrow base. Meanwhile, the admissible logarithmic kernel (Volume III) explains flat rotation curves where both GR and Newton fail --- but this success is regime-specific, patched at a core radius $R_c$ in a manner structurally analogous to MOND. Whether the universe operates through admissible kernels at all scales, or whether the success of different kernels in different regimes points to a deeper organizing principle, is an open question that the POT framework identifies but does not yet resolve.
+- *Physical content* (constant on formulation fibers): pipeline non-admissibility, field equations, observable predictions.
+- *Formulation artifacts* (varying on fibers): energy localizability, $K$-admissibility, $Q$-admissibility, background-dependence.
+- *Open questions* (empirically underdetermined): whether nature realizes the non-admissible sector, whether admissible kernels operate at all scales.
 
-The singularity analysis stands independent of this uncertainty: the Schwarzschild singularity lives entirely in $\"ker\"(Q_(\"GR\"))$. The curvature diverges, but $Q$ maps it to zero --- the Ricci tensor vanishes for vacuum. The observable projection annihilates the singularity, separating vacuum singularities (in $\"ker\"(Q)$, annihilated) from matter singularities (in $\"im\"(Q)$, observable). This result depends on the structure of $Q$, not on which kernel produced the curvature.
+This classification --- projection, fiber, evidence --- applies beyond GR. Singularities, renormalization, gauge artifacts, and the Higgs mechanism all submit to the same analysis: the $K$--$Q$ framework does not resolve these questions, but it tells you which kind of question you are asking.
 
-The unifying insight is that the curvature formula $R = d omega + omega and omega$, shared in structure by GR and Yang--Mills, produces the same algebraic non-admissibility in both theories. What differs is the observable projection, and the Projection Sufficiency Principle determines whether the universe must respond with a Higgs-like mechanism. But the empirical question --- whether the nonlinear term is physically realized, or whether nature operates through the admissible linearization --- remains open. The Projected Ontology framework provides the language to state, classify, and verify these distinctions precisely.
-
-All 50 results --- 17 by Kleis evaluation of the Cartan pipeline and 33 by the Z3 SMT solver --- are formally verified, with no human intervention in the derivation chain.")
+All results are formally verified: 17 by Kleis evaluation of the Cartan pipeline, 33 by Z3 structural verification, and 67 by Z3 formulation and truncation analysis.")
 
 
 // =============================================================================
@@ -530,6 +603,12 @@ define ref_hulse_taylor = ArxivReference("HT1975",
 define ref_isaacson = ArxivReference("Isa1968",
     "Isaacson, R. A. Gravitational radiation in the limit of high frequency. II. Nonlinear terms and the effective stress tensor. *Phys. Rev.* 166, 1272 (1968).")
 
+define ref_deser = ArxivReference("Des1970",
+    "Deser, S. Self-interaction and gauge invariance. *Gen. Relativ. Gravit.* 1, 9 (1970).")
+
+define ref_maluf = ArxivReference("Mal2013",
+    "Maluf, J. W. The teleparallel equivalent of general relativity. *Annalen Phys.* 525, 339 (2013).")
+
 
 // =============================================================================
 // Assembly
@@ -543,6 +622,7 @@ define all_sections = [
     sec_consequences,
     sec_fibers,
     sec_restoration,
+    sec_formulations,
     sec_weyl,
     sec_prior_work,
     sec_singularity,
@@ -565,7 +645,9 @@ define all_sections = [
     ref_milgrom,
     ref_gpb,
     ref_hulse_taylor,
-    ref_isaacson
+    ref_isaacson,
+    ref_deser,
+    ref_maluf
 ]
 
 define paper = Paper(
