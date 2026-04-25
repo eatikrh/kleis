@@ -114,6 +114,8 @@ EXTRA_ENTRIES = [
      "/docs/papers/divergence_kernels_paper.pdf", 1.0),
     ("docs/papers/moonlight_paper.pdf",
      "/docs/papers/moonlight_paper.pdf", 1.0),
+    ("docs/papers/pot_gr_projection_kernel_paper.pdf",
+     "/docs/papers/pot_gr_projection_kernel_paper.pdf", 1.0),
 ]
 
 
