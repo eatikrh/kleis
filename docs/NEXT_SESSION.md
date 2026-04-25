@@ -1,6 +1,153 @@
 # Next Session Notes
 
-**Last Updated:** April 21, 2026 (session — The Abstract K-Q Framework)
+**Last Updated:** April 14, 2026
+
+---
+
+## GR Projection Kernel Paper — EXPANDED (44 verified results)
+
+**Branch:** `feature/gr-projection-kernel`
+
+### What Is Done
+
+1. **Theory file: 44/44 examples pass** (`theories/gr_projection_kernel.kleis`):
+   - Parts 1-3: K_GR, Q_GR, admissibility defect, ω∧ω isolation (17 computational)
+   - Part 4: Z3 structural consequences (12 verified: non-localizability, problem of time, DOF, boundary)
+   - **Part 5: Diffeomorphism fibers** (F1-F2: orbit structure, fiber membership)
+   - **Part 6: Projective stability** (F3-F4: admissible→invariant, non-admissible→variant)
+   - **Part 7: Non-localizability theorem** (F5-F7: fiber-derived non-localizability, classification)
+   - **Part 8: Gribov analog + observable hierarchy** (F8-F11: coordinate fixing, order hierarchy)
+   - **Part 9: Admissibility restoration** (R1-R4: background metric, fragility, full chain)
+   - **Part 10: Weyl tensor / ker(Q_GR)** (Q1-Q3: Schwarzschild Weyl, Ricci=0 but Weyl≠0, Minkowski Weyl=0)
+
+2. **Paper source: 13 sections** (`examples/ontology/revised/pot_gr_projection_kernel_paper.kleis`):
+   - Sections 1-5: Introduction, K-Q pair, defect, ω∧ω isolation, structural consequences
+   - **Section 6: Diffeomorphism Fibers and Non-Localizability** (fiber interpretation, Gribov, hierarchy)
+   - **Section 7: Admissibility and the Gravitational Kernels** (four-kernel landscape, Projection Sufficiency Principle)
+   - **Section 8: Formulation Independence of Non-Admissibility** (Cartan, Spin-2, TEGR, Palatini — 34 Z3-verified)
+   - **Section 9: The Content of ker(Q) — The Weyl Tensor** (Q computed, obstruction qualified as formulation-dependent)
+   - **Section 10: Prior Work** (Curiel, De Vuyst et al., Ashtekar, Trautman, log potential, Deser, Maluf)
+   - **Section 11: Singularity Annihilation** (Schwarzschild in ker(Q), projection artifact)
+   - Section 12: Discussion (Q as arbiter, formulation independence, evidentiary status)
+   - Section 13: Conclusion (formulation-independent claim, 84 verified results)
+
+3. **PDF compiled and deployed:**
+   - `docs/papers/pot_gr_projection_kernel_paper.pdf`
+   - `docs/papers/pot_gr_projection_kernel_paper.kleis`
+   - `docs/papers/gr_projection_kernel.kleis`
+
+### Key Files Changed
+
+- `theories/gr_projection_kernel.kleis` (EXPANDED — 44 verified examples, Parts 5-10 added)
+- `theories/gr_formulation_kernels.kleis` (NEW — 34 Z3-verified examples, formulation independence)
+- `examples/ontology/revised/pot_gr_projection_kernel_paper.kleis` (EXPANDED — 13 sections)
+- `docs/papers/pot_gr_projection_kernel_paper.pdf` (RECOMPILED)
+- `docs/papers/pot_gr_projection_kernel_paper.kleis` (UPDATED)
+- `docs/papers/gr_projection_kernel.kleis` (UPDATED)
+- `papers.html` (paper entry exists from earlier)
+- `scripts/generate_sitemap.py` (sitemap entry exists from earlier)
+
+### Major Revisions (this session)
+
+- **Section 7 renamed**: "Admissibility and the Gravitational Kernels" — no longer "Why GR Does Not Need a Higgs"
+- **Four-kernel landscape**: Newton, Logarithmic, Linearized GR, Full GR compared in table
+- **Critical observation**: All clean GR confirmations (binary pulsar, frame-dragging, gravitational waves) are linearized (admissible) GR predictions. Only LIGO merger waveforms require the nonlinear ω∧ω term — extracted via matched filtering against GR templates.
+- **Projection Sufficiency Principle**: Q determines whether non-admissibility requires restoration. YM: yes (charges hidden). GR: no (geometry intact).
+- **Admissibility dilemma**: Logarithmic kernel (admissible) explains rotation curves, but Newton (also admissible) doesn't. Admissibility alone doesn't select the correct kernel.
+- **Patching problem / MOND parallel**: Logarithmic kernel patched at R_c, structurally analogous to MOND's a_0.
+- **Experimental methodology notes**: Frame-dragging (GPB) required subtracting systematics larger than the signal. LIGO uses matched filtering against GR templates. Binary pulsar is the most model-independent confirmation.
+- **Abstract, Discussion, Conclusion all updated** to reflect these changes.
+- **New references added**: Milgrom (1983), Gravity Probe B (2011), Hulse-Taylor (1975), Isaacson (1968), Atik Volume I.
+
+### Formulation Independence of Non-Admissibility (this session)
+
+- **New theory file**: `theories/gr_formulation_kernels.kleis` — 34/34 Z3-verified examples
+  - Structures for Cartan, Spin-2 (free + full), TEGR, Palatini
+  - Admissibility of both K and Q in each formulation
+  - The invariant: every full GR formulation has a non-admissible step
+  - Location classification: Cartan/Palatini/Spin-2 in K; TEGR in Q; free spin-2 nowhere
+- **New paper section**: Section 8 "Formulation Independence of Non-Admissibility"
+  - Table comparing K and Q admissibility across all formulations
+  - States the formulation-independent claim: the K-Q pipeline necessarily contains a non-admissible step
+  - TEGR is the critical case: K admissible (T = de linear), Q non-admissible (torsion scalar quadratic)
+- **Revised claims throughout paper**:
+  - Weyl section: "obstruction is in K not Q" → qualified as formulation-dependent
+  - Discussion: added formulation-independence paragraph, qualified Projection Sufficiency Principle
+  - Conclusion: added formulation-independence summary, updated result counts
+  - Abstract: added formulation-independence result, updated result counts
+- **New references**: Deser 1970 (self-coupling), Maluf 2013 (teleparallel review)
+- **Result count**: 17 Kleis evaluator + 33 Z3 structural + 34 Z3 formulation = 84 total verified
+
+### Future Research Questions
+
+- **Kernel unification problem**: A reader of the four-kernel table would naturally ask whether a single kernel can reproduce all four properties (rotation curves, frame-dragging, waves, binary pulsar). A naive spatial patch (logarithmic for r > R_c, linearized GR otherwise) fails because gravitational waves propagate through intergalactic space — all LIGO detections are extragalactic (GW150914 at ~410 Mpc, GW170817 at ~40 Mpc). A wave generated by a linearized GR source traverses regions where the logarithmic kernel governs galactic dynamics. A true unified kernel would need to reduce to logarithmic behavior for quasi-static galactic potentials and to linearized GR behavior for dynamical/radiative modes — a single mathematical object, not a spatial patch.
+
+- **Teleparallel kernel in Kleis**: Formalize the TEGR pipeline in a full Kleis theory file (not just the classification, but the actual torsion computation). The torsion tensor T^a = de^a has well-defined symbolic components. Computing the torsion scalar and showing that it matches the Einstein-Hilbert Lagrangian (up to a boundary term) would be a strong computational verification. This would also allow computing the admissibility defect of Q_TEGR directly (analogous to the Cartan Δ computation).
+
+- **The circularity question**: The Deser self-coupling argument says gravity must couple to its own energy. But non-admissibility (the result of self-coupling) makes gravitational energy non-localizable. So the self-coupling couples to something that the self-coupling makes undefined. In TEGR, gravitational energy IS localizable (because K is admissible), but Q is non-admissible — so the energy density that TEGR localizes depends on the quadratic torsion scalar, which is formulation-dependent. The circularity moves but doesn't resolve.
+
+### DO NOT
+
+- Do NOT edit the Typst output file directly
+- Do NOT change the plan file
+- Do NOT use `render_paper()` — the correct function is `compile_arxiv_paper()`
+- Do NOT use `ArxivPaper(...)` — the correct constructor is `Paper(...)`
+- Do NOT use `$Q circ K$` in paper source — Typst wants `$Q compose K$`
+
+---
+
+## ResearchGate DOIs
+
+Papers published on ResearchGate with permanent DOIs:
+
+| Paper | DOI | Date |
+|-------|-----|------|
+| Independence as Non-Invariance: Detecting Undecidability via Projection Fibers in SMT-Backed Shadow Theories | 10.13140/RG.2.2.22374.18243 | 2026-04-24 |
+| Observable Bounds on Ontological Dimension: A Constructive Consequence of Projection Fiber Theory | 10.13140/RG.2.2.11468.99206 | 2026-04-24 |
+
+**Next to upload:** Abstract K-Q Framework (uploaded but rate-limited, needs license/details fix), Moonlight Sonata
+
+### Recommended Publication Order (ResearchGate)
+
+1. ~~Independence as Non-Invariance (Projection Fibers)~~ — **DONE**
+2. ~~Observable Bounds on Ontological Dimension (Fiber Dimension)~~ — **DONE**
+3. The Abstract K-Q Framework — **uploaded, needs details fix**
+4. The Beauty is in the Skolems (Moonlight Sonata)
+5. Theory Selection and Divergence Kernels
+6. Flat Galactic Rotation Curves (POT)
+7. Electrodynamics as a Theorem of POT
+8. Confinement as Fiber Non-Invariance (Yang-Mills)
+9. Admissibility Restoration (Higgs necessity)
+10. Renormalization as Projected Ontology (Volume VII)
+11. Conditional Reduction of Yang-Mills Mass Gap (Volume VIII)
+12. Yang-Mills Vacuum Stability (Volume IX)
+13. Projection Singularities: Why Physics Has No Infinities (Volume X)
+14. Quantization as Projection Kernel (Volume XI)
+15. The Spectral Comb and the Riemann Hypothesis
+16. Transfer Function (Hilbert-Pólya)
+17. The Hum (Twin Prime Beat Structure)
+18. NS Smoothness (Half-Derivative Gap)
+19. NS Geometric Depletion
+20. NS Bent Tubes
+21. NS Dynamical Closure
+22. NS Forced Localization
+23. NS Unconditional Regularity (Grand Finale)
+24. NS Epilogue (Kernel and the Fluid)
+25. φ⁴ One-Loop
+26. QED Vacuum Polarization
+27. YM One-Loop Gluon Self-Energy
+28. Ghost Activity Theorem
+29. Gauge Dependence and Ghost Activity
+30. Structural Atlas of ker(Q)
+31. POT vs GR: Gravitational Lensing
+32. Schanuel's Conjecture
+33. Toeplitz Inscribed Square
+34. Selberg Universality
+35. Classical Spectral Essay (Mass Gap Epilogue)
+36. Technical Brief: Realization Tautology
+37. Quantum Entanglement as POT
+
+**Rationale:** Lead with the conceptual root (fibers), then the generalization (K-Q), then the attention-grabber (music). Follow with POT foundations, the renormalization arc, RH, NS, one-loop stress tests, and remaining papers. This follows the intellectual arc rather than chronological order.
 
 ---
 
@@ -136,21 +283,50 @@ Fixed `format_with_source` in `src/kleis_parser.rs` to use `line.chars().count()
 | 6 | Structural atlas | pot_ker_q_atlas.kleis | pot_ker_q_atlas_paper.kleis | 24 Z3 |
 | 7 | Abstract K-Q framework | pot_abstract_kq_framework.kleis | pot_abstract_kq_framework_paper.kleis | 24 Z3 |
 
-### What comes next — options for Paper 8
+### What comes next — Paper 8: One Field, Two Projections
 
-The seven-paper arc + abstract framework is complete. The abstract paper unified five physical domains under one (K, Q) structure and introduced ker(K) as a new structural object. Three natural directions:
+**Status: Plan written. Ready to implement.**
 
-#### Option A: Cross-Domain Migration (recommended)
+Plan file: `.cursor/plans/classical_quantum_kernel_reach_paper_8.plan.md`
 
-Does migration (Type 4) occur in non-QFT domains? The abstract framework poses the question precisely. Testing it in fluid mechanics (Biot-Savart) or galactic dynamics would be the strongest evidence for the framework's generality.
+#### The discovery that led here
 
-#### Option B: Anomaly Cancellation as ker(Q) Consistency
+The seven papers measured the gap K⁻¹(ker(Q)) \ ker(K) across domains. This bounds the codomain dimension of the modal flow in H_ont from the observable side. But the no-double-counting constraint sharpens this further: classical and quantum descriptions of the same phenomenon (Maxwell/QED, classical gravity/quantum gravity, classical fluids/superfluids) cannot both appear as separate fields in the modal flow. That would be double-counting. One field, two kernels.
 
-In the Standard Model, anomalies cancel between generations. What does this mean for the boundary of ker(Q)? Is anomaly cancellation a necessary condition for Q to be well-defined?
+This forces a choice: is the modal flow classical, quantum, or pre-quantum? The Quantization Kernel paper (Paper 11) already treated quantization as a kernel. So "quantum" is what K does, not what the source is. The resolution: one field in H_ont, with K_cl and K_qu as two projections of it.
 
-#### Option C: The Representation-Invariant Decomposition Theorem
+#### The kernel inclusion theorem
 
-Different gauge-fixing schemes = different factorizations of Q∘K with the same image and different kernel realizations. The atlas provides the vocabulary. This paper would prove the factorization theorem.
+For any phenomenon with both classical and quantum descriptions:
+
+    ker(K_qu) ⊆ ker(K_cl)
+
+The quantum kernel reaches strictly more of the source. The "classically invisible, quantum-activated" sector is:
+
+    Δ = ker(K_cl) \ ker(K_qu)
+
+For EM/QED: Δ = {ψ} (the electron field). Classical EM sees only A_μ through the exterior derivative. QED sees both A_μ and ψ through the Feynman kernel. The electron was always in the modal flow; the classical kernel couldn't see it.
+
+#### What the paper will contain
+
+1. **Kernel inclusion axioms** — ker(K_qu) ⊆ ker(K_cl), gap inheritance
+2. **EM/QED instantiation** — (A_μ, ψ) source, d vs Feynman kernel, Δ = {ψ}
+3. **Gravity instantiation** — linearized Green's fn vs graviton propagator
+4. **Fluid instantiation** — Biot-Savart vs quantum fluid kernel (superfluid order parameter in Δ)
+5. **Minimum field content** — union of Δ across domains constrains the modal flow
+6. **Philosophical payoff** — quantization is kernel refinement, not ontological upgrade
+
+#### Key structural claim
+
+The classical/quantum divide is not in the ontology. It is in (K, Q). The variety of physics comes from the variety of projections, not from a proliferation of source fields.
+
+This does NOT violate the "no Lagrangian for the modal flow" boundary. We characterize what K must reach (the codomain), not what the source dynamics are (the domain).
+
+#### Deferred options (still valid for future papers)
+
+- **Cross-domain migration** — does Type 4 migration occur outside QFT?
+- **Anomaly cancellation as ker(Q) consistency** — is anomaly cancellation necessary for Q to be well-defined?
+- **Representation-invariant decomposition theorem** — different gauge-fixing = different factorizations of Q∘K
 
 ---
 

@@ -1,0 +1,48 @@
+---
+description: Kleis document generation pipeline rules
+globs: examples/**/*.kleis, theories/**/*.kleis
+alwaysApply: false
+---
+
+# Document Generation Pipeline
+
+When compiling Kleis documents to PDF, follow this exact pattern:
+
+## Compile example block — ALWAYS use typst_raw()
+
+```kleis
+// ✅ CORRECT — typst_raw() produces unquoted output
+example "compile_paper" {
+    let typst = compile_arxiv_paper(paper)
+    out(typst_raw(typst))
+}
+
+// ❌ WRONG — output will have wrapping quotes, breaking Typst
+example "compile_paper" {
+    out(compile_arxiv_paper(paper))
+}
+```
+
+## Command line — ALWAYS use --raw-output
+
+```bash
+# ✅ CORRECT
+kleis test --raw-output --example compile_paper my_paper.kleis > my_paper.typ
+typst compile my_paper.typ
+
+# ❌ WRONG — banners (✅/❌) will appear in Typst output
+kleis test --example compile_paper my_paper.kleis > my_paper.typ
+```
+
+## Both are required
+
+- `typst_raw()` in code → removes wrapping quotes from strings
+- `--raw-output` on CLI → suppresses test banners
+
+Without both, the generated `.typ` file will fail to compile or have a stray `"` on the first page.
+
+## String content rules
+
+- Use `---` for em-dashes inside strings (not Unicode `—`)
+- Use `--` for en-dashes (not Unicode `–`)
+- Keywords must be a single comma-separated string, not a list

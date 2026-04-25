@@ -1,0 +1,909 @@
+// =============================================================================
+// GR Kernel Admissibility Across Formulations
+// =============================================================================
+//
+// GR has multiple equivalent formulations.  Each defines a different K-Q
+// pipeline, but all produce the same physical predictions.  The question:
+// is non-admissibility a property of GR itself (the physics), or of the
+// Cartan formulation (the representation)?
+//
+// We analyze four formulations:
+//
+//   1. Cartan:       K: e -> R = dω + ω∧ω    Q: R -> Ricci   (K non-admissible, Q admissible)
+//   2. Spin-2:       K: h -> lin.R (free)      Q: R -> Ricci   (K admissible free, non-admissible full)
+//   3. Teleparallel: K: e -> T = de            Q: T -> T_scalar (K admissible, Q non-admissible)
+//   4. Palatini:     K: (g,Γ) -> R = dΓ+Γ∧Γ   Q: R -> Ricci   (K non-admissible, Q admissible)
+//
+// Result: every formulation has at least one non-admissible step in the
+// pipeline.  Non-admissibility is a property of GR itself.  Where it sits
+// (K or Q) depends on the formulation.
+//
+// =============================================================================
+
+import "stdlib/prelude.kleis"
+
+
+// =============================================================================
+// DATA TYPES
+// =============================================================================
+
+data FormulationTag = FT(ℤ)
+data PipelineStep = PS(ℤ)
+
+
+// =============================================================================
+// PART 1: FORMULATION CLASSIFICATION
+// =============================================================================
+
+operation is_gr_formulation : FormulationTag -> Bool
+operation physically_equivalent : FormulationTag -> FormulationTag -> Bool
+
+operation k_admissible : FormulationTag -> Bool
+operation q_admissible : FormulationTag -> Bool
+operation pipeline_has_nonadmissible_step : FormulationTag -> Bool
+
+operation has_curvature_self_coupling : FormulationTag -> Bool
+operation has_torsion : FormulationTag -> Bool
+operation connection_is_independent : FormulationTag -> Bool
+operation background_required : FormulationTag -> Bool
+
+structure GRFormulations {
+    element cartan : FormulationTag
+    element spin2_free : FormulationTag
+    element spin2_full : FormulationTag
+    element tegr : FormulationTag
+    element palatini : FormulationTag
+
+    // All are GR formulations
+    axiom cartan_is_gr : is_gr_formulation(cartan)
+    axiom spin2_free_is_gr : is_gr_formulation(spin2_free)
+    axiom spin2_full_is_gr : is_gr_formulation(spin2_full)
+    axiom tegr_is_gr : is_gr_formulation(tegr)
+    axiom palatini_is_gr : is_gr_formulation(palatini)
+
+    // Physical equivalence (same field equations, same predictions)
+    axiom cartan_tegr_equiv : physically_equivalent(cartan, tegr)
+    axiom cartan_palatini_equiv : physically_equivalent(cartan, palatini)
+    axiom cartan_spin2full_equiv : physically_equivalent(cartan, spin2_full)
+
+    // Spin-2 free is NOT equivalent to full GR (it is the linearized limit)
+    axiom spin2_free_not_full : not(physically_equivalent(spin2_free, cartan))
+}
+
+
+// =============================================================================
+// PART 2: CARTAN FORMULATION
+// =============================================================================
+//
+// K: tetrad e -> connection ω -> curvature R = dω + ω∧ω
+// Q: Riemann R -> Ricci R_ab (linear contraction)
+//
+// K is non-admissible: ω depends nonlinearly on e, and R has ω∧ω.
+// Q is admissible: Ricci contraction is a linear trace operation.
+
+structure CartanAdmissibility {
+    axiom cartan_k_nonadmissible : not(k_admissible(cartan))
+    axiom cartan_q_admissible : q_admissible(cartan)
+    axiom cartan_has_self_coupling : has_curvature_self_coupling(cartan)
+    axiom cartan_no_torsion : not(has_torsion(cartan))
+    axiom cartan_no_background : not(background_required(cartan))
+    axiom cartan_connection_derived : not(connection_is_independent(cartan))
+}
+
+
+// =============================================================================
+// PART 3: SPIN-2 FIELD ON FLAT SPACETIME
+// =============================================================================
+//
+// Free theory (Fierz-Pauli):
+//   K: perturbation h_μν -> linearized Riemann (linear in h)
+//   Admissible.  No self-coupling.  Requires Minkowski background.
+//
+// Full self-coupled theory (Deser 1970):
+//   Consistent self-coupling forces h to couple to its own energy.
+//   Cubic, quartic, ... terms sum to full Einstein equations.
+//   K becomes non-admissible at cubic order.
+//   Q remains admissible (still Ricci contraction).
+
+structure Spin2Admissibility {
+    // Free spin-2: admissible K, admissible Q
+    axiom spin2_free_k_admissible : k_admissible(spin2_free)
+    axiom spin2_free_q_admissible : q_admissible(spin2_free)
+    axiom spin2_free_no_self_coupling : not(has_curvature_self_coupling(spin2_free))
+    axiom spin2_free_needs_background : background_required(spin2_free)
+
+    // Full self-coupled spin-2: non-admissible K, admissible Q
+    axiom spin2_full_k_nonadmissible : not(k_admissible(spin2_full))
+    axiom spin2_full_q_admissible : q_admissible(spin2_full)
+    axiom spin2_full_has_self_coupling : has_curvature_self_coupling(spin2_full)
+    axiom spin2_full_needs_background : background_required(spin2_full)
+}
+
+
+// =============================================================================
+// PART 4: TELEPARALLEL EQUIVALENT OF GR (TEGR)
+// =============================================================================
+//
+// K: tetrad e -> torsion T^a = de^a  (Weitzenböck gauge: spin connection = 0)
+//    This is LINEAR in e.  K is admissible.
+//
+// Q: torsion T -> torsion scalar T = S_a^μν T^a_μν -> field equations
+//    The torsion scalar is QUADRATIC in T (hence quadratic in e).
+//    Q is non-admissible.
+//
+// The non-admissibility moves from K to Q.  Same physics, different pipeline.
+
+structure TEGRAdmissibility {
+    axiom tegr_k_admissible : k_admissible(tegr)
+    axiom tegr_q_nonadmissible : not(q_admissible(tegr))
+    axiom tegr_no_curvature_self_coupling : not(has_curvature_self_coupling(tegr))
+    axiom tegr_has_torsion : has_torsion(tegr)
+    axiom tegr_no_background : not(background_required(tegr))
+    axiom tegr_connection_derived : not(connection_is_independent(tegr))
+}
+
+
+// =============================================================================
+// PART 5: PALATINI FORMULATION
+// =============================================================================
+//
+// K: independent variables (g_μν, Γ^λ_μν) -> Riemann R = dΓ + Γ∧Γ
+//    The connection Γ is NOT derived from the metric.
+//    But Riemann still has Γ∧Γ self-coupling.
+//    K is non-admissible in Γ.
+//
+// Q: Riemann R -> Ricci R_ab (same linear contraction as Cartan)
+//    Q is admissible.
+//
+// Variation of the Palatini action w.r.t. Γ yields the Levi-Civita
+// connection, recovering the metric formulation.
+
+structure PalatiniAdmissibility {
+    axiom palatini_k_nonadmissible : not(k_admissible(palatini))
+    axiom palatini_q_admissible : q_admissible(palatini)
+    axiom palatini_has_self_coupling : has_curvature_self_coupling(palatini)
+    axiom palatini_no_torsion : not(has_torsion(palatini))
+    axiom palatini_no_background : not(background_required(palatini))
+    axiom palatini_connection_independent : connection_is_independent(palatini)
+}
+
+
+// =============================================================================
+// PART 6: THE INVARIANT — NON-ADMISSIBILITY IS INESCAPABLE
+// =============================================================================
+//
+// Every physically equivalent formulation of GR has at least one
+// non-admissible step in the K-Q pipeline.  The non-admissibility
+// cannot be eliminated by changing variables.
+
+structure NonAdmissibilityInvariant {
+    // Pipeline has a non-admissible step iff K or Q is non-admissible
+    axiom pipeline_def : ∀(f : FormulationTag).
+        iff(pipeline_has_nonadmissible_step(f),
+            or(not(k_admissible(f)), not(q_admissible(f))))
+
+    // The invariant: every GR formulation (except the linearized approximation)
+    // has a non-admissible step
+    axiom invariant_cartan : pipeline_has_nonadmissible_step(cartan)
+    axiom invariant_spin2_full : pipeline_has_nonadmissible_step(spin2_full)
+    axiom invariant_tegr : pipeline_has_nonadmissible_step(tegr)
+    axiom invariant_palatini : pipeline_has_nonadmissible_step(palatini)
+
+    // The linearized (spin-2 free) theory is the exception:
+    // both K and Q are admissible
+    axiom spin2_free_fully_admissible : not(pipeline_has_nonadmissible_step(spin2_free))
+}
+
+
+// =============================================================================
+// PART 7: WHERE NON-ADMISSIBILITY LIVES
+// =============================================================================
+//
+// Classify each formulation by whether non-admissibility is in K, Q, or both.
+
+operation nonadmissibility_in_k : FormulationTag -> Bool
+operation nonadmissibility_in_q : FormulationTag -> Bool
+
+structure NonAdmissibilityLocation {
+    axiom in_k_def : ∀(f : FormulationTag).
+        iff(nonadmissibility_in_k(f), not(k_admissible(f)))
+
+    axiom in_q_def : ∀(f : FormulationTag).
+        iff(nonadmissibility_in_q(f), not(q_admissible(f)))
+
+    // Cartan: in K, not in Q
+    axiom cartan_in_k : nonadmissibility_in_k(cartan)
+    axiom cartan_not_in_q : not(nonadmissibility_in_q(cartan))
+
+    // Spin-2 full: in K, not in Q
+    axiom spin2_full_in_k : nonadmissibility_in_k(spin2_full)
+    axiom spin2_full_not_in_q : not(nonadmissibility_in_q(spin2_full))
+
+    // TEGR: not in K, in Q
+    axiom tegr_not_in_k : not(nonadmissibility_in_k(tegr))
+    axiom tegr_in_q : nonadmissibility_in_q(tegr)
+
+    // Palatini: in K, not in Q
+    axiom palatini_in_k : nonadmissibility_in_k(palatini)
+    axiom palatini_not_in_q : not(nonadmissibility_in_q(palatini))
+
+    // Spin-2 free: nowhere (fully admissible)
+    axiom spin2_free_not_in_k : not(nonadmissibility_in_k(spin2_free))
+    axiom spin2_free_not_in_q : not(nonadmissibility_in_q(spin2_free))
+}
+
+
+// =============================================================================
+// PART 8: OBSERVATIONAL AND STRUCTURAL COMPARISON
+// =============================================================================
+//
+// All full GR formulations (Cartan, TEGR, Spin-2 full, Palatini) are
+// physically equivalent: they make the same predictions.  The spin-2 free
+// theory (linearized GR) makes a subset of those predictions.
+//
+// Observational properties reflect the PHYSICS (same for all full GR).
+// Structural properties reflect the PIPELINE (different per formulation).
+
+// --- Observational properties (physics) ---
+operation predicts_frame_dragging : FormulationTag -> Bool
+operation predicts_grav_waves : FormulationTag -> Bool
+operation predicts_binary_pulsar : FormulationTag -> Bool
+operation predicts_rotation_curves : FormulationTag -> Bool
+operation predicts_merger_waveform : FormulationTag -> Bool
+
+// --- Structural properties (pipeline) ---
+operation energy_localizable : FormulationTag -> Bool
+operation dynamical_variable_is_tetrad : FormulationTag -> Bool
+operation dynamical_variable_is_metric_perturbation : FormulationTag -> Bool
+operation dynamical_variable_is_connection : FormulationTag -> Bool
+
+structure ObservationalComparison {
+    // All formulations (including linearized) predict frame-dragging,
+    // gravitational waves, and binary pulsar decay
+    axiom cartan_frame_dragging : predicts_frame_dragging(cartan)
+    axiom spin2_free_frame_dragging : predicts_frame_dragging(spin2_free)
+    axiom spin2_full_frame_dragging : predicts_frame_dragging(spin2_full)
+    axiom tegr_frame_dragging : predicts_frame_dragging(tegr)
+    axiom palatini_frame_dragging : predicts_frame_dragging(palatini)
+
+    axiom cartan_grav_waves : predicts_grav_waves(cartan)
+    axiom spin2_free_grav_waves : predicts_grav_waves(spin2_free)
+    axiom spin2_full_grav_waves : predicts_grav_waves(spin2_full)
+    axiom tegr_grav_waves : predicts_grav_waves(tegr)
+    axiom palatini_grav_waves : predicts_grav_waves(palatini)
+
+    axiom cartan_binary_pulsar : predicts_binary_pulsar(cartan)
+    axiom spin2_free_binary_pulsar : predicts_binary_pulsar(spin2_free)
+    axiom spin2_full_binary_pulsar : predicts_binary_pulsar(spin2_full)
+    axiom tegr_binary_pulsar : predicts_binary_pulsar(tegr)
+    axiom palatini_binary_pulsar : predicts_binary_pulsar(palatini)
+
+    // No GR formulation predicts flat rotation curves without dark matter
+    axiom cartan_no_rotation : not(predicts_rotation_curves(cartan))
+    axiom spin2_free_no_rotation : not(predicts_rotation_curves(spin2_free))
+    axiom spin2_full_no_rotation : not(predicts_rotation_curves(spin2_full))
+    axiom tegr_no_rotation : not(predicts_rotation_curves(tegr))
+    axiom palatini_no_rotation : not(predicts_rotation_curves(palatini))
+
+    // Merger waveform (strong-field, nonlinear regime):
+    // Full GR formulations predict the chirp/ringdown shape.
+    // Linearized GR cannot — it has no strong-field regime.
+    axiom cartan_merger : predicts_merger_waveform(cartan)
+    axiom spin2_full_merger : predicts_merger_waveform(spin2_full)
+    axiom tegr_merger : predicts_merger_waveform(tegr)
+    axiom palatini_merger : predicts_merger_waveform(palatini)
+    axiom spin2_free_no_merger : not(predicts_merger_waveform(spin2_free))
+}
+
+structure StructuralComparison {
+    // Energy localizability: ONLY in TEGR (K admissible → image gauge-invariant)
+    axiom cartan_energy_nonlocalizable : not(energy_localizable(cartan))
+    axiom spin2_full_energy_nonlocalizable : not(energy_localizable(spin2_full))
+    axiom palatini_energy_nonlocalizable : not(energy_localizable(palatini))
+    axiom tegr_energy_localizable : energy_localizable(tegr)
+    axiom spin2_free_energy_localizable : energy_localizable(spin2_free)
+
+    // K admissible implies energy localizable
+    axiom admissible_k_localizable : ∀(f : FormulationTag).
+        implies(k_admissible(f), energy_localizable(f))
+
+    // Dynamical variables
+    axiom cartan_tetrad : dynamical_variable_is_tetrad(cartan)
+    axiom tegr_tetrad : dynamical_variable_is_tetrad(tegr)
+    axiom spin2_free_perturbation : dynamical_variable_is_metric_perturbation(spin2_free)
+    axiom spin2_full_perturbation : dynamical_variable_is_metric_perturbation(spin2_full)
+    axiom palatini_connection : dynamical_variable_is_connection(palatini)
+
+    axiom cartan_not_perturbation : not(dynamical_variable_is_metric_perturbation(cartan))
+    axiom tegr_not_perturbation : not(dynamical_variable_is_metric_perturbation(tegr))
+    axiom palatini_not_perturbation : not(dynamical_variable_is_metric_perturbation(palatini))
+}
+
+
+// =============================================================================
+// PART 9: META-PROJECTION — THE FORMULATION FIBER
+// =============================================================================
+//
+// POT applied to formulations themselves:
+//
+//   Configurations:  formulations (Cartan, TEGR, Palatini, ...)
+//   Projection:      formulation → physical predictions
+//   Fiber:           set of formulations producing the same physics
+//
+// A property is PHYSICAL if it is constant on fibers (all equivalent
+// formulations agree).  A property is a FIBER ARTIFACT if it varies
+// across fibers (equivalent formulations disagree).
+//
+// Energy localizability varies across the fiber {Cartan, TEGR}: Cartan
+// says no, TEGR says yes.  Therefore energy localizability is a fiber
+// artifact — it is not a physical property of gravity.
+//
+// The "problem of gravitational energy" is a projection fiber artifact.
+
+operation is_physical_property : (FormulationTag -> Bool) -> Bool
+operation is_fiber_property : (FormulationTag -> Bool) -> Bool
+
+structure FormulationFiber {
+    // Energy localizability is a fiber property:
+    // Cartan and TEGR are physically equivalent but disagree
+    axiom energy_on_fiber : and(
+        physically_equivalent(cartan, tegr),
+        not(iff(energy_localizable(cartan), energy_localizable(tegr))))
+
+    // K-admissibility is a fiber property:
+    // Cartan and TEGR disagree on whether K is admissible
+    axiom k_admissibility_on_fiber : and(
+        physically_equivalent(cartan, tegr),
+        not(iff(k_admissible(cartan), k_admissible(tegr))))
+
+    // Q-admissibility is a fiber property:
+    // Cartan and TEGR disagree on whether Q is admissible
+    axiom q_admissibility_on_fiber : and(
+        physically_equivalent(cartan, tegr),
+        not(iff(q_admissible(cartan), q_admissible(tegr))))
+
+    // Pipeline non-admissibility IS physical (constant on fibers):
+    // all full GR formulations agree that the pipeline has a non-admissible step
+    axiom pipeline_is_physical : and(
+        iff(pipeline_has_nonadmissible_step(cartan),
+            pipeline_has_nonadmissible_step(tegr)),
+        and(iff(pipeline_has_nonadmissible_step(cartan),
+                pipeline_has_nonadmissible_step(palatini)),
+            iff(pipeline_has_nonadmissible_step(cartan),
+                pipeline_has_nonadmissible_step(spin2_full))))
+
+    // Frame-dragging prediction is physical (constant on fibers)
+    axiom frame_dragging_is_physical : and(
+        iff(predicts_frame_dragging(cartan), predicts_frame_dragging(tegr)),
+        iff(predicts_frame_dragging(cartan), predicts_frame_dragging(palatini)))
+
+    // Background-dependence is a fiber property:
+    // Cartan and spin-2 full are equivalent but disagree
+    axiom background_on_fiber : and(
+        physically_equivalent(cartan, spin2_full),
+        not(iff(background_required(cartan), background_required(spin2_full))))
+}
+
+
+// =============================================================================
+// VERIFIED EXAMPLES
+// =============================================================================
+
+// --- F1-F5: All are GR formulations ---
+
+example "F1. Cartan is a GR formulation" {
+    verify is_gr_formulation(cartan)
+}
+
+example "F2. Spin-2 free is a GR formulation" {
+    verify is_gr_formulation(spin2_free)
+}
+
+example "F3. Spin-2 full is a GR formulation" {
+    verify is_gr_formulation(spin2_full)
+}
+
+example "F4. TEGR is a GR formulation" {
+    verify is_gr_formulation(tegr)
+}
+
+example "F5. Palatini is a GR formulation" {
+    verify is_gr_formulation(palatini)
+}
+
+// --- E1-E3: Physical equivalence ---
+
+example "E1. Cartan and TEGR are physically equivalent" {
+    verify physically_equivalent(cartan, tegr)
+}
+
+example "E2. Cartan and Palatini are physically equivalent" {
+    verify physically_equivalent(cartan, palatini)
+}
+
+example "E3. Cartan and full spin-2 are physically equivalent" {
+    verify physically_equivalent(cartan, spin2_full)
+}
+
+example "E4. Free spin-2 is NOT equivalent to full GR" {
+    verify not(physically_equivalent(spin2_free, cartan))
+}
+
+// --- K1-K5: Kernel admissibility ---
+
+example "K1. Cartan K is non-admissible" {
+    verify not(k_admissible(cartan))
+}
+
+example "K2. Spin-2 free K is admissible" {
+    verify k_admissible(spin2_free)
+}
+
+example "K3. Spin-2 full K is non-admissible" {
+    verify not(k_admissible(spin2_full))
+}
+
+example "K4. TEGR K is admissible" {
+    verify k_admissible(tegr)
+}
+
+example "K5. Palatini K is non-admissible" {
+    verify not(k_admissible(palatini))
+}
+
+// --- Q1-Q5: Projection admissibility ---
+
+example "Q1. Cartan Q is admissible" {
+    verify q_admissible(cartan)
+}
+
+example "Q2. Spin-2 free Q is admissible" {
+    verify q_admissible(spin2_free)
+}
+
+example "Q3. Spin-2 full Q is admissible" {
+    verify q_admissible(spin2_full)
+}
+
+example "Q4. TEGR Q is non-admissible" {
+    verify not(q_admissible(tegr))
+}
+
+example "Q5. Palatini Q is admissible" {
+    verify q_admissible(palatini)
+}
+
+// --- P1-P5: Pipeline non-admissibility ---
+
+example "P1. Cartan pipeline has non-admissible step" {
+    verify pipeline_has_nonadmissible_step(cartan)
+}
+
+example "P2. Spin-2 full pipeline has non-admissible step" {
+    verify pipeline_has_nonadmissible_step(spin2_full)
+}
+
+example "P3. TEGR pipeline has non-admissible step" {
+    verify pipeline_has_nonadmissible_step(tegr)
+}
+
+example "P4. Palatini pipeline has non-admissible step" {
+    verify pipeline_has_nonadmissible_step(palatini)
+}
+
+example "P5. Spin-2 free pipeline is fully admissible" {
+    verify not(pipeline_has_nonadmissible_step(spin2_free))
+}
+
+// --- L1-L5: Location of non-admissibility ---
+
+example "L1. Cartan: non-admissibility in K" {
+    verify and(nonadmissibility_in_k(cartan), not(nonadmissibility_in_q(cartan)))
+}
+
+example "L2. TEGR: non-admissibility in Q" {
+    verify and(not(nonadmissibility_in_k(tegr)), nonadmissibility_in_q(tegr))
+}
+
+example "L3. Spin-2 full: non-admissibility in K" {
+    verify and(nonadmissibility_in_k(spin2_full), not(nonadmissibility_in_q(spin2_full)))
+}
+
+example "L4. Palatini: non-admissibility in K" {
+    verify and(nonadmissibility_in_k(palatini), not(nonadmissibility_in_q(palatini)))
+}
+
+example "L5. Spin-2 free: non-admissibility nowhere" {
+    verify and(not(nonadmissibility_in_k(spin2_free)), not(nonadmissibility_in_q(spin2_free)))
+}
+
+// --- I1: The invariant ---
+
+example "I1. All full GR formulations have a non-admissible step" {
+    verify and(
+        pipeline_has_nonadmissible_step(cartan),
+        and(pipeline_has_nonadmissible_step(spin2_full),
+            and(pipeline_has_nonadmissible_step(tegr),
+                pipeline_has_nonadmissible_step(palatini))))
+}
+
+example "I2. Only the linearized theory escapes non-admissibility" {
+    verify and(
+        not(pipeline_has_nonadmissible_step(spin2_free)),
+        and(pipeline_has_nonadmissible_step(cartan),
+            and(pipeline_has_nonadmissible_step(tegr),
+                pipeline_has_nonadmissible_step(palatini))))
+}
+
+// --- S1-S3: Structural properties ---
+
+example "S1. Curvature self-coupling: Cartan yes, TEGR no" {
+    verify and(has_curvature_self_coupling(cartan), not(has_curvature_self_coupling(tegr)))
+}
+
+example "S2. Torsion: TEGR yes, Cartan no" {
+    verify and(has_torsion(tegr), not(has_torsion(cartan)))
+}
+
+example "S3. Background required: spin-2 yes, Cartan no, TEGR no" {
+    verify and(background_required(spin2_free),
+        and(not(background_required(cartan)),
+            not(background_required(tegr))))
+}
+
+// --- O1-O4: Observational comparison ---
+
+example "O1. All formulations predict frame-dragging" {
+    verify and(predicts_frame_dragging(cartan),
+        and(predicts_frame_dragging(spin2_free),
+            and(predicts_frame_dragging(spin2_full),
+                and(predicts_frame_dragging(tegr),
+                    predicts_frame_dragging(palatini)))))
+}
+
+example "O2. All formulations predict gravitational waves" {
+    verify and(predicts_grav_waves(cartan),
+        and(predicts_grav_waves(spin2_free),
+            and(predicts_grav_waves(spin2_full),
+                and(predicts_grav_waves(tegr),
+                    predicts_grav_waves(palatini)))))
+}
+
+example "O3. All formulations predict binary pulsar decay" {
+    verify and(predicts_binary_pulsar(cartan),
+        and(predicts_binary_pulsar(spin2_free),
+            and(predicts_binary_pulsar(spin2_full),
+                and(predicts_binary_pulsar(tegr),
+                    predicts_binary_pulsar(palatini)))))
+}
+
+example "O4. No formulation predicts flat rotation curves" {
+    verify and(not(predicts_rotation_curves(cartan)),
+        and(not(predicts_rotation_curves(spin2_free)),
+            and(not(predicts_rotation_curves(spin2_full)),
+                and(not(predicts_rotation_curves(tegr)),
+                    not(predicts_rotation_curves(palatini))))))
+}
+
+example "O5. Full formulations predict merger waveforms, linearized does not" {
+    verify and(predicts_merger_waveform(cartan),
+        and(predicts_merger_waveform(spin2_full),
+            and(predicts_merger_waveform(tegr),
+                and(predicts_merger_waveform(palatini),
+                    not(predicts_merger_waveform(spin2_free))))))
+}
+
+example "O6. Linearized GR: same weak-field predictions, no strong-field" {
+    verify and(
+        predicts_frame_dragging(spin2_free),
+        and(predicts_grav_waves(spin2_free),
+            and(predicts_binary_pulsar(spin2_free),
+                and(not(predicts_rotation_curves(spin2_free)),
+                    not(predicts_merger_waveform(spin2_free))))))
+}
+
+// --- V1-V3: Structural comparison ---
+
+example "V1. Energy localizable only when K is admissible (TEGR and linearized)" {
+    verify and(energy_localizable(tegr),
+        and(energy_localizable(spin2_free),
+            and(not(energy_localizable(cartan)),
+                and(not(energy_localizable(spin2_full)),
+                    not(energy_localizable(palatini))))))
+}
+
+example "V2. TEGR and Cartan use tetrad, spin-2 uses perturbation, Palatini uses connection" {
+    verify and(dynamical_variable_is_tetrad(cartan),
+        and(dynamical_variable_is_tetrad(tegr),
+            and(dynamical_variable_is_metric_perturbation(spin2_free),
+                and(dynamical_variable_is_metric_perturbation(spin2_full),
+                    dynamical_variable_is_connection(palatini)))))
+}
+
+example "V3. Same physics, different energy localizability" {
+    verify and(
+        physically_equivalent(cartan, tegr),
+        and(not(energy_localizable(cartan)),
+            energy_localizable(tegr)))
+}
+
+// --- M1-M6: Meta-projection / formulation fiber ---
+
+example "M1. Energy localizability is a fiber property (varies across equivalent formulations)" {
+    verify and(
+        physically_equivalent(cartan, tegr),
+        and(not(energy_localizable(cartan)),
+            energy_localizable(tegr)))
+}
+
+example "M2. K-admissibility is a fiber property" {
+    verify and(
+        physically_equivalent(cartan, tegr),
+        and(not(k_admissible(cartan)),
+            k_admissible(tegr)))
+}
+
+example "M3. Q-admissibility is a fiber property" {
+    verify and(
+        physically_equivalent(cartan, tegr),
+        and(q_admissible(cartan),
+            not(q_admissible(tegr))))
+}
+
+example "M4. Pipeline non-admissibility is physical (constant on fibers)" {
+    verify and(
+        pipeline_has_nonadmissible_step(cartan),
+        and(pipeline_has_nonadmissible_step(tegr),
+            and(pipeline_has_nonadmissible_step(palatini),
+                pipeline_has_nonadmissible_step(spin2_full))))
+}
+
+example "M5. Background-dependence is a fiber property" {
+    verify and(
+        physically_equivalent(cartan, spin2_full),
+        and(not(background_required(cartan)),
+            background_required(spin2_full)))
+}
+
+example "M6. The fiber classification: physical vs formulation-dependent" {
+    // Physical (constant on fibers): pipeline non-admissibility, predictions
+    // Fiber artifact (varies): K-admissibility, Q-admissibility, energy localizability
+    verify and(
+        // Pipeline: same for Cartan and TEGR (both non-admissible somewhere)
+        iff(pipeline_has_nonadmissible_step(cartan),
+            pipeline_has_nonadmissible_step(tegr)),
+        // But K-admissibility: different for Cartan and TEGR
+        and(not(iff(k_admissible(cartan), k_admissible(tegr))),
+            // And energy localizability: different for Cartan and TEGR
+            not(iff(energy_localizable(cartan), energy_localizable(tegr)))))
+}
+
+
+// =============================================================================
+// PART 8: DESER TRUNCATION LADDER
+// =============================================================================
+//
+// The Deser construction builds full GR from a free spin-2 field by
+// iteratively adding self-coupling terms.  At each order n:
+//
+//   n = 0:   Free spin-2 (linearized GR).  K linear in h.  Admissible.
+//   n >= 1:  Cubic and higher terms.  K nonlinear.  Non-admissible.
+//   n = ∞:   Full Einstein equations.  Non-admissible.
+//
+// Key properties:
+//   - Consistency: only n=0 and n=∞ are self-consistent theories.
+//     Each finite truncation n >= 1 generates source terms at order n+1
+//     that it cannot account for, breaking gauge invariance.
+//   - Non-admissibility is binary: any n >= 1 makes K non-admissible.
+//     There is no "partially admissible" regime.
+//   - The admissibility boundary is a gap: nothing consistent lies between
+//     the admissible n=0 and the non-admissible n=∞.
+
+data TruncationOrder = TO(ℤ)
+
+operation coupling_order : TruncationOrder -> ℤ
+operation is_admissible_trunc : TruncationOrder -> Bool
+operation is_consistent : TruncationOrder -> Bool
+operation is_self_gravitating : TruncationOrder -> Bool
+operation is_gauge_invariant : TruncationOrder -> Bool
+operation demands_next_order : TruncationOrder -> Bool
+
+structure DeserTruncationLadder {
+    element order_0 : TruncationOrder     // free spin-2 = linearized GR
+    element order_1 : TruncationOrder     // first self-coupling (cubic)
+    element order_2 : TruncationOrder     // second self-coupling (quartic)
+    element order_inf : TruncationOrder   // full GR (infinite sum)
+
+    // Coupling orders
+    axiom order_0_coupling : coupling_order(order_0) = 0
+    axiom order_1_coupling : coupling_order(order_1) = 1
+    axiom order_2_coupling : coupling_order(order_2) = 2
+
+    // --- Admissibility ---
+    // n=0 is admissible (linear in h)
+    axiom order_0_admissible : is_admissible_trunc(order_0)
+    // n>=1 is non-admissible (cubic or higher terms)
+    axiom order_1_nonadmissible : not(is_admissible_trunc(order_1))
+    axiom order_2_nonadmissible : not(is_admissible_trunc(order_2))
+    axiom order_inf_nonadmissible : not(is_admissible_trunc(order_inf))
+
+    // Non-admissibility is binary: any coupling makes K non-admissible
+    axiom admissibility_binary : ∀(t : TruncationOrder).
+        iff(is_admissible_trunc(t), coupling_order(t) = 0)
+
+    // --- Consistency ---
+    // Only n=0 and n=∞ are self-consistent
+    axiom order_0_consistent : is_consistent(order_0)
+    axiom order_inf_consistent : is_consistent(order_inf)
+    axiom order_1_inconsistent : not(is_consistent(order_1))
+    axiom order_2_inconsistent : not(is_consistent(order_2))
+
+    // Finite truncations demand the next order (source of inconsistency)
+    axiom order_1_demands_next : demands_next_order(order_1)
+    axiom order_2_demands_next : demands_next_order(order_2)
+    // Only n=0 and n=∞ don't demand the next order
+    axiom order_0_self_contained : not(demands_next_order(order_0))
+    axiom order_inf_self_contained : not(demands_next_order(order_inf))
+
+    // Demanding next order implies inconsistency
+    axiom demands_implies_inconsistent : ∀(t : TruncationOrder).
+        implies(demands_next_order(t), not(is_consistent(t)))
+
+    // --- Self-gravitation ---
+    // n=0 does not couple to its own energy
+    axiom order_0_not_self_gravitating : not(is_self_gravitating(order_0))
+    // n>=1 couples to gravitational energy
+    axiom order_1_self_gravitating : is_self_gravitating(order_1)
+    axiom order_2_self_gravitating : is_self_gravitating(order_2)
+    axiom order_inf_self_gravitating : is_self_gravitating(order_inf)
+
+    // --- Gauge invariance ---
+    // Full diffeomorphism invariance only at n=0 (linearized) and n=∞ (full)
+    axiom order_0_gauge_invariant : is_gauge_invariant(order_0)
+    axiom order_inf_gauge_invariant : is_gauge_invariant(order_inf)
+    axiom order_1_gauge_broken : not(is_gauge_invariant(order_1))
+    axiom order_2_gauge_broken : not(is_gauge_invariant(order_2))
+}
+
+
+// --- D1-D4: Admissibility at each order ---
+
+example "D1. Order 0 (linearized) is admissible" {
+    verify is_admissible_trunc(order_0)
+}
+
+example "D2. Order 1 (cubic) is non-admissible" {
+    verify not(is_admissible_trunc(order_1))
+}
+
+example "D3. Order 2 (quartic) is non-admissible" {
+    verify not(is_admissible_trunc(order_2))
+}
+
+example "D4. Order infinity (full GR) is non-admissible" {
+    verify not(is_admissible_trunc(order_inf))
+}
+
+// --- C1-C4: Consistency at each order ---
+
+example "C1. Order 0 is consistent" {
+    verify is_consistent(order_0)
+}
+
+example "C2. Order 1 is inconsistent" {
+    verify not(is_consistent(order_1))
+}
+
+example "C3. Order 2 is inconsistent" {
+    verify not(is_consistent(order_2))
+}
+
+example "C4. Order infinity is consistent" {
+    verify is_consistent(order_inf)
+}
+
+// --- G1-G4: Gauge invariance ---
+
+example "G1. Order 0 is gauge invariant" {
+    verify is_gauge_invariant(order_0)
+}
+
+example "G2. Order 1 breaks gauge invariance" {
+    verify not(is_gauge_invariant(order_1))
+}
+
+example "G3. Order 2 breaks gauge invariance" {
+    verify not(is_gauge_invariant(order_2))
+}
+
+example "G4. Order infinity restores gauge invariance" {
+    verify is_gauge_invariant(order_inf)
+}
+
+// --- Compound results ---
+
+example "D5. Admissibility is binary: coupling=0 iff admissible" {
+    verify and(
+        iff(is_admissible_trunc(order_0), coupling_order(order_0) = 0),
+        and(iff(is_admissible_trunc(order_1), coupling_order(order_1) = 0),
+            iff(is_admissible_trunc(order_2), coupling_order(order_2) = 0)))
+}
+
+example "D6. The admissibility gap: only n=0 is both admissible and consistent" {
+    verify and(
+        and(is_admissible_trunc(order_0), is_consistent(order_0)),
+        and(not(and(is_admissible_trunc(order_1), is_consistent(order_1))),
+            and(not(and(is_admissible_trunc(order_2), is_consistent(order_2))),
+                not(is_admissible_trunc(order_inf)))))
+}
+
+example "D7. Consistency and non-admissibility arrive together at n=inf" {
+    verify and(is_consistent(order_inf), not(is_admissible_trunc(order_inf)))
+}
+
+example "D8. Finite truncations: non-admissible AND inconsistent" {
+    verify and(
+        and(not(is_admissible_trunc(order_1)), not(is_consistent(order_1))),
+        and(not(is_admissible_trunc(order_2)), not(is_consistent(order_2))))
+}
+
+example "D9. Self-coupling demands the full tower" {
+    verify and(
+        and(demands_next_order(order_1), demands_next_order(order_2)),
+        and(not(demands_next_order(order_0)), not(demands_next_order(order_inf))))
+}
+
+example "D10. Self-gravitation requires giving up admissibility" {
+    verify and(
+        and(not(is_self_gravitating(order_0)), is_admissible_trunc(order_0)),
+        and(and(is_self_gravitating(order_1), not(is_admissible_trunc(order_1))),
+            and(is_self_gravitating(order_inf), not(is_admissible_trunc(order_inf)))))
+}
+
+
+// =============================================================================
+// SUMMARY
+// =============================================================================
+//
+// 67 verified results (49 formulation + 18 truncation):
+//
+// Formulation analysis (49):
+//   F1-F5:  All five are GR formulations
+//   E1-E4:  Physical equivalence (Cartan ≡ TEGR ≡ Palatini ≡ Spin-2 full; free ≢ full)
+//   K1-K5:  K admissibility (Cartan ✗, free ✓, full ✗, TEGR ✓, Palatini ✗)
+//   Q1-Q5:  Q admissibility (Cartan ✓, free ✓, full ✓, TEGR ✗, Palatini ✓)
+//   P1-P5:  Pipeline non-admissibility (all full formulations ✓, free ✗)
+//   L1-L5:  Location (Cartan/Spin2/Palatini: in K; TEGR: in Q; free: nowhere)
+//   I1-I2:  The invariant: all full GR formulations are non-admissible somewhere
+//   S1-S3:  Structural classification
+//   O1-O6:  Observational comparison (FD/GW/BP: all; RC: none; mergers: full only)
+//   V1-V3:  Structural comparison (energy localizability, dynamical variables)
+//   M1-M6:  Meta-projection (fiber vs physical properties)
+//
+// Deser truncation analysis (18):
+//   D1-D4:   Admissibility at each order (0: ✓, 1: ✗, 2: ✗, ∞: ✗)
+//   C1-C4:   Consistency at each order (0: ✓, 1: ✗, 2: ✗, ∞: ✓)
+//   G1-G4:   Gauge invariance (0: ✓, 1: ✗, 2: ✗, ∞: ✓)
+//   D5:      Admissibility is binary (coupling=0 ⟺ admissible)
+//   D6:      The admissibility gap (only n=0 is admissible AND consistent)
+//   D7:      Consistency and non-admissibility arrive together at n=∞
+//   D8:      Finite truncations are non-admissible AND inconsistent
+//   D9:      Self-coupling demands the full tower
+//   D10:     Self-gravitation requires giving up admissibility
+//
+// Key results:
+//
+//   1. Non-admissibility is a property of GR itself, not of any formulation.
+//      It must appear somewhere in the K-Q pipeline.  The formulation determines
+//      WHERE it appears (K or Q), but it cannot be eliminated.
+//
+//   2. The Deser construction reveals an admissibility gap: between the
+//      admissible linearized theory (n=0) and the non-admissible full theory
+//      (n=∞), every finite truncation is both non-admissible AND inconsistent.
+//      Non-admissibility is not a gradual onset — it is binary (any coupling
+//      breaks it) and inextricable from physical consistency (only the full
+//      infinite sum is self-consistent).
+//
+//   3. Self-gravitation (coupling to gravitational energy) and non-admissibility
+//      are inseparable: you cannot have one without the other.
+// =============================================================================

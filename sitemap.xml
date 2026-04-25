@@ -7,7 +7,7 @@
   </url>
   <url>
     <loc>https://kleis.io/papers</loc>
-    <lastmod>2026-04-24</lastmod>
+    <lastmod>2026-04-25</lastmod>
     <priority>0.5</priority>
   </url>
   <url>
@@ -393,6 +393,11 @@
   <url>
     <loc>https://kleis.io/docs/papers/moonlight_paper.pdf</loc>
     <lastmod>2026-04-24</lastmod>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://kleis.io/docs/papers/pot_gr_projection_kernel_paper.pdf</loc>
+    <lastmod>2026-04-25</lastmod>
     <priority>1.0</priority>
   </url>
 </urlset>

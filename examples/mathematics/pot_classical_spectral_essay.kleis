@@ -303,5 +303,6 @@ define paper = arxiv_paper(
 )
 
 example "compile" {
-    out(compile_arxiv_paper(paper))
+    let typst = compile_arxiv_paper(paper)
+    out(typst_raw(typst))
 }
