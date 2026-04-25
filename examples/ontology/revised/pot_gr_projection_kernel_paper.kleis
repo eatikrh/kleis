@@ -64,7 +64,7 @@ The key advantage of our approach is that the Cartan pipeline is *computational*
 
 The linearized theory provides the control case. When the background is flat, $omega = 0$, so $omega and omega = 0$, and the kernel becomes admissible. This explains why linearized GR has localizable gravitational energy (carried by the Isaacson stress-energy tensor), an external background time (Minkowski), and freely propagating gravitational waves. The transition from linearized to full GR is the transition across the admissibility boundary.
 
-A striking consequence emerges from the Weyl tensor analysis: the Schwarzschild singularity at $r = 0$ --- a genuine curvature singularity where $R_(a b c d) R^(a b c d) arrow.r infinity$ --- lives entirely in $\"ker\"(Q_(\"GR\")))$. The observable projection maps this divergent curvature to zero ($R_(a b) = 0$). In the POT framework, where physical observables are identified with $\"im\"(Q)$, the vacuum singularity is not an observable divergence but a structural artifact of the production kernel --- following the same pattern as UV divergence annihilation in quantum field theory.
+A striking consequence emerges from the Weyl tensor analysis: the Schwarzschild singularity at $r = 0$ --- a genuine curvature singularity where $R_(a b c d) R^(a b c d) arrow.r infinity$ --- lives entirely in $\"ker\"(Q_(\"GR\"))$. The observable projection maps this divergent curvature to zero ($R_(a b) = 0$). In the POT framework, where physical observables are identified with $\"im\"(Q)$, the vacuum singularity is not an observable divergence but a structural artifact of the production kernel --- following the same pattern as UV divergence annihilation in quantum field theory.
 
 All 50 results are verified: 17 by the Kleis evaluator (symbolic Cartan computations) and 33 by the Z3 SMT solver (structural consequences).")
 
@@ -76,13 +76,25 @@ All 50 results are verified: 17 by the Kleis evaluator (symbolic Cartan computat
 define sec_kq = ArxivSection("GR as a K-Q Pair via Cartan Geometry",
 "We identify the two operators that define GR within the POT framework.
 
-*Production kernel* $K_(\"GR\")$. The production kernel maps a tetrad $e^a$ to the Riemann curvature tensor via Cartan's structure equations. The pipeline is:
-$ e^a arrow.r omega^a_b arrow.r R^a_b = d omega^a_b + omega^a_c and omega^c_b $
-where the connection $omega^a_b$ is the unique Levi-Civita connection satisfying torsion-freedom ($d e^a + omega^a_b and e^b = 0$) and metric compatibility ($omega_(a b) = -omega_(b a)$). In Kleis, this is the function `compute_riemann(tetrad)` from `stdlib/cartan_compute.kleis`, which chains exterior differentiation (`d1`), the connection solver (`solve_connection`), wedge products (`wedge`), and algebraic simplification (`simplify`).
+*Production kernel* $K_(\"GR\")$. The production kernel maps a tetrad $e^a$ to the Riemann curvature tensor via Cartan's structure equations in three explicit steps.
 
-*Observable projection* $Q_(\"GR\")$. The observable projection extracts from curvature the quantities that couple to matter:
-$ R^a_(b c d) arrow.r R_(a b) = R^c_(a c b) arrow.r G_(a b) = R_(a b) - 1/2 R g_(a b) arrow.r T_(a b) $
-The last step uses the Einstein field equations $G_(a b) = 8 pi G T_(a b)$. The kernel of $Q$ includes the Weyl tensor (tidal curvature not fixed by local matter), gauge degrees of freedom (4 diffeomorphisms), and constraint equations (Hamiltonian and momentum constraints).
+*Step 1: Anholonomy coefficients.* Compute the exterior derivatives $d e^a$ and extract the structure coefficients $C^a_(b c)$ defined by:
+$ d e^a = 1/2 C^a_(b c) e^b and e^c $
+These encode how the tetrad frame fails to be a coordinate basis.
+
+*Step 2: Connection.* The unique torsion-free, metric-compatible connection is:
+$ omega^a_b = sum_c 1/2 (C^a_(b c) - C_(b)^(\" \"a)_(\" \"c) + C_(c)^(\" \"a)_(\" \"b)) e^c $
+This is the Koszul formula in the tetrad basis. The connection $omega^a_b$ is a set of $4 times 4$ one-forms, each a linear combination of the tetrad one-forms weighted by the anholonomy coefficients. The nonlinearity enters here: the $C^a_(b c)$ depend on the tetrad components and their derivatives, so $omega$ is a *nonlinear* function of $e$.
+
+*Step 3: Curvature.* The Riemann curvature 2-form is:
+$ R^a_b = d omega^a_b + sum_c omega^a_c and omega^c_b $
+The first term $d omega$ is linear in $omega$ (hence nonlinear in $e$ through Step 2). The second term $omega and omega$ is *quadratic* in $omega$ --- this is the self-coupling that makes $K_(\"GR\")$ non-admissible, structurally identical to $A and A$ in the Yang--Mills field strength $F = d A + A and A$.
+
+The complete kernel is the composition: $K_(\"GR\")(e) = R(omega(e))$, implemented in Kleis as `compute_riemann(tetrad)`, which chains exterior differentiation (`d1`), the connection solver (`solve_connection`), and wedge products (`wedge`).
+
+*Observable projection* $Q_(\"GR\")$. The observable projection is the Ricci contraction --- the trace of the Riemann tensor over its first and third indices:
+$ R_(a b) = sum_(c=0)^3 R^c_(\" \" a c b) $
+This $4 times 4$ symmetric tensor is the part of the curvature that couples to matter via the Einstein field equations $G_(a b) = R_(a b) - 1/2 R g_(a b) = 8 pi G T_(a b)$. The kernel of $Q$ --- what the trace contraction discards --- is the Weyl tensor $C_(a b c d)$: the 10-component trace-free part of the Riemann tensor encoding tidal forces, gravitational waves, and long-range gravitational effects not determined by local matter.
 
 *Verification.* We verify the pipeline on two metrics:
 
@@ -255,9 +267,9 @@ In four dimensions, the Riemann tensor has 20 independent components. The Ricci 
 $ C_(a b c d) = R_(a b c d) - (\"Ricci terms\") $
 The Weyl tensor is the content of $\"ker\"(Q_(\"GR\")):$ it is curvature that is *not* determined by the local energy-momentum tensor.
 
-*Computation: Schwarzschild.* For the Schwarzschild vacuum ($T_(a b) = 0$), the Einstein equations give $R_(a b) = 0$: the Ricci tensor vanishes. But the Riemann tensor is *nonzero* --- it produces the tidal forces that stretch and compress freely falling objects. Therefore: $\"im\"(K_(\"GR\"))) subset.eq \"ker\"(Q_(\"GR\")))$ for vacuum. *All* of the curvature that $K$ produces is projected away by $Q$.
+*Computation: Schwarzschild.* For the Schwarzschild vacuum ($T_(a b) = 0$), the Einstein equations give $R_(a b) = 0$: the Ricci tensor vanishes. But the Riemann tensor is *nonzero* --- it produces the tidal forces that stretch and compress freely falling objects. Therefore: $\"im\"(K_(\"GR\")) subset.eq \"ker\"(Q_(\"GR\"))$ for vacuum. *All* of the curvature that $K$ produces is projected away by $Q$.
 
-We compute this explicitly using the Kleis Cartan pipeline: the Weyl component $W^0_(\"  1 01\")$ for Schwarzschild is nonzero (depending on $M$ and $r$), confirming that the vacuum Riemann tensor has nontrivial content in $\"ker\"(Q_(\"GR\")))$.
+We compute this explicitly using the Kleis Cartan pipeline: the Weyl component $W^0_(\"  1 01\")$ for Schwarzschild is nonzero (depending on $M$ and $r$), confirming that the vacuum Riemann tensor has nontrivial content in $\"ker\"(Q_(\"GR\"))$.
 
 *Minkowski.* For flat spacetime, the Riemann tensor vanishes entirely: $W^0_(\"  1 01\") = 0$. The kernel of $Q$ is empty for flat space --- there is nothing to project away.
 
@@ -267,7 +279,7 @@ We compute this explicitly using the Kleis Cartan pipeline: the Weyl component $
 - *Gravitational lensing:* light deflection by massive objects (even in vacuum)
 - *Black hole hair:* the Schwarzschild and Kerr metrics are entirely characterized by their Weyl tensor
 
-All of these are physical effects that are *not* constrained by local matter --- they are the content of the kernel of $Q$. In POT language: $\"ker\"(Q_(\"GR\")))$ is non-empty and physically rich, containing the degrees of freedom that propagate freely through vacuum.
+All of these are physical effects that are *not* constrained by local matter --- they are the content of the kernel of $Q$. In POT language: $\"ker\"(Q_(\"GR\"))$ is non-empty and physically rich, containing the degrees of freedom that propagate freely through vacuum.
 
 *The obstruction is in $K$, not $Q$.* This computation clarifies a subtle point. $Q_(\"GR\")$ is well-defined and computable: it is the Ricci contraction, and we verified it on Schwarzschild (producing $R_(mu nu) = 0$) and Minkowski ($R_(mu nu) = 0$). The structural problems of GR --- non-localizability, problem of time, coordinate singularities --- do not arise from $Q$. They arise from $K$: the map from tetrads to curvature, where the $omega and omega$ self-coupling introduces non-admissibility. The quantum gravity community's search for ``the right quantization'' is, in POT language, a search for a $Q$ to solve a problem that lives in $K$.")
 
@@ -287,6 +299,8 @@ define sec_prior_work = ArxivSection("Prior Work",
 
 *Trautman and Sardanashvily: metric as gravitational Higgs.* Trautman (1979) and later Sardanashvily proposed that the metric tensor in GR plays a role analogous to the Higgs field: it breaks the GL(4,$bb(R)$) symmetry of the frame bundle to SO(3,1). Our linearization-as-restoration analysis (Section 7) formalizes a related but distinct claim: the *background metric* $eta$ restores admissibility by absorbing the $omega and omega$ defect, paralleling how the Higgs restores admissibility by absorbing the Lie bracket defect. The key difference we identify is fragility: the GR restoration is a non-dynamical choice, not a physical mechanism.
 
+*ADM formalism (1959) and LIGO (2015).* Our degree-of-freedom counting $10 - 4 - 4 = 2$ reproduces the result of the ADM (Arnowitt--Deser--Misner) canonical formulation of GR, which identifies the Hamiltonian and momentum constraints and establishes that the gravitational field has exactly 2 propagating degrees of freedom: the transverse-traceless polarizations $h_+$ and $h_times$. This was confirmed experimentally by LIGO's first detection of gravitational waves (GW150914, 2015), which measured a signal consistent with exactly 2 polarizations. Our framework arrives at the same count from the POT structure: the 4 gauge DOF are fiber directions (diffeomorphism orbits), the 4 constraints are $\"ker\"(Q)$ content (projected away), and the 2 surviving modes are $\"im\"(Q compose K)$ --- what passes through both production and projection.
+
 *Logarithmic potential and flat rotation curves.* In a companion paper, we showed that a logarithmic Green's function $K(r) tilde log(r)$ reproduces flat galactic rotation curves without dark matter. This raises the question: can the logarithmic kernel be derived from the GR weak-field limit? The answer is no. The GR weak-field kernel is the Newtonian $1/r$ potential, producing Keplerian falloff $v tilde 1/sqrt(r)$. The logarithmic correction requires physics beyond the standard linearization. Our framework makes this precise: the GR kernel (via Cartan) gives $1/r$ in the admissible limit; any departure from $1/r$ requires either a modification of $K$ (e.g., additional fields, modified gravity) or a non-perturbative effect from the non-admissible regime.")
 
 
@@ -295,7 +309,7 @@ define sec_prior_work = ArxivSection("Prior Work",
 // =============================================================================
 
 define sec_singularity = ArxivSection("Singularity Annihilation: Vacuum Singularities in ker(Q)",
-"The Schwarzschild singularity at $r = 0$ is a genuine curvature singularity: the Kretschmer scalar $R_(a b c d) R^(a b c d) arrow.r infinity$. Yet $Q_(\"GR\")$ maps this divergent curvature to *zero*: $R_(a b) = 0$ everywhere, including at the singularity. The entire divergence lives in $\"ker\"(Q_(\"GR\")))$ --- the Weyl tensor sector. $Q$ annihilates the infinity --- not in the sense that the Riemann tensor ceases to diverge (it does not; the curvature invariant $R_(a b c d) R^(a b c d) arrow.r infinity$ remains), but in the precise sense that the observable projection maps the divergent input to a finite (in fact, zero) output. The divergence is real in the production layer; it is absent from the observable layer.
+"The Schwarzschild singularity at $r = 0$ is a genuine curvature singularity: the Kretschmer scalar $R_(a b c d) R^(a b c d) arrow.r infinity$. Yet $Q_(\"GR\")$ maps this divergent curvature to *zero*: $R_(a b) = 0$ everywhere, including at the singularity. The entire divergence lives in $\"ker\"(Q_(\"GR\"))$ --- the Weyl tensor sector. $Q$ annihilates the infinity --- not in the sense that the Riemann tensor ceases to diverge (it does not; the curvature invariant $R_(a b c d) R^(a b c d) arrow.r infinity$ remains), but in the precise sense that the observable projection maps the divergent input to a finite (in fact, zero) output. The divergence is real in the production layer; it is absent from the observable layer.
 
 The mechanism is identical to the annihilation of UV divergences in QFT. In the companion $phi^4$ paper (Volume I), we showed that one-loop divergences in Feynman integrals live in $\"ker\"(Q)$: the divergent parts are scheme-dependent and do not contribute to physical observables. The observable projection $Q$ extracts only the finite, scheme-independent residue. Here, $Q_(\"GR\")$ performs the same operation on the Schwarzschild singularity: it extracts the Ricci tensor (the part coupled to matter), which is zero, discarding the divergent Weyl tensor (the part encoding tidal forces).
 
@@ -311,7 +325,7 @@ The mechanism is identical to the annihilation of UV divergences in QFT. In the 
 
 For vacuum singularities, the entire curvature is Weyl: $R_(a b c d) = C_(a b c d)$ when $R_(a b) = 0$. The observable projection sees nothing but ``vacuum'' ($T_(a b) = 0$). The singularity --- the divergent tidal stretching, the infinite curvature --- is invisible to $Q$. It is a *structural artifact of the production kernel*, not a feature of the observable output.
 
-To be precise: the Schwarzschild singularity at $r = 0$ is *not* a coordinate artifact --- the curvature invariant $R_(a b c d) R^(a b c d) arrow.r infinity$ is diffeomorphism-invariant and cannot be removed by coordinate choice (unlike the coordinate singularity at $r = 2 M$, which is removable). What the POT framework establishes is a different and stronger claim: *the singularity is a projection artifact*. The divergent curvature is geometrically real, but it resides entirely in $\"ker\"(Q_(\"GR\")))$ --- the sector that the observable projection discards. The shift is not from geometry to coordinates, but from geometry to the production--observation distinction: the singularity is produced by $K$ but erased by $Q$.
+To be precise: the Schwarzschild singularity at $r = 0$ is *not* a coordinate artifact --- the curvature invariant $R_(a b c d) R^(a b c d) arrow.r infinity$ is diffeomorphism-invariant and cannot be removed by coordinate choice (unlike the coordinate singularity at $r = 2 M$, which is removable). What the POT framework establishes is a different and stronger claim: *the singularity is a projection artifact*. The divergent curvature is geometrically real, but it resides entirely in $\"ker\"(Q_(\"GR\"))$ --- the sector that the observable projection discards. The shift is not from geometry to coordinates, but from geometry to the production--observation distinction: the singularity is produced by $K$ but erased by $Q$.
 
 *The observability criterion.* Within Projected Ontology Theory, physical observables are identified with $\"im\"(Q)$: a quantity is physically accessible if and only if it survives the observable projection. This criterion formalizes standard practice in field theory, where gauge-dependent quantities (Yang--Mills), coordinate-dependent quantities (GR), and scheme-dependent quantities (QFT renormalization) are not regarded as physical. Consequently, divergences that lie entirely in $\"ker\"(Q)$ do not correspond to observable singularities but to structural features of the production kernel.
 
@@ -370,13 +384,57 @@ define sec_conclusion = ArxivSection("Conclusion",
 
 The structural consequences --- gravitational energy non-localizability, the problem of time, and the admissibility boundary between full and linearized GR --- follow from the same chain that produces color confinement in Yang--Mills: non-admissible kernel $arrow.r$ non-invariant image on gauge orbits $arrow.r$ unobservable or non-localizable quantities.
 
-Beyond the initial proof, we established the full fiber interpretation: diffeomorphism orbits are the projection fibers of GR, and non-admissibility forces the kernel image to vary across these fibers, producing non-localizability as a consequence of the Main Theorem of projection fiber theory. We identified the Gribov analog (no global coordinate fixing for non-admissible kernels), the observable hierarchy (only curvature invariants survive as observables in full GR), and the admissibility restoration mechanism (linearization around a background metric, the structural analog of the Higgs mechanism). The Weyl tensor was computed as the explicit content of $\"ker\"(Q_(\"GR\")))$ --- the curvature that the observable projection discards.
+Beyond the initial proof, we established the full fiber interpretation: diffeomorphism orbits are the projection fibers of GR, and non-admissibility forces the kernel image to vary across these fibers, producing non-localizability as a consequence of the Main Theorem of projection fiber theory. We identified the Gribov analog (no global coordinate fixing for non-admissible kernels), the observable hierarchy (only curvature invariants survive as observables in full GR), and the admissibility restoration mechanism (linearization around a background metric, the structural analog of the Higgs mechanism). The Weyl tensor was computed as the explicit content of $\"ker\"(Q_(\"GR\"))$ --- the curvature that the observable projection discards.
 
-Perhaps the most striking result is the singularity analysis: the Schwarzschild singularity lives entirely in $\"ker\"(Q_(\"GR\")))$. The curvature diverges, but $Q$ maps it to zero --- the Ricci tensor vanishes for vacuum. The observable projection annihilates the singularity, following the same structural pattern as UV divergence annihilation in QFT. This classification separates vacuum singularities (in $\"ker\"(Q)$, annihilated) from matter singularities (in $\"im\"(Q)$, observable), and suggests that singularity resolution in quantum gravity is the problem of finding a kernel $K$ that does not produce divergent Weyl content.
+Perhaps the most striking result is the singularity analysis: the Schwarzschild singularity lives entirely in $\"ker\"(Q_(\"GR\"))$. The curvature diverges, but $Q$ maps it to zero --- the Ricci tensor vanishes for vacuum. The observable projection annihilates the singularity, following the same structural pattern as UV divergence annihilation in QFT. This classification separates vacuum singularities (in $\"ker\"(Q)$, annihilated) from matter singularities (in $\"im\"(Q)$, observable), and suggests that singularity resolution in quantum gravity is the problem of finding a kernel $K$ that does not produce divergent Weyl content.
 
 The unifying insight is that the curvature formula $R = d omega + omega and omega$, shared in structure by GR and Yang--Mills, is the single algebraic object responsible for the most profound features of both theories. The Projected Ontology framework provides the language to state and verify this precisely.
 
 All 50 results --- 17 by Kleis evaluation of the Cartan pipeline and 33 by the Z3 SMT solver --- are formally verified, with no human intervention in the derivation chain.")
+
+
+// =============================================================================
+// References
+// =============================================================================
+
+define ref_adm = ArxivReference("ADM1959",
+    "Arnowitt, R., Deser, S., and Misner, C. W. Dynamical structure and definition of energy in general relativity. *Phys. Rev.* 116, 1322 (1959).")
+
+define ref_ashtekar = ArxivReference("Ash1986",
+    "Ashtekar, A. New variables for classical and quantum gravity. *Phys. Rev. Lett.* 57, 2244 (1986).")
+
+define ref_ligo = ArxivReference("LIGO2016",
+    "Abbott, B. P. et al. (LIGO/Virgo). Observation of gravitational waves from a binary black hole merger. *Phys. Rev. Lett.* 116, 061102 (2016).")
+
+define ref_curiel = ArxivReference("Cur2019",
+    "Curiel, E. On the existence of spacetime structure. *Brit. J. Phil. Sci.* 69, 447--483 (2019).")
+
+define ref_devuyst = ArxivReference("DEHK2024",
+    "De Vuyst, J., Eccles, S., Hoehn, P. A., and Kirklin, J. Gravitational constraints on a lightlike boundary. arXiv:2409.09308 (2024).")
+
+define ref_trautman = ArxivReference("Tra1979",
+    "Trautman, A. Fiber bundles, gauge fields, and gravitation. In *General Relativity and Gravitation*, Vol. 1, A. Held, ed. (Plenum, 1979).")
+
+define ref_sardanashvily = ArxivReference("Sar1992",
+    "Sardanashvily, G. On the geometry of spontaneous symmetry breaking and Higgs mechanism in gravitation. *J. Math. Phys.* 33, 1546 (1992).")
+
+define ref_atik_ym = ArxivReference("Atik-IV",
+    "Atik, E. Confinement as fiber non-invariance: a projection-theoretic derivation. Volume IV of the POT Series. *Preprint* (2025).")
+
+define ref_atik_higgs = ArxivReference("Atik-V",
+    "Atik, E. Admissibility restoration and the necessity of the Higgs mechanism. Volume V of the POT Series. *Preprint* (2025).")
+
+define ref_atik_fibers = ArxivReference("Atik-III",
+    "Atik, E. Independence as non-invariance: detecting undecidability via projection fibers in SMT-backed shadow theories. Volume III of the POT Series. *Preprint* (2025). DOI: 10.13140/RG.2.2.22374.18243.")
+
+define ref_atik_singularity = ArxivReference("Atik-X",
+    "Atik, E. Projection singularities: why physics has no infinities. Volume X of the POT Series. *Preprint* (2025).")
+
+define ref_atik_kq = ArxivReference("Atik-VII",
+    "Atik, E. The abstract K-Q framework: kernels, projections, and null-space structure across domains. Volume VII of the POT Series. *Preprint* (2025).")
+
+define ref_atik_rotation = ArxivReference("Atik-RC",
+    "Atik, E. Flat galactic rotation curves from a logarithmic Green's function. *Preprint* (2025).")
 
 
 // =============================================================================
@@ -395,7 +453,20 @@ define all_sections = [
     sec_prior_work,
     sec_singularity,
     sec_discussion,
-    sec_conclusion
+    sec_conclusion,
+    ref_adm,
+    ref_ashtekar,
+    ref_ligo,
+    ref_curiel,
+    ref_devuyst,
+    ref_trautman,
+    ref_sardanashvily,
+    ref_atik_ym,
+    ref_atik_higgs,
+    ref_atik_fibers,
+    ref_atik_singularity,
+    ref_atik_kq,
+    ref_atik_rotation
 ]
 
 define paper = Paper(
