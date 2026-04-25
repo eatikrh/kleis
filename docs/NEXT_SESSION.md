@@ -1,6 +1,59 @@
 # Next Session Notes
 
-**Last Updated:** April 14, 2026
+**Last Updated:** April 25, 2026
+
+---
+
+## Kernel Factorization Paper — NEW (35 verified results)
+
+**Branch:** `feature/kernel-factorization-paper`
+
+### What Is Done
+
+1. **Theory file: 35/35 examples pass** (`theories/pot_kernel_factorization.kleis`):
+   - Part 1: Kernel Composition Monoid (M1-M3: associativity, identity, admissibility)
+   - Part 2: Factorization Structures (2-factor, 3-factor, atoms)
+   - Part 3: Admissibility Obstruction Theorem (A1-A5: closure, contrapositive, atom detection)
+   - Part 4: Factorization Elasticity (E1-E3: lengths, half-factorial criterion)
+   - Part 5: Formulation Fiber as Factorization Rearrangement (F1-F7: atom location, invariance)
+   - Part 6: Factorization Refinement / Shemyakova Condition
+   - Part 7: Concrete POT Kernel Instances (K1-K6: EM, GR, YM classification)
+   - Part 8: Factorization Dichotomy (D1-D5: factorial vs atomic sectors)
+   - Part 9: Transfer Homomorphisms (T1-T2: preserves atom, forgets location)
+   - Cross-architecture compatibility (C1-C4: 3-factor ⟹ 2-factor, architecture selection)
+
+2. **Paper source: 11 sections** (`examples/ontology/revised/pot_kernel_factorization_paper.kleis`):
+   - Section 1: Introduction
+   - Section 2: The Kernel Composition Monoid
+   - Section 3: Two Factorization Architectures
+   - Section 4: The Admissibility Obstruction Theorem
+   - Section 5: The Factorization Dichotomy
+   - Section 6: The Landau Analogy
+   - Section 7: The Formulation Fiber as Factorization Rearrangement
+   - Section 8: Transfer Homomorphisms and the Class Group
+   - Section 9: Connections to Pure Mathematics
+   - Section 10: Discussion
+   - Section 11: Conclusion
+
+3. **PDF compiled and deployed:**
+   - `docs/papers/pot_kernel_factorization_paper.pdf`
+   - `docs/papers/pot_kernel_factorization_paper.kleis`
+   - `docs/papers/pot_kernel_factorization.kleis`
+
+### Key Results
+
+- **Admissibility Obstruction Theorem**: Non-admissible kernels cannot be decomposed into admissible factors. The self-coupling terms ω∧ω (GR) and A∧A (YM) are irreducible atoms.
+- **Factorization Dichotomy**: Admissible kernels (EM, entanglement, rotation curves) → factorial sector (multiple factorizations, Architecture 1). Non-admissible kernels (GR, YM) → atomic sector (constrained, Architecture 2).
+- **Formulation Fiber = Factorization Rearrangement**: Cartan puts atom in K, TEGR puts atom in Q. Same physics, different factorization. Atom invariant, location varies.
+- **Literature Connections**: Geroldinger-Halter-Koch (non-unique factorization in monoids), Landau/Shemyakova (LPDO factorization), categorical factorization systems, Costello-Gwilliam (factorization algebras in QFT), Smertnig (non-commutative transfer homomorphisms).
+
+### Future Research
+
+- Compute the elasticity of the POT kernel monoid
+- Determine if the kernel monoid has Krull structure and its class group
+- Can the (K, Q) factorization system be made orthogonal with additional physical conditions?
+- Extend to QFT: FP ∘ K_ren ∘ K_path is a third architecture
+- Relate to Costello-Gwilliam factorization algebras (local-to-global vs configuration-to-observable)
 
 ---
 
@@ -77,6 +130,46 @@
   - Abstract: added formulation-independence result, updated result counts
 - **New references**: Deser 1970 (self-coupling), Maluf 2013 (teleparallel review)
 - **Result count**: 17 Kleis evaluator + 33 Z3 structural + 34 Z3 formulation = 84 total verified
+
+### Kernel Factorization Reconciliation — IMPORTANT FUTURE WORK
+
+There are **two different kernel decomposition architectures** in the POT papers that need to be reconciled:
+
+**Architecture 1: Three-factor factorization** (Entanglement, Electrodynamics, Rotation Curves papers)
+```
+K = K_univ ∘ K_dyn ∘ K_rep
+```
+- K_univ: universal geometric structure
+- K_dyn: dynamical sector (elliptic for gravity, hyperbolic for propagation)
+- K_rep: representation/measurement sector (scalar for gravity, matrix-valued for spin)
+- Each factor is admissible; composition is admissible by `compose_admissible`
+- The EM paper extends this: K_em-sector = K_univ ∘ K_dyn ∘ K_em (where K_em = d|Ω¹)
+- The entanglement paper uses K_rep as the spinor projection parameterized by detector angle
+
+**Architecture 2: K-Q pipeline** (GR paper, Yang-Mills paper, K-Q Atlas, abstract framework)
+```
+Configuration → K (production) → intermediate → Q (projection) → observables
+```
+- K maps configurations to intermediate mathematical objects (curvature, field strength)
+- Q extracts observables (Ricci tensor, physical cross-sections)
+- Admissibility is tested on K and Q separately
+- The formulation fiber analysis lives here (where in the K-Q pipeline is non-admissibility?)
+
+**The tension**: The three-factor factorization decomposes the *production kernel* K into composable admissible pieces. The K-Q pipeline separates *production* from *observation*. These are orthogonal decompositions of the same overall process:
+
+```
+Full pipeline:  config → [K_univ ∘ K_dyn ∘ K_rep] → intermediate → Q → observables
+                         ←── Architecture 1 ──→    ←── Arch 2 ──→
+```
+
+**Questions to resolve**:
+1. Is K in the K-Q pipeline = K_univ ∘ K_dyn ∘ K_rep? If so, what is Q in terms of the three factors?
+2. For non-admissible K (GR, Yang-Mills): which factor breaks admissibility? Is it K_dyn (the ω∧ω term lives in dynamics)?
+3. The EM paper says K_em = d is admissible because U(1) is abelian. In the K-Q pipeline, this means K is admissible and Q (extracting observables from F) is also admissible. Does K_em map to K_dyn or K_rep in the three-factor scheme?
+4. Can the formulation fiber analysis (Cartan vs TEGR moving non-admissibility between K and Q) be expressed as re-partitioning the three factors between K and Q?
+5. The entanglement paper says the gravitational and measurement kernels are "different faces of the same underlying operator." But the GR paper says K_GR is non-admissible while K_measurement (spinor projection) is admissible. How do these compose if one factor is non-admissible?
+
+**This is not a contradiction** — the three-factor scheme was developed for admissible sectors (gravity = logarithmic kernel, EM, measurement), while the K-Q pipeline handles non-admissible sectors (full GR, Yang-Mills). The reconciliation likely involves: the three-factor decomposition applies when K is admissible; when K is non-admissible, the factorization breaks and you need the K-Q pipeline instead. But this needs to be formalized.
 
 ### Future Research Questions
 
