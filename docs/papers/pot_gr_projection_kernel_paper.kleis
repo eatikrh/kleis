@@ -43,9 +43,9 @@ define paper_affiliations = [
     Affiliation(1, "Kleis Research", "https://kleis.io")
 ]
 
-define paper_abstract = "We prove that the General Relativity projection kernel is non-admissible by identifying and computing the admissibility defect in the Cartan geometry pipeline. The curvature formula $R^a_b = d omega^a_b + omega^a_c and omega^c_b$ has the same algebraic structure as the Yang--Mills field strength $F = d A + A and A$: both contain a quadratic self-coupling term that breaks the linearity required for kernel admissibility. Using Kleis's symbolic Cartan pipeline --- which derives curvature from tetrads via exterior differentiation, connection solving, and wedge products --- we compute the admissibility defect $Delta(e_A, e_B) = K(e_A + e_B) - K(e_A) - K(e_B)$ on concrete tetrads and verify that it is nonzero for the Schwarzschild metric. We isolate the $omega and omega$ term as the source: for flat spacetime $omega = 0$, so the self-coupling vanishes and the kernel is admissible (the linearized limit); for curved spacetime $omega eq.not 0$, producing a nonzero defect. We develop the full fiber interpretation: diffeomorphism orbits are the projection fibers of GR, and non-admissibility forces the kernel image to vary across fibers, producing gravitational energy non-localizability as an instance of the Main Theorem of projection fiber theory. We identify the Gribov analog (no global coordinate fixing for non-admissible kernels), the observable hierarchy (only curvature invariants survive in full GR), and the admissibility restoration mechanism (linearization around a background metric as the structural analog of the Higgs mechanism --- fragile, unlike the dynamical Higgs). We compute the Weyl tensor as the explicit content of $\"ker\"(Q_(\"GR\"))$, and show that the structural obstruction resides in $K$ (the production kernel), not in $Q$ (the observable projection). We prove that the Schwarzschild singularity lives entirely in $\"ker\"(Q_(\"GR\"))$: the curvature diverges at $r = 0$, but $Q$ maps it to zero ($R_(a b) = 0$), annihilating the singularity via the same mechanism that removes UV divergences in QFT. All 50 results are verified: 17 by Kleis evaluation of the Cartan pipeline and 33 by the Z3 SMT solver."
+define paper_abstract = "We prove that the General Relativity projection kernel is non-admissible by computing the admissibility defect in the Cartan geometry pipeline. The curvature formula $R^a_b = d omega^a_b + omega^a_c and omega^c_b$ has the same algebraic structure as the Yang--Mills field strength $F = d A + A and A$: both contain a quadratic self-coupling term that breaks kernel admissibility. Using Kleis's symbolic Cartan pipeline, we compute the defect $Delta(e_A, e_B) = K(e_A + e_B) - K(e_A) - K(e_B)$ on the Schwarzschild tetrad and verify it is nonzero, isolating the $omega and omega$ term as the source. We develop the full fiber interpretation: diffeomorphism orbits are the projection fibers of GR, and non-admissibility produces gravitational energy non-localizability via the Main Theorem of projection fiber theory. We compute the Weyl tensor as the content of $\"ker\"(Q_(\"GR\"))$ and prove that the Schwarzschild singularity lives entirely in $\"ker\"(Q)$: the curvature diverges but $Q$ maps it to zero. The central conceptual result is a re-interpretation of the observable projection $Q$. In Yang--Mills, non-admissibility confines charges, requiring the Higgs mechanism to restore observability. In GR, the same algebraic non-admissibility makes energy non-localizable but does not hide geometric observables (tidal forces, gravitational waves, frame-dragging). The distinction is structural: Yang--Mills gauge symmetry acts on internal charge space, while GR gauge symmetry acts on spacetime itself. We formulate a Projection Sufficiency Principle: non-admissibility requires dynamical restoration if and only if the essential observables lie in the sector it hides. We then confront an admissibility dilemma: the three gravitational observations commonly cited as confirming full GR --- binary pulsar decay, frame-dragging, and gravitational waves --- are all predictions of linearized GR, which is admissible. The only claimed evidence for the nonlinear $omega and omega$ term is the LIGO merger waveform, extracted via matched filtering against GR-derived templates. Meanwhile, the admissible logarithmic kernel (Volume III) explains flat rotation curves without dark matter, where both GR and Newton fail --- but this success is regime-specific (patched at a core radius $R_c$, structurally analogous to MOND). Whether the universe operates through admissible kernels remains genuinely open. All 50 results are verified: 17 by Kleis evaluation and 33 by the Z3 SMT solver."
 
-define paper_keywords = "general relativity, Cartan geometry, admissible kernel, projected ontology, non-admissibility, connection self-coupling, gravitational energy, problem of time, linearized gravity, diffeomorphism fibers, Weyl tensor, admissibility restoration, Gribov problem, singularity annihilation, black hole singularity, formal verification, Z3 theorem prover"
+define paper_keywords = "general relativity, Cartan geometry, admissible kernel, projected ontology, non-admissibility, connection self-coupling, gravitational energy, linearized gravity, diffeomorphism fibers, Weyl tensor, projection sufficiency, Higgs mechanism, singularity annihilation, logarithmic kernel, rotation curves, formal verification, Z3 theorem prover"
 
 // =============================================================================
 // Section 1: Introduction
@@ -76,43 +76,25 @@ All 50 results are verified: 17 by the Kleis evaluator (symbolic Cartan computat
 define sec_kq = ArxivSection("GR as a K-Q Pair via Cartan Geometry",
 "We identify the two operators that define GR within the POT framework.
 
-*Production kernel* $K_(\"GR\")$. The production kernel maps a tetrad $e^a$ to the Riemann curvature tensor via Cartan's structure equations. The pipeline is:
-$ e^a arrow.r omega^a_b arrow.r R^a_b = d omega^a_b + omega^a_c and omega^c_b $
-where the connection $omega^a_b$ is the unique Levi-Civita connection satisfying torsion-freedom ($d e^a + omega^a_b and e^b = 0$) and metric compatibility ($omega_(a b) = -omega_(b a)$). The Kleis implementation is:
+*Production kernel* $K_(\"GR\")$. The production kernel maps a tetrad $e^a$ to the Riemann curvature tensor via Cartan's structure equations in three explicit steps.
 
-```
-define K_GR(tetrad) = compute_riemann(tetrad)
+*Step 1: Anholonomy coefficients.* Compute the exterior derivatives $d e^a$ and extract the structure coefficients $C^a_(b c)$ defined by:
+$ d e^a = 1/2 C^a_(b c) e^b and e^c $
+These encode how the tetrad frame fails to be a coordinate basis.
 
-define compute_riemann(tetrad) =
-    let omega = solve_connection(tetrad) in
-    compute_curvature(omega)
+*Step 2: Connection.* The unique torsion-free, metric-compatible connection is:
+$ omega^a_b = sum_c 1/2 (C^a_(b c) - C_(b)^(\" \"a)_(\" \"c) + C_(c)^(\" \"a)_(\" \"b)) e^c $
+This is the Koszul formula in the tetrad basis. The connection $omega^a_b$ is a set of $4 times 4$ one-forms, each a linear combination of the tetrad one-forms weighted by the anholonomy coefficients. The nonlinearity enters here: the $C^a_(b c)$ depend on the tetrad components and their derivatives, so $omega$ is a *nonlinear* function of $e$.
 
-define curvature_ab(omega, a, b) =
-    let d_omega = d1(nth(nth(omega, a), b)) in
-    let w0 = wedge(nth(nth(omega,a),0), nth(nth(omega,0),b)) in
-    let w1 = wedge(nth(nth(omega,a),1), nth(nth(omega,1),b)) in
-    let w2 = wedge(nth(nth(omega,a),2), nth(nth(omega,2),b)) in
-    let w3 = wedge(nth(nth(omega,a),3), nth(nth(omega,3),b)) in
-    add2(d_omega, add2(add2(w0, w1), add2(w2, w3)))
-```
+*Step 3: Curvature.* The Riemann curvature 2-form is:
+$ R^a_b = d omega^a_b + sum_c omega^a_c and omega^c_b $
+The first term $d omega$ is linear in $omega$ (hence nonlinear in $e$ through Step 2). The second term $omega and omega$ is *quadratic* in $omega$ --- this is the self-coupling that makes $K_(\"GR\")$ non-admissible, structurally identical to $A and A$ in the Yang--Mills field strength $F = d A + A and A$.
 
-The curvature formula $R^a_b = d omega^a_b + sum_c omega^a_c and omega^c_b$ is implemented directly: `d1` computes the exterior derivative, `wedge` computes the wedge product, and the four terms `w0`--`w3` sum over the internal index $c = 0, 1, 2, 3$. The connection solver (`solve_connection`) extracts the anholonomy coefficients from $d e^a$ and computes the unique torsion-free, metric-compatible connection.
+The complete kernel is the composition: $K_(\"GR\")(e) = R(omega(e))$, implemented in Kleis as `compute_riemann(tetrad)`, which chains exterior differentiation (`d1`), the connection solver (`solve_connection`), and wedge products (`wedge`).
 
-*Observable projection* $Q_(\"GR\")$. The observable projection extracts from curvature the quantities that couple to matter --- the Ricci tensor $R_(a b) = sum_c R^c_(a c b)$:
-
-```
-define Q_GR(R) = [
-  [ricci_component(R,0,0), ricci_component(R,0,1), ...],
-  [ricci_component(R,1,0), ricci_component(R,1,1), ...],
-  ...
-]
-
-define ricci_component(R, a, b) =
-    simplify(R[0][0][a][b] + R[1][1][a][b]
-           + R[2][2][a][b] + R[3][3][a][b])
-```
-
-This is the trace contraction $R_(a b) = sum_(c=0)^3 R^c_(\"  \") _(c a b)$, summing the Riemann tensor over its first and third indices. The Einstein tensor $G_(a b) = R_(a b) - 1/2 R g_(a b)$ and the energy-momentum tensor $T_(a b)$ follow via the field equations $G_(a b) = 8 pi G T_(a b)$. The kernel of $Q$ includes the Weyl tensor (tidal curvature not fixed by local matter), gauge degrees of freedom (4 diffeomorphisms), and constraint equations (Hamiltonian and momentum constraints).
+*Observable projection* $Q_(\"GR\")$. The observable projection is the Ricci contraction --- the trace of the Riemann tensor over its first and third indices:
+$ R_(a b) = sum_(c=0)^3 R^c_(\" \" a c b) $
+This $4 times 4$ symmetric tensor is the part of the curvature that couples to matter via the Einstein field equations $G_(a b) = R_(a b) - 1/2 R g_(a b) = 8 pi G T_(a b)$. The kernel of $Q$ --- what the trace contraction discards --- is the Weyl tensor $C_(a b c d)$: the 10-component trace-free part of the Riemann tensor encoding tidal forces, gravitational waves, and long-range gravitational effects not determined by local matter.
 
 *Verification.* We verify the pipeline on two metrics:
 
@@ -238,40 +220,86 @@ All fiber-structure results (F1--F11) are Z3-verified.")
 
 
 // =============================================================================
-// Section 7: Admissibility Restoration — Linearization as GR Higgs
+// Section 7: Admissibility and the Gravitational Kernels
 // =============================================================================
 
-define sec_restoration = ArxivSection("Admissibility Restoration: Linearization as GR Higgs",
-"In Volume V, we showed that the Higgs mechanism in the electroweak sector can be understood as *admissibility restoration*: the Higgs field is a ``restoring field'' that compensates the Lie bracket defect in the SU(2) kernel, making the composite kernel effectively admissible and weak charges observable. Is there an analog for GR?
+define sec_restoration = ArxivSection("Admissibility and the Gravitational Kernels",
+"In Volume V, we showed that the Higgs mechanism in the electroweak sector can be understood as *admissibility restoration*: the Higgs field compensates the Lie bracket defect in the SU(2) kernel, making weak charges observable. Given the structural identity between GR and Yang--Mills at the kernel level ($omega and omega$ versus $A and A$), one might expect a gravitational analog of the Higgs mechanism to exist. We argue that no such mechanism is needed, and that the reason illuminates a fundamental distinction between the two theories.
 
-The analog is *linearization around a background metric*. Writing $g_(mu nu) = eta_(mu nu) + h_(mu nu)$ and retaining only terms linear in $h$, the $omega and omega$ self-coupling drops out: the effective kernel $K_(\"eff\")(h)$ is the linearized Riemann tensor, which is linear in $h$. This composite kernel is admissible:
-$ K_(\"eff\")(h_A + h_B) = K_(\"eff\")(h_A) + K_(\"eff\")(h_B) $
+*The same algebra, different consequences.* Both kernels are non-admissible for the same algebraic reason: quadratic self-coupling. But the gauge symmetries act on different objects:
 
-The Minkowski background $eta$ plays the structural role of the restoring field:
-- It *absorbs the nonlinearity*: the full connection $omega(eta + h)$ is nonlinear, but $omega(eta + h) - omega(eta) = delta omega(h)$ is linear at first order in $h$, and $delta omega and delta omega$ is quadratic hence discarded.
-- It *breaks diffeomorphism invariance*: just as the Higgs breaks gauge symmetry by selecting a vacuum, $eta$ selects a preferred coordinate system (inertial frames). Gravitational energy becomes localizable with respect to this choice.
-- It *provides an external time*: the Minkowski time coordinate $t$ serves as the evolution parameter, resolving the problem of time for the linearized theory.
+- In Yang--Mills, the gauge symmetry is *internal*: SU(2) and SU(3) act on an internal charge space (color, weak isospin). These are properties of matter fields that live *in* spacetime. When non-admissibility confines these charges, it hides something inside spacetime. Without the Higgs, weak charges would be invisible --- the theory would predict unobservable $W$ and $Z$ bosons.
 
-The restoration chain is: background $eta$ $arrow.r$ admissible $K_(\"eff\")$ $arrow.r$ energy localizable (Isaacson) $arrow.r$ external time exists.
+- In GR, the gauge symmetry is *external*: diffeomorphisms act on spacetime *itself*. Gravity is not a field in spacetime --- it IS spacetime. Non-admissibility makes gravitational energy non-localizable, but it does not hide the observable effects of gravity. Tidal forces, gravitational lensing, gravitational waves, frame-dragging --- all are directly measured. You cannot confine spacetime. You are already in it.
 
-*Key difference from Yang--Mills.* The Higgs field is *dynamical*: it satisfies its own equation of motion, the restoration is a physical process, and its consequences (particle masses) are measurable. The background metric is a *choice*: it is not dynamical in linearized GR, the restoration depends on which background we expand around, and the consequences (energy localizability) hold only in the weak-field regime.
+*What GR does explain.* GR is supported by several classes of observation, of varying directness:
 
-This means admissibility restoration in GR is *fragile*: leave the weak-field regime --- approach a black hole, enter the strong-gravity regime of the early universe --- and the linearization breaks down, the $omega and omega$ term dominates, and non-admissibility returns. The structural consequences (non-localizability, problem of time) reassert themselves.
+- *Binary pulsar decay*: The Hulse--Taylor pulsar energy loss matches the quadrupole formula to 0.2% accuracy over decades of observation. This is a direct measurement --- the pulse arrival times shift cumulatively, with no large systematics to subtract.
+- *Frame-dragging*: Gravity Probe B reported Lense--Thirring precession at $37.2 plus.minus 7.2$ mas/yr, consistent with GR's prediction of 39.2 mas/yr. The measurement required extensive modeling of systematic effects (electrostatic patch torques) that exceeded the signal itself. LAGEOS satellite tracking yields consistent results after subtracting Earth's gravitational multipole contributions.
+- *Gravitational waves*: LIGO detected coincident strain signals in two detectors consistent with a binary inspiral waveform. The signal extraction uses matched filtering --- cross-correlation against GR-derived templates --- so the detection and the theory are not fully independent.
 
-The GR Higgs parallel can be summarized:
+No ``gravitational Higgs'' was needed for nature to produce these observables, with the binary pulsar providing the most model-independent confirmation.
+
+*What GR does not explain.* Galaxy rotation curves are flat: orbital velocity $v(r)$ remains approximately constant far beyond the visible matter distribution. The GR kernel (and its Newtonian limit) predicts Keplerian decline $v(r) prop r^(-1\/2)$, in sharp disagreement with observation. The standard resolution is to postulate dark matter --- unobserved mass that modifies $T_(mu nu)$ to produce the observed curves. But this means GR requires invisible matter to match galactic observations, a move that is structurally analogous to adding an unobserved field.
+
+In Volume III, we showed that a different admissible kernel --- the logarithmic projection kernel $K_(\"log\")$ with Green's function $G(r, r') = -(kappa \/ 2 pi) ln |r - r'|$ --- produces $v(r) = \"const\"$ directly, without dark matter. The logarithmic kernel is admissible (linear), so it does not raise the Higgs question. But it predicts a different gravitational potential ($ln r$ instead of $1\/r$) and does not produce frame-dragging or gravitational waves.
+
+The situation is therefore: GR is correct for strong-field, dynamical phenomena (waves, frame-dragging, binary pulsars), while the logarithmic kernel matches galactic rotation curves without auxiliary hypotheses. Neither kernel, alone, accounts for all gravitational observations.
+
+*The admissibility dilemma.* The success of the logarithmic kernel creates a genuine interpretive tension. The kernel that explains flat rotation curves is admissible. Could this be evidence that the universe prefers admissible kernels --- that non-admissibility in GR is, after all, an obstruction that nature corrects, perhaps through some restoration mechanism we have not yet identified?
+
+The answer is not clear, and we must be honest about this. The evidence pulls in two directions:
+
+*For* a preference for admissibility: the logarithmic kernel (admissible) explains rotation curves that the GR kernel (non-admissible) cannot without dark matter.
+
+*Against* a preference for admissibility: the Newtonian kernel is also admissible, and it too fails at rotation curves --- it predicts Keplerian decline, just like GR's weak-field limit. Admissibility alone does not select the correct kernel. The logarithmic kernel succeeds not because it is admissible, but because it has a specific Green's function ($ln |r - r'|$) that produces the right potential. Newton's kernel has a different Green's function ($1\/|r - r'|$) that produces the wrong one.
+
+This means we face a four-kernel landscape:
+
+#table(
+  columns: (1fr, 1fr, 1fr, 1fr, 1fr),
+  [*Property*], [*Newton*], [*Logarithmic*], [*Linearized GR*], [*Full GR*],
+  [Admissible?], [Yes], [Yes], [Yes], [No],
+  [Rotation curves?], [No (Keplerian)], [Yes (flat)], [No (Keplerian)], [No (needs dark matter)],
+  [Frame-dragging?], [No], [No], [Yes], [Yes],
+  [Gravitational waves?], [No], [No], [Yes], [Yes],
+  [Binary pulsar?], [No], [No], [Yes], [Yes],
+)
+
+*A critical observation.* The three observations commonly cited as confirming full GR --- binary pulsar decay, frame-dragging, and gravitational waves --- are all predictions of *linearized* GR. The quadrupole formula for gravitational radiation is derived in the linearized/post-Newtonian regime. The Lense--Thirring effect comes from the gravitomagnetic potential $h_(0 i)$ of the linearized metric. The gravitational wave equation is a linearized Einstein equation. None of these observations requires the $omega and omega$ self-coupling that makes full GR non-admissible.
+
+The only claimed evidence for the nonlinear regime is the specific waveform shape during the final merger cycles in LIGO data, where numerical relativity (full nonlinear GR) produces templates that linearized theory cannot. But this is precisely the measurement with the most model-dependent extraction: the signal is identified through matched filtering against templates built from the nonlinear theory.
+
+This shifts the landscape significantly. Three admissible kernels (Newton, logarithmic, linearized GR) account for different subsets of gravitational observations. Linearized GR is the most successful admissible kernel: it explains frame-dragging, gravitational waves, and binary pulsar decay --- everything except rotation curves. The logarithmic kernel explains rotation curves but not the dynamical phenomena. The only evidence that requires going *beyond* admissible kernels into the non-admissible full GR is the LIGO merger waveform, which is the least model-independent of all the observations.
+
+We cannot conclude that the universe systematically prefers admissible kernels. But we can observe that the evidence for the *non-admissible* part of GR --- the $omega and omega$ term, the very structure that creates the non-admissibility --- is thinner than commonly presented. The cleanest measurements do not distinguish linearized from full GR.
+
+*The patching problem.* The situation is in fact more uncomfortable than a three-way competition. In Volume III, we introduced a core radius $R_c$ and defined the logarithmic kernel's domain as $r >= R_c$, with the inner region ($r < R_c$) governed by the standard baryonic mass distribution --- which is to say, by the Newtonian potential. The matching condition at $R_c$ fixes $kappa = 2 pi \/ R_c$ and produces the flat outer rotation curve. But this is a *patch*: two different kernels stitched together at a boundary, not a single unified kernel that reproduces both the inner rise and the outer plateau from one structure.
+
+This is structurally analogous to MOND (Milgrom, 1983), which introduces an acceleration scale $a_0$ and applies a modified force law below it while retaining Newton above. Both approaches succeed empirically in their respective outer regimes; both involve a transition parameter ($R_c$ or $a_0$); and neither derives a single kernel valid at all scales from first principles. The POT formulation has the advantage that its transition is spatial ($R_c$) rather than dynamical ($a_0$), and the logarithmic kernel has a concrete Green's function interpretation. But the structural similarity is real, and we should not overclaim: the flat rotation curve result is a regime-specific success, not a demonstration that the logarithmic kernel is the universal gravitational kernel.
+
+*The role of the observable projection.* What we *can* say is that the Higgs question --- does non-admissibility hide essential observables? --- has a clear answer for GR:
 
 #table(
   columns: (1fr, 1fr, 1fr),
-  [*Property*], [*Yang--Mills (Higgs)*], [*GR (background metric)*],
-  [Restoring field], [Higgs $phi$], [Background $eta_(mu nu)$],
-  [Mechanism], [Absorbs Lie bracket], [Absorbs $omega and omega$],
-  [Breaks symmetry], [Gauge $\"SU\"(2)$], [Diffeomorphism],
-  [Observable charges], [Weak charges ($W$, $Z$ masses)], [Gravitational energy (Isaacson)],
-  [Dynamical?], [Yes (Higgs potential)], [No (background choice)],
-  [Fragile?], [No (permanent)], [Yes (breaks in strong field)],
+  [*Property*], [*Yang--Mills*], [*GR*],
+  [Gauge symmetry acts on], [Internal charge space], [Spacetime itself],
+  [What enters $ker(Q)$], [Charges (color, weak isospin)], [Energy density],
+  [What remains in im($Q$)], [Not enough --- charges missing], [Geometry intact],
+  [Non-admissibility hides essential observables?], [*Yes*], [*No*],
 )
 
-Results R1--R4 verify these structural claims in Z3.")
+In Yang--Mills, non-admissibility pushes charges into $ker(Q)$, and $\"im\"(Q)$ without the Higgs is missing the weak sector entirely. The Higgs moves charges from $ker(Q)$ to $\"im\"(Q)$, restoring observability. In GR, non-admissibility pushes energy density into $ker(Q)$, but the geometry --- tidal forces, geodesic deviation, wave strain --- stays in $\"im\"(Q)$. Non-admissibility does not hide the geometric observables that GR correctly predicts.
+
+But the rotation curve problem does not fit neatly into either the Higgs question or the kernel-range question. It is not that non-admissibility *hides* the flat rotation curves --- the Newtonian kernel is admissible and also fails. It is that the *specific form* of the GR kernel (and its Newtonian limit) produces the wrong potential at galactic scales. Whether this points to a different kernel, a modification of GR, or genuinely invisible matter remains an open question --- one that the POT framework identifies precisely but does not resolve.
+
+*Linearization is an approximation, not a mechanism.* Writing $g_(mu nu) = eta_(mu nu) + h_(mu nu)$ and linearizing does produce an admissible kernel $K_(\"eff\")(h)$, formally analogous to Higgs restoration. But linearization is something physicists do, not something nature does. The background $eta$ is a human choice. That said, the fact that the cleanest gravitational observations (binary pulsar, frame-dragging, gravitational waves) are all predictions of the linearized theory raises a genuine question about whether the nonlinear $omega and omega$ term is physically realized or merely a mathematical extension.
+
+*What we can and cannot conclude.* The distinction between internal and external gauge symmetry is structural: Yang--Mills gauge symmetry acts on internal charge space (can confine charges), while GR gauge symmetry acts on spacetime itself (cannot confine geometry). This explains why non-admissibility requires a Higgs in Yang--Mills but does not hide geometric observables in GR.
+
+But whether the universe ultimately operates through admissible kernels at all scales --- whether the success of the logarithmic kernel at galactic scales is a clue --- is an open question. POT provides the language to state the question precisely: three gravitational kernels, two admissible and one not, each correct in a different regime, none complete. The framework does not tell us which principle selects the right kernel in each regime. That remains to be discovered.
+
+Results R1--R4 verify the formal linearization claims in Z3.")
 
 
 // =============================================================================
@@ -317,7 +345,7 @@ define sec_prior_work = ArxivSection("Prior Work",
 
 *Trautman and Sardanashvily: metric as gravitational Higgs.* Trautman (1979) and later Sardanashvily proposed that the metric tensor in GR plays a role analogous to the Higgs field: it breaks the GL(4,$bb(R)$) symmetry of the frame bundle to SO(3,1). Our linearization-as-restoration analysis (Section 7) formalizes a related but distinct claim: the *background metric* $eta$ restores admissibility by absorbing the $omega and omega$ defect, paralleling how the Higgs restores admissibility by absorbing the Lie bracket defect. The key difference we identify is fragility: the GR restoration is a non-dynamical choice, not a physical mechanism.
 
-*ADM formalism (1959) and LIGO (2015).* Our degree-of-freedom counting $10 - 4 - 4 = 2$ reproduces the result of the ADM (Arnowitt--Deser--Misner) canonical formulation of GR, which identifies the Hamiltonian and momentum constraints and establishes that the gravitational field has exactly 2 propagating degrees of freedom: the transverse-traceless polarizations $h_+$ and $h_times$. This was confirmed experimentally by LIGO's first detection of gravitational waves (GW150914, 2015), which measured a signal consistent with exactly 2 polarizations. Our framework arrives at the same count from the POT structure: the 4 gauge DOF are fiber directions (diffeomorphism orbits), the 4 constraints are $\"ker\"(Q)$ content (projected away), and the 2 surviving modes are $\"im\"(Q compose K)$ --- what passes through both production and projection.
+*ADM formalism (1959).* Our degree-of-freedom counting $10 - 4 - 4 = 2$ reproduces the result of the ADM (Arnowitt--Deser--Misner) canonical formulation of GR, which identifies the Hamiltonian and momentum constraints and establishes that the gravitational field has exactly 2 propagating degrees of freedom: the transverse-traceless polarizations $h_+$ and $h_times$. LIGO's detection of gravitational waves (GW150914, 2015) reported a signal consistent with exactly 2 polarizations, using matched filtering against GR-derived waveform templates. Our framework arrives at the same count from the POT structure: the 4 gauge DOF are fiber directions (diffeomorphism orbits), the 4 constraints are $\"ker\"(Q)$ content (projected away), and the 2 surviving modes are $\"im\"(Q compose K)$ --- what passes through both production and projection.
 
 *Logarithmic potential and flat rotation curves.* In a companion paper, we showed that a logarithmic Green's function $K(r) tilde log(r)$ reproduces flat galactic rotation curves without dark matter. This raises the question: can the logarithmic kernel be derived from the GR weak-field limit? The answer is no. The GR weak-field kernel is the Newtonian $1/r$ potential, producing Keplerian falloff $v tilde 1/sqrt(r)$. The logarithmic correction requires physics beyond the standard linearization. Our framework makes this precise: the GR kernel (via Cartan) gives $1/r$ in the admissible limit; any departure from $1/r$ requires either a modification of $K$ (e.g., additional fields, modified gravity) or a non-perturbative effect from the non-admissible regime.")
 
@@ -374,23 +402,48 @@ Both are curvature 2-forms of connections on fiber bundles (the frame bundle $\"
 
 Yet the physical consequences differ:
 
-- *Yang--Mills non-admissibility* $arrow.r$ color confinement (charges unobservable)
-- *GR non-admissibility* $arrow.r$ energy non-localizability (gravitational energy coordinate-dependent)
+- *Yang--Mills non-admissibility* $arrow.r$ color confinement (charges unobservable) $arrow.r$ Higgs needed
+- *GR non-admissibility* $arrow.r$ energy non-localizability $arrow.r$ but geometry observable $arrow.r$ no restoration needed
 
-The difference is in the *observable projection* $Q$, not in the kernel $K$. Both kernels are non-admissible for the same reason. But $Q_(\"YM\")$ projects onto gauge-invariant observables (Wilson loops, $\"Tr\" F and F$), making color charge unobservable; while $Q_(\"GR\")$ projects onto the Ricci tensor (via Einstein's equations), making gravitational energy-momentum coordinate-dependent.
+*The re-interpretation of $Q$.* In the Yang--Mills paper (Volume V), we presented the observable projection $Q$ as primarily an algebraic filter: it takes the output of $K$ and extracts the observable content. The obstruction was located entirely in $K$, and $Q$ was treated as passive. The present paper forces a deeper reading of $Q$'s role.
 
-*$Q_(\"GR\")$ is concrete and computable.* Unlike in quantum gravity --- where the nature of the observable projection is an open question tied to the measurement problem --- $Q_(\"GR\")$ in classical GR is fully determined: it is the Ricci contraction. We computed $Q compose K$ on Schwarzschild and obtained $R_(mu nu) = 0$, confirming that the projection works correctly. The kernel of $Q$ is the Weyl tensor, which we computed explicitly. The structural problems of GR --- non-localizability, the problem of time, coordinate singularities --- therefore arise entirely from $K$, not from $Q$. The obstruction is the $omega and omega$ self-coupling in the production kernel, not any ambiguity in the observable projection. This stands in contrast to the quantum gravity program, where much effort is devoted to finding the ``right'' quantization (the right $Q$): our analysis suggests that the obstruction is in the kernel, not the projection.
+The critical observation is this: *the same non-admissible algebra produces different needs for restoration depending on what $Q$ projects onto*. In Yang--Mills, $Q$ needs charges. Non-admissibility confines them. Therefore $\"im\"(Q)$ is incomplete, and a restoring mechanism (the Higgs) must move charges from $\"ker\"(Q)$ back into $\"im\"(Q)$. In GR, $Q$ needs geometry. Non-admissibility hides energy density, but geometry --- tidal forces, wave strain, geodesic deviation --- remains in $\"im\"(Q)$. The projection is already complete. No restoration is needed.
 
-*The intermediate layer is not observable.* The Riemann tensor is the *intermediate* of the GR pipeline: it is the output of $K$ (production) and the input to $Q$ (observation). It lives between production and observation. Stating that ``the Riemann tensor diverges at $r = 0$'' is a statement about this intermediate layer --- not about $\"im\"(Q)$. In the POT framework, attributing physical reality to the intermediate is a category error: it is structurally equivalent to asking what an electron is doing between measurements (quantum mechanics), what momentum a virtual photon carries (quantum field theory), or what value a gauge field takes before gauge fixing (Yang--Mills). In each case, the intermediate is mathematically well-defined but not observable. Physics already knows this in every domain; POT formalizes it: only $\"im\"(Q)$ corresponds to physical observables. The curvature invariant $R_(a b c d) R^(a b c d) arrow.r infinity$ is a property of the intermediate layer. The observable output is $Q$'s result: $R_(a b) = 0$. Vacuum. Nothing diverges in the projection.
+This means $Q$ is not merely a passive filter. It determines *whether non-admissibility is a problem*. The same algebraic defect in $K$ is catastrophic or benign depending on what $Q$ requires. Put differently: the algebra of $K$ is the same, but $Q$ decides whether the universe needs to respond with a dynamical mechanism.
+
+We can state this as a principle:
+
+#align(center)[#box(stroke: 0.5pt, inset: 8pt)[
+*Projection Sufficiency Principle:* Non-admissibility of $K$ requires a dynamical restoration mechanism if and only if the essential observables of the theory lie in the sector that non-admissibility pushes into $\"ker\"(Q)$.
+]]
+
+For Yang--Mills: essential observables include charges $arrow.r$ charges confined by non-admissibility $arrow.r$ restoration required. For GR: essential observables are geometric $arrow.r$ geometry survives non-admissibility $arrow.r$ no restoration required.
+
+This reframes the relationship between the Higgs mechanism and GR. The question is not ``where is the gravitational Higgs?'' The question is ``does $Q_(\"GR\")$ need one?'' For the Higgs question specifically --- does non-admissibility hide essential observables? --- the answer is no. The binary pulsar, frame-dragging measurements, and gravitational wave detections are all consistent with geometric predictions of GR. Non-admissibility does not confine geometric observables in the way it confines charges in Yang--Mills.
+
+But the flat rotation curve problem introduces a deeper uncertainty. The admissible logarithmic kernel (Volume III) explains galactic rotation curves without dark matter, where the non-admissible GR kernel cannot. Read one way, this is evidence that the universe prefers admissible kernels --- that non-admissibility in GR is a genuine obstruction. But the Newtonian kernel is also admissible and also fails at rotation curves, producing Keplerian decline just like GR's weak-field limit. Admissibility does not select the correct kernel; the specific form of the Green's function does. We therefore cannot conclude that the universe systematically honors or violates admissibility. The data underdetermines the principle.
+
+*$Q$ as the arbiter of physical consequences.* This interpretation promotes $Q$ from a passive algebraic operation to the object that determines the *physical meaning* of non-admissibility. $K$ produces the same kind of defect in both theories. But:
+
+- $Q_(\"YM\")$ + non-admissible $K_(\"YM\")$ = *incomplete observables* $arrow.r$ dynamical fix needed
+- $Q_(\"GR\")$ + non-admissible $K_(\"GR\")$ = *complete observables* $arrow.r$ no fix needed
+
+The universe responds to the combination $(K, Q)$, not to $K$ alone. The Higgs is not a response to non-admissibility per se --- it is a response to *insufficient projection*. Where projection is sufficient, non-admissibility is tolerated.
+
+*$Q_(\"GR\")$ is concrete and computable.* Unlike in quantum gravity --- where the nature of the observable projection is an open question tied to the measurement problem --- $Q_(\"GR\")$ in classical GR is fully determined: it is the Ricci contraction. We computed $Q compose K$ on Schwarzschild and obtained $R_(mu nu) = 0$, confirming that the projection works correctly. The kernel of $Q$ is the Weyl tensor, which we computed explicitly.
+
+*The intermediate layer is not observable.* The Riemann tensor is the *intermediate* of the GR pipeline: it is the output of $K$ (production) and the input to $Q$ (observation). Stating that ``the Riemann tensor diverges at $r = 0$'' is a statement about this intermediate layer --- not about $\"im\"(Q)$. In the POT framework, attributing physical reality to the intermediate is a category error: it is structurally equivalent to asking what an electron is doing between measurements, what momentum a virtual photon carries, or what value a gauge field takes before gauge fixing. Only $\"im\"(Q)$ corresponds to physical observables. The curvature invariant $R_(a b c d) R^(a b c d) arrow.r infinity$ is a property of the intermediate layer. The observable output is $Q$'s result: $R_(a b) = 0$. Vacuum. Nothing diverges in the projection.
 
 *Admissibility as a classification principle.* The admissibility boundary organizes physical theories:
 
-- *Admissible:* Electrodynamics ($K = d$), linearized GR, Biot--Savart (fluid mechanics)
+- *Admissible:* Electrodynamics ($K = d$), linearized GR, Newton gravity, the logarithmic flat-rotation kernel
 - *Non-admissible:* Yang--Mills ($K = d + A and A$), full nonlinear GR ($K: e arrow.r d omega + omega and omega$)
 
-The gap $K^(-1)(\"ker\"(Q)) without \"ker\"(K)$ --- the pre-images of unobservable curvature that are not in the kernel of $K$ itself --- is where structural richness resides. For admissible theories, this gap is empty or simple. For non-admissible theories, it contains the full complexity of confinement (Yang--Mills) or the constraint structure of canonical gravity (GR).
+The admissible theories do not raise the question of restoration at all --- their projections are automatically well-behaved. Among the non-admissible theories, the Projection Sufficiency Principle determines whether a Higgs-like mechanism is required: it is required for Yang--Mills (insufficient projection) but not for GR (sufficient projection).
 
-*What this paper does not do.* We do not derive the Einstein field equations from first principles, nor do we compute the gravitational action (Einstein--Hilbert or Palatini). We do not resolve the problem of time dynamically, nor do we provide a concrete quantum kernel $K$ that resolves the Schwarzschild singularity. These require physical content beyond the algebraic framework developed here. What we establish is the structural layer beneath: the non-admissibility of the GR kernel is the algebraic *precondition* for non-localizability, the problem of time, and the constraint structure of canonical gravity, just as non-admissibility of the Yang--Mills kernel is the precondition for confinement. The classification of singularities by their position relative to $\"ker\"(Q)$ provides a structural framework for understanding which infinities are projection artifacts and which are genuine observable divergences.")
+*The evidentiary status of non-admissibility in GR.* A further complication deserves emphasis. The three gravitational observations cited above --- binary pulsar decay, frame-dragging, and gravitational waves --- are all predictions of *linearized* GR, which is admissible. The quadrupole formula is a linearized/post-Newtonian result. The Lense--Thirring effect is derived from the gravitomagnetic potential $h_(0 i)$ of the linearized metric. The gravitational wave equation is the linearized Einstein equation. The only claimed observation that requires the nonlinear $omega and omega$ self-coupling is the specific merger waveform shape in LIGO data, extracted via matched filtering against templates derived from the nonlinear theory. The evidence for the non-admissible part of GR --- the very structure this paper analyzes --- is therefore thinner than commonly presented. The cleanest gravitational measurements do not distinguish between linearized and full GR.
+
+*What this paper does not do.* We do not derive the Einstein field equations from first principles, nor do we resolve the problem of time dynamically, nor do we provide a concrete quantum kernel $K$ that resolves the Schwarzschild singularity. These require physical content beyond the algebraic framework developed here. What we establish is the structural layer beneath: the non-admissibility of the GR kernel, the role of $Q$ as the arbiter of whether non-admissibility requires dynamical correction, and the classification of singularities by their position relative to $\"ker\"(Q)$.")
 
 
 // =============================================================================
@@ -400,13 +453,21 @@ The gap $K^(-1)(\"ker\"(Q)) without \"ker\"(K)$ --- the pre-images of unobservab
 define sec_conclusion = ArxivSection("Conclusion",
 "We have shown, using the Kleis Cartan geometry pipeline, that the General Relativity production kernel is non-admissible. The proof is computational: we evaluate the admissibility defect $Delta(e_A, e_B) = K(e_A + e_B) - K(e_A) - K(e_B)$ on the Schwarzschild tetrad and a radial perturbation, obtaining a nonzero symbolic expression. We isolate the $omega and omega$ self-coupling as the source, paralleling the $A and A$ term in Yang--Mills.
 
-The structural consequences --- gravitational energy non-localizability, the problem of time, and the admissibility boundary between full and linearized GR --- follow from the same chain that produces color confinement in Yang--Mills: non-admissible kernel $arrow.r$ non-invariant image on gauge orbits $arrow.r$ unobservable or non-localizable quantities.
+Beyond the initial proof, we established the full fiber interpretation: diffeomorphism orbits are the projection fibers of GR, and non-admissibility forces the kernel image to vary across these fibers, producing non-localizability as a consequence of the Main Theorem of projection fiber theory. We identified the Gribov analog, the observable hierarchy, and the admissibility boundary between full and linearized GR. The Weyl tensor was computed as the explicit content of $\"ker\"(Q_(\"GR\"))$.
 
-Beyond the initial proof, we established the full fiber interpretation: diffeomorphism orbits are the projection fibers of GR, and non-admissibility forces the kernel image to vary across these fibers, producing non-localizability as a consequence of the Main Theorem of projection fiber theory. We identified the Gribov analog (no global coordinate fixing for non-admissible kernels), the observable hierarchy (only curvature invariants survive as observables in full GR), and the admissibility restoration mechanism (linearization around a background metric, the structural analog of the Higgs mechanism). The Weyl tensor was computed as the explicit content of $\"ker\"(Q_(\"GR\"))$ --- the curvature that the observable projection discards.
+The most significant result is the re-interpretation of the observable projection $Q$. In the Yang--Mills case, we argued that the Higgs mechanism is admissibility restoration --- a dynamical field that moves confined charges from $\"ker\"(Q)$ back into $\"im\"(Q)$. The GR case reveals that this is only half the story. The full principle is:
 
-Perhaps the most striking result is the singularity analysis: the Schwarzschild singularity lives entirely in $\"ker\"(Q_(\"GR\"))$. The curvature diverges, but $Q$ maps it to zero --- the Ricci tensor vanishes for vacuum. The observable projection annihilates the singularity, following the same structural pattern as UV divergence annihilation in QFT. This classification separates vacuum singularities (in $\"ker\"(Q)$, annihilated) from matter singularities (in $\"im\"(Q)$, observable), and suggests that singularity resolution in quantum gravity is the problem of finding a kernel $K$ that does not produce divergent Weyl content.
+*Non-admissibility of $K$ requires dynamical restoration if and only if $\"im\"(Q)$ is insufficient for observation.*
 
-The unifying insight is that the curvature formula $R = d omega + omega and omega$, shared in structure by GR and Yang--Mills, is the single algebraic object responsible for the most profound features of both theories. The Projected Ontology framework provides the language to state and verify this precisely.
+In Yang--Mills, the essential observables (charges, masses) are hidden by non-admissibility, so the Higgs is required. In GR, the geometric observables (tidal forces, gravitational waves, frame-dragging) survive non-admissibility intact. Non-admissibility does not hide the observables that $Q_(\"GR\")$ projects onto in the way it hides charges in Yang--Mills.
+
+This promotes $Q$ from a passive algebraic filter to the *arbiter* of whether non-admissibility has physical consequences. The kernel $K$ is non-admissible in both cases for the same algebraic reason ($omega and omega$ versus $A and A$). But the universe responds to the pair $(K, Q)$, not to $K$ alone. Where projection is sufficient (GR geometric observables), non-admissibility is tolerated; where it is insufficient (Yang--Mills charges), nature provides a dynamical fix.
+
+A complication sharpens the picture. The three gravitational observations commonly cited as confirming GR --- binary pulsar decay, frame-dragging, and gravitational waves --- are all predictions of *linearized* GR, which is admissible. The only claimed evidence for the nonlinear $omega and omega$ term is the specific merger waveform in LIGO data, extracted via matched filtering against GR-derived templates. The evidence for full non-admissible GR, as distinct from its admissible linearization, rests on a narrow base. Meanwhile, the admissible logarithmic kernel (Volume III) explains flat rotation curves where both GR and Newton fail --- but this success is regime-specific, patched at a core radius $R_c$ in a manner structurally analogous to MOND. Whether the universe operates through admissible kernels at all scales, or whether the success of different kernels in different regimes points to a deeper organizing principle, is an open question that the POT framework identifies but does not yet resolve.
+
+The singularity analysis stands independent of this uncertainty: the Schwarzschild singularity lives entirely in $\"ker\"(Q_(\"GR\"))$. The curvature diverges, but $Q$ maps it to zero --- the Ricci tensor vanishes for vacuum. The observable projection annihilates the singularity, separating vacuum singularities (in $\"ker\"(Q)$, annihilated) from matter singularities (in $\"im\"(Q)$, observable). This result depends on the structure of $Q$, not on which kernel produced the curvature.
+
+The unifying insight is that the curvature formula $R = d omega + omega and omega$, shared in structure by GR and Yang--Mills, produces the same algebraic non-admissibility in both theories. What differs is the observable projection, and the Projection Sufficiency Principle determines whether the universe must respond with a Higgs-like mechanism. But the empirical question --- whether the nonlinear term is physically realized, or whether nature operates through the admissible linearization --- remains open. The Projected Ontology framework provides the language to state, classify, and verify these distinctions precisely.
 
 All 50 results --- 17 by Kleis evaluation of the Cartan pipeline and 33 by the Z3 SMT solver --- are formally verified, with no human intervention in the derivation chain.")
 
@@ -454,6 +515,21 @@ define ref_atik_kq = ArxivReference("Atik-VII",
 define ref_atik_rotation = ArxivReference("Atik-RC",
     "Atik, E. Flat galactic rotation curves from a logarithmic Green's function. *Preprint* (2025).")
 
+define ref_milgrom = ArxivReference("Mil1983",
+    "Milgrom, M. A modification of the Newtonian dynamics as a possible alternative to the hidden mass hypothesis. *Astrophys. J.* 270, 365 (1983).")
+
+define ref_gpb = ArxivReference("GPB2011",
+    "Everitt, C. W. F. et al. Gravity Probe B: Final results of a space experiment to test general relativity. *Phys. Rev. Lett.* 106, 221101 (2011).")
+
+define ref_atik_qft = ArxivReference("Atik-I",
+    "Atik, E. Projected Ontology Theory: a kernel-projection framework for quantum field theory. Volume I of the POT Series. *Preprint* (2025).")
+
+define ref_hulse_taylor = ArxivReference("HT1975",
+    "Hulse, R. A. and Taylor, J. H. Discovery of a pulsar in a binary system. *Astrophys. J.* 195, L51 (1975).")
+
+define ref_isaacson = ArxivReference("Isa1968",
+    "Isaacson, R. A. Gravitational radiation in the limit of high frequency. II. Nonlinear terms and the effective stress tensor. *Phys. Rev.* 166, 1272 (1968).")
+
 
 // =============================================================================
 // Assembly
@@ -484,7 +560,12 @@ define all_sections = [
     ref_atik_fibers,
     ref_atik_singularity,
     ref_atik_kq,
-    ref_atik_rotation
+    ref_atik_rotation,
+    ref_atik_qft,
+    ref_milgrom,
+    ref_gpb,
+    ref_hulse_taylor,
+    ref_isaacson
 ]
 
 define paper = Paper(
@@ -497,5 +578,6 @@ define paper = Paper(
 )
 
 example "compile_paper" {
-    out(compile_arxiv_paper(paper))
+    let typst = compile_arxiv_paper(paper)
+    out(typst_raw(typst))
 }
