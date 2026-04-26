@@ -681,22 +681,22 @@ impl Expression {
                     }
                 }
 
-                if let (Expression::List(la), Expression::List(ra)) = (lhs, rhs) {
-                    if la.len() == ra.len() {
-                        let conjuncts: Vec<Expression> = la
-                            .iter()
-                            .zip(ra.iter())
-                            .map(|(a, b)| {
-                                Expression::operation("equals", vec![a.clone(), b.clone()])
-                                    .decompose_constructor_equalities()
-                            })
-                            .collect();
-                        if let Some(result) = conjuncts
-                            .into_iter()
-                            .reduce(|acc, c| Expression::operation("and", vec![acc, c]))
-                        {
-                            return result;
-                        }
+                if let (Expression::List(la), Expression::List(ra)) = (lhs, rhs)
+                    && la.len() == ra.len()
+                {
+                    let conjuncts: Vec<Expression> = la
+                        .iter()
+                        .zip(ra.iter())
+                        .map(|(a, b)| {
+                            Expression::operation("equals", vec![a.clone(), b.clone()])
+                                .decompose_constructor_equalities()
+                        })
+                        .collect();
+                    if let Some(result) = conjuncts
+                        .into_iter()
+                        .reduce(|acc, c| Expression::operation("and", vec![acc, c]))
+                    {
+                        return result;
                     }
                 }
 

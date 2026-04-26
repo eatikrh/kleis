@@ -3,8 +3,8 @@
 //! Tests that complex number operations are correctly wired into the Z3 backend.
 
 use kleis::solvers::z3::translators::complex::ComplexZ3;
-use z3::ast::Real;
 use z3::SatResult;
+use z3::ast::Real;
 
 /// Test that i² = -1 is verified by Z3
 #[test]

@@ -485,17 +485,17 @@ impl KleisContext {
                 continue;
             }
 
-            if let Some(doc) = self.documents.get(&current) {
-                if let Some(ref program) = doc.program {
-                    // Add imports to visit queue (iterate over HashSet)
-                    for import_path in doc.imports.iter() {
-                        if !visited.contains(import_path) {
-                            to_visit.push(import_path.clone());
-                        }
+            if let Some(doc) = self.documents.get(&current)
+                && let Some(ref program) = doc.program
+            {
+                // Add imports to visit queue (iterate over HashSet)
+                for import_path in doc.imports.iter() {
+                    if !visited.contains(import_path) {
+                        to_visit.push(import_path.clone());
                     }
-
-                    result.push((current.clone(), program.clone()));
                 }
+
+                result.push((current.clone(), program.clone()));
             }
         }
 

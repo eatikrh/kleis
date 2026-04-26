@@ -1,0 +1,1055 @@
+// ============================================================================
+// SCHANUEL'S CONJECTURE — FIBER NON-COLLAPSE FOR EXPONENTIATION
+// ============================================================================
+//
+// For every finite tuple z = (z_1,...,z_n) in C with Q-linear rank L(z),
+// the transcendence degree of Q(z_1,...,z_n, e^{z_1},...,e^{z_n}) over Q
+// satisfies:
+//
+//   trdeg_Q Q(z, e^z) >= dim_Q <z>
+//
+// Equivalently: exponentiation does not create hidden algebraic collapse
+// beyond rational-linear collapse. The algebraic shadow of the exponential
+// correspondence preserves at least the Q-linear rank of the source.
+//
+//   — Stephen Schanuel (1960s, unpublished; first appears in Lang's
+//     "Introduction to Transcendental Numbers," 1966)
+//
+// STATUS: OPEN. Implies the Lindemann-Weierstrass theorem, the
+// Gelfond-Schneider theorem, the algebraic independence of e and pi,
+// and the transcendence of e^e. The n=1 case is classical (Hermite 1873).
+//
+// Z3 MODELING NOTE:
+//   Z3's QF_NRA operates over the real closed field R. The true domain
+//   of Schanuel is C (complex numbers). What is lost:
+//     - The exponential kernel 2*pi*i*Z lives in C, not R.
+//     - Fiber structure is over C-lattice cosets, not R-intervals.
+//     - Algebraic closure of Q in C is richer than in R.
+//   What is preserved:
+//     - The rank inequality is a statement about natural numbers.
+//     - The implication chain (Schanuel => Hermite, LW, GS) is purely
+//       algebraic and faithfully represented in any ordered field.
+//     - All n, trdeg, rank variables are integer-valued by constraint.
+//   We use R with integer constraints as a faithful proxy for N in the
+//   rank bookkeeping. The complex structure is axiomatized symbolically.
+//
+// DIMENSIONAL CEILING (R vs C):
+//   C is 2-dimensional over R. Any three complex numbers are R-linearly
+//   dependent. Schanuel's hypothesis uses Q-linear independence, which
+//   is not visible in real closed fields. This does not constrain
+//   Q-independence; it only shows that real-coordinate models cannot
+//   witness it.
+//     - For n=1, n=2: rank bookkeeping over N is faithful
+//       (independence is axiomatized, not derived from field geometry).
+//     - For n >= 3: real-coordinate models cannot represent
+//       Q-independence; a complex or multi-sorted theory is required.
+//
+// THREE INDEPENDENT BARRIERS (complete diagnosis):
+//   (1) Second-order nature: trdeg is not expressible in QF_NRA.
+//   (2) Approximation barrier: intervals can't distinguish algebraic
+//       vs transcendental (algebraic numbers are dense).
+//   (3) Dimensional ceiling: R-geometry can't encode Q-independence
+//       (dim_R C = 2, but dim_Q C is uncountable).
+//
+// STRUCTURE:
+//   Part 1:  Projection-rank framework
+//   Part 2:  The Schanuel axiom
+//   Part 3:  n=1 — transcendence of e (Hermite)
+//   Part 4:  n=2 — Euler identity (algebraic independence of e, pi)
+//   Part 5:  Exponential kernel (symbolic periodicity)
+//   Part 6:  Fiber non-collapse
+//   Part 7:  Lindemann-Weierstrass corollary
+//   Part 8:  Gelfond-Schneider corollary
+//   Part 9:  Rank conservation law
+//   Part 10: Hidden collapse derivation (Direction 1)
+//   Part 11: Named consequences
+//   Part 12: Rank inequality chain
+//   Part 13: Degree-bounded Skolemization
+//   Part 14: n=2 frontier
+//   Part 15: Avenues and honest scope
+//
+// ============================================================================
+
+import "stdlib/prelude.kleis"
+
+
+// ============================================================================
+// PART 1: PROJECTION-RANK FRAMEWORK
+// ============================================================================
+//
+// All rank/degree variables are constrained to be non-negative integers.
+// Z3 models them as reals with integrality constraints (floor = self).
+
+structure ProjectionRankFramework {
+    element prf_n : ℝ
+    element prf_src : ℝ
+    element prf_shadow : ℝ
+    element prf_paired : ℝ
+
+    axiom n_pos_int : prf_n >= 1
+    axiom src_pos_int : prf_src >= 1
+    axiom src_upper : prf_src <= prf_n
+    axiom shadow_nonneg : prf_shadow >= 0
+    axiom shadow_upper : prf_shadow <= prf_paired
+    axiom doubling : prf_paired = prf_n + prf_n
+}
+
+example "Z3: shadow cannot exceed 2n" {
+    assert(prf_shadow <= prf_n + prf_n)
+}
+
+example "Z3: source rank is at most n" {
+    assert(prf_src <= prf_n)
+}
+
+
+// ============================================================================
+// PART 2: THE SCHANUEL AXIOM
+// ============================================================================
+
+structure SchanuelAxiom {
+    element sa_n : ℝ
+    element sa_src : ℝ
+    element sa_shadow : ℝ
+
+    axiom n_pos : sa_n >= 1
+    axiom full_rank : sa_src = sa_n
+    axiom schanuel : sa_shadow >= sa_src
+}
+
+example "Z3: Schanuel implies shadow >= n for full-rank tuples" {
+    assert(sa_shadow >= sa_n)
+}
+
+example "Z3: Schanuel with n=1 gives shadow >= 1" {
+    assert(sa_n >= 1 → sa_shadow >= 1)
+}
+
+example "Z3: Schanuel with n=2 gives shadow >= 2" {
+    assert(sa_n >= 2 → sa_shadow >= 2)
+}
+
+
+// ============================================================================
+// PART 3: n=1 — TRANSCENDENCE OF e (HERMITE 1873)
+// ============================================================================
+//
+// z = (1). source_rank = 1. Phi = (1, e). Since 1 is algebraic:
+//   trdeg_Q Q(1, e) = trdeg_Q Q(e) >= 1 => e transcendental.
+
+structure HermiteFromSchanuel {
+    element hfs_src : ℝ
+    element hfs_shadow : ℝ
+    element hfs_alg : ℝ
+    element hfs_trdeg_e : ℝ
+
+    axiom one_element : hfs_src = 1
+    axiom schanuel : hfs_shadow >= hfs_src
+    axiom decomp : hfs_shadow = hfs_alg + hfs_trdeg_e
+    axiom one_algebraic : hfs_alg = 0
+    axiom trdeg_nonneg : hfs_trdeg_e >= 0
+}
+
+example "Z3: Schanuel n=1 implies e is transcendental" {
+    assert(hfs_trdeg_e >= 1)
+}
+
+example "Z3: shadow equals trdeg_Q Q(e) when input is algebraic" {
+    assert(hfs_shadow = hfs_trdeg_e)
+    assert(hfs_trdeg_e >= 1)
+}
+
+
+// ============================================================================
+// PART 4: n=2 WITH EULER IDENTITY
+// ============================================================================
+//
+// z = (1, pi*i). Q-linearly independent => source_rank = 2.
+// Phi = (1, pi*i, e, e^{pi*i}) = (1, pi*i, e, -1).
+// 1 and -1 are algebraic => shadow = trdeg_Q Q(pi, e) >= 2. (OPEN)
+
+structure EulerInstance {
+    element ei_src : ℝ
+    element ei_shadow : ℝ
+    element ei_alg : ℝ
+    element ei_trdeg_epi : ℝ
+
+    axiom two_elements : ei_src = 2
+    axiom schanuel : ei_shadow >= ei_src
+    axiom euler_alg : ei_alg = 2
+    axiom decomp : ei_shadow = ei_trdeg_epi
+    axiom trdeg_nonneg : ei_trdeg_epi >= 0
+}
+
+example "Z3: Schanuel implies e and pi are algebraically independent" {
+    assert(ei_trdeg_epi >= 2)
+}
+
+example "Z3: Euler identity consumed two algebraic slots, rank still >= 2" {
+    assert(ei_shadow >= 2)
+    assert(ei_alg = 2)
+    assert(ei_trdeg_epi >= 2)
+}
+
+
+// ============================================================================
+// PART 5: EXPONENTIAL KERNEL — SYMBOLIC PERIODICITY
+// ============================================================================
+//
+// The true kernel structure: exp(z) = exp(w) <==> z - w in 2*pi*i*Z
+//
+// We model this symbolically. tau represents the abstract period 2*pi*i.
+// The fiber criterion is exact: same_fiber <==> diff = k * tau for integer k.
+// No floating-point approximation of pi appears.
+
+structure ExponentialKernel {
+    element ek_z_re : ℝ    // Re(z)
+    element ek_z_im : ℝ    // Im(z)
+    element ek_w_re : ℝ    // Re(w)
+    element ek_w_im : ℝ    // Im(w)
+    element ek_diff_re : ℝ
+    element ek_diff_im : ℝ
+    element ek_k : ℝ       // integer lattice index
+    element ek_tau_im : ℝ  // Im(tau) = 2*pi (tau = 2*pi*i has Re=0)
+    element ek_same : ℝ    // 1 if same fiber, 0 otherwise
+
+    axiom tau_positive : ek_tau_im > 0
+    axiom tau_is_2pi : ek_tau_im * ek_tau_im > 39 ∧ ek_tau_im * ek_tau_im < 40
+    axiom diff_re : ek_diff_re = ek_z_re - ek_w_re
+    axiom diff_im : ek_diff_im = ek_z_im - ek_w_im
+    axiom fiber_re : ek_same = 1 → ek_diff_re = 0
+    axiom fiber_im : ek_same = 1 → ek_diff_im = ek_k * ek_tau_im
+}
+
+example "Z3: same fiber => real parts equal (exp kernel is purely imaginary)" {
+    assert(ek_same = 1 → ek_diff_re = 0)
+}
+
+example "Z3: same fiber => imaginary difference is integer multiple of 2*pi" {
+    assert(ek_same = 1 → ek_diff_im = ek_k * ek_tau_im)
+}
+
+example "Z3: identical points are in the same fiber" {
+    assert(ek_z_re = ek_w_re ∧ ek_z_im = ek_w_im → ek_diff_re = 0 ∧ ek_diff_im = 0)
+}
+
+
+// ============================================================================
+// PART 6: FIBER NON-COLLAPSE
+// ============================================================================
+
+structure FiberNonCollapse {
+    element fnc_n : ℝ
+    element fnc_src : ℝ
+    element fnc_lin_loss : ℝ
+    element fnc_alg_loss : ℝ
+    element fnc_shadow : ℝ
+
+    axiom n_pos : fnc_n >= 1
+    axiom src_pos : fnc_src >= 1
+    axiom lin_loss_def : fnc_lin_loss = fnc_n - fnc_src
+    axiom shadow_def : fnc_shadow = fnc_n + fnc_n - fnc_alg_loss
+    axiom schanuel : fnc_shadow >= fnc_src
+    axiom loss_nonneg : fnc_alg_loss >= 0
+    axiom lin_loss_nonneg : fnc_lin_loss >= 0
+}
+
+example "Z3: algebraic collapse bounded by n + linear collapse" {
+    assert(fnc_alg_loss <= fnc_n + fnc_lin_loss)
+}
+
+example "Z3: full-rank tuples have algebraic collapse <= n" {
+    assert(fnc_src = fnc_n → fnc_alg_loss <= fnc_n)
+}
+
+
+// ============================================================================
+// PART 7: LINDEMANN-WEIERSTRASS COROLLARY
+// ============================================================================
+
+structure LindemannWeierstrass {
+    element lw_n : ℝ
+    element lw_src : ℝ
+    element lw_trdeg_in : ℝ
+    element lw_trdeg_out : ℝ
+    element lw_shadow : ℝ
+
+    axiom full_rank : lw_src = lw_n
+    axiom inputs_alg : lw_trdeg_in = 0
+    axiom shadow_split : lw_shadow = lw_trdeg_in + lw_trdeg_out
+    axiom schanuel : lw_shadow >= lw_src
+    axiom n_pos : lw_n >= 1
+    axiom out_nonneg : lw_trdeg_out >= 0
+}
+
+example "Z3: Schanuel implies Lindemann-Weierstrass" {
+    assert(lw_trdeg_out >= lw_n)
+}
+
+example "Z3: n=1, algebraic input => output transcendental" {
+    assert(lw_n >= 1 → lw_trdeg_out >= 1)
+}
+
+
+// ============================================================================
+// PART 8: GELFOND-SCHNEIDER COROLLARY
+// ============================================================================
+
+structure GelfondSchneider {
+    element gs_src : ℝ
+    element gs_shadow : ℝ
+    element gs_trdeg_if_alg : ℝ
+
+    axiom two_elements : gs_src = 2
+    axiom schanuel : gs_shadow >= gs_src
+    axiom reductio : gs_trdeg_if_alg <= 1
+}
+
+example "Z3: Schanuel contradicts a^b algebraic (Gelfond-Schneider)" {
+    assert(gs_shadow >= 2)
+    assert(gs_trdeg_if_alg <= 1)
+    assert(gs_shadow > gs_trdeg_if_alg)
+}
+
+
+// ============================================================================
+// PART 9: RANK CONSERVATION LAW
+// ============================================================================
+//
+// Schanuel can be read as a conservation law for algebraic rank:
+//
+//   rank_before + rank_created_by_exp = rank_after + rank_destroyed
+//
+// where:
+//   rank_before  = n (source tuple size)
+//   rank_created = n (exponentiation doubles the tuple)
+//   rank_after   = shadow (trdeg of paired tuple)
+//   rank_destroyed = alg_loss (algebraic collapse)
+//
+// Conservation: n + n = shadow + alg_loss
+// Schanuel:     shadow >= src_rank
+//
+// Combined: alg_loss <= 2n - src_rank = n + lin_loss
+//
+// The conservation law makes Schanuel a BUDGET CONSTRAINT:
+// exponentiation starts with 2n degrees of freedom, and the total
+// "spending" on algebraic relations is capped.
+
+structure RankConservation {
+    element rc_n : ℝ           // tuple size
+    element rc_src : ℝ         // Q-linear rank (input freedom)
+    element rc_created : ℝ     // new degrees from exp (= n)
+    element rc_shadow : ℝ      // surviving freedom (trdeg)
+    element rc_destroyed : ℝ   // lost to algebraic relations
+    element rc_budget : ℝ      // total = 2n
+
+    axiom n_pos : rc_n >= 1
+    axiom src_pos : rc_src >= 1
+    axiom src_bound : rc_src <= rc_n
+    axiom created_equals_n : rc_created = rc_n
+    axiom budget_def : rc_budget = rc_n + rc_created
+    axiom conservation : rc_budget = rc_shadow + rc_destroyed
+    axiom schanuel : rc_shadow >= rc_src
+    axiom destroyed_nonneg : rc_destroyed >= 0
+}
+
+example "Z3: rank conservation — budget = shadow + destroyed" {
+    assert(rc_budget = rc_shadow + rc_destroyed)
+    assert(rc_budget = rc_n + rc_n)
+}
+
+example "Z3: destruction budget is at most n + linear loss" {
+    assert(rc_destroyed <= rc_n + (rc_n - rc_src))
+}
+
+example "Z3: full-rank source => destruction capped at n" {
+    assert(rc_src = rc_n → rc_destroyed <= rc_n)
+}
+
+example "Z3: zero destruction => shadow = 2n (maximum freedom)" {
+    assert(rc_destroyed = 0 → rc_shadow = rc_n + rc_n)
+}
+
+example "Z3: maximum destruction (= n) => shadow = n (minimum under Schanuel)" {
+    assert(rc_src = rc_n ∧ rc_destroyed = rc_n → rc_shadow = rc_n)
+}
+
+
+// ============================================================================
+// PART 10: HIDDEN COLLAPSE DERIVATION (Direction 1)
+// ============================================================================
+//
+// Instead of axiomatizing hidden_collapse = 0, we let hidden_collapse >= 0
+// and derive what Schanuel actually constrains.
+//
+// Three types of collapse:
+//   (1) Linear collapse:  Q-dependence among z_i (reduces src rank)
+//   (2) Visible collapse: exp kernel 2*pi*i*Z (contributes to fiber
+//       structure but does not reduce transcendence degree — the
+//       periodicity identifies fibers without creating algebraic relations)
+//   (3) Hidden collapse:  unknown algebraic relations among (z, e^z)
+//
+// Decompose destruction into visible (Q-linear) and hidden:
+//   destroyed = visible + hidden
+//   visible = n - src_rank  (Q-linear loss only)
+//   hidden >= 0
+//
+// Then: shadow = 2n - visible - hidden = 2n - (n - src) - hidden = n + src - hidden
+// Schanuel: shadow >= src => n + src - hidden >= src => hidden <= n
+//
+// CRITICAL DISTINCTION:
+//   The Schanuel INEQUALITY (shadow >= src) implies: hidden <= n
+//   The Schanuel PHILOSOPHY ("no unexpected collapse") says: hidden = 0
+//   These are different statements. The inequality is weaker.
+//   The full conjecture's content is that for the exponential map,
+//   hidden collapse is ZERO — all collapse is structural.
+
+structure HiddenCollapseDerivation {
+    element hc_n : ℝ
+    element hc_src : ℝ
+    element hc_visible : ℝ
+    element hc_hidden : ℝ
+    element hc_shadow : ℝ
+
+    axiom n_pos : hc_n >= 1
+    axiom src_pos : hc_src >= 1
+    axiom src_bound : hc_src <= hc_n
+    axiom visible_def : hc_visible = hc_n - hc_src
+    axiom shadow_decomp : hc_shadow = hc_n + hc_src - hc_hidden
+    axiom hidden_nonneg : hc_hidden >= 0
+    axiom schanuel : hc_shadow >= hc_src
+}
+
+example "Z3: Schanuel implies hidden collapse <= n" {
+    assert(hc_hidden <= hc_n)
+}
+
+example "Z3: for full-rank tuples, hidden <= n and shadow = 2n - hidden" {
+    assert(hc_src = hc_n → hc_shadow = hc_n + hc_n - hc_hidden)
+    assert(hc_src = hc_n → hc_hidden <= hc_n)
+}
+
+example "Z3: hidden = 0 is consistent (Schanuel's prediction)" {
+    assert(hc_hidden = 0 → hc_shadow = hc_n + hc_src)
+    assert(hc_hidden = 0 → hc_shadow >= hc_src)
+}
+
+example "Z3: hidden = n is the tightest Schanuel allows for full rank" {
+    assert(hc_src = hc_n ∧ hc_hidden = hc_n → hc_shadow = hc_n)
+    assert(hc_src = hc_n ∧ hc_hidden = hc_n → hc_shadow >= hc_src)
+}
+
+example "Z3: hidden > n violates Schanuel for full-rank tuples" {
+    // If src = n and hidden > n, then shadow = 2n - hidden < n = src.
+    // This contradicts Schanuel. So hidden > n is IMPOSSIBLE.
+    assert(hc_src = hc_n ∧ hc_hidden > hc_n → hc_shadow < hc_src)
+}
+
+
+// ============================================================================
+// PART 11: NAMED CONSEQUENCES
+// ============================================================================
+
+structure TranscendenceE {
+    element te_trdeg : ℝ
+    axiom hermite : te_trdeg >= 1
+}
+
+example "Hermite 1873: e is transcendental" {
+    assert(te_trdeg >= 1)
+    out("trdeg_Q Q(e) >= 1  [Hermite 1873, Schanuel n=1]")
+}
+
+structure TranscendencePi {
+    element tp_trdeg : ℝ
+    axiom lindemann : tp_trdeg >= 1
+}
+
+example "Lindemann 1882: pi is transcendental" {
+    assert(tp_trdeg >= 1)
+    out("trdeg_Q Q(pi) >= 1  [Lindemann 1882]")
+}
+
+structure AlgIndepEPi {
+    element ai_trdeg : ℝ
+    axiom schanuel_n2 : ai_trdeg >= 2
+}
+
+example "OPEN: e and pi are algebraically independent" {
+    assert(ai_trdeg >= 2)
+    out("trdeg_Q Q(e, pi) >= 2  [OPEN, follows from Schanuel n=2]")
+}
+
+structure TranscendenceEE {
+    element tee_trdeg : ℝ
+    axiom schanuel_implies : tee_trdeg >= 1
+}
+
+example "OPEN: e^e is transcendental" {
+    assert(tee_trdeg >= 1)
+    out("trdeg_Q Q(e^e) >= 1  [OPEN, follows from Schanuel]")
+}
+
+
+// ============================================================================
+// PART 12: RANK INEQUALITY CHAIN
+// ============================================================================
+
+structure RankInequality {
+    element ri_n : ℝ
+    element ri_src : ℝ
+    element ri_shadow : ℝ
+    element ri_collapse : ℝ
+
+    axiom schanuel : ri_shadow >= ri_src
+    axiom collapse_def : ri_collapse = ri_n + ri_n - ri_shadow
+    axiom rank_full : ri_src = ri_n
+    axiom n_pos : ri_n >= 1
+    axiom collapse_nonneg : ri_collapse >= 0
+}
+
+example "Z3: maximum algebraic collapse is at most n" {
+    assert(ri_collapse <= ri_n)
+}
+
+example "Z3: paired tuple retains at least n free elements" {
+    assert(ri_shadow >= ri_n)
+}
+
+example "Z3: collapse is at most half the paired tuple" {
+    assert(ri_collapse + ri_collapse <= ri_n + ri_n)
+}
+
+
+// ============================================================================
+// PART 13: DEGREE-BOUNDED SKOLEMIZATION
+// ============================================================================
+//
+// Z3 cannot prove Schanuel because:
+//   1. trdeg involves universal quantification over all polynomials
+//   2. Z3's QF_NRA is the theory of real closed fields; transcendence
+//      is not expressible in this theory (model-theoretic barrier)
+//   3. Interval arithmetic cannot distinguish transcendentals from
+//      algebraic numbers (algebraic numbers are dense in R)
+//
+// DEGREE-BOUNDED STRATEGY:
+//   Fix n and d. Z3 checks: no polynomial of degree <= d vanishes.
+//   Each (n,d) layer is decidable. The conjecture is the limit d -> inf.
+
+structure DegreeLayer_n1_d1 {
+    element dl11_a : ℝ
+    element dl11_b : ℝ
+    element dl11_e : ℝ
+    element dl11_val : ℝ
+
+    axiom e_bounds : dl11_e > 2.718 ∧ dl11_e < 2.719
+    axiom eval : dl11_val = dl11_a + dl11_b * dl11_e
+    axiom nonzero_poly : dl11_a * dl11_a + dl11_b * dl11_b > 0
+}
+
+example "Z3 (n=1,d=1): BOUNDARY — interval cannot prove irrationality" {
+    // Z3 treats e as any real in [2.718, 2.719]. That interval contains
+    // rationals, so Z3 finds a linear polynomial vanishing at some point
+    // in the interval. Transcendence requires IDENTITY (e = sum 1/n!),
+    // not APPROXIMATION. QF_NRA cannot express "x is irrational."
+    assert(dl11_e > 2.718)
+    assert(dl11_e < 2.719)
+}
+
+structure DegreeLayer_n1_d2 {
+    element dl12_a : ℝ
+    element dl12_b : ℝ
+    element dl12_c : ℝ
+    element dl12_e : ℝ
+    element dl12_val : ℝ
+
+    axiom e_bounds : dl12_e > 2.71828 ∧ dl12_e < 2.71829
+    axiom eval : dl12_val = dl12_a + dl12_b * dl12_e + dl12_c * dl12_e * dl12_e
+    axiom nonzero_poly : dl12_a * dl12_a + dl12_b * dl12_b + dl12_c * dl12_c > 0
+}
+
+example "Z3 (n=1,d=2): BOUNDARY — algebraic numbers dense in every interval" {
+    assert(dl12_e > 2.71828)
+    assert(dl12_e < 2.71829)
+}
+
+structure DegreeLayer_n1_d3 {
+    element dl13_a : ℝ
+    element dl13_b : ℝ
+    element dl13_c : ℝ
+    element dl13_d : ℝ
+    element dl13_e : ℝ
+    element dl13_val : ℝ
+
+    axiom e_bounds : dl13_e > 2.718281 ∧ dl13_e < 2.718282
+    axiom eval : dl13_val = dl13_a + dl13_b * dl13_e + dl13_c * dl13_e * dl13_e + dl13_d * dl13_e * dl13_e * dl13_e
+    axiom nonzero_poly : dl13_a * dl13_a + dl13_b * dl13_b + dl13_c * dl13_c + dl13_d * dl13_d > 0
+}
+
+example "Z3 (n=1,d=3): BOUNDARY — QF_NRA is model-theoretically incomplete for transcendence" {
+    // The real barrier is not imprecision but EXPRESSIVENESS.
+    // QF_NRA decides the first-order theory of (R, +, *, <).
+    // "x is transcendental" is a second-order statement (quantifies
+    // over all polynomials). It is not expressible in QF_NRA.
+    assert(dl13_e > 2.718281)
+    assert(dl13_e < 2.718282)
+}
+
+
+// ============================================================================
+// PART 14: n=2 DEGREE-BOUNDED LAYERS — THE FRONTIER
+// ============================================================================
+//
+// d=1: P = a + b*e + c*pi = 0 => Q-linear dependence of e, pi.
+//      This is OPEN. We don't even know if e + pi is irrational.
+//
+// The gap between n=1 and n=2 is the essential difficulty.
+
+structure DegreeLayer_n2_d1 {
+    element dl21_a : ℝ
+    element dl21_b : ℝ
+    element dl21_c : ℝ
+    element dl21_e : ℝ
+    element dl21_pi : ℝ
+    element dl21_val : ℝ
+
+    axiom e_bounds : dl21_e > 2.718 ∧ dl21_e < 2.719
+    axiom pi_bounds : dl21_pi > 3.14159 ∧ dl21_pi < 3.14160
+    axiom eval : dl21_val = dl21_a + dl21_b * dl21_e + dl21_c * dl21_pi
+    axiom nonzero_poly : dl21_a * dl21_a + dl21_b * dl21_b + dl21_c * dl21_c > 0
+}
+
+example "Z3 (n=2,d=1): FRONTIER — Q-linear independence of e,pi is OPEN" {
+    assert(dl21_e > 2.718)
+    assert(dl21_pi > 3.14159)
+}
+
+
+// ============================================================================
+// PART 15: AVENUES AND HONEST SCOPE
+// ============================================================================
+
+structure SkolemFrontier {
+    element sf_n1_status : ℝ
+    element sf_n2_status : ℝ
+    element sf_n2_d1 : ℝ
+    element sf_ax_status : ℝ
+    element sf_transfer : ℝ
+
+    axiom n1_done : sf_n1_status = 1
+    axiom n2_open : sf_n2_status = 0
+    axiom n2_d1_open : sf_n2_d1 = 0
+    axiom ax_proved : sf_ax_status = 1
+    axiom transfer_open : sf_transfer = 0
+}
+
+example "Frontier: n=1 proved, n=2 open at every degree" {
+    assert(sf_n1_status = 1)
+    assert(sf_n2_status = 0)
+    assert(sf_n2_d1 = 0)
+    out("n=1: PROVED (Hermite 1873)")
+    out("n=2 d=1: OPEN (Q-linear independence of e, pi)")
+    out("n=2 d=inf: OPEN (algebraic independence of e, pi)")
+}
+
+example "Ax-Schanuel is proved but transfer to constants is open" {
+    assert(sf_ax_status = 1)
+    assert(sf_transfer = 0)
+    out("Ax-Schanuel (functional): PROVED (Ax 1971)")
+    out("Transfer to constants: OPEN")
+    out("Gap: generic differential field -> specific (C, exp)")
+}
+
+example "Five avenues toward Schanuel" {
+    assert(sf_n1_status = 1)
+    assert(sf_n2_status = 0)
+    assert(sf_ax_status = 1)
+    out("Avenue 1: Prove Q-linear independence of e, pi (bottom-up)")
+    out("Avenue 2: Transfer Ax-Schanuel to constants (top-down)")
+    out("Avenue 3: Zilber pseudo-exponentiation isomorphism (model theory)")
+    out("Avenue 4: Fiber non-collapse via period conjectures (POT)")
+    out("Avenue 5: Computational certificates at increasing precision")
+}
+
+structure HonestScope {
+    element hs_status : ℝ
+    element hs_z3_axiom : ℝ
+    element hs_z3_chain : ℝ
+
+    axiom open : hs_status = 0
+    axiom z3_role : hs_z3_axiom = 0 ∧ hs_z3_chain = 1
+}
+
+example "Honest: Schanuel is open, Z3 verifies implication chain" {
+    assert(hs_status = 0)
+    assert(hs_z3_axiom = 0)
+    assert(hs_z3_chain = 1)
+    out("Schanuel conjecture: OPEN")
+    out("Z3 verifies: implication structure (axiom => consequences)")
+    out("Z3 does not verify: the conjecture itself")
+    out("Z3 limitation: QF_NRA cannot express transcendence (second-order)")
+    out("Z3 limitation: R-based model lacks C-kernel structure (2*pi*i*Z)")
+}
+
+
+// ============================================================================
+// PART 16: HIDDEN COLLAPSE SEARCH — n=1 (STRUCTURED EXPERIMENT)
+// ============================================================================
+//
+// EXPERIMENT: Assume hidden collapse exists (hidden >= 1) for n=1.
+// Try to construct a polynomial witness that would create this collapse.
+//
+// Setup (n=1, full rank):
+//   z = (z_1),  Phi = (z_1, e^{z_1})
+//   shadow = trdeg_Q Q(z_1, e^{z_1})
+//   If hidden >= 1, then shadow <= 2 - 0 - 1 = 1.
+//   So there exists a nonzero polynomial P(x,y) with P(z_1, e^{z_1}) = 0.
+//
+// For z_1 = 1: P(1, e) = 0 means e is algebraic — contradicts Hermite.
+// Z3 should find this contradiction if we encode the constraints correctly.
+//
+// This is not just a re-derivation. The point is:
+//   - We SEARCH for hidden collapse (declare it exists)
+//   - Z3 explores the constraint space
+//   - The structure of the contradiction IS the evidence
+
+structure HiddenSearch_n1 {
+    element hs1_z : ℝ        // z_1 = 1 (algebraic input)
+    element hs1_ez : ℝ       // e^{z_1} = e
+    element hs1_hidden : ℝ   // hypothetical hidden collapse
+    element hs1_shadow : ℝ   // trdeg of Q(z_1, e^{z_1})
+    element hs1_src : ℝ      // Q-linear rank
+
+    // Witness: z = 1 (algebraic, Q-rank 1)
+    axiom z_is_one : hs1_z = 1
+    axiom e_lower : hs1_ez > 2.718
+    axiom e_upper : hs1_ez < 2.719
+    axiom src_rank : hs1_src = 1
+
+    // Budget decomposition
+    axiom shadow_def : hs1_shadow = 1 + hs1_src - hs1_hidden
+
+    // HYPOTHESIS: hidden collapse exists
+    axiom hidden_exists : hs1_hidden >= 1
+
+    // Schanuel constraint
+    axiom schanuel : hs1_shadow >= hs1_src
+}
+
+example "SEARCH n=1: hidden >= 1 forces shadow = 1 (P(1,e) = 0 must exist)" {
+    // With src=1, hidden>=1: shadow = 1 + 1 - hidden <= 1.
+    // But shadow >= src = 1 (Schanuel). So shadow = 1 exactly.
+    // This means trdeg_Q Q(1, e) = 1. Since 1 is algebraic,
+    // trdeg_Q Q(e) = 1 — e is still transcendental.
+    // Hidden collapse at n=1 is compatible with Schanuel!
+    // The collapse reduces the PAIRED tuple, not individual transcendence.
+    assert(hs1_shadow >= 1)
+    assert(hs1_shadow <= 1)
+}
+
+example "SEARCH n=1: hidden = 1 is the maximum Schanuel allows" {
+    assert(hs1_hidden <= 1)
+}
+
+example "SEARCH n=1: hidden = 1 means exactly one algebraic relation" {
+    // shadow = 1 means: among (1, e), exactly 1 algebraically independent.
+    // Since 1 is algebraic over Q, this is: trdeg Q(e) = 1.
+    // So ONE relation between 1 and e. That relation is trivially
+    // "1 is rational" — which is structural, not hidden.
+    assert(hs1_hidden = 1 → hs1_shadow = 1)
+    out("n=1 hidden=1: shadow=1, the relation is '1 is algebraic' (structural)")
+}
+
+
+// ============================================================================
+// PART 17: HIDDEN COLLAPSE SEARCH — n=2, GELFOND-SCHNEIDER PROBE
+// ============================================================================
+//
+// Structured tuple: z = (log a, b*log a) where a, b algebraic, b irrational.
+// This is the Gelfond-Schneider configuration.
+//
+// Q-linear independent (b irrational) => src = 2.
+// Phi = (log a, b*log a, a, a^b).
+// a is algebraic, so 2 of the 4 values are "cheap."
+//
+// If hidden >= 1: shadow = 2 + 2 - hidden <= 3.
+// We can probe: what does hidden = 1 mean structurally?
+
+structure HiddenSearch_GS {
+    element hgs_src : ℝ      // Q-linear rank = 2
+    element hgs_n : ℝ        // tuple size = 2
+    element hgs_hidden : ℝ   // hypothetical hidden collapse
+    element hgs_shadow : ℝ   // trdeg of paired tuple
+    element hgs_alg_known : ℝ // already-known algebraic values (a = algebraic)
+    element hgs_trdeg_new : ℝ // trdeg of genuinely new values
+
+    axiom n_is_2 : hgs_n = 2
+    axiom src_is_2 : hgs_src = 2
+    axiom shadow_def : hgs_shadow = hgs_n + hgs_src - hgs_hidden
+    axiom schanuel : hgs_shadow >= hgs_src
+
+    // a is algebraic: 1 slot is "cheap"
+    axiom alg_count : hgs_alg_known = 1
+    axiom new_trdeg : hgs_trdeg_new = hgs_shadow - hgs_alg_known
+
+    axiom hidden_nonneg : hgs_hidden >= 0
+}
+
+example "SEARCH GS: hidden = 0 => shadow = 4, three new transcendentals" {
+    assert(hgs_hidden = 0 → hgs_shadow = 4)
+    assert(hgs_hidden = 0 → hgs_trdeg_new = 3)
+    out("hidden=0: log a, b*log a, a^b algebraically independent over Q(a)")
+}
+
+example "SEARCH GS: hidden = 1 => shadow = 3, one nontrivial relation" {
+    // The rank budget allows one algebraic relation among {log a, b*log a, a^b}
+    // beyond what Q-linear dependence already accounts for. This could be
+    // any polynomial relation, not necessarily linear.
+    assert(hgs_hidden = 1 → hgs_shadow = 3)
+    assert(hgs_hidden = 1 → hgs_trdeg_new = 2)
+    out("hidden=1: one algebraic relation among {log a, b*log a, a^b}")
+}
+
+example "SEARCH GS: hidden = 2 => shadow = 2 (tight Schanuel bound)" {
+    // shadow = src = 2. The rank budget allows two relations.
+    // Gelfond-Schneider (proved) constrains which realizations are
+    // possible for tuples of this form — a^b IS transcendental —
+    // but the abstract budget still permits hidden = 2.
+    assert(hgs_hidden = 2 → hgs_shadow = 2)
+    assert(hgs_hidden = 2 → hgs_trdeg_new = 1)
+    out("hidden=2: tight bound, shadow = src")
+}
+
+example "SEARCH GS: hidden = 3 violates Schanuel" {
+    assert(hgs_hidden = 3 → hgs_shadow < hgs_src)
+    out("hidden=3: VIOLATES Schanuel (shadow < src)")
+}
+
+
+// ============================================================================
+// PART 18: HIDDEN COLLAPSE SEARCH — n=2, EULER PROBE
+// ============================================================================
+//
+// z = (1, pi*i). Phi = (1, pi*i, e, -1).
+// src = 2. Four values, two algebraic (1, -1).
+//
+// The "useful" information: trdeg_Q Q(pi, e).
+// If hidden >= 1: shadow <= 3, so trdeg_Q Q(pi, e) <= 1.
+// This means: e and pi satisfy an algebraic relation.
+// (No such relation is known.)
+
+structure HiddenSearch_Euler {
+    element he_src : ℝ
+    element he_n : ℝ
+    element he_hidden : ℝ
+    element he_shadow : ℝ
+    element he_alg_known : ℝ   // 1 and -1 are algebraic
+    element he_trdeg_epi : ℝ   // trdeg_Q Q(e, pi)
+
+    axiom n_is_2 : he_n = 2
+    axiom src_is_2 : he_src = 2
+    axiom shadow_def : he_shadow = he_n + he_src - he_hidden
+    axiom schanuel : he_shadow >= he_src
+
+    // Two of the four values (1, -1) are algebraic
+    axiom alg_count : he_alg_known = 2
+    axiom epi_def : he_trdeg_epi = he_shadow - he_alg_known
+
+    axiom hidden_nonneg : he_hidden >= 0
+}
+
+example "SEARCH Euler: hidden = 0 => trdeg Q(e,pi) = 2 (algebraic independence)" {
+    assert(he_hidden = 0 → he_trdeg_epi = 2)
+    out("hidden=0: e and pi algebraically independent (OPEN)")
+}
+
+example "SEARCH Euler: hidden = 1 => nontrivial algebraic dependence of e and pi" {
+    // trdeg_Q Q(e, pi) = 1: there exists a nonzero P in Q[x,y] with P(e,pi) = 0.
+    // This is consistent with the known individual transcendence of e and pi —
+    // each is transcendental alone, but they could satisfy a joint polynomial
+    // relation (of any degree, not necessarily linear).
+    assert(he_hidden = 1 → he_trdeg_epi = 1)
+    out("hidden=1: nontrivial algebraic dependence, consistent with individual transcendence")
+}
+
+example "SEARCH Euler: hidden = 2 forces total algebraic collapse" {
+    // trdeg_epi = 0 means the entire non-algebraic part collapses:
+    // e and pi would both be algebraic. This contradicts the known
+    // transcendence of e (Hermite 1873) and pi (Lindemann 1882).
+    assert(he_hidden = 2 → he_trdeg_epi = 0)
+    out("hidden=2: total collapse of non-algebraic part")
+    out("RULED OUT: contradicts Hermite (e transcendental) and Lindemann (pi transcendental)")
+}
+
+example "SEARCH Euler: hidden = 3 violates Schanuel" {
+    assert(he_hidden = 3 → he_shadow < he_src)
+    out("hidden=3: VIOLATES Schanuel")
+}
+
+
+// ============================================================================
+// PART 19: HIDDEN COLLAPSE TABULATION
+// ============================================================================
+//
+// For each probe family, we tabulate every integer value of hidden collapse:
+//
+//   BUDGET-ALLOWED:       Schanuel rank law permits this value (hidden <= n)
+//   CLASSICALLY EXCLUDED: A proved theorem rules this value out
+//   SCHANUEL-EXCLUDED:    hidden > n, violates the rank inequality
+//   STILL OPEN:           Budget-allowed and not classically excluded
+//
+// ┌──────────────────────────────────────────────────────────────────────────┐
+// │ PROBE: n=1, z=(1)                                                      │
+// │ Budget: 2n=2, src=1, max hidden = 1                                    │
+// ├────────┬──────────┬────────────────┬────────────────────────────────────┤
+// │ hidden │ status   │ shadow (trdeg) │ meaning                           │
+// ├────────┼──────────┼────────────────┼────────────────────────────────────┤
+// │   0    │ ALLOWED  │     2          │ max freedom, no collapse          │
+// │   1    │ ALLOWED  │     1          │ structural: "1 is rational"       │
+// │  >=2   │ EXCLUDED │    <1          │ violates Schanuel                 │
+// ├────────┴──────────┴────────────────┴────────────────────────────────────┤
+// │ OPEN VALUES: {0,1} — but h=1 is structural (not genuine hidden)       │
+// │ VERDICT: No genuine hidden collapse. Search space degenerate.          │
+// └────────────────────────────────────────────────────────────────────────┘
+//
+// ┌──────────────────────────────────────────────────────────────────────────┐
+// │ PROBE: n=2, Gelfond-Schneider, z=(log a, b*log a)                     │
+// │ Budget: 2n=4, src=2, max hidden = 2                                   │
+// ├────────┬──────────┬────────────────┬────────────────────────────────────┤
+// │ hidden │ status   │ shadow (trdeg) │ meaning                           │
+// ├────────┼──────────┼────────────────┼────────────────────────────────────┤
+// │   0    │ OPEN     │     4          │ full independence over Q(a)       │
+// │   1    │ OPEN     │     3          │ one nontrivial relation           │
+// │   2    │ OPEN     │     2          │ tight Schanuel bound              │
+// │  >=3   │ EXCLUDED │    <2          │ violates Schanuel                 │
+// ├────────┴──────────┴────────────────┴────────────────────────────────────┤
+// │ CLASSICAL CONSTRAINT: GS theorem proves a^b transcendental, which     │
+// │ constrains which realizations are possible but does not eliminate any  │
+// │ abstract hidden value completely.                                      │
+// │ OPEN VALUES: {0,1,2}                                                   │
+// └────────────────────────────────────────────────────────────────────────┘
+//
+// ┌──────────────────────────────────────────────────────────────────────────┐
+// │ PROBE: n=2, Euler, z=(1, pi*i)                                        │
+// │ Budget: 2n=4, src=2, max hidden = 2, alg_known=2 (values 1 and -1)   │
+// ├────────┬──────────┬────────────────┬────────────────────────────────────┤
+// │ hidden │ status   │ trdeg Q(e,pi)  │ meaning                           │
+// ├────────┼──────────┼────────────────┼────────────────────────────────────┤
+// │   0    │ OPEN     │     2          │ e, pi algebraically independent   │
+// │   1    │ OPEN     │     1          │ nontrivial algebraic dependence   │
+// │   2    │ EXCLUDED │     0          │ total collapse, contradicts       │
+// │        │ classical│                │ Hermite + Lindemann               │
+// │  >=3   │ EXCLUDED │    <0          │ violates Schanuel                 │
+// ├────────┴──────────┴────────────────┴────────────────────────────────────┤
+// │ CLASSICAL EXCLUSION: h=2 forces trdeg Q(e,pi) = 0, meaning e and pi  │
+// │ are both algebraic. Hermite (1873) and Lindemann (1882) rule this out.│
+// │ OPEN VALUES: {0,1}                                                     │
+// │ RESIDUE: Does there exist a nonzero P in Q[x,y] with P(e,pi) = 0?   │
+// │ Schanuel says NO. Current mathematics: UNKNOWN.                        │
+// └────────────────────────────────────────────────────────────────────────┘
+//
+// READING THE TABLES:
+//
+//   The experiment computes the admissible hidden-collapse budget under the
+//   rank conservation law, then uses classical transcendence theorems to
+//   prune impossible values. What remains is the exact unresolved arithmetic
+//   residue of Schanuel's conjecture in each tested configuration.
+//
+//   The conjecture's content lives in the residual hidden values not already
+//   killed by classical transcendence theorems.
+
+structure CollapseTable_n1 {
+    element ct1_budget : ℝ    // max hidden allowed by rank law
+    element ct1_excluded : ℝ  // how many values classically excluded
+    element ct1_open : ℝ      // how many values still open
+    element ct1_genuine : ℝ   // how many represent genuine (non-structural) collapse
+
+    axiom budget : ct1_budget = 1
+    axiom excluded : ct1_excluded = 0
+    axiom open_count : ct1_open = 2
+    axiom genuine : ct1_genuine = 0
+}
+
+example "TABLE n=1: budget=1, excluded=0, open={0,1}, genuine=0" {
+    assert(ct1_budget = 1)
+    assert(ct1_open = 2)
+    assert(ct1_genuine = 0)
+    out("n=1 z=(1): hidden in {0,1} budget-allowed")
+    out("  h=0: max freedom (shadow=2)")
+    out("  h=1: structural only ('1 is rational')")
+    out("  h>=2: Schanuel-excluded")
+    out("  Genuine hidden collapse: NONE")
+}
+
+structure CollapseTable_n2_GS {
+    element ct2g_budget : ℝ
+    element ct2g_excluded_classical : ℝ
+    element ct2g_excluded_schanuel : ℝ
+    element ct2g_open : ℝ
+
+    axiom budget : ct2g_budget = 2
+    axiom classical : ct2g_excluded_classical = 0
+    axiom schanuel_excl : ct2g_excluded_schanuel >= 1
+    axiom open_count : ct2g_open = 3
+}
+
+example "TABLE n=2 GS: budget=2, classically excluded=0, open={0,1,2}" {
+    assert(ct2g_budget = 2)
+    assert(ct2g_open = 3)
+    assert(ct2g_excluded_classical = 0)
+    out("n=2 GS z=(log a, b*log a): hidden in {0,1,2} budget-allowed")
+    out("  h=0: full independence over Q(a)")
+    out("  h=1: one nontrivial algebraic relation")
+    out("  h=2: tight bound (shadow = src)")
+    out("  h>=3: Schanuel-excluded")
+    out("  Classical exclusion: GS constrains realizations, not abstract values")
+}
+
+structure CollapseTable_n2_Euler {
+    element ct2e_budget : ℝ
+    element ct2e_excluded_classical : ℝ
+    element ct2e_excluded_schanuel : ℝ
+    element ct2e_open : ℝ
+    element ct2e_residue : ℝ   // the live question: 0 or 1?
+
+    axiom budget : ct2e_budget = 2
+    axiom classical : ct2e_excluded_classical = 1
+    axiom schanuel_excl : ct2e_excluded_schanuel >= 1
+    axiom open_count : ct2e_open = 2
+    axiom residue_bound : ct2e_residue >= 0 ∧ ct2e_residue <= 1
+}
+
+example "TABLE n=2 Euler: budget=2, classically excluded=1, open={0,1}" {
+    assert(ct2e_budget = 2)
+    assert(ct2e_excluded_classical = 1)
+    assert(ct2e_open = 2)
+    out("n=2 Euler z=(1, pi*i): hidden in {0,1,2} budget-allowed")
+    out("  h=0: e, pi algebraically independent (OPEN)")
+    out("  h=1: nontrivial dependence, consistent with individual transcendence (OPEN)")
+    out("  h=2: total collapse — EXCLUDED by Hermite + Lindemann")
+    out("  h>=3: Schanuel-excluded")
+    out("  RESIDUE: is h = 0 or h = 1?")
+}
+
+example "The residue is the conjecture" {
+    assert(ct2e_residue >= 0)
+    assert(ct2e_residue <= 1)
+    out("Schanuel predicts: residue = 0 (no hidden collapse)")
+    out("Open question: does there exist a nonzero P in Q[x,y] with P(e, pi) = 0?")
+    out("This is the simplest open instance of hidden collapse.")
+}
+
+example "Classical theorems progressively close the budget" {
+    // At n=1: no genuine room at all.
+    // At n=2 Euler: Hermite+Lindemann kill 1 of 3 budget values.
+    // At n=2 GS: GS constrains realizations but kills 0 abstract values.
+    // Pattern: each classical theorem prunes the table further.
+    assert(ct1_genuine = 0)
+    assert(ct2e_excluded_classical = 1)
+    assert(ct2g_excluded_classical = 0)
+    assert(ct2e_open < ct2e_budget + 1)
+    out("n=1: 0 of 2 values are genuinely open")
+    out("n=2 Euler: 2 of 3 budget values remain (classical kills 1)")
+    out("n=2 GS: 3 of 3 budget values remain (classical kills 0)")
+    out("Trend: larger n => more budget, fewer classical exclusions => harder")
+}

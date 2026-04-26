@@ -7,7 +7,7 @@
 //! can be successfully parsed and rendered.
 
 use kleis::parser::parse_latex;
-use kleis::render::{build_default_context, render_expression, RenderTarget};
+use kleis::render::{RenderTarget, build_default_context, render_expression};
 
 #[derive(Debug)]
 struct TemplateTest {

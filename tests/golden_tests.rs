@@ -308,9 +308,11 @@ mod golden_next_batch {
             .collect();
 
         assert!(!complex_ops.is_empty());
-        assert!(complex_ops
-            .iter()
-            .any(|s| s.contains(r"\overline") || s.contains("Re") || s.contains("Im")));
+        assert!(
+            complex_ops
+                .iter()
+                .any(|s| s.contains(r"\overline") || s.contains("Re") || s.contains("Im"))
+        );
     }
 
     /// Operator hat notation
@@ -345,9 +347,10 @@ mod golden_next_batch {
 
         assert!(trig.len() >= 2);
         assert!(trig.iter().any(|s| s.contains(r"\cos")));
-        assert!(trig
-            .iter()
-            .any(|s| s.contains(r"\sinh") || s.contains(r"\cosh")));
+        assert!(
+            trig.iter()
+                .any(|s| s.contains(r"\sinh") || s.contains(r"\cosh"))
+        );
     }
 
     /// Matrix operations (trace, inverse)
@@ -465,9 +468,11 @@ mod golden_batch4_polish {
             .collect();
 
         assert!(!stats.is_empty());
-        assert!(stats
-            .iter()
-            .any(|s| s.contains(r"\mathrm{Var}") || s.contains(r"\mathrm{Cov}")));
+        assert!(
+            stats
+                .iter()
+                .any(|s| s.contains(r"\mathrm{Var}") || s.contains(r"\mathrm{Cov}"))
+        );
     }
 
     /// Polish: Complete coverage verification
@@ -533,9 +538,11 @@ mod golden_batch3_completeness {
             .collect();
 
         assert!(!bracket_examples.is_empty());
-        assert!(bracket_examples
-            .iter()
-            .any(|s| s.contains(r"\lfloor") || s.contains(r"\lceil")));
+        assert!(
+            bracket_examples
+                .iter()
+                .any(|s| s.contains(r"\lfloor") || s.contains(r"\lceil"))
+        );
     }
 
     /// Inverse trigonometric functions

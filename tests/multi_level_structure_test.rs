@@ -231,7 +231,9 @@ fn test_group_inverse_with_monoid_dependencies() {
                 println!("   ✅ Test passes: Z3 communication works, structures loaded");
             }
             Ok(VerificationResult::Unknown) => {
-                println!("   ✅ Z3 returned Unknown (acceptable - structures loaded, verification attempted)");
+                println!(
+                    "   ✅ Z3 returned Unknown (acceptable - structures loaded, verification attempted)"
+                );
             }
             Ok(VerificationResult::Disabled) => {
                 panic!("Verification should be enabled");

@@ -6,7 +6,7 @@
 //! - R(ρ, -σ, -μ, -ν) → R^ρ_σμν (Riemann-style)
 
 use kleis::ast::Expression;
-use kleis::render::{build_default_context, render_expression, RenderTarget};
+use kleis::render::{RenderTarget, build_default_context, render_expression};
 
 /// Helper to create an Object expression
 fn obj(name: &str) -> Expression {

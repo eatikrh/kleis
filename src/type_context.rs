@@ -427,21 +427,16 @@ impl TypeContextBuilder {
                     name,
                     implementation,
                 } = member
+                    && name == "lift"
                 {
-                    if name == "lift" {
-                        let lift_fn = match implementation {
-                            crate::kleis_ast::Implementation::Builtin(s) => s.clone(),
-                            crate::kleis_ast::Implementation::Inline { .. } => {
-                                format!(
-                                    "{}_to_{}",
-                                    from_type.to_lowercase(),
-                                    to_type.to_lowercase()
-                                )
-                            }
-                        };
-                        self.registry
-                            .register_promotion(&from_type, &to_type, &lift_fn);
-                    }
+                    let lift_fn = match implementation {
+                        crate::kleis_ast::Implementation::Builtin(s) => s.clone(),
+                        crate::kleis_ast::Implementation::Inline { .. } => {
+                            format!("{}_to_{}", from_type.to_lowercase(), to_type.to_lowercase())
+                        }
+                    };
+                    self.registry
+                        .register_promotion(&from_type, &to_type, &lift_fn);
                 }
             }
 
@@ -734,34 +729,34 @@ impl TypeContextBuilder {
                         .collect::<Result<Vec<_>, _>>()?;
 
                     // Check if this is a parameterized type alias
-                    if let Some((params, body)) = aliases.get(name) {
-                        if !params.is_empty() {
-                            // This is a parameterized alias - substitute!
-                            if args_norm.len() != params.len() {
-                                return Err(format!(
-                                    "Type alias {} expects {} arguments, got {}",
-                                    name,
-                                    params.len(),
-                                    args_norm.len()
-                                ));
-                            }
-                            if stack.contains(name) {
-                                return Err(format!("Cyclic type alias detected: {}", name));
-                            }
-                            stack.push(name.clone());
-
-                            // Extract parameter names
-                            let param_names: Vec<String> =
-                                params.iter().map(|p| p.name.clone()).collect();
-
-                            // Substitute parameters in the body
-                            let substituted = substitute(body, &param_names, &args_norm);
-
-                            // Recursively normalize the result
-                            let expanded = helper(&substituted, aliases, stack)?;
-                            stack.pop();
-                            return Ok(expanded);
+                    if let Some((params, body)) = aliases.get(name)
+                        && !params.is_empty()
+                    {
+                        // This is a parameterized alias - substitute!
+                        if args_norm.len() != params.len() {
+                            return Err(format!(
+                                "Type alias {} expects {} arguments, got {}",
+                                name,
+                                params.len(),
+                                args_norm.len()
+                            ));
                         }
+                        if stack.contains(name) {
+                            return Err(format!("Cyclic type alias detected: {}", name));
+                        }
+                        stack.push(name.clone());
+
+                        // Extract parameter names
+                        let param_names: Vec<String> =
+                            params.iter().map(|p| p.name.clone()).collect();
+
+                        // Substitute parameters in the body
+                        let substituted = substitute(body, &param_names, &args_norm);
+
+                        // Recursively normalize the result
+                        let expanded = helper(&substituted, aliases, stack)?;
+                        stack.pop();
+                        return Ok(expanded);
                     }
 
                     // Not a parameterized alias - keep as parametric type
@@ -871,10 +866,9 @@ impl TypeContextBuilder {
                 name,
                 type_signature,
             } = member
+                && name == op_name
             {
-                if name == op_name {
-                    return Some(type_signature);
-                }
+                return Some(type_signature);
             }
         }
 
@@ -1672,13 +1666,13 @@ impl TypeContextBuilder {
         for structure in self.structures.values() {
             // Only register parametric structures (those with type parameters)
             // Non-parametric structures don't need registry lookup
-            if !structure.type_params.is_empty() {
-                if let Err(e) = registry.register(structure.clone()) {
-                    eprintln!(
-                        "Warning: Failed to register structure '{}': {}",
-                        structure.name, e
-                    );
-                }
+            if !structure.type_params.is_empty()
+                && let Err(e) = registry.register(structure.clone())
+            {
+                eprintln!(
+                    "Warning: Failed to register structure '{}': {}",
+                    structure.name, e
+                );
             }
         }
 

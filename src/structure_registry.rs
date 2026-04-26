@@ -408,10 +408,9 @@ impl StructureRegistry {
                     name,
                     type_signature,
                 } = member
+                    && name == operation_name
                 {
-                    if name == operation_name {
-                        return Some(type_signature);
-                    }
+                    return Some(type_signature);
                 }
             }
         }
@@ -618,9 +617,11 @@ mod tests {
         let result = registry.register(matrix);
 
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("Structure 'Matrix' is already registered"));
+        assert!(
+            result
+                .unwrap_err()
+                .contains("Structure 'Matrix' is already registered")
+        );
     }
 
     #[test]

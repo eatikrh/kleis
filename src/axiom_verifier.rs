@@ -361,11 +361,11 @@ impl<'r> AxiomVerifier<'r> {
         // Skip parameterized (abstract) structures: their axioms use
         // uninterpreted functions over type-erased sorts (all → Int),
         // creating unconstrained universal quantifiers that explode in Z3.
-        if let Some(structure) = self.registry.get(structure_name) {
-            if !structure.type_params.is_empty() {
-                self.loaded_structures.insert(structure_name.to_string());
-                return Ok(());
-            }
+        if let Some(structure) = self.registry.get(structure_name)
+            && !structure.type_params.is_empty()
+        {
+            self.loaded_structures.insert(structure_name.to_string());
+            return Ok(());
         }
 
         // Proactive memory guard: bail before calling into Z3 if memory is exhausted.
@@ -1083,8 +1083,12 @@ mod tests {
         };
         let result = verifier.verify_axiom(&tautology).unwrap();
         assert!(
-            matches!(result, VerificationResult::Valid | VerificationResult::ValidWithWitness { .. }),
-            "Existential tautology should hold after failed structure load (rollback must work): got {:?}", result
+            matches!(
+                result,
+                VerificationResult::Valid | VerificationResult::ValidWithWitness { .. }
+            ),
+            "Existential tautology should hold after failed structure load (rollback must work): got {:?}",
+            result
         );
     }
 
@@ -1404,8 +1408,12 @@ mod tests {
         );
         let result = verifier.verify_axiom(&absurd_forall).unwrap();
         assert!(
-            !matches!(result, VerificationResult::Valid | VerificationResult::ValidWithWitness { .. }),
-            "∀x. x=0 should be INVALID after failed load (solver must not be vacuously true): got {:?}", result
+            !matches!(
+                result,
+                VerificationResult::Valid | VerificationResult::ValidWithWitness { .. }
+            ),
+            "∀x. x=0 should be INVALID after failed load (solver must not be vacuously true): got {:?}",
+            result
         );
     }
 

@@ -326,18 +326,17 @@ impl SemanticLowering {
             name,
             "plus" | "minus" | "times" | "divide" | "scalar_divide"
         ) && arg_types.len() == 2
-        {
-            if let Some(lowered) = self.lower_arithmetic_generic(
+            && let Some(lowered) = self.lower_arithmetic_generic(
                 name,
                 arg_types[0],
                 arg_types[1],
                 &lowered_args[0],
                 &lowered_args[1],
-            ) {
-                return lowered;
-            }
-            // Fall through to hardcoded patterns if generic fails
+            )
+        {
+            return lowered;
         }
+        // Fall through to hardcoded patterns if generic fails
 
         match (name, arg_types.as_slice()) {
             // ============================================

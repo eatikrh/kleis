@@ -973,7 +973,7 @@ fn extract_bases(s: &str) -> Vec<String> {
 
 fn extract_decorator_name(trimmed: &str) -> String {
     let after_at = &trimmed[1..]; // skip '@'
-                                  // Take until '(' or end of line
+    // Take until '(' or end of line
     let name: String = after_at
         .chars()
         .take_while(|c| *c != '(' && *c != '\n' && *c != ' ')

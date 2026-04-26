@@ -510,14 +510,14 @@ fn run_test(file: PathBuf, example_filter: Option<String>, verbose: bool, raw_ou
 
     for example in &examples {
         // Apply filter if specified
-        if let Some(ref filter) = example_filter {
-            if !example.name.contains(filter.as_str()) {
-                skipped += 1;
-                if verbose && !raw_output {
-                    println!("⏭️  {} (skipped)", example.name);
-                }
-                continue;
+        if let Some(ref filter) = example_filter
+            && !example.name.contains(filter.as_str())
+        {
+            skipped += 1;
+            if verbose && !raw_output {
+                println!("⏭️  {} (skipped)", example.name);
             }
+            continue;
         }
 
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -919,44 +919,42 @@ fn run_review(
     }
 
     // Auto-discover extra files from the policy's review_extra_files()
-    if include_from_policy {
-        if let Some(extra) = engine.extra_review_files() {
-            let repo_root = diff_context
-                .as_ref()
-                .map(|(_, root)| root.clone())
-                .or_else(|| {
-                    files.first().and_then(|f| {
-                        let dir = if f.is_absolute() {
-                            f.parent().unwrap_or(Path::new(".")).to_path_buf()
-                        } else {
-                            std::env::current_dir()
-                                .ok()?
-                                .join(f)
-                                .parent()
-                                .unwrap_or(Path::new("."))
-                                .to_path_buf()
-                        };
-                        git_repo_root_for(&dir)
-                    })
-                });
+    if include_from_policy && let Some(extra) = engine.extra_review_files() {
+        let repo_root = diff_context
+            .as_ref()
+            .map(|(_, root)| root.clone())
+            .or_else(|| {
+                files.first().and_then(|f| {
+                    let dir = if f.is_absolute() {
+                        f.parent().unwrap_or(Path::new(".")).to_path_buf()
+                    } else {
+                        std::env::current_dir()
+                            .ok()?
+                            .join(f)
+                            .parent()
+                            .unwrap_or(Path::new("."))
+                            .to_path_buf()
+                    };
+                    git_repo_root_for(&dir)
+                })
+            });
 
-            if let Some(root) = repo_root {
-                for pattern in &extra {
-                    let candidate = root.join(pattern);
-                    if candidate.exists() {
-                        if verbose {
-                            eprintln!(
-                                "[kleis-review] auto-include from policy: {}",
-                                candidate.display()
-                            );
-                        }
-                        files.push(candidate);
-                    } else if verbose {
+        if let Some(root) = repo_root {
+            for pattern in &extra {
+                let candidate = root.join(pattern);
+                if candidate.exists() {
+                    if verbose {
                         eprintln!(
-                            "[kleis-review] auto-include: {} not found (skipped)",
+                            "[kleis-review] auto-include from policy: {}",
                             candidate.display()
                         );
                     }
+                    files.push(candidate);
+                } else if verbose {
+                    eprintln!(
+                        "[kleis-review] auto-include: {} not found (skipped)",
+                        candidate.display()
+                    );
                 }
             }
         }
@@ -989,19 +987,19 @@ fn run_review(
 
     // Load per-language LLM guidelines once at startup.
     // Uses first target file's language for initial resolution; reloads if language changes.
-    if let Some(ref mut cfg) = llm_config {
-        if let Some(first) = files.first() {
-            let lang = language_from_path(first);
-            cfg.load_guidelines(&lang, &kleis_cfg.llm.guidelines_file);
-            if verbose {
-                if cfg.guidelines.is_some() {
-                    eprintln!("[kleis-review] Loaded {} guidelines for LLM prompt", lang);
-                } else {
-                    eprintln!(
-                        "[kleis-review] No guidelines file found for {}, using generic prompt",
-                        lang
-                    );
-                }
+    if let Some(ref mut cfg) = llm_config
+        && let Some(first) = files.first()
+    {
+        let lang = language_from_path(first);
+        cfg.load_guidelines(&lang, &kleis_cfg.llm.guidelines_file);
+        if verbose {
+            if cfg.guidelines.is_some() {
+                eprintln!("[kleis-review] Loaded {} guidelines for LLM prompt", lang);
+            } else {
+                eprintln!(
+                    "[kleis-review] No guidelines file found for {}, using generic prompt",
+                    lang
+                );
             }
         }
     }
@@ -1059,71 +1057,68 @@ fn run_review(
         }
 
         // --- Diff-aware diff_check_* rules ---
-        if let Some((ref base_ref, ref repo_root)) = diff_context {
-            if has_diff_checks {
-                let should_diff = if has_diff_filter {
-                    engine.eval_diff_file_filter(&path_str)
-                } else {
-                    true
-                };
+        if let Some((ref base_ref, ref repo_root)) = diff_context
+            && has_diff_checks
+        {
+            let should_diff = if has_diff_filter {
+                engine.eval_diff_file_filter(&path_str)
+            } else {
+                true
+            };
 
-                if should_diff {
-                    if let Some(rel_path) = repo_relative_path(file_path, repo_root) {
-                        match git_show_file(base_ref, &rel_path, repo_root) {
-                            Some(base_content) => {
-                                let current_content =
-                                    std::fs::read_to_string(file_path).unwrap_or_default();
-                                if verbose {
-                                    eprintln!(
-                                        "[kleis-review] diff_file_filter(\"{}\") = true, fetched {} bytes from {}",
-                                        path_str,
-                                        base_content.len(),
-                                        base_ref
-                                    );
-                                }
-                                let diff_result =
-                                    engine.check_diff(&current_content, &base_content, &path_str);
-                                for verdict in &diff_result.verdicts {
-                                    if !verdict.passed
-                                        && verdict.severity
-                                            == kleis::review_mcp::engine::RuleSeverity::Error
-                                    {
-                                        file_passed = false;
-                                    }
-                                    if failures_only && verdict.passed {
-                                        continue;
-                                    }
-                                    let v_emoji = if verdict.passed {
-                                        "  ✅"
-                                    } else if verdict.severity
-                                        == kleis::review_mcp::engine::RuleSeverity::Advisory
-                                    {
-                                        "  ⚠️"
-                                    } else {
-                                        "  ❌"
-                                    };
-                                    println!(
-                                        "{} {} — {}",
-                                        v_emoji, verdict.rule_name, verdict.message
-                                    );
-                                }
+            if should_diff {
+                if let Some(rel_path) = repo_relative_path(file_path, repo_root) {
+                    match git_show_file(base_ref, &rel_path, repo_root) {
+                        Some(base_content) => {
+                            let current_content =
+                                std::fs::read_to_string(file_path).unwrap_or_default();
+                            if verbose {
+                                eprintln!(
+                                    "[kleis-review] diff_file_filter(\"{}\") = true, fetched {} bytes from {}",
+                                    path_str,
+                                    base_content.len(),
+                                    base_ref
+                                );
                             }
-                            None => {
-                                if verbose {
-                                    eprintln!(
-                                        "[kleis-review] {} not found on {}, skipping diff rules",
-                                        rel_path, base_ref
-                                    );
+                            let diff_result =
+                                engine.check_diff(&current_content, &base_content, &path_str);
+                            for verdict in &diff_result.verdicts {
+                                if !verdict.passed
+                                    && verdict.severity
+                                        == kleis::review_mcp::engine::RuleSeverity::Error
+                                {
+                                    file_passed = false;
                                 }
+                                if failures_only && verdict.passed {
+                                    continue;
+                                }
+                                let v_emoji = if verdict.passed {
+                                    "  ✅"
+                                } else if verdict.severity
+                                    == kleis::review_mcp::engine::RuleSeverity::Advisory
+                                {
+                                    "  ⚠️"
+                                } else {
+                                    "  ❌"
+                                };
+                                println!("{} {} — {}", v_emoji, verdict.rule_name, verdict.message);
+                            }
+                        }
+                        None => {
+                            if verbose {
+                                eprintln!(
+                                    "[kleis-review] {} not found on {}, skipping diff rules",
+                                    rel_path, base_ref
+                                );
                             }
                         }
                     }
-                } else if verbose {
-                    eprintln!(
-                        "[kleis-review] diff_file_filter(\"{}\") = false, skipping diff rules",
-                        path_str
-                    );
                 }
+            } else if verbose {
+                eprintln!(
+                    "[kleis-review] diff_file_filter(\"{}\") = false, skipping diff rules",
+                    path_str
+                );
             }
         }
 
@@ -1392,17 +1387,16 @@ impl KleisUnifiedServer {
         }
 
         // Load into LSP's evaluator
-        if let Some(ref prog) = program {
-            if let Ok(mut eval) = self.shared.evaluator.lock() {
-                if let Err(e) = eval.load_program(prog) {
-                    diagnostics.push(Diagnostic {
-                        range: Range::default(),
-                        severity: Some(DiagnosticSeverity::ERROR),
-                        message: format!("Load error: {}", e),
-                        ..Default::default()
-                    });
-                }
-            }
+        if let Some(ref prog) = program
+            && let Ok(mut eval) = self.shared.evaluator.lock()
+            && let Err(e) = eval.load_program(prog)
+        {
+            diagnostics.push(Diagnostic {
+                range: Range::default(),
+                severity: Some(DiagnosticSeverity::ERROR),
+                message: format!("Load error: {}", e),
+                ..Default::default()
+            });
         }
 
         (program, diagnostics)
@@ -1783,11 +1777,11 @@ impl DapState {
 
         // Recursively load imported files
         for item in &program.items {
-            if let kleis::kleis_ast::TopLevel::Import(import_path) = item {
-                if let Some(resolved) = resolve_import_path(import_path, &canonical) {
-                    eprintln!("[kleis-dap] Loading import: {}", resolved.display());
-                    self.load_import(&resolved)?;
-                }
+            if let kleis::kleis_ast::TopLevel::Import(import_path) = item
+                && let Some(resolved) = resolve_import_path(import_path, &canonical)
+            {
+                eprintln!("[kleis-dap] Loading import: {}", resolved.display());
+                self.load_import(&resolved)?;
             }
         }
 
@@ -1820,10 +1814,10 @@ impl DapState {
 
         // Recursively load this file's imports
         for item in &program.items {
-            if let kleis::kleis_ast::TopLevel::Import(import_path) = item {
-                if let Some(resolved) = resolve_import_path(import_path, path) {
-                    self.load_import(&resolved)?;
-                }
+            if let kleis::kleis_ast::TopLevel::Import(import_path) = item
+                && let Some(resolved) = resolve_import_path(import_path, path)
+            {
+                self.load_import(&resolved)?;
             }
         }
 
@@ -1860,24 +1854,22 @@ impl DapState {
                         }
                     }
                 }
-                if let kleis::kleis_ast::TopLevel::FunctionDef(func) = item {
-                    if let Some(ref span) = func.span {
-                        if span.line == line {
-                            return true;
-                        }
-                    }
+                if let kleis::kleis_ast::TopLevel::FunctionDef(func) = item
+                    && let Some(ref span) = func.span
+                    && span.line == line
+                {
+                    return true;
                 }
             }
             false
         };
 
         // If no file path given or file matches main program, check main program
-        if file_path.is_none() || file_path == self.current_file.as_ref() {
-            if let Some(ref program) = self.program {
-                if check_program(program) {
-                    return true;
-                }
-            }
+        if (file_path.is_none() || file_path == self.current_file.as_ref())
+            && let Some(ref program) = self.program
+            && check_program(program)
+        {
+            return true;
         }
 
         // Check imported files
@@ -1947,10 +1939,8 @@ fn run_dap_on_listener(
 
         // Parse and handle request
         if let Ok(request) = serde_json::from_slice::<serde_json::Value>(&content) {
-            if verbose {
-                if let Some(cmd) = request.get("command").and_then(|c| c.as_str()) {
-                    eprintln!("[kleis-dap] Request: {}", cmd);
-                }
+            if verbose && let Some(cmd) = request.get("command").and_then(|c| c.as_str()) {
+                eprintln!("[kleis-dap] Request: {}", cmd);
             }
 
             // Handle the request - may return multiple messages (response + events)
@@ -2204,30 +2194,30 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
 
             // Try to get bindings from the current stack frame in the stop event
             // Bindings now include type information (TypedBinding)
-            if let Some(ref stop_event) = state.last_stop_event {
-                if let Some(frame) = stop_event.stack.first() {
-                    for (name, binding) in &frame.bindings {
-                        // DAP supports a "type" field for variables
-                        let type_str = binding.ty.as_ref().map(kleis::debug::format_type);
-                        let mut var_json = serde_json::json!({
-                            "name": name,
-                            "value": &binding.value,
-                            "variablesReference": 0
-                        });
-                        // Add type field if available
-                        if let Some(ref ty) = type_str {
-                            var_json["type"] = serde_json::Value::String(ty.clone());
-                        }
-                        // Add verification badge if available
-                        if let Some(verified) = binding.verified {
-                            let badge = if verified { " ✓" } else { " ✗" };
-                            if let Some(val) = var_json.get("value").and_then(|v| v.as_str()) {
-                                var_json["value"] =
-                                    serde_json::Value::String(format!("{}{}", val, badge));
-                            }
-                        }
-                        variables.push(var_json);
+            if let Some(ref stop_event) = state.last_stop_event
+                && let Some(frame) = stop_event.stack.first()
+            {
+                for (name, binding) in &frame.bindings {
+                    // DAP supports a "type" field for variables
+                    let type_str = binding.ty.as_ref().map(kleis::debug::format_type);
+                    let mut var_json = serde_json::json!({
+                        "name": name,
+                        "value": &binding.value,
+                        "variablesReference": 0
+                    });
+                    // Add type field if available
+                    if let Some(ref ty) = type_str {
+                        var_json["type"] = serde_json::Value::String(ty.clone());
                     }
+                    // Add verification badge if available
+                    if let Some(verified) = binding.verified {
+                        let badge = if verified { " ✓" } else { " ✗" };
+                        if let Some(val) = var_json.get("value").and_then(|v| v.as_str()) {
+                            var_json["value"] =
+                                serde_json::Value::String(format!("{}{}", val, badge));
+                        }
+                    }
+                    variables.push(var_json);
                 }
             }
 
@@ -2318,59 +2308,57 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                     }
                 }
 
-                if let Some(args) = request.get("arguments") {
-                    if let Some(bps) = args.get("breakpoints").and_then(|b| b.as_array()) {
-                        for bp in bps {
-                            if let Some(line) = bp.get("line").and_then(|l| l.as_u64()) {
-                                let line = line as u32;
-                                let is_valid = state
-                                    .is_valid_breakpoint_line_in_file(line, file_path.as_ref());
+                if let Some(args) = request.get("arguments")
+                    && let Some(bps) = args.get("breakpoints").and_then(|b| b.as_array())
+                {
+                    for bp in bps {
+                        if let Some(line) = bp.get("line").and_then(|l| l.as_u64()) {
+                            let line = line as u32;
+                            let is_valid =
+                                state.is_valid_breakpoint_line_in_file(line, file_path.as_ref());
 
-                                if is_valid {
-                                    if let Some(ref path) = file_path {
-                                        if let Ok(mut shared_bps) = controller.breakpoints.write() {
-                                            shared_bps
-                                                .push(DebugBreakpoint::new(path.clone(), line));
-                                        }
-                                    }
-                                }
-
-                                let mut bp_resp = serde_json::json!({
-                                    "verified": is_valid,
-                                    "line": line
-                                });
-                                if !is_valid {
-                                    bp_resp["message"] = serde_json::Value::String(
-                                        "Cannot set breakpoint on this line (no executable code)"
-                                            .to_string(),
-                                    );
-                                }
-                                breakpoints_response.push(bp_resp);
+                            if is_valid
+                                && let Some(ref path) = file_path
+                                && let Ok(mut shared_bps) = controller.breakpoints.write()
+                            {
+                                shared_bps.push(DebugBreakpoint::new(path.clone(), line));
                             }
+
+                            let mut bp_resp = serde_json::json!({
+                                "verified": is_valid,
+                                "line": line
+                            });
+                            if !is_valid {
+                                bp_resp["message"] = serde_json::Value::String(
+                                    "Cannot set breakpoint on this line (no executable code)"
+                                        .to_string(),
+                                );
+                            }
+                            breakpoints_response.push(bp_resp);
                         }
                     }
                 }
             } else {
                 // No controller yet (before launch) - just validate
-                if let Some(args) = request.get("arguments") {
-                    if let Some(bps) = args.get("breakpoints").and_then(|b| b.as_array()) {
-                        for bp in bps {
-                            if let Some(line) = bp.get("line").and_then(|l| l.as_u64()) {
-                                let line = line as u32;
-                                let is_valid = state
-                                    .is_valid_breakpoint_line_in_file(line, file_path.as_ref());
-                                let mut bp_resp = serde_json::json!({
-                                    "verified": is_valid,
-                                    "line": line
-                                });
-                                if !is_valid {
-                                    bp_resp["message"] = serde_json::Value::String(
-                                        "Cannot set breakpoint on this line (no executable code)"
-                                            .to_string(),
-                                    );
-                                }
-                                breakpoints_response.push(bp_resp);
+                if let Some(args) = request.get("arguments")
+                    && let Some(bps) = args.get("breakpoints").and_then(|b| b.as_array())
+                {
+                    for bp in bps {
+                        if let Some(line) = bp.get("line").and_then(|l| l.as_u64()) {
+                            let line = line as u32;
+                            let is_valid =
+                                state.is_valid_breakpoint_line_in_file(line, file_path.as_ref());
+                            let mut bp_resp = serde_json::json!({
+                                "verified": is_valid,
+                                "line": line
+                            });
+                            if !is_valid {
+                                bp_resp["message"] = serde_json::Value::String(
+                                    "Cannot set breakpoint on this line (no executable code)"
+                                        .to_string(),
+                                );
                             }
+                            breakpoints_response.push(bp_resp);
                         }
                     }
                 }
@@ -2467,7 +2455,10 @@ fn handle_dap_request(request: &serde_json::Value, state: &mut DapState) -> Vec<
                                 state.last_stop_event = Some(stop_event);
                             }
                             Err(e) => {
-                                eprintln!("[kleis-dap] No stop event received (may have completed quickly): {:?}", e);
+                                eprintln!(
+                                    "[kleis-dap] No stop event received (may have completed quickly): {:?}",
+                                    e
+                                );
                             }
                         }
                     }

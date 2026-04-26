@@ -350,10 +350,12 @@ fn real_rust_review_policy_assertions(path: PathBuf) {
     // Multi-line inputs needed: body_step uses brace_delta per line.
     let result = engine.check_code("fn main() {\n    foo().unwrap();\n}", "rust");
     assert!(!result.passed);
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_safe_structural" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_safe_structural" && !v.passed)
+    );
 
     // Code with unsafe should fail (check_safe_structural)
     let result = engine.check_code(
@@ -361,156 +363,194 @@ fn real_rust_review_policy_assertions(path: PathBuf) {
         "rust",
     );
     assert!(!result.passed);
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_safe_structural" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_safe_structural" && !v.passed)
+    );
 
     // Code with println! should fail (check_clean_structural)
     let result = engine.check_code("fn main() {\n    println!(\"hello\");\n}", "rust");
     assert!(!result.passed);
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_clean_structural" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_clean_structural" && !v.passed)
+    );
 
     // Code with panic! should fail (check_safe_structural)
     let result = engine.check_code("fn main() {\n    panic!(\"oops\");\n}", "rust");
     assert!(!result.passed);
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_safe_structural" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_safe_structural" && !v.passed)
+    );
 
     // Code with todo! should fail (check_clean_structural)
     let result = engine.check_code("fn main() {\n    todo!(\"later\");\n}", "rust");
     assert!(!result.passed);
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_clean_structural" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_clean_structural" && !v.passed)
+    );
 
     // Code with dbg! should fail (check_clean_structural)
     let result = engine.check_code("fn main() {\n    dbg!(x);\n}", "rust");
     assert!(!result.passed);
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_clean_structural" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_clean_structural" && !v.passed)
+    );
 
     // Code with hardcoded password literal should fail (check_secure_structural)
     let result = engine.check_code("fn init() {\n    let password = \"hunter2\";\n}", "rust");
     assert!(!result.passed);
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_secure_structural" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_secure_structural" && !v.passed)
+    );
 
     // Code with wildcard import should fail (check_structural)
     let result = engine.check_code("use std::collections::*;\nfn process() {\n}\n", "rust");
     assert!(!result.passed);
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_structural" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_structural" && !v.passed)
+    );
 
     // Code with #[allow(unused)] should fail
     let result = engine.check_code("#[allow(dead_code)]\nfn old() {}", "rust");
     assert!(!result.passed);
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_no_allow_unused" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_allow_unused" && !v.passed)
+    );
 
     // Narrating comments should fail (check_structural)
     let result = engine.check_code("// Import the module\nuse std::io;\nfn f() {\n}\n", "rust");
     assert!(!result.passed);
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_structural" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_structural" && !v.passed)
+    );
 
     // Result<_, String> should fail
     let result = engine.check_code("fn load() -> Result<(), String> { Ok(()) }", "rust");
     assert!(!result.passed);
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_no_result_string" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_result_string" && !v.passed)
+    );
 
     // Clippy suppression should fail
     let result = engine.check_code("#[allow(clippy::needless_return)]\nfn f() {}", "rust");
     assert!(!result.passed);
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_no_clippy_suppression" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_clippy_suppression" && !v.passed)
+    );
 
     // Too many arguments suppression should fail
     let result = engine.check_code("#[allow(clippy::too_many_arguments)]\nfn f() {}", "rust");
     assert!(!result.passed);
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_no_too_many_arguments" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_too_many_arguments" && !v.passed)
+    );
 
     // --- Clippy -D warnings patterns ---
 
     // &String should fail (clippy::ptr_arg)
     let result = engine.check_code("fn greet(name: &String) {}", "rust");
     assert!(!result.passed);
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_clippy_ptr_arg" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_clippy_ptr_arg" && !v.passed)
+    );
 
     // &Vec<T> should fail (clippy::ptr_arg)
     let result = engine.check_code("fn sum(items: &Vec<i32>) -> i32 { 0 }", "rust");
     assert!(!result.passed);
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_clippy_ptr_arg" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_clippy_ptr_arg" && !v.passed)
+    );
 
     // .len() == 0 should fail (clippy::len_zero)
     let result = engine.check_code("if v.len() == 0 { return; }", "rust");
     assert!(!result.passed);
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_clippy_len_zero" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_clippy_len_zero" && !v.passed)
+    );
 
     // .len() > 0 should fail (clippy::len_zero)
     let result = engine.check_code("if v.len() > 0 { process(); }", "rust");
     assert!(!result.passed);
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_clippy_len_zero" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_clippy_len_zero" && !v.passed)
+    );
 
     // == true should fail (clippy::bool_comparison)
     let result = engine.check_code("if flag == true { run(); }", "rust");
     assert!(!result.passed);
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_clippy_bool_comparison" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_clippy_bool_comparison" && !v.passed)
+    );
 
     // == false should fail (clippy::bool_comparison)
     let result = engine.check_code("if done == false { continue; }", "rust");
     assert!(!result.passed);
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_clippy_bool_comparison" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_clippy_bool_comparison" && !v.passed)
+    );
 
     // .to_string().as_str() should fail (redundant clone)
     let result = engine.check_code("let s = name.to_string().as_str();", "rust");
     assert!(!result.passed);
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_clippy_redundant_clone" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_clippy_redundant_clone" && !v.passed)
+    );
 
     // .expect(&format!()) should fail (clippy::expect_fun_call)
     let result = engine.check_code(
@@ -518,31 +558,39 @@ fn real_rust_review_policy_assertions(path: PathBuf) {
         "rust",
     );
     assert!(!result.passed);
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_clippy_expect_fun_call" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_clippy_expect_fun_call" && !v.passed)
+    );
 
     // --- No emoji ---
 
     // Emoji in string literal should trigger advisory (but not block)
     let result = engine.check_code("let msg = \"Done ✅\";", "rust");
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "advise_no_emoji" && !v.passed));
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "advise_no_emoji"
-            && v.severity == kleis::review_mcp::engine::RuleSeverity::Advisory));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "advise_no_emoji" && !v.passed)
+    );
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "advise_no_emoji"
+                && v.severity == kleis::review_mcp::engine::RuleSeverity::Advisory)
+    );
 
     // Emoji in comment should trigger advisory
     let result = engine.check_code("// TODO: fix this 🐛\nfn f() {}", "rust");
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "advise_no_emoji" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "advise_no_emoji" && !v.passed)
+    );
 
     // Plain text should pass
     let result_clean = engine.check_code("let msg = \"Done\";", "rust");
@@ -931,10 +979,12 @@ fn test_check_file_bad_code() {
         .check_file(tmp_path.to_str().unwrap(), "rust")
         .expect("check_file should succeed");
     assert!(!result.passed, "Bad code should fail");
-    assert!(result
-        .verdicts
-        .iter()
-        .any(|v| v.rule_name == "check_no_unwrap" && !v.passed));
+    assert!(
+        result
+            .verdicts
+            .iter()
+            .any(|v| v.rule_name == "check_no_unwrap" && !v.passed)
+    );
     let _ = std::fs::remove_file(&tmp_path);
 }
 

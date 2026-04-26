@@ -163,9 +163,11 @@ mod tests {
         assert_eq!(resp["type"], "response");
         assert_eq!(resp["command"], "initialize");
         assert_eq!(resp["success"], true);
-        assert!(resp["body"]["supportsConfigurationDoneRequest"]
-            .as_bool()
-            .unwrap_or(false));
+        assert!(
+            resp["body"]["supportsConfigurationDoneRequest"]
+                .as_bool()
+                .unwrap_or(false)
+        );
     }
 
     #[test]

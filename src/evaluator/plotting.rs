@@ -8,7 +8,7 @@ impl Evaluator {
         &self,
         args: &[Expression],
     ) -> Result<Option<Expression>, String> {
-        use crate::plotting::{compile_diagram, DiagramOptions, PlotElement};
+        use crate::plotting::{DiagramOptions, PlotElement, compile_diagram};
 
         if args.is_empty() {
             return Err("diagram() requires at least one plot element".to_string());
@@ -26,24 +26,21 @@ impl Evaluator {
         if let Some(Expression::Operation {
             name, args: opts, ..
         }) = args.first()
+            && name == "record"
         {
-            if name == "record" {
-                self.parse_diagram_options(opts, &mut options)?;
-                start_idx = 1;
-            }
+            self.parse_diagram_options(opts, &mut options)?;
+            start_idx = 1;
         }
 
         // Check last arg for options record (v0.96 named arguments style)
-        if end_idx > start_idx {
-            if let Some(Expression::Operation {
+        if end_idx > start_idx
+            && let Some(Expression::Operation {
                 name, args: opts, ..
             }) = args.last()
-            {
-                if name == "record" {
-                    self.parse_diagram_options(opts, &mut options)?;
-                    end_idx = args.len() - 1;
-                }
-            }
+            && name == "record"
+        {
+            self.parse_diagram_options(opts, &mut options)?;
+            end_idx = args.len() - 1;
         }
 
         // Collect plot elements from middle args
@@ -53,11 +50,11 @@ impl Evaluator {
             // Handle lists of PlotElements (for dynamic generation with list_map)
             if let Expression::List(list_elements) = &evaluated {
                 for list_elem in list_elements {
-                    if let Expression::Operation { name, .. } = list_elem {
-                        if name == "PlotElement" {
-                            let element = self.decode_plot_element(list_elem)?;
-                            elements.push(element);
-                        }
+                    if let Expression::Operation { name, .. } = list_elem
+                        && name == "PlotElement"
+                    {
+                        let element = self.decode_plot_element(list_elem)?;
+                        elements.push(element);
                     }
                 }
                 continue;
@@ -80,7 +77,7 @@ impl Evaluator {
                     return Err(format!(
                         "diagram() expects PlotElement, got: {}(). Use plot(), bar(), scatter(), etc.",
                         name
-            ));
+                    ));
                 }
             } else {
                 return Err(format!(
@@ -119,7 +116,7 @@ impl Evaluator {
         &self,
         args: &[Expression],
     ) -> Result<Option<Expression>, String> {
-        use crate::plotting::{export_diagram_typst, DiagramOptions, PlotElement};
+        use crate::plotting::{DiagramOptions, PlotElement, export_diagram_typst};
 
         if args.is_empty() {
             return Err("export_typst() requires at least one plot element".to_string());
@@ -136,24 +133,21 @@ impl Evaluator {
         if let Some(Expression::Operation {
             name, args: opts, ..
         }) = args.first()
+            && name == "record"
         {
-            if name == "record" {
-                self.parse_diagram_options(opts, &mut options)?;
-                start_idx = 1;
-            }
+            self.parse_diagram_options(opts, &mut options)?;
+            start_idx = 1;
         }
 
         // Check last arg for options record (v0.96 named arguments)
-        if end_idx > start_idx {
-            if let Some(Expression::Operation {
+        if end_idx > start_idx
+            && let Some(Expression::Operation {
                 name, args: opts, ..
             }) = args.last()
-            {
-                if name == "record" {
-                    self.parse_diagram_options(opts, &mut options)?;
-                    end_idx = args.len() - 1;
-                }
-            }
+            && name == "record"
+        {
+            self.parse_diagram_options(opts, &mut options)?;
+            end_idx = args.len() - 1;
         }
 
         // Collect plot elements
@@ -162,11 +156,11 @@ impl Evaluator {
 
             if let Expression::List(list_elements) = &evaluated {
                 for list_elem in list_elements {
-                    if let Expression::Operation { name, .. } = list_elem {
-                        if name == "PlotElement" {
-                            let element = self.decode_plot_element(list_elem)?;
-                            elements.push(element);
-                        }
+                    if let Expression::Operation { name, .. } = list_elem
+                        && name == "PlotElement"
+                    {
+                        let element = self.decode_plot_element(list_elem)?;
+                        elements.push(element);
                     }
                 }
                 continue;
@@ -205,7 +199,7 @@ impl Evaluator {
         &self,
         args: &[Expression],
     ) -> Result<Option<Expression>, String> {
-        use crate::plotting::{export_diagram_typst_fragment, DiagramOptions, PlotElement};
+        use crate::plotting::{DiagramOptions, PlotElement, export_diagram_typst_fragment};
 
         if args.is_empty() {
             return Err("export_typst_fragment() requires at least one plot element".to_string());
@@ -221,23 +215,20 @@ impl Evaluator {
         if let Some(Expression::Operation {
             name, args: opts, ..
         }) = args.first()
+            && name == "record"
         {
-            if name == "record" {
-                self.parse_diagram_options(opts, &mut options)?;
-                start_idx = 1;
-            }
+            self.parse_diagram_options(opts, &mut options)?;
+            start_idx = 1;
         }
 
-        if end_idx > start_idx {
-            if let Some(Expression::Operation {
+        if end_idx > start_idx
+            && let Some(Expression::Operation {
                 name, args: opts, ..
             }) = args.last()
-            {
-                if name == "record" {
-                    self.parse_diagram_options(opts, &mut options)?;
-                    end_idx = args.len() - 1;
-                }
-            }
+            && name == "record"
+        {
+            self.parse_diagram_options(opts, &mut options)?;
+            end_idx = args.len() - 1;
         }
 
         for arg in &args[start_idx..end_idx] {
@@ -245,11 +236,11 @@ impl Evaluator {
 
             if let Expression::List(list_elements) = &evaluated {
                 for list_elem in list_elements {
-                    if let Expression::Operation { name, .. } = list_elem {
-                        if name == "PlotElement" {
-                            let element = self.decode_plot_element(list_elem)?;
-                            elements.push(element);
-                        }
+                    if let Expression::Operation { name, .. } = list_elem
+                        && name == "PlotElement"
+                    {
+                        let element = self.decode_plot_element(list_elem)?;
+                        elements.push(element);
                     }
                 }
                 continue;
@@ -390,7 +381,7 @@ impl Evaluator {
             _ => {
                 return Err(
                     "table_typst_raw(): first argument must be a list of headers".to_string(),
-                )
+                );
             }
         };
 
@@ -409,7 +400,9 @@ impl Evaluator {
                 })
                 .collect::<Result<_, _>>()?,
             _ => {
-                return Err("table_typst_raw(): second argument must be list of rows (list)".into())
+                return Err(
+                    "table_typst_raw(): second argument must be list of rows (list)".into(),
+                );
             }
         };
 
@@ -501,7 +494,7 @@ impl Evaluator {
                     return Err(format!(
                         "Unknown render target: '{}'. Use 'typst', 'latex', 'unicode', 'html', or 'kleis'",
                         target_str
-                    ))
+                    ));
                 }
             }
         } else {
@@ -669,79 +662,76 @@ impl Evaluator {
         options: &mut crate::plotting::DiagramOptions,
     ) -> Result<(), String> {
         for opt in opts {
-            if let Expression::Operation { name, args, .. } = opt {
-                if name == "field" && args.len() == 2 {
-                    let key = self.extract_string(&args[0])?;
-                    match key.as_str() {
-                        "width" => options.width = Some(self.extract_f64(&args[1])?),
-                        "height" => options.height = Some(self.extract_f64(&args[1])?),
-                        "title" => options.title = Some(self.extract_string(&args[1])?),
-                        "xlabel" => options.xlabel = Some(self.extract_string(&args[1])?),
-                        "ylabel" => options.ylabel = Some(self.extract_string(&args[1])?),
-                        "xscale" => options.xscale = Some(self.extract_string(&args[1])?),
-                        "yscale" => options.yscale = Some(self.extract_string(&args[1])?),
-                        "legend" | "legend_position" => {
-                            options.legend_position = Some(self.extract_string(&args[1])?)
-                        }
-                        "grid" => options.grid = Some(self.extract_bool(&args[1])?),
-                        "fill" => options.fill = Some(self.extract_string(&args[1])?),
-                        "aspect_ratio" => options.aspect_ratio = Some(self.extract_f64(&args[1])?),
-                        "xaxis_subticks" | "x_subticks" => {
-                            options.xaxis_subticks = Some(self.extract_string(&args[1])?)
-                        }
-                        "yaxis_subticks" | "y_subticks" => {
-                            options.yaxis_subticks = Some(self.extract_string(&args[1])?)
-                        }
-                        "yaxis_mirror" | "y_mirror" => {
-                            options.yaxis_mirror = Some(self.extract_bool(&args[1])?)
-                        }
-                        "margin_top" => options.margin_top = Some(self.extract_string(&args[1])?),
-                        "margin_bottom" => {
-                            options.margin_bottom = Some(self.extract_string(&args[1])?)
-                        }
-                        "margin_left" => options.margin_left = Some(self.extract_string(&args[1])?),
-                        "margin_right" => {
-                            options.margin_right = Some(self.extract_string(&args[1])?)
-                        }
-                        "xaxis_ticks" | "x_ticks" => {
-                            options.xaxis_ticks = Some(self.extract_string_list(&args[1])?)
-                        }
-                        "xaxis_tick_rotate" | "x_tick_rotate" => {
-                            options.xaxis_tick_rotate = Some(self.extract_f64(&args[1])?)
-                        }
-                        "xaxis_ticks_none" | "hide_xaxis_ticks" => {
-                            options.xaxis_ticks_none = Some(self.extract_bool(&args[1])?)
-                        }
-                        "yaxis_ticks_none" | "hide_yaxis_ticks" => {
-                            options.yaxis_ticks_none = Some(self.extract_bool(&args[1])?)
-                        }
-                        "xaxis_tick_unit" | "x_tick_unit" => {
-                            options.xaxis_tick_unit = Some(self.extract_f64(&args[1])?)
-                        }
-                        "xaxis_tick_suffix" | "x_tick_suffix" => {
-                            options.xaxis_tick_suffix = Some(self.extract_string(&args[1])?)
-                        }
-                        "yaxis_tick_unit" | "y_tick_unit" => {
-                            options.yaxis_tick_unit = Some(self.extract_f64(&args[1])?)
-                        }
-                        "yaxis_tick_suffix" | "y_tick_suffix" => {
-                            options.yaxis_tick_suffix = Some(self.extract_string(&args[1])?)
-                        }
-                        "xlim" | "x_lim" => {
-                            let limits = self.extract_f64_list_from_diagram_option(&args[1])?;
-                            if limits.len() >= 2 {
-                                options.xlim = Some((limits[0], limits[1]));
-                            }
-                        }
-                        "ylim" | "y_lim" => {
-                            let limits = self.extract_f64_list_from_diagram_option(&args[1])?;
-                            if limits.len() >= 2 {
-                                options.ylim = Some((limits[0], limits[1]));
-                            }
-                        }
-                        "theme" => options.theme = Some(self.extract_string(&args[1])?),
-                        _ => {} // Ignore unknown options
+            if let Expression::Operation { name, args, .. } = opt
+                && name == "field"
+                && args.len() == 2
+            {
+                let key = self.extract_string(&args[0])?;
+                match key.as_str() {
+                    "width" => options.width = Some(self.extract_f64(&args[1])?),
+                    "height" => options.height = Some(self.extract_f64(&args[1])?),
+                    "title" => options.title = Some(self.extract_string(&args[1])?),
+                    "xlabel" => options.xlabel = Some(self.extract_string(&args[1])?),
+                    "ylabel" => options.ylabel = Some(self.extract_string(&args[1])?),
+                    "xscale" => options.xscale = Some(self.extract_string(&args[1])?),
+                    "yscale" => options.yscale = Some(self.extract_string(&args[1])?),
+                    "legend" | "legend_position" => {
+                        options.legend_position = Some(self.extract_string(&args[1])?)
                     }
+                    "grid" => options.grid = Some(self.extract_bool(&args[1])?),
+                    "fill" => options.fill = Some(self.extract_string(&args[1])?),
+                    "aspect_ratio" => options.aspect_ratio = Some(self.extract_f64(&args[1])?),
+                    "xaxis_subticks" | "x_subticks" => {
+                        options.xaxis_subticks = Some(self.extract_string(&args[1])?)
+                    }
+                    "yaxis_subticks" | "y_subticks" => {
+                        options.yaxis_subticks = Some(self.extract_string(&args[1])?)
+                    }
+                    "yaxis_mirror" | "y_mirror" => {
+                        options.yaxis_mirror = Some(self.extract_bool(&args[1])?)
+                    }
+                    "margin_top" => options.margin_top = Some(self.extract_string(&args[1])?),
+                    "margin_bottom" => options.margin_bottom = Some(self.extract_string(&args[1])?),
+                    "margin_left" => options.margin_left = Some(self.extract_string(&args[1])?),
+                    "margin_right" => options.margin_right = Some(self.extract_string(&args[1])?),
+                    "xaxis_ticks" | "x_ticks" => {
+                        options.xaxis_ticks = Some(self.extract_string_list(&args[1])?)
+                    }
+                    "xaxis_tick_rotate" | "x_tick_rotate" => {
+                        options.xaxis_tick_rotate = Some(self.extract_f64(&args[1])?)
+                    }
+                    "xaxis_ticks_none" | "hide_xaxis_ticks" => {
+                        options.xaxis_ticks_none = Some(self.extract_bool(&args[1])?)
+                    }
+                    "yaxis_ticks_none" | "hide_yaxis_ticks" => {
+                        options.yaxis_ticks_none = Some(self.extract_bool(&args[1])?)
+                    }
+                    "xaxis_tick_unit" | "x_tick_unit" => {
+                        options.xaxis_tick_unit = Some(self.extract_f64(&args[1])?)
+                    }
+                    "xaxis_tick_suffix" | "x_tick_suffix" => {
+                        options.xaxis_tick_suffix = Some(self.extract_string(&args[1])?)
+                    }
+                    "yaxis_tick_unit" | "y_tick_unit" => {
+                        options.yaxis_tick_unit = Some(self.extract_f64(&args[1])?)
+                    }
+                    "yaxis_tick_suffix" | "y_tick_suffix" => {
+                        options.yaxis_tick_suffix = Some(self.extract_string(&args[1])?)
+                    }
+                    "xlim" | "x_lim" => {
+                        let limits = self.extract_f64_list_from_diagram_option(&args[1])?;
+                        if limits.len() >= 2 {
+                            options.xlim = Some((limits[0], limits[1]));
+                        }
+                    }
+                    "ylim" | "y_lim" => {
+                        let limits = self.extract_f64_list_from_diagram_option(&args[1])?;
+                        if limits.len() >= 2 {
+                            options.ylim = Some((limits[0], limits[1]));
+                        }
+                    }
+                    "theme" => options.theme = Some(self.extract_string(&args[1])?),
+                    _ => {} // Ignore unknown options
                 }
             }
         }
@@ -950,10 +940,10 @@ impl Evaluator {
             }
 
             // Try to evaluate as a plot element
-            if let Expression::Operation { name, .. } = &arg {
-                if name == "PlotElement" {
-                    child_elements.push(arg.clone());
-                }
+            if let Expression::Operation { name, .. } = &arg
+                && name == "PlotElement"
+            {
+                child_elements.push(arg.clone());
             }
         }
 
@@ -996,10 +986,10 @@ impl Evaluator {
             }
 
             // Try to evaluate as a plot element
-            if let Expression::Operation { name, .. } = &arg {
-                if name == "PlotElement" {
-                    child_elements.push(arg.clone());
-                }
+            if let Expression::Operation { name, .. } = &arg
+                && name == "PlotElement"
+            {
+                child_elements.push(arg.clone());
             }
         }
 
@@ -1033,50 +1023,49 @@ impl Evaluator {
             let evaluated = self.eval_concrete(arg)?;
 
             // Check for options record
-            if let Expression::Operation { name, .. } = &evaluated {
-                if name == "record" {
-                    options_record = Some(evaluated.clone());
-                    continue;
-                }
+            if let Expression::Operation { name, .. } = &evaluated
+                && name == "record"
+            {
+                options_record = Some(evaluated.clone());
+                continue;
             }
 
             // Check for list of pairs
-            if let Expression::List(items) = &evaluated {
-                if !items.is_empty() {
-                    // Check if first item is a Pair
-                    if let Expression::Operation {
-                        name,
-                        args: pair_args,
-                        ..
-                    } = self.eval_concrete(&items[0])?
-                    {
-                        if name == "Pair" && pair_args.len() == 2 {
-                            // It's a list of pairs
-                            for item in items {
-                                if let Expression::Operation {
-                                    name: n,
-                                    args: p_args,
-                                    ..
-                                } = self.eval_concrete(item)?
-                                {
-                                    if n == "Pair" && p_args.len() == 2 {
-                                        x_data.push(self.extract_f64(&p_args[0])?);
-                                        y_data.push(self.extract_f64(&p_args[1])?);
-                                    }
-                                }
-                            }
-                            continue;
+            if let Expression::List(items) = &evaluated
+                && !items.is_empty()
+            {
+                // Check if first item is a Pair
+                if let Expression::Operation {
+                    name,
+                    args: pair_args,
+                    ..
+                } = self.eval_concrete(&items[0])?
+                    && name == "Pair"
+                    && pair_args.len() == 2
+                {
+                    // It's a list of pairs
+                    for item in items {
+                        if let Expression::Operation {
+                            name: n,
+                            args: p_args,
+                            ..
+                        } = self.eval_concrete(item)?
+                            && n == "Pair"
+                            && p_args.len() == 2
+                        {
+                            x_data.push(self.extract_f64(&p_args[0])?);
+                            y_data.push(self.extract_f64(&p_args[1])?);
                         }
                     }
-                    // Otherwise it might be a list of numbers (x or y data)
-                    let nums: Result<Vec<f64>, _> =
-                        items.iter().map(|e| self.extract_f64(e)).collect();
-                    if let Ok(nums) = nums {
-                        if x_data.is_empty() {
-                            x_data = nums;
-                        } else {
-                            y_data = nums;
-                        }
+                    continue;
+                }
+                // Otherwise it might be a list of numbers (x or y data)
+                let nums: Result<Vec<f64>, _> = items.iter().map(|e| self.extract_f64(e)).collect();
+                if let Ok(nums) = nums {
+                    if x_data.is_empty() {
+                        x_data = nums;
+                    } else {
+                        y_data = nums;
                     }
                 }
             }
@@ -1125,14 +1114,12 @@ impl Evaluator {
                             args: fargs,
                             ..
                         } = field_arg
+                            && fname == "field"
+                            && fargs.len() >= 2
+                            && let Expression::Const(key) = &fargs[0]
+                            && key == "y2"
                         {
-                            if fname == "field" && fargs.len() >= 2 {
-                                if let Expression::Const(key) = &fargs[0] {
-                                    if key == "y2" {
-                                        y2_data = Some(self.extract_number_list_v2(&fargs[1])?);
-                                    }
-                                }
-                            }
+                            y2_data = Some(self.extract_number_list_v2(&fargs[1])?);
                         }
                     }
                     options_record = Some(evaluated);
@@ -1182,15 +1169,15 @@ impl Evaluator {
         for arg in args.iter().skip(1) {
             let evaluated = self.eval_concrete(arg)?;
             // Skip options records
-            if let Expression::Operation { ref name, .. } = evaluated {
-                if name == "record" {
-                    continue;
-                }
+            if let Expression::Operation { ref name, .. } = evaluated
+                && name == "record"
+            {
+                continue;
             }
-            if let Ok(ys) = self.extract_number_list_v2(&evaluated) {
-                if ys.len() == n {
-                    y_series.push(ys);
-                }
+            if let Ok(ys) = self.extract_number_list_v2(&evaluated)
+                && ys.len() == n
+            {
+                y_series.push(ys);
             }
         }
 
@@ -1326,10 +1313,10 @@ impl Evaluator {
                     }
                     if args.len() >= 4 {
                         // arg[3] could be y2 data or options
-                        if let Ok(y2) = self.decode_f64_list(&args[3]) {
-                            if !y2.is_empty() {
-                                element.y2_data = Some(y2);
-                            }
+                        if let Ok(y2) = self.decode_f64_list(&args[3])
+                            && !y2.is_empty()
+                        {
+                            element.y2_data = Some(y2);
                         }
                     }
                     if args.len() >= 5 {
@@ -1395,15 +1382,15 @@ impl Evaluator {
                 }
                 PlotType::SecondaryYAxis | PlotType::SecondaryXAxis => {
                     // args[1] is the list of child elements
-                    if args.len() >= 2 {
-                        if let Expression::List(children) = &args[1] {
-                            let mut decoded_children = Vec::new();
-                            for child in children {
-                                let decoded = self.decode_plot_element(child)?;
-                                decoded_children.push(Box::new(decoded));
-                            }
-                            element.options.children = Some(decoded_children);
+                    if args.len() >= 2
+                        && let Expression::List(children) = &args[1]
+                    {
+                        let mut decoded_children = Vec::new();
+                        for child in children {
+                            let decoded = self.decode_plot_element(child)?;
+                            decoded_children.push(Box::new(decoded));
                         }
+                        element.options.children = Some(decoded_children);
                     }
                     if args.len() >= 3 {
                         self.parse_element_options(&args[2], &mut element.options)?;
@@ -1465,121 +1452,89 @@ impl Evaluator {
         expr: &Expression,
         options: &mut crate::plotting::PlotElementOptions,
     ) -> Result<(), String> {
-        if let Expression::Operation { name, args, .. } = expr {
-            if name == "record" {
-                for opt in args {
-                    if let Expression::Operation {
-                        name: field_name,
-                        args: field_args,
-                        ..
-                    } = opt
-                    {
-                        if field_name == "field" && field_args.len() == 2 {
-                            let key = self.extract_string(&field_args[0])?;
-                            match key.as_str() {
-                                "label" => {
-                                    options.label = Some(self.extract_string(&field_args[1])?)
-                                }
-                                "color" => {
-                                    options.color = Some(self.extract_string(&field_args[1])?)
-                                }
-                                "stroke" => {
-                                    options.stroke = Some(self.extract_string(&field_args[1])?)
-                                }
-                                "mark" => options.mark = Some(self.extract_string(&field_args[1])?),
-                                "mark_size" => {
-                                    options.mark_size = Some(self.extract_f64(&field_args[1])?)
-                                }
-                                "xerr" => {
-                                    options.xerr =
-                                        Some(self.extract_number_list_v2(&field_args[1])?)
-                                }
-                                "yerr" => {
-                                    options.yerr =
-                                        Some(self.extract_number_list_v2(&field_args[1])?)
-                                }
-                                "step" => options.step = Some(self.extract_string(&field_args[1])?),
-                                "smooth" => {
-                                    options.smooth = Some(self.extract_bool(&field_args[1])?)
-                                }
-                                "every" => {
-                                    options.every = Some(self.extract_f64(&field_args[1])? as usize)
-                                }
-                                "offset" => {
-                                    options.offset = Some(self.extract_f64(&field_args[1])?)
-                                }
-                                "width" => options.width = Some(self.extract_f64(&field_args[1])?),
-                                "fill" => options.fill = Some(self.extract_string(&field_args[1])?),
-                                "base" => options.base = Some(self.extract_f64(&field_args[1])?),
-                                "colormap" | "map" => {
-                                    options.colormap = Some(self.extract_string(&field_args[1])?)
-                                }
-                                "colors" | "color_values" => {
-                                    // Per-point color values for scatter plots (floats 0-1)
-                                    options.colors =
-                                        Some(self.extract_number_list_v2(&field_args[1])?)
-                                }
-                                "scale" => options.scale = Some(self.extract_f64(&field_args[1])?),
-                                "pivot" => {
-                                    options.pivot = Some(self.extract_string(&field_args[1])?)
-                                }
-                                "clip" => options.clip = Some(self.extract_bool(&field_args[1])?),
-                                "z_index" => {
-                                    options.z_index = Some(self.extract_f64(&field_args[1])? as i32)
-                                }
-                                "opacity" | "alpha" => {
-                                    options.opacity = Some(self.extract_f64(&field_args[1])?)
-                                }
-                                // place() options
-                                "text" => options.text = Some(self.extract_string(&field_args[1])?),
-                                "align" => {
-                                    options.align = Some(self.extract_string(&field_args[1])?)
-                                }
-                                "padding" | "pad" => {
-                                    options.padding = Some(self.extract_string(&field_args[1])?)
-                                }
-                                // yaxis() and xaxis() options
-                                "position" => {
-                                    options.position = Some(self.extract_string(&field_args[1])?)
-                                }
-                                "axis_label" => {
-                                    options.axis_label = Some(self.extract_string(&field_args[1])?)
-                                }
-                                // xaxis() specific options
-                                "tick_distance" => {
-                                    options.tick_distance = Some(self.extract_f64(&field_args[1])?)
-                                }
-                                "exponent" => {
-                                    options.exponent =
-                                        Some(self.extract_f64(&field_args[1])? as i32)
-                                }
-                                "axis_offset" => {
-                                    options.axis_offset = Some(self.extract_f64(&field_args[1])?)
-                                }
-                                // path() options
-                                "closed" => {
-                                    options.closed = Some(self.extract_bool(&field_args[1])?)
-                                }
-                                "functions" => {
-                                    // functions = ("x => k/x", "x => k/x")
-                                    // Expect a pair of strings
-                                    if let Expression::Operation {
-                                        name,
-                                        args: fn_args,
-                                        ..
-                                    } = self.eval_concrete(&field_args[1])?
-                                    {
-                                        if name == "Pair" && fn_args.len() == 2 {
-                                            options.transform_forward =
-                                                Some(self.extract_string(&fn_args[0])?);
-                                            options.transform_inverse =
-                                                Some(self.extract_string(&fn_args[1])?);
-                                        }
-                                    }
-                                }
-                                _ => {} // Ignore unknown options
+        if let Expression::Operation { name, args, .. } = expr
+            && name == "record"
+        {
+            for opt in args {
+                if let Expression::Operation {
+                    name: field_name,
+                    args: field_args,
+                    ..
+                } = opt
+                    && field_name == "field"
+                    && field_args.len() == 2
+                {
+                    let key = self.extract_string(&field_args[0])?;
+                    match key.as_str() {
+                        "label" => options.label = Some(self.extract_string(&field_args[1])?),
+                        "color" => options.color = Some(self.extract_string(&field_args[1])?),
+                        "stroke" => options.stroke = Some(self.extract_string(&field_args[1])?),
+                        "mark" => options.mark = Some(self.extract_string(&field_args[1])?),
+                        "mark_size" => options.mark_size = Some(self.extract_f64(&field_args[1])?),
+                        "xerr" => options.xerr = Some(self.extract_number_list_v2(&field_args[1])?),
+                        "yerr" => options.yerr = Some(self.extract_number_list_v2(&field_args[1])?),
+                        "step" => options.step = Some(self.extract_string(&field_args[1])?),
+                        "smooth" => options.smooth = Some(self.extract_bool(&field_args[1])?),
+                        "every" => options.every = Some(self.extract_f64(&field_args[1])? as usize),
+                        "offset" => options.offset = Some(self.extract_f64(&field_args[1])?),
+                        "width" => options.width = Some(self.extract_f64(&field_args[1])?),
+                        "fill" => options.fill = Some(self.extract_string(&field_args[1])?),
+                        "base" => options.base = Some(self.extract_f64(&field_args[1])?),
+                        "colormap" | "map" => {
+                            options.colormap = Some(self.extract_string(&field_args[1])?)
+                        }
+                        "colors" | "color_values" => {
+                            // Per-point color values for scatter plots (floats 0-1)
+                            options.colors = Some(self.extract_number_list_v2(&field_args[1])?)
+                        }
+                        "scale" => options.scale = Some(self.extract_f64(&field_args[1])?),
+                        "pivot" => options.pivot = Some(self.extract_string(&field_args[1])?),
+                        "clip" => options.clip = Some(self.extract_bool(&field_args[1])?),
+                        "z_index" => {
+                            options.z_index = Some(self.extract_f64(&field_args[1])? as i32)
+                        }
+                        "opacity" | "alpha" => {
+                            options.opacity = Some(self.extract_f64(&field_args[1])?)
+                        }
+                        // place() options
+                        "text" => options.text = Some(self.extract_string(&field_args[1])?),
+                        "align" => options.align = Some(self.extract_string(&field_args[1])?),
+                        "padding" | "pad" => {
+                            options.padding = Some(self.extract_string(&field_args[1])?)
+                        }
+                        // yaxis() and xaxis() options
+                        "position" => options.position = Some(self.extract_string(&field_args[1])?),
+                        "axis_label" => {
+                            options.axis_label = Some(self.extract_string(&field_args[1])?)
+                        }
+                        // xaxis() specific options
+                        "tick_distance" => {
+                            options.tick_distance = Some(self.extract_f64(&field_args[1])?)
+                        }
+                        "exponent" => {
+                            options.exponent = Some(self.extract_f64(&field_args[1])? as i32)
+                        }
+                        "axis_offset" => {
+                            options.axis_offset = Some(self.extract_f64(&field_args[1])?)
+                        }
+                        // path() options
+                        "closed" => options.closed = Some(self.extract_bool(&field_args[1])?),
+                        "functions" => {
+                            // functions = ("x => k/x", "x => k/x")
+                            // Expect a pair of strings
+                            if let Expression::Operation {
+                                name,
+                                args: fn_args,
+                                ..
+                            } = self.eval_concrete(&field_args[1])?
+                                && name == "Pair"
+                                && fn_args.len() == 2
+                            {
+                                options.transform_forward = Some(self.extract_string(&fn_args[0])?);
+                                options.transform_inverse = Some(self.extract_string(&fn_args[1])?);
                             }
                         }
+                        _ => {} // Ignore unknown options
                     }
                 }
             }

@@ -4,7 +4,7 @@
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 use kleis::parser::parse_latex;
-use kleis::render::{build_default_context, render_expression, RenderTarget};
+use kleis::render::{RenderTarget, build_default_context, render_expression};
 
 fn main() {
     let tests = vec![r"\mathrm{Var}(X)", r"\mathrm{Cov}(X, Y)", r"\mathrm{Tr}(A)"];

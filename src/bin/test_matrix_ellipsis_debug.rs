@@ -4,7 +4,7 @@
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 use kleis::parser::parse_latex;
-use kleis::render::{build_default_context, render_expression, RenderTarget};
+use kleis::render::{RenderTarget, build_default_context, render_expression};
 
 fn main() {
     let latex = r"\begin{bmatrix}a_{11} & \cdots & a_{1n}\\\vdots & \ddots & \vdots\\a_{m1} & \cdots & a_{mn}\end{bmatrix}";

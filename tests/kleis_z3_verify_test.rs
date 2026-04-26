@@ -13,7 +13,7 @@
 
 use kleis::ast::Expression;
 use kleis::kleis_parser::parse_kleis;
-use kleis::render::{build_default_context, render_expression, RenderTarget};
+use kleis::render::{RenderTarget, build_default_context, render_expression};
 use kleis::solvers::backend::{SolverBackend, VerificationResult};
 use kleis::solvers::z3::backend::Z3Backend;
 use kleis::structure_registry::StructureRegistry;

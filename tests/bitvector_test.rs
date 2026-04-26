@@ -3,7 +3,7 @@
 //! Tests parsing, type inference, and Z3 BitVec operations
 //! Based on Bourbaki-style formalization: BitVec(n) as x : [0,n-1] → {0,1}
 
-use kleis::kleis_parser::{parse_kleis_program, KleisParser};
+use kleis::kleis_parser::{KleisParser, parse_kleis_program};
 use kleis::type_context::TypeContextBuilder;
 use kleis::type_inference::{Type, TypeInference};
 

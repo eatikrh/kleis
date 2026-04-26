@@ -26,7 +26,7 @@ use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
 
 use kleis::kleis_ast::{Program, TopLevel};
-use kleis::kleis_parser::{parse_kleis_program, KleisParseError};
+use kleis::kleis_parser::{KleisParseError, parse_kleis_program};
 use kleis::type_checker::TypeChecker;
 use kleis::type_context::TypeContextBuilder;
 
@@ -157,16 +157,16 @@ impl KleisLanguageServer {
         }
 
         // Build type context from this file
-        if let Ok(file_builder) = TypeContextBuilder::from_program(program) {
-            if let Err(e) = builder.merge(file_builder) {
-                diagnostics.push(Diagnostic {
-                    range: Range::default(),
-                    severity: Some(DiagnosticSeverity::WARNING),
-                    source: Some("kleis".to_string()),
-                    message: format!("Error merging types from '{}': {}", path.display(), e),
-                    ..Default::default()
-                });
-            }
+        if let Ok(file_builder) = TypeContextBuilder::from_program(program)
+            && let Err(e) = builder.merge(file_builder)
+        {
+            diagnostics.push(Diagnostic {
+                range: Range::default(),
+                severity: Some(DiagnosticSeverity::WARNING),
+                source: Some("kleis".to_string()),
+                message: format!("Error merging types from '{}': {}", path.display(), e),
+                ..Default::default()
+            });
         }
 
         diagnostics
@@ -230,16 +230,16 @@ impl KleisLanguageServer {
         }
 
         // Build type context from the main document
-        if let Ok(main_builder) = TypeContextBuilder::from_program(program.clone()) {
-            if let Err(e) = builder.merge(main_builder) {
-                all_diagnostics.push(Diagnostic {
-                    range: Range::default(),
-                    severity: Some(DiagnosticSeverity::WARNING),
-                    source: Some("kleis".to_string()),
-                    message: format!("Error building type context: {}", e),
-                    ..Default::default()
-                });
-            }
+        if let Ok(main_builder) = TypeContextBuilder::from_program(program.clone())
+            && let Err(e) = builder.merge(main_builder)
+        {
+            all_diagnostics.push(Diagnostic {
+                range: Range::default(),
+                severity: Some(DiagnosticSeverity::WARNING),
+                source: Some("kleis".to_string()),
+                message: format!("Error building type context: {}", e),
+                ..Default::default()
+            });
         }
 
         // =======================================================================
@@ -669,23 +669,18 @@ impl LanguageServer for KleisLanguageServer {
         }
 
         // Also check imported files that might not be open
-        if let Some(imports) = Some(&doc.imports) {
-            if let Ok(doc_path) = uri.to_file_path() {
-                if let Some(parent) = doc_path.parent() {
-                    for import_path in imports.iter() {
-                        let resolved = parent.join(import_path);
-                        if resolved.exists() {
-                            if let Ok(content) = std::fs::read_to_string(&resolved) {
-                                if let Ok(import_uri) = Url::from_file_path(&resolved) {
-                                    if let Some(location) =
-                                        find_definition_in_text(&content, &word, &import_uri)
-                                    {
-                                        return Ok(Some(GotoDefinitionResponse::Scalar(location)));
-                                    }
-                                }
-                            }
-                        }
-                    }
+        if let Some(imports) = Some(&doc.imports)
+            && let Ok(doc_path) = uri.to_file_path()
+            && let Some(parent) = doc_path.parent()
+        {
+            for import_path in imports.iter() {
+                let resolved = parent.join(import_path);
+                if resolved.exists()
+                    && let Ok(content) = std::fs::read_to_string(&resolved)
+                    && let Ok(import_uri) = Url::from_file_path(&resolved)
+                    && let Some(location) = find_definition_in_text(&content, &word, &import_uri)
+                {
+                    return Ok(Some(GotoDefinitionResponse::Scalar(location)));
                 }
             }
         }
@@ -698,42 +693,42 @@ impl LanguageServer for KleisLanguageServer {
 
         // Add context-aware completions from imports
         let uri = &params.text_document_position.text_document.uri;
-        if let Some(doc) = self.documents.get(uri) {
-            if let Some(ref ctx) = doc.type_context {
-                // Add structures as type completions
-                for structure_name in ctx.all_structure_names() {
-                    completions.push(CompletionItem {
-                        label: structure_name.clone(),
-                        kind: Some(CompletionItemKind::CLASS),
-                        detail: Some("(structure from import)".to_string()),
-                        documentation: Some(Documentation::String(format!(
-                            "Structure `{}` from imported files",
-                            structure_name
-                        ))),
-                        ..Default::default()
-                    });
+        if let Some(doc) = self.documents.get(uri)
+            && let Some(ref ctx) = doc.type_context
+        {
+            // Add structures as type completions
+            for structure_name in ctx.all_structure_names() {
+                completions.push(CompletionItem {
+                    label: structure_name.clone(),
+                    kind: Some(CompletionItemKind::CLASS),
+                    detail: Some("(structure from import)".to_string()),
+                    documentation: Some(Documentation::String(format!(
+                        "Structure `{}` from imported files",
+                        structure_name
+                    ))),
+                    ..Default::default()
+                });
+            }
+
+            // Add operations
+            for op_name in ctx.all_operation_names() {
+                // Skip if already in static completions
+                if completions.iter().any(|c| c.label == op_name) {
+                    continue;
                 }
 
-                // Add operations
-                for op_name in ctx.all_operation_names() {
-                    // Skip if already in static completions
-                    if completions.iter().any(|c| c.label == op_name) {
-                        continue;
-                    }
+                let detail = if let Some(sig) = ctx.operation_signature(&op_name) {
+                    sig
+                } else {
+                    "(operation from import)".to_string()
+                };
 
-                    let detail = if let Some(sig) = ctx.operation_signature(&op_name) {
-                        sig
-                    } else {
-                        "(operation from import)".to_string()
-                    };
-
-                    completions.push(CompletionItem {
-                        label: op_name.clone(),
-                        kind: Some(CompletionItemKind::FUNCTION),
-                        detail: Some(detail),
-                        ..Default::default()
-                    });
-                }
+                completions.push(CompletionItem {
+                    label: op_name.clone(),
+                    kind: Some(CompletionItemKind::FUNCTION),
+                    detail: Some(detail),
+                    ..Default::default()
+                });
             }
         }
 
@@ -868,38 +863,38 @@ impl LanguageServer for KleisLanguageServer {
                 let active_param = after_paren.chars().filter(|c| *c == ',').count() as u32;
 
                 // Look up function signature
-                if let Some(ref ctx) = doc.type_context {
-                    if let Some(sig) = ctx.operation_signature(&func_name) {
-                        // Parse the signature to get parameters
-                        let params = parse_signature_params(&sig);
+                if let Some(ref ctx) = doc.type_context
+                    && let Some(sig) = ctx.operation_signature(&func_name)
+                {
+                    // Parse the signature to get parameters
+                    let params = parse_signature_params(&sig);
 
-                        let signature = SignatureInformation {
-                            label: sig.clone(),
-                            documentation: Some(Documentation::MarkupContent(MarkupContent {
-                                kind: MarkupKind::Markdown,
-                                value: format!(
-                                    "**{}**\n\nOperation from imported structure.",
-                                    func_name
-                                ),
-                            })),
-                            parameters: Some(
-                                params
-                                    .iter()
-                                    .map(|p| ParameterInformation {
-                                        label: ParameterLabel::Simple(p.clone()),
-                                        documentation: None,
-                                    })
-                                    .collect(),
+                    let signature = SignatureInformation {
+                        label: sig.clone(),
+                        documentation: Some(Documentation::MarkupContent(MarkupContent {
+                            kind: MarkupKind::Markdown,
+                            value: format!(
+                                "**{}**\n\nOperation from imported structure.",
+                                func_name
                             ),
-                            active_parameter: Some(active_param),
-                        };
+                        })),
+                        parameters: Some(
+                            params
+                                .iter()
+                                .map(|p| ParameterInformation {
+                                    label: ParameterLabel::Simple(p.clone()),
+                                    documentation: None,
+                                })
+                                .collect(),
+                        ),
+                        active_parameter: Some(active_param),
+                    };
 
-                        return Ok(Some(SignatureHelp {
-                            signatures: vec![signature],
-                            active_signature: Some(0),
-                            active_parameter: Some(active_param),
-                        }));
-                    }
+                    return Ok(Some(SignatureHelp {
+                        signatures: vec![signature],
+                        active_signature: Some(0),
+                        active_parameter: Some(active_param),
+                    }));
                 }
 
                 // Try builtin functions
@@ -1312,28 +1307,28 @@ impl LanguageServer for KleisLanguageServer {
             }
 
             // Add lens for structure definitions
-            if trimmed.starts_with("structure ") {
-                if let Some(paren_pos) = trimmed.find('(') {
-                    let name = trimmed[10..paren_pos].trim();
-                    lenses.push(CodeLens {
-                        range: Range {
-                            start: Position {
-                                line: line_num,
-                                character: 0,
-                            },
-                            end: Position {
-                                line: line_num,
-                                character: line.len() as u32,
-                            },
+            if trimmed.starts_with("structure ")
+                && let Some(paren_pos) = trimmed.find('(')
+            {
+                let name = trimmed[10..paren_pos].trim();
+                lenses.push(CodeLens {
+                    range: Range {
+                        start: Position {
+                            line: line_num,
+                            character: 0,
                         },
-                        command: Some(Command {
-                            title: "⚡ Find implementations".to_string(),
-                            command: "kleis.findImplementations".to_string(),
-                            arguments: Some(vec![serde_json::Value::String(name.to_string())]),
-                        }),
-                        data: None,
-                    });
-                }
+                        end: Position {
+                            line: line_num,
+                            character: line.len() as u32,
+                        },
+                    },
+                    command: Some(Command {
+                        title: "⚡ Find implementations".to_string(),
+                        command: "kleis.findImplementations".to_string(),
+                        arguments: Some(vec![serde_json::Value::String(name.to_string())]),
+                    }),
+                    data: None,
+                });
             }
 
             // Add lens for define statements
@@ -1513,19 +1508,18 @@ impl LanguageServer for KleisLanguageServer {
             for ch in trimmed.chars() {
                 if ch == '{' {
                     brace_stack.push(line_num);
-                } else if ch == '}' {
-                    if let Some(start_line) = brace_stack.pop() {
-                        if line_num > start_line {
-                            ranges.push(FoldingRange {
-                                start_line,
-                                start_character: None,
-                                end_line: line_num,
-                                end_character: None,
-                                kind: Some(FoldingRangeKind::Region),
-                                collapsed_text: None,
-                            });
-                        }
-                    }
+                } else if ch == '}'
+                    && let Some(start_line) = brace_stack.pop()
+                    && line_num > start_line
+                {
+                    ranges.push(FoldingRange {
+                        start_line,
+                        start_character: None,
+                        end_line: line_num,
+                        end_character: None,
+                        kind: Some(FoldingRangeKind::Region),
+                        collapsed_text: None,
+                    });
                 }
             }
 
@@ -1598,36 +1592,36 @@ impl LanguageServer for KleisLanguageServer {
             let line_num = line_num as u32;
 
             // Find import statements: import "path/to/file.kleis"
-            if let Some(import_start) = line.find("import ") {
-                if let Some(quote_start) = line[import_start..].find('"') {
-                    let path_start = import_start + quote_start + 1;
-                    if let Some(quote_end) = line[path_start..].find('"') {
-                        let import_path = &line[path_start..path_start + quote_end];
+            if let Some(import_start) = line.find("import ")
+                && let Some(quote_start) = line[import_start..].find('"')
+            {
+                let path_start = import_start + quote_start + 1;
+                if let Some(quote_end) = line[path_start..].find('"') {
+                    let import_path = &line[path_start..path_start + quote_end];
 
-                        // Resolve relative to current document
-                        if let Ok(doc_path) = uri.to_file_path() {
-                            if let Some(parent) = doc_path.parent() {
-                                let resolved = parent.join(import_path);
-                                if resolved.exists() {
-                                    if let Ok(target_uri) = Url::from_file_path(&resolved) {
-                                        links.push(DocumentLink {
-                                            range: Range {
-                                                start: Position {
-                                                    line: line_num,
-                                                    character: path_start as u32 - 1,
-                                                },
-                                                end: Position {
-                                                    line: line_num,
-                                                    character: (path_start + quote_end + 1) as u32,
-                                                },
-                                            },
-                                            target: Some(target_uri),
-                                            tooltip: Some(format!("Open {}", resolved.display())),
-                                            data: None,
-                                        });
-                                    }
-                                }
-                            }
+                    // Resolve relative to current document
+                    if let Ok(doc_path) = uri.to_file_path()
+                        && let Some(parent) = doc_path.parent()
+                    {
+                        let resolved = parent.join(import_path);
+                        if resolved.exists()
+                            && let Ok(target_uri) = Url::from_file_path(&resolved)
+                        {
+                            links.push(DocumentLink {
+                                range: Range {
+                                    start: Position {
+                                        line: line_num,
+                                        character: path_start as u32 - 1,
+                                    },
+                                    end: Position {
+                                        line: line_num,
+                                        character: (path_start + quote_end + 1) as u32,
+                                    },
+                                },
+                                target: Some(target_uri),
+                                tooltip: Some(format!("Open {}", resolved.display())),
+                                data: None,
+                            });
                         }
                     }
                 }
@@ -2564,36 +2558,84 @@ fn find_enclosing_block(text: &str, line_idx: usize, _col_idx: usize) -> Option<
 fn get_builtin_description(word: &str) -> Option<&'static str> {
     match word {
         // Types
-        "ℝ" | "Real" => Some("**ℝ** (Real numbers)\n\nThe field of real numbers. Supports:\n- Arithmetic: `+`, `-`, `*`, `/`\n- Comparisons: `<`, `>`, `≤`, `≥`\n- Functions: `abs`, `sqrt`, `exp`, `ln`, `sin`, `cos`"),
-        "ℂ" | "Complex" => Some("**ℂ** (Complex numbers)\n\nThe field of complex numbers. Supports:\n- Arithmetic: `+`, `-`, `*`, `/`\n- Operations: `re`, `im`, `conj`, `abs`\n- Constructor: `complex(re, im)`"),
-        "ℤ" | "Int" | "Integer" => Some("**ℤ** (Integers)\n\nThe ring of integers. Supports:\n- Arithmetic: `+`, `-`, `*`\n- Division: `div`, `mod`\n- Comparisons: `<`, `>`, `≤`, `≥`"),
-        "ℕ" | "Nat" | "Natural" => Some("**ℕ** (Natural numbers)\n\nNon-negative integers 0, 1, 2, ...\n- Closed under `+` and `*`\n- Not closed under `-`"),
-        "ℚ" | "Rational" => Some("**ℚ** (Rational numbers)\n\nFractions p/q where p, q ∈ ℤ, q ≠ 0"),
-        "𝔹" | "Bool" | "Boolean" => Some("**𝔹** (Boolean)\n\nLogical values: `true`, `false`\n- Operations: `∧`, `∨`, `¬`"),
-        "Matrix" => Some("**Matrix(m, n, T)**\n\nParametric matrix type with dimensions m×n and element type T.\n\nOperations:\n- `transpose : Matrix(n, m, T)`\n- `det : T` (square matrices)\n- `trace : T` (square matrices)\n- `eigenvalues` (numerical)"),
-        "Vector" => Some("**Vector(n, T)**\n\nColumn vector of dimension n with element type T.\n\nEquivalent to `Matrix(n, 1, T)`"),
-        "Tensor" => Some("**Tensor(dims, T)**\n\nMulti-dimensional array with given dimensions and element type."),
+        "ℝ" | "Real" => Some(
+            "**ℝ** (Real numbers)\n\nThe field of real numbers. Supports:\n- Arithmetic: `+`, `-`, `*`, `/`\n- Comparisons: `<`, `>`, `≤`, `≥`\n- Functions: `abs`, `sqrt`, `exp`, `ln`, `sin`, `cos`",
+        ),
+        "ℂ" | "Complex" => Some(
+            "**ℂ** (Complex numbers)\n\nThe field of complex numbers. Supports:\n- Arithmetic: `+`, `-`, `*`, `/`\n- Operations: `re`, `im`, `conj`, `abs`\n- Constructor: `complex(re, im)`",
+        ),
+        "ℤ" | "Int" | "Integer" => Some(
+            "**ℤ** (Integers)\n\nThe ring of integers. Supports:\n- Arithmetic: `+`, `-`, `*`\n- Division: `div`, `mod`\n- Comparisons: `<`, `>`, `≤`, `≥`",
+        ),
+        "ℕ" | "Nat" | "Natural" => Some(
+            "**ℕ** (Natural numbers)\n\nNon-negative integers 0, 1, 2, ...\n- Closed under `+` and `*`\n- Not closed under `-`",
+        ),
+        "ℚ" | "Rational" => {
+            Some("**ℚ** (Rational numbers)\n\nFractions p/q where p, q ∈ ℤ, q ≠ 0")
+        }
+        "𝔹" | "Bool" | "Boolean" => {
+            Some("**𝔹** (Boolean)\n\nLogical values: `true`, `false`\n- Operations: `∧`, `∨`, `¬`")
+        }
+        "Matrix" => Some(
+            "**Matrix(m, n, T)**\n\nParametric matrix type with dimensions m×n and element type T.\n\nOperations:\n- `transpose : Matrix(n, m, T)`\n- `det : T` (square matrices)\n- `trace : T` (square matrices)\n- `eigenvalues` (numerical)",
+        ),
+        "Vector" => Some(
+            "**Vector(n, T)**\n\nColumn vector of dimension n with element type T.\n\nEquivalent to `Matrix(n, 1, T)`",
+        ),
+        "Tensor" => Some(
+            "**Tensor(dims, T)**\n\nMulti-dimensional array with given dimensions and element type.",
+        ),
 
         // Keywords
-        "structure" => Some("**structure**\n\nDefines an algebraic structure with parameters, operations, and axioms.\n\n```kleis\nstructure Group(G) {\n    operation mul : G × G → G\n    element identity : G\n    axiom assoc: ∀(a b c : G). mul(mul(a,b),c) = mul(a,mul(b,c))\n}\n```"),
-        "implements" => Some("**implements**\n\nProvides concrete implementations for a structure.\n\n```kleis\nimplements Group(ℤ) {\n    operation mul = builtin_add\n    element identity = 0\n}\n```"),
-        "data" => Some("**data**\n\nDefines an algebraic data type (ADT).\n\n```kleis\ndata Option(T) {\n    constructor None\n    constructor Some(T)\n}\n```"),
-        "define" => Some("**define**\n\nDefines a named expression or function.\n\n```kleis\ndefine square(x : ℝ) : ℝ = x * x\n```"),
-        "axiom" => Some("**axiom**\n\nDeclares a mathematical axiom (assumed true).\n\n```kleis\naxiom commutativity: ∀(x y : G). mul(x, y) = mul(y, x)\n```"),
-        "operation" => Some("**operation**\n\nDeclares an operation within a structure.\n\n```kleis\noperation add : T × T → T\n```"),
-        "import" => Some("**import**\n\nImports definitions from another Kleis file.\n\n```kleis\nimport \"stdlib/matrices.kleis\"\n```"),
+        "structure" => Some(
+            "**structure**\n\nDefines an algebraic structure with parameters, operations, and axioms.\n\n```kleis\nstructure Group(G) {\n    operation mul : G × G → G\n    element identity : G\n    axiom assoc: ∀(a b c : G). mul(mul(a,b),c) = mul(a,mul(b,c))\n}\n```",
+        ),
+        "implements" => Some(
+            "**implements**\n\nProvides concrete implementations for a structure.\n\n```kleis\nimplements Group(ℤ) {\n    operation mul = builtin_add\n    element identity = 0\n}\n```",
+        ),
+        "data" => Some(
+            "**data**\n\nDefines an algebraic data type (ADT).\n\n```kleis\ndata Option(T) {\n    constructor None\n    constructor Some(T)\n}\n```",
+        ),
+        "define" => Some(
+            "**define**\n\nDefines a named expression or function.\n\n```kleis\ndefine square(x : ℝ) : ℝ = x * x\n```",
+        ),
+        "axiom" => Some(
+            "**axiom**\n\nDeclares a mathematical axiom (assumed true).\n\n```kleis\naxiom commutativity: ∀(x y : G). mul(x, y) = mul(y, x)\n```",
+        ),
+        "operation" => Some(
+            "**operation**\n\nDeclares an operation within a structure.\n\n```kleis\noperation add : T × T → T\n```",
+        ),
+        "import" => Some(
+            "**import**\n\nImports definitions from another Kleis file.\n\n```kleis\nimport \"stdlib/matrices.kleis\"\n```",
+        ),
 
         // Quantifiers
-        "∀" | "forall" => Some("**∀** (Universal quantifier)\n\nFor all values of a variable.\n\n```kleis\n∀(x : ℝ). x + 0 = x\n```"),
-        "∃" | "exists" => Some("**∃** (Existential quantifier)\n\nThere exists a value.\n\n```kleis\n∃(x : ℝ). x * x = 2\n```"),
-        "λ" | "lambda" => Some("**λ** (Lambda)\n\nAnonymous function.\n\n```kleis\nλ(x : ℝ). x * x\n```"),
+        "∀" | "forall" => Some(
+            "**∀** (Universal quantifier)\n\nFor all values of a variable.\n\n```kleis\n∀(x : ℝ). x + 0 = x\n```",
+        ),
+        "∃" | "exists" => Some(
+            "**∃** (Existential quantifier)\n\nThere exists a value.\n\n```kleis\n∃(x : ℝ). x * x = 2\n```",
+        ),
+        "λ" | "lambda" => {
+            Some("**λ** (Lambda)\n\nAnonymous function.\n\n```kleis\nλ(x : ℝ). x * x\n```")
+        }
 
         // Common operations
-        "transpose" => Some("**transpose**\n\nMatrix transpose operation.\n\n`transpose : Matrix(m, n, T) → Matrix(n, m, T)`"),
-        "det" => Some("**det**\n\nMatrix determinant (for square matrices).\n\n`det : Matrix(n, n, T) → T`"),
-        "trace" => Some("**trace**\n\nMatrix trace (sum of diagonal elements).\n\n`trace : Matrix(n, n, T) → T`"),
-        "inv" => Some("**inv**\n\nMatrix inverse (for invertible square matrices).\n\n`inv : Matrix(n, n, T) → Matrix(n, n, T)`"),
-        "eigenvalues" => Some("**eigenvalues**\n\nCompute eigenvalues of a square matrix.\n\nReturns a list of eigenvalues (may be complex)."),
+        "transpose" => Some(
+            "**transpose**\n\nMatrix transpose operation.\n\n`transpose : Matrix(m, n, T) → Matrix(n, m, T)`",
+        ),
+        "det" => Some(
+            "**det**\n\nMatrix determinant (for square matrices).\n\n`det : Matrix(n, n, T) → T`",
+        ),
+        "trace" => Some(
+            "**trace**\n\nMatrix trace (sum of diagonal elements).\n\n`trace : Matrix(n, n, T) → T`",
+        ),
+        "inv" => Some(
+            "**inv**\n\nMatrix inverse (for invertible square matrices).\n\n`inv : Matrix(n, n, T) → Matrix(n, n, T)`",
+        ),
+        "eigenvalues" => Some(
+            "**eigenvalues**\n\nCompute eigenvalues of a square matrix.\n\nReturns a list of eigenvalues (may be complex).",
+        ),
         "svd" => Some("**svd**\n\nSingular Value Decomposition.\n\nDecomposes A = U Σ Vᵀ"),
 
         _ => None,
@@ -2711,11 +2753,10 @@ fn get_kleis_completions() -> Vec<CompletionItem> {
         detail: Some("Universal quantifier (for all)".to_string()),
         documentation: Some(Documentation::MarkupContent(MarkupContent {
             kind: MarkupKind::Markdown,
-            value:
-                "**Universal quantification**: asserts a property holds for all values.\n\n\
+            value: "**Universal quantification**: asserts a property holds for all values.\n\n\
                     Type `forall` for ASCII alternative.\n\n\
                     Example:\n```kleis\n∀(x : ℝ). x + 0 = x\n∀(a b : G). mul(a, b) = mul(b, a)\n```"
-                    .to_string(),
+                .to_string(),
         })),
         insert_text: Some("∀(${1:x} : ${2:T}). ${0}".to_string()),
         insert_text_format: Some(InsertTextFormat::SNIPPET),

@@ -542,7 +542,7 @@ impl TypeInference {
                 // Determine the type to bind:
                 // 1. If type annotation is present, parse and use it
                 // 2. Otherwise, infer from the value
-                let binding_ty = if let Some(ref ann) = type_annotation {
+                let binding_ty = if let Some(ann) = type_annotation {
                     // Parse the type annotation string into a Type
                     self.parse_type_annotation(ann)
                 } else {
@@ -1047,14 +1047,14 @@ impl TypeInference {
                     type_name: "Type".to_string(),
                     constructor: "Complex".to_string(),
                     args: vec![],
-                }
+                };
             }
             "ℤ" | "Int" | "Integer" => {
                 return Type::Data {
                     type_name: "Type".to_string(),
                     constructor: "Integer".to_string(),
                     args: vec![],
-                }
+                };
             }
             "ℕ" | "Nat" => return Type::Nat,
             "𝔹" | "Bool" => return Type::Bool,
@@ -1072,19 +1072,19 @@ impl TypeInference {
                     "Matrix" => {
                         // Parse Matrix(m, n, T)
                         let parts: Vec<&str> = params_str.split(',').collect();
-                        if parts.len() >= 2 {
-                            if let (Ok(m), Ok(n)) = (
+                        if parts.len() >= 2
+                            && let (Ok(m), Ok(n)) = (
                                 parts[0].trim().parse::<usize>(),
                                 parts[1].trim().parse::<usize>(),
-                            ) {
-                                // Parse element type if present, default to ℝ
-                                let elem_type = if parts.len() >= 3 {
-                                    self.parse_type_annotation(parts[2].trim())
-                                } else {
-                                    Type::scalar()
-                                };
-                                return Type::matrix(m, n, elem_type);
-                            }
+                            )
+                        {
+                            // Parse element type if present, default to ℝ
+                            let elem_type = if parts.len() >= 3 {
+                                self.parse_type_annotation(parts[2].trim())
+                            } else {
+                                Type::scalar()
+                            };
+                            return Type::matrix(m, n, elem_type);
                         }
                     }
                     "Vector" => {
@@ -1205,17 +1205,16 @@ impl TypeInference {
                     .iter()
                     .enumerate()
                     .find(|(_, p)| p.name == *name)
+                    && matches!(param.kind, Some(crate::kleis_ast::KindExpr::Arrow(_, _)))
                 {
-                    if matches!(param.kind, Some(crate::kleis_ast::KindExpr::Arrow(_, _))) {
-                        let mut app = type_args
-                            .get(idx)
-                            .ok_or_else(|| format!("Type parameter {} index out of bounds", name))?
-                            .clone();
-                        for arg in param_types {
-                            app = Type::App(Box::new(app), Box::new(arg));
-                        }
-                        return Ok(app);
+                    let mut app = type_args
+                        .get(idx)
+                        .ok_or_else(|| format!("Type parameter {} index out of bounds", name))?
+                        .clone();
+                    for arg in param_types {
+                        app = Type::App(Box::new(app), Box::new(arg));
                     }
+                    return Ok(app);
                 }
 
                 Ok(Type::Data {
@@ -1656,7 +1655,7 @@ impl TypeInference {
             let c2 = get_constructor(&t2);
 
             // Case 1: Both types are concrete and same constructor
-            if let (Some(ref con1), Some(ref con2)) = (&c1, &c2) {
+            if let (Some(con1), Some(con2)) = (&c1, &c2) {
                 if con1 == con2 {
                     // Same constructor - for parametric types, verify Nat parameters match
                     // This is GENERIC: works for Matrix(m,n,T), Vector(n,T), Tensor(i,j,k,T),
@@ -1703,14 +1702,14 @@ impl TypeInference {
 
                 // Case 3: Scalar types - use type promotion hierarchy
                 // Query registry for common supertype
-                if let Some(builder) = context_builder {
-                    if let Some(common_type) = builder.find_common_supertype(con1, con2) {
-                        return Ok(Type::Data {
-                            type_name: "Type".to_string(),
-                            constructor: common_type,
-                            args: vec![],
-                        });
-                    }
+                if let Some(builder) = context_builder
+                    && let Some(common_type) = builder.find_common_supertype(con1, con2)
+                {
+                    return Ok(Type::Data {
+                        type_name: "Type".to_string(),
+                        constructor: common_type,
+                        args: vec![],
+                    });
                 }
 
                 // Fallback: return t1's type (arbitrary choice for unknown cases)
@@ -1989,7 +1988,7 @@ fn unify(t1: &Type, t2: &Type) -> Result<Substitution, String> {
 
         // Symbolic dimension expressions: delegate to dimension solver
         (Type::NatExpr(e1), Type::NatExpr(e2)) => {
-            use crate::dimension_solver::{unify_dims, DimUnifyResult};
+            use crate::dimension_solver::{DimUnifyResult, unify_dims};
             match unify_dims(e1, e2) {
                 DimUnifyResult::Equal(_) => Ok(Substitution::empty()),
                 DimUnifyResult::Unequal(msg) => Err(msg),
@@ -1998,7 +1997,7 @@ fn unify(t1: &Type, t2: &Type) -> Result<Substitution, String> {
 
         // NatExpr vs NatValue: check if expression evaluates to value
         (Type::NatExpr(e), Type::NatValue(n)) | (Type::NatValue(n), Type::NatExpr(e)) => {
-            use crate::dimension_solver::{unify_dims, DimUnifyResult};
+            use crate::dimension_solver::{DimUnifyResult, unify_dims};
             use crate::kleis_ast::DimExpr;
             match unify_dims(e, &DimExpr::Lit(*n)) {
                 DimUnifyResult::Equal(_) => Ok(Substitution::empty()),

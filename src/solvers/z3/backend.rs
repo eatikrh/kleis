@@ -29,8 +29,8 @@ use crate::solvers::z3::type_mapping::{
 use crate::structure_registry::StructureRegistry;
 use crate::type_inference::Type;
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use z3::ast::{Ast, Bool, Dynamic, Int, Real};
 use z3::{DatatypeAccessor, DatatypeBuilder, DatatypeSort, FuncDecl, SatResult, Solver, Sort};
 
@@ -227,14 +227,13 @@ impl<'r> Z3Backend<'r> {
         // Array<Int, Int> would be unsoundly wrapped as a Set.
         use z3::SortKind;
         let sort = d.get_sort();
-        if sort.kind() == SortKind::Array {
-            if let Some(range) = sort.array_range() {
-                if range.kind() == SortKind::Bool {
-                    // SAFETY: sort is Array with Bool range, which is Z3's Set representation
-                    let ctx = &z3::Context::thread_local();
-                    return unsafe { Some(z3::ast::Set::wrap(ctx, d.get_z3_ast())) };
-                }
-            }
+        if sort.kind() == SortKind::Array
+            && let Some(range) = sort.array_range()
+            && range.kind() == SortKind::Bool
+        {
+            // SAFETY: sort is Array with Bool range, which is Z3's Set representation
+            let ctx = &z3::Context::thread_local();
+            return unsafe { Some(z3::ast::Set::wrap(ctx, d.get_z3_ast())) };
         }
         None
     }
@@ -703,7 +702,7 @@ impl<'r> Z3Backend<'r> {
                 span,
             } => {
                 // Check if the variable is shadowed by the pattern
-                let shadowed = if let Pattern::Variable(ref pname) = pattern {
+                let shadowed = if let Pattern::Variable(pname) = pattern {
                     pname == var_name
                 } else {
                     false
@@ -1094,17 +1093,17 @@ impl<'r> Z3Backend<'r> {
             // universal quantifiers that cause Z3 to explode. These can still
             // be loaded on-demand via load_axioms_for_expression() which only
             // picks axioms whose operations match the target expression.
-            if let Some(structure) = self.registry.get(&structure_name) {
-                if !structure.type_params.is_empty() {
-                    if z3_debug {
-                        eprintln!(
-                            "   [Z3 DEBUG] Skipping parameterized structure '{}' ({} type params) — load on demand",
-                            structure_name,
-                            structure.type_params.len()
-                        );
-                    }
-                    continue;
+            if let Some(structure) = self.registry.get(&structure_name)
+                && !structure.type_params.is_empty()
+            {
+                if z3_debug {
+                    eprintln!(
+                        "   [Z3 DEBUG] Skipping parameterized structure '{}' ({} type params) — load on demand",
+                        structure_name,
+                        structure.type_params.len()
+                    );
                 }
+                continue;
             }
 
             let axioms = self.registry.get_axioms(&structure_name);
@@ -1293,10 +1292,10 @@ impl<'r> Z3Backend<'r> {
         match expr {
             Expression::Operation { name, args, .. } => {
                 for (pos, arg) in args.iter().enumerate() {
-                    if let Expression::Object(param_name) = arg {
-                        if let Some(val) = concrete_args.get(&(name.clone(), pos)) {
-                            subst.insert(param_name.clone(), val.clone());
-                        }
+                    if let Expression::Object(param_name) = arg
+                        && let Some(val) = concrete_args.get(&(name.clone(), pos))
+                    {
+                        subst.insert(param_name.clone(), val.clone());
                     }
                     Self::find_groundable_params(arg, concrete_args, subst);
                 }
@@ -1331,12 +1330,11 @@ impl<'r> Z3Backend<'r> {
         match expr {
             Expression::Operation { name, args, .. } => {
                 for (pos, arg) in args.iter().enumerate() {
-                    if let Expression::Object(param_name) = arg {
-                        if !bound.contains(param_name.as_str()) {
-                            if let Some(val) = concrete_args.get(&(name.clone(), pos)) {
-                                subst.insert(param_name.clone(), val.clone());
-                            }
-                        }
+                    if let Expression::Object(param_name) = arg
+                        && !bound.contains(param_name.as_str())
+                        && let Some(val) = concrete_args.get(&(name.clone(), pos))
+                    {
+                        subst.insert(param_name.clone(), val.clone());
                     }
                     Self::find_groundable_params_excluding(arg, concrete_args, subst, bound);
                 }
@@ -1601,10 +1599,11 @@ impl<'r> Z3Backend<'r> {
             for variant in &data_def.variants {
                 for field in &variant.fields {
                     // Check if field type references another data type
-                    if let TypeExpr::Named(name) = &field.type_expr {
-                        if all_dt_names.contains(name) && name != &data_def.name {
-                            deps.push(name.clone());
-                        }
+                    if let TypeExpr::Named(name) = &field.type_expr
+                        && all_dt_names.contains(name)
+                        && name != &data_def.name
+                    {
+                        deps.push(name.clone());
                     }
                 }
             }
@@ -2297,7 +2296,9 @@ impl<'r> Z3Backend<'r> {
 
         let z3_debug = std::env::var("KLEIS_Z3_DEBUG").unwrap_or_default() == "1";
         if z3_debug {
-            eprintln!("   [Z3 DEBUG] Declared List ADT (KleisList) — cons/nil are now injective constructors");
+            eprintln!(
+                "   [Z3 DEBUG] Declared List ADT (KleisList) — cons/nil are now injective constructors"
+            );
         }
         self.declared_data_types
             .insert("List".to_string(), list_sort);
@@ -2368,12 +2369,11 @@ impl<'r> Z3Backend<'r> {
                 }
 
                 // 2. Check structure-scoped identity elements (if a scope is active)
-                if let Some(scope) = &self.current_structure_scope {
-                    if let Some(struct_map) = self.structure_elements.get(scope) {
-                        if let Some(scoped) = struct_map.get(name) {
-                            return Ok(scoped.clone());
-                        }
-                    }
+                if let Some(scope) = &self.current_structure_scope
+                    && let Some(struct_map) = self.structure_elements.get(scope)
+                    && let Some(scoped) = struct_map.get(name)
+                {
+                    return Ok(scoped.clone());
                 }
 
                 // 3. Check global identity elements (fallback)
@@ -2420,10 +2420,11 @@ impl<'r> Z3Backend<'r> {
                 // 4. Special case: 'i' as the complex imaginary unit
                 // Only use complex i if NOT already in free_variables (which means
                 // it was used as a loop variable first)
-                if name == "i" && !self.free_variables.contains_key("i") {
-                    if let Some(i_value) = self.get_complex_i() {
-                        return Ok(i_value);
-                    }
+                if name == "i"
+                    && !self.free_variables.contains_key("i")
+                    && let Some(i_value) = self.get_complex_i()
+                {
+                    return Ok(i_value);
                 }
 
                 // 5. Check already-created free variables
@@ -2473,19 +2474,19 @@ impl<'r> Z3Backend<'r> {
 
                 // Check if this is a defined function (not just an operation)
                 // If so, expand it at the Kleis level before translating to Z3
-                if let Some(func_def) = self.registry.get_function(name) {
-                    if func_def.params.len() == args.len() {
-                        // Create substitution map: param -> arg
-                        let subst: HashMap<String, Expression> = func_def
-                            .params
-                            .iter()
-                            .cloned()
-                            .zip(args.iter().cloned())
-                            .collect();
-                        // Substitute and translate
-                        let substituted_body = substitute_expr(&func_def.body, &subst);
-                        return self.kleis_to_z3(&substituted_body, vars);
-                    }
+                if let Some(func_def) = self.registry.get_function(name)
+                    && func_def.params.len() == args.len()
+                {
+                    // Create substitution map: param -> arg
+                    let subst: HashMap<String, Expression> = func_def
+                        .params
+                        .iter()
+                        .cloned()
+                        .zip(args.iter().cloned())
+                        .collect();
+                    // Substitute and translate
+                    let substituted_body = substitute_expr(&func_def.body, &subst);
+                    return self.kleis_to_z3(&substituted_body, vars);
                 }
 
                 // Type-dispatched operations: check if we have type info for this operation
@@ -2499,12 +2500,12 @@ impl<'r> Z3Backend<'r> {
                 // Special case: sum_over with concrete bounds
                 // Expands sum_over(λ i . body, start, end) into body[i=start] + body[i=start+1] + ... + body[i=end-1]
                 // This enables tensor contraction/Einstein summation in Z3
-                if name == "sum_over" && args.len() == 3 {
-                    if let Some(expanded) =
+                if name == "sum_over"
+                    && args.len() == 3
+                    && let Some(expanded) =
                         self.try_expand_sum_over(&args[0], &args[1], &args[2], vars)?
-                    {
-                        return Ok(expanded);
-                    }
+                {
+                    return Ok(expanded);
                 }
 
                 // Standard path: translate arguments first
@@ -3613,10 +3614,10 @@ impl<'r> Z3Backend<'r> {
                     return Err("re requires 1 argument".to_string());
                 }
                 // Use datatype accessor
-                if let Some(ref cdt) = self.complex_datatype {
-                    if self.is_complex_sort(&args[0]) {
-                        return Ok(cdt.accessor_re().apply(&[&args[0] as &dyn Ast]));
-                    }
+                if let Some(ref cdt) = self.complex_datatype
+                    && self.is_complex_sort(&args[0])
+                {
+                    return Ok(cdt.accessor_re().apply(&[&args[0] as &dyn Ast]));
                 }
                 // Fallback for symbolic complex
                 let func_decl = self.declare_uninterpreted("re", 1);
@@ -3630,10 +3631,10 @@ impl<'r> Z3Backend<'r> {
                     return Err("im requires 1 argument".to_string());
                 }
                 // Use datatype accessor
-                if let Some(ref cdt) = self.complex_datatype {
-                    if self.is_complex_sort(&args[0]) {
-                        return Ok(cdt.accessor_im().apply(&[&args[0] as &dyn Ast]));
-                    }
+                if let Some(ref cdt) = self.complex_datatype
+                    && self.is_complex_sort(&args[0])
+                {
+                    return Ok(cdt.accessor_im().apply(&[&args[0] as &dyn Ast]));
                 }
                 // Fallback for symbolic complex
                 let func_decl = self.declare_uninterpreted("im", 1);
@@ -3647,16 +3648,16 @@ impl<'r> Z3Backend<'r> {
                     return Err("conj requires 1 argument".to_string());
                 }
                 // Use algebraic translation
-                if let Some(ref cdt) = self.complex_datatype {
-                    if self.is_complex_sort(&args[0]) {
-                        let re = cdt.accessor_re().apply(&[&args[0] as &dyn Ast]);
-                        let im = cdt.accessor_im().apply(&[&args[0] as &dyn Ast]);
-                        let neg_im = im.as_real().map(|r| r.unary_minus()).ok_or("im not Real")?;
-                        let re_real = re.as_real().ok_or("re not Real")?;
-                        return Ok(cdt
-                            .constructor()
-                            .apply(&[&re_real as &dyn Ast, &neg_im as &dyn Ast]));
-                    }
+                if let Some(ref cdt) = self.complex_datatype
+                    && self.is_complex_sort(&args[0])
+                {
+                    let re = cdt.accessor_re().apply(&[&args[0] as &dyn Ast]);
+                    let im = cdt.accessor_im().apply(&[&args[0] as &dyn Ast]);
+                    let neg_im = im.as_real().map(|r| r.unary_minus()).ok_or("im not Real")?;
+                    let re_real = re.as_real().ok_or("re not Real")?;
+                    return Ok(cdt
+                        .constructor()
+                        .apply(&[&re_real as &dyn Ast, &neg_im as &dyn Ast]));
                 }
                 // Fallback
                 let func_decl = self.declare_uninterpreted("conj", 1);
@@ -3670,25 +3671,26 @@ impl<'r> Z3Backend<'r> {
                     return Err("complex_add requires 2 arguments".to_string());
                 }
                 // Algebraic translation
-                if let Some(ref cdt) = self.complex_datatype {
-                    if self.is_complex_sort(&args[0]) && self.is_complex_sort(&args[1]) {
-                        let re1 = cdt.accessor_re().apply(&[&args[0] as &dyn Ast]);
-                        let im1 = cdt.accessor_im().apply(&[&args[0] as &dyn Ast]);
-                        let re2 = cdt.accessor_re().apply(&[&args[1] as &dyn Ast]);
-                        let im2 = cdt.accessor_im().apply(&[&args[1] as &dyn Ast]);
+                if let Some(ref cdt) = self.complex_datatype
+                    && self.is_complex_sort(&args[0])
+                    && self.is_complex_sort(&args[1])
+                {
+                    let re1 = cdt.accessor_re().apply(&[&args[0] as &dyn Ast]);
+                    let im1 = cdt.accessor_im().apply(&[&args[0] as &dyn Ast]);
+                    let re2 = cdt.accessor_re().apply(&[&args[1] as &dyn Ast]);
+                    let im2 = cdt.accessor_im().apply(&[&args[1] as &dyn Ast]);
 
-                        let re_sum = Real::add(&[
-                            &re1.as_real().ok_or("re1 not Real")?,
-                            &re2.as_real().ok_or("re2 not Real")?,
-                        ]);
-                        let im_sum = Real::add(&[
-                            &im1.as_real().ok_or("im1 not Real")?,
-                            &im2.as_real().ok_or("im2 not Real")?,
-                        ]);
-                        return Ok(cdt
-                            .constructor()
-                            .apply(&[&re_sum as &dyn Ast, &im_sum as &dyn Ast]));
-                    }
+                    let re_sum = Real::add(&[
+                        &re1.as_real().ok_or("re1 not Real")?,
+                        &re2.as_real().ok_or("re2 not Real")?,
+                    ]);
+                    let im_sum = Real::add(&[
+                        &im1.as_real().ok_or("im1 not Real")?,
+                        &im2.as_real().ok_or("im2 not Real")?,
+                    ]);
+                    return Ok(cdt
+                        .constructor()
+                        .apply(&[&re_sum as &dyn Ast, &im_sum as &dyn Ast]));
                 }
                 // Fallback
                 let func_decl = self.declare_uninterpreted("complex_add", 2);
@@ -3702,43 +3704,44 @@ impl<'r> Z3Backend<'r> {
                     return Err("complex_mul requires 2 arguments".to_string());
                 }
                 // Algebraic translation
-                if let Some(ref cdt) = self.complex_datatype {
-                    if self.is_complex_sort(&args[0]) && self.is_complex_sort(&args[1]) {
-                        let a = cdt
-                            .accessor_re()
-                            .apply(&[&args[0] as &dyn Ast])
-                            .as_real()
-                            .ok_or("a not Real")?;
-                        let b = cdt
-                            .accessor_im()
-                            .apply(&[&args[0] as &dyn Ast])
-                            .as_real()
-                            .ok_or("b not Real")?;
-                        let c = cdt
-                            .accessor_re()
-                            .apply(&[&args[1] as &dyn Ast])
-                            .as_real()
-                            .ok_or("c not Real")?;
-                        let d = cdt
-                            .accessor_im()
-                            .apply(&[&args[1] as &dyn Ast])
-                            .as_real()
-                            .ok_or("d not Real")?;
+                if let Some(ref cdt) = self.complex_datatype
+                    && self.is_complex_sort(&args[0])
+                    && self.is_complex_sort(&args[1])
+                {
+                    let a = cdt
+                        .accessor_re()
+                        .apply(&[&args[0] as &dyn Ast])
+                        .as_real()
+                        .ok_or("a not Real")?;
+                    let b = cdt
+                        .accessor_im()
+                        .apply(&[&args[0] as &dyn Ast])
+                        .as_real()
+                        .ok_or("b not Real")?;
+                    let c = cdt
+                        .accessor_re()
+                        .apply(&[&args[1] as &dyn Ast])
+                        .as_real()
+                        .ok_or("c not Real")?;
+                    let d = cdt
+                        .accessor_im()
+                        .apply(&[&args[1] as &dyn Ast])
+                        .as_real()
+                        .ok_or("d not Real")?;
 
-                        // Real part: ac - bd
-                        let ac = Real::mul(&[&a, &c]);
-                        let bd = Real::mul(&[&b, &d]);
-                        let re_result = Real::sub(&[&ac, &bd]);
+                    // Real part: ac - bd
+                    let ac = Real::mul(&[&a, &c]);
+                    let bd = Real::mul(&[&b, &d]);
+                    let re_result = Real::sub(&[&ac, &bd]);
 
-                        // Imaginary part: ad + bc
-                        let ad = Real::mul(&[&a, &d]);
-                        let bc = Real::mul(&[&b, &c]);
-                        let im_result = Real::add(&[&ad, &bc]);
+                    // Imaginary part: ad + bc
+                    let ad = Real::mul(&[&a, &d]);
+                    let bc = Real::mul(&[&b, &c]);
+                    let im_result = Real::add(&[&ad, &bc]);
 
-                        return Ok(cdt
-                            .constructor()
-                            .apply(&[&re_result as &dyn Ast, &im_result as &dyn Ast]));
-                    }
+                    return Ok(cdt
+                        .constructor()
+                        .apply(&[&re_result as &dyn Ast, &im_result as &dyn Ast]));
                 }
                 // Fallback
                 let func_decl = self.declare_uninterpreted("complex_mul", 2);
@@ -3752,33 +3755,33 @@ impl<'r> Z3Backend<'r> {
                     return Err("complex_inverse requires 1 argument".to_string());
                 }
                 // Algebraic: 1/z = (a - bi) / (a² + b²)
-                if let Some(ref cdt) = self.complex_datatype {
-                    if self.is_complex_sort(&args[0]) {
-                        let a = cdt
-                            .accessor_re()
-                            .apply(&[&args[0] as &dyn Ast])
-                            .as_real()
-                            .ok_or("a not Real")?;
-                        let b = cdt
-                            .accessor_im()
-                            .apply(&[&args[0] as &dyn Ast])
-                            .as_real()
-                            .ok_or("b not Real")?;
+                if let Some(ref cdt) = self.complex_datatype
+                    && self.is_complex_sort(&args[0])
+                {
+                    let a = cdt
+                        .accessor_re()
+                        .apply(&[&args[0] as &dyn Ast])
+                        .as_real()
+                        .ok_or("a not Real")?;
+                    let b = cdt
+                        .accessor_im()
+                        .apply(&[&args[0] as &dyn Ast])
+                        .as_real()
+                        .ok_or("b not Real")?;
 
-                        // |z|² = a² + b²
-                        let a_sq = Real::mul(&[&a, &a]);
-                        let b_sq = Real::mul(&[&b, &b]);
-                        let abs_sq = Real::add(&[&a_sq, &b_sq]);
+                    // |z|² = a² + b²
+                    let a_sq = Real::mul(&[&a, &a]);
+                    let b_sq = Real::mul(&[&b, &b]);
+                    let abs_sq = Real::add(&[&a_sq, &b_sq]);
 
-                        // 1/z = (a / |z|², -b / |z|²)
-                        let re_result = a.div(&abs_sq);
-                        let neg_b = b.unary_minus();
-                        let im_result = neg_b.div(&abs_sq);
+                    // 1/z = (a / |z|², -b / |z|²)
+                    let re_result = a.div(&abs_sq);
+                    let neg_b = b.unary_minus();
+                    let im_result = neg_b.div(&abs_sq);
 
-                        return Ok(cdt
-                            .constructor()
-                            .apply(&[&re_result as &dyn Ast, &im_result as &dyn Ast]));
-                    }
+                    return Ok(cdt
+                        .constructor()
+                        .apply(&[&re_result as &dyn Ast, &im_result as &dyn Ast]));
                 }
                 let func_decl = self.declare_uninterpreted("complex_inverse", 1);
                 let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
@@ -3790,35 +3793,36 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("complex_sub requires 2 arguments".to_string());
                 }
-                if let Some(ref cdt) = self.complex_datatype {
-                    if self.is_complex_sort(&args[0]) && self.is_complex_sort(&args[1]) {
-                        let re1 = cdt
-                            .accessor_re()
-                            .apply(&[&args[0] as &dyn Ast])
-                            .as_real()
-                            .ok_or("re1")?;
-                        let im1 = cdt
-                            .accessor_im()
-                            .apply(&[&args[0] as &dyn Ast])
-                            .as_real()
-                            .ok_or("im1")?;
-                        let re2 = cdt
-                            .accessor_re()
-                            .apply(&[&args[1] as &dyn Ast])
-                            .as_real()
-                            .ok_or("re2")?;
-                        let im2 = cdt
-                            .accessor_im()
-                            .apply(&[&args[1] as &dyn Ast])
-                            .as_real()
-                            .ok_or("im2")?;
+                if let Some(ref cdt) = self.complex_datatype
+                    && self.is_complex_sort(&args[0])
+                    && self.is_complex_sort(&args[1])
+                {
+                    let re1 = cdt
+                        .accessor_re()
+                        .apply(&[&args[0] as &dyn Ast])
+                        .as_real()
+                        .ok_or("re1")?;
+                    let im1 = cdt
+                        .accessor_im()
+                        .apply(&[&args[0] as &dyn Ast])
+                        .as_real()
+                        .ok_or("im1")?;
+                    let re2 = cdt
+                        .accessor_re()
+                        .apply(&[&args[1] as &dyn Ast])
+                        .as_real()
+                        .ok_or("re2")?;
+                    let im2 = cdt
+                        .accessor_im()
+                        .apply(&[&args[1] as &dyn Ast])
+                        .as_real()
+                        .ok_or("im2")?;
 
-                        let re_diff = Real::sub(&[&re1, &re2]);
-                        let im_diff = Real::sub(&[&im1, &im2]);
-                        return Ok(cdt
-                            .constructor()
-                            .apply(&[&re_diff as &dyn Ast, &im_diff as &dyn Ast]));
-                    }
+                    let re_diff = Real::sub(&[&re1, &re2]);
+                    let im_diff = Real::sub(&[&im1, &im2]);
+                    return Ok(cdt
+                        .constructor()
+                        .apply(&[&re_diff as &dyn Ast, &im_diff as &dyn Ast]));
                 }
                 let func_decl = self.declare_uninterpreted("complex_sub", 2);
                 let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
@@ -3830,49 +3834,50 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 2 {
                     return Err("complex_div requires 2 arguments".to_string());
                 }
-                if let Some(ref cdt) = self.complex_datatype {
-                    if self.is_complex_sort(&args[0]) && self.is_complex_sort(&args[1]) {
-                        let a = cdt
-                            .accessor_re()
-                            .apply(&[&args[0] as &dyn Ast])
-                            .as_real()
-                            .ok_or("a")?;
-                        let b = cdt
-                            .accessor_im()
-                            .apply(&[&args[0] as &dyn Ast])
-                            .as_real()
-                            .ok_or("b")?;
-                        let c = cdt
-                            .accessor_re()
-                            .apply(&[&args[1] as &dyn Ast])
-                            .as_real()
-                            .ok_or("c")?;
-                        let d = cdt
-                            .accessor_im()
-                            .apply(&[&args[1] as &dyn Ast])
-                            .as_real()
-                            .ok_or("d")?;
+                if let Some(ref cdt) = self.complex_datatype
+                    && self.is_complex_sort(&args[0])
+                    && self.is_complex_sort(&args[1])
+                {
+                    let a = cdt
+                        .accessor_re()
+                        .apply(&[&args[0] as &dyn Ast])
+                        .as_real()
+                        .ok_or("a")?;
+                    let b = cdt
+                        .accessor_im()
+                        .apply(&[&args[0] as &dyn Ast])
+                        .as_real()
+                        .ok_or("b")?;
+                    let c = cdt
+                        .accessor_re()
+                        .apply(&[&args[1] as &dyn Ast])
+                        .as_real()
+                        .ok_or("c")?;
+                    let d = cdt
+                        .accessor_im()
+                        .apply(&[&args[1] as &dyn Ast])
+                        .as_real()
+                        .ok_or("d")?;
 
-                        // z1/z2 = (ac + bd)/(c² + d²) + i(bc - ad)/(c² + d²)
-                        let c_sq = Real::mul(&[&c, &c]);
-                        let d_sq = Real::mul(&[&d, &d]);
-                        let denom = Real::add(&[&c_sq, &d_sq]);
+                    // z1/z2 = (ac + bd)/(c² + d²) + i(bc - ad)/(c² + d²)
+                    let c_sq = Real::mul(&[&c, &c]);
+                    let d_sq = Real::mul(&[&d, &d]);
+                    let denom = Real::add(&[&c_sq, &d_sq]);
 
-                        let ac = Real::mul(&[&a, &c]);
-                        let bd = Real::mul(&[&b, &d]);
-                        let bc = Real::mul(&[&b, &c]);
-                        let ad = Real::mul(&[&a, &d]);
+                    let ac = Real::mul(&[&a, &c]);
+                    let bd = Real::mul(&[&b, &d]);
+                    let bc = Real::mul(&[&b, &c]);
+                    let ad = Real::mul(&[&a, &d]);
 
-                        let re_num = Real::add(&[&ac, &bd]);
-                        let im_num = Real::sub(&[&bc, &ad]);
+                    let re_num = Real::add(&[&ac, &bd]);
+                    let im_num = Real::sub(&[&bc, &ad]);
 
-                        let re_result = re_num.div(&denom);
-                        let im_result = im_num.div(&denom);
+                    let re_result = re_num.div(&denom);
+                    let im_result = im_num.div(&denom);
 
-                        return Ok(cdt
-                            .constructor()
-                            .apply(&[&re_result as &dyn Ast, &im_result as &dyn Ast]));
-                    }
+                    return Ok(cdt
+                        .constructor()
+                        .apply(&[&re_result as &dyn Ast, &im_result as &dyn Ast]));
                 }
                 let func_decl = self.declare_uninterpreted("complex_div", 2);
                 let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
@@ -3884,24 +3889,24 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 1 {
                     return Err("neg_complex requires 1 argument".to_string());
                 }
-                if let Some(ref cdt) = self.complex_datatype {
-                    if self.is_complex_sort(&args[0]) {
-                        let re = cdt
-                            .accessor_re()
-                            .apply(&[&args[0] as &dyn Ast])
-                            .as_real()
-                            .ok_or("re")?;
-                        let im = cdt
-                            .accessor_im()
-                            .apply(&[&args[0] as &dyn Ast])
-                            .as_real()
-                            .ok_or("im")?;
-                        let neg_re = re.unary_minus();
-                        let neg_im = im.unary_minus();
-                        return Ok(cdt
-                            .constructor()
-                            .apply(&[&neg_re as &dyn Ast, &neg_im as &dyn Ast]));
-                    }
+                if let Some(ref cdt) = self.complex_datatype
+                    && self.is_complex_sort(&args[0])
+                {
+                    let re = cdt
+                        .accessor_re()
+                        .apply(&[&args[0] as &dyn Ast])
+                        .as_real()
+                        .ok_or("re")?;
+                    let im = cdt
+                        .accessor_im()
+                        .apply(&[&args[0] as &dyn Ast])
+                        .as_real()
+                        .ok_or("im")?;
+                    let neg_re = re.unary_minus();
+                    let neg_im = im.unary_minus();
+                    return Ok(cdt
+                        .constructor()
+                        .apply(&[&neg_re as &dyn Ast, &neg_im as &dyn Ast]));
                 }
                 let func_decl = self.declare_uninterpreted("neg_complex", 1);
                 let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
@@ -3913,22 +3918,22 @@ impl<'r> Z3Backend<'r> {
                 if args.len() != 1 {
                     return Err("abs_squared requires 1 argument".to_string());
                 }
-                if let Some(ref cdt) = self.complex_datatype {
-                    if self.is_complex_sort(&args[0]) {
-                        let re = cdt
-                            .accessor_re()
-                            .apply(&[&args[0] as &dyn Ast])
-                            .as_real()
-                            .ok_or("re")?;
-                        let im = cdt
-                            .accessor_im()
-                            .apply(&[&args[0] as &dyn Ast])
-                            .as_real()
-                            .ok_or("im")?;
-                        let re_sq = Real::mul(&[&re, &re]);
-                        let im_sq = Real::mul(&[&im, &im]);
-                        return Ok(Real::add(&[&re_sq, &im_sq]).into());
-                    }
+                if let Some(ref cdt) = self.complex_datatype
+                    && self.is_complex_sort(&args[0])
+                {
+                    let re = cdt
+                        .accessor_re()
+                        .apply(&[&args[0] as &dyn Ast])
+                        .as_real()
+                        .ok_or("re")?;
+                    let im = cdt
+                        .accessor_im()
+                        .apply(&[&args[0] as &dyn Ast])
+                        .as_real()
+                        .ok_or("im")?;
+                    let re_sq = Real::mul(&[&re, &re]);
+                    let im_sq = Real::mul(&[&im, &im]);
+                    return Ok(Real::add(&[&re_sq, &im_sq]).into());
                 }
                 let func_decl = self.declare_uninterpreted("abs_squared", 1);
                 let ast_args: Vec<&dyn Ast> = args.iter().map(|d| d as &dyn Ast).collect();
@@ -4487,23 +4492,27 @@ impl<'r> Z3Backend<'r> {
                 let mut promoted_args: Vec<Dynamic> = args.to_vec();
                 let arity = func_decl.arity();
                 for i in 0..arity {
-                    if let Some(expected_sort_kind) = func_decl.domain(i) {
-                        if let Some(arg) = promoted_args.get(i) {
-                            let actual_sort = arg.get_sort();
-                            if expected_sort_kind != actual_sort.kind() {
-                                if actual_sort.kind() == z3::SortKind::Int
-                                    && expected_sort_kind == z3::SortKind::Real
-                                {
-                                    let real_val = arg.as_int().unwrap().to_real();
-                                    promoted_args[i] = real_val.into();
-                                } else {
-                                    return Err(format!(
-                                        "Type mismatch in call to '{}': argument {} has type {:?} but expected {:?}.\n\
+                    if let Some(expected_sort_kind) = func_decl.domain(i)
+                        && let Some(arg) = promoted_args.get(i)
+                    {
+                        let actual_sort = arg.get_sort();
+                        if expected_sort_kind != actual_sort.kind() {
+                            if actual_sort.kind() == z3::SortKind::Int
+                                && expected_sort_kind == z3::SortKind::Real
+                            {
+                                let real_val = arg.as_int().unwrap().to_real();
+                                promoted_args[i] = real_val.into();
+                            } else {
+                                return Err(format!(
+                                    "Type mismatch in call to '{}': argument {} has type {:?} but expected {:?}.\n\
                                          Hint: Check if '{}' is declared with the correct signature, or if there are \
                                          duplicate definitions with different types.",
-                                        name, i + 1, actual_sort, expected_sort_kind, name
-                                    ));
-                                }
+                                    name,
+                                    i + 1,
+                                    actual_sort,
+                                    expected_sort_kind,
+                                    name
+                                ));
                             }
                         }
                     }
@@ -4935,11 +4944,10 @@ impl<'r> Z3Backend<'r> {
                     args: scrutinee_args,
                     ..
                 } = scrutinee
+                    && args.len() == scrutinee_args.len()
                 {
-                    if args.len() == scrutinee_args.len() {
-                        for (pat, arg) in args.iter().zip(scrutinee_args.iter()) {
-                            self.bind_pattern_vars(vars, arg, pat)?;
-                        }
+                    for (pat, arg) in args.iter().zip(scrutinee_args.iter()) {
+                        self.bind_pattern_vars(vars, arg, pat)?;
                     }
                 }
                 Ok(())
@@ -5498,12 +5506,11 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         // Load relevant computational axioms for operations in the expression.
         // Injectivity axioms are skipped — handled by decomposition + List ADT.
         // Skip if axioms were already loaded (e.g., via initialize_from_registry).
-        if self.loaded_structures.is_empty() {
-            if let Err(e) = self.load_axioms_for_expression(&decomposed) {
-                if z3_debug {
-                    eprintln!("   [Z3 DEBUG] axiom loading warning: {}", e);
-                }
-            }
+        if self.loaded_structures.is_empty()
+            && let Err(e) = self.load_axioms_for_expression(&decomposed)
+            && z3_debug
+        {
+            eprintln!("   [Z3 DEBUG] axiom loading warning: {}", e);
         }
 
         // Use push/pop for incremental solving
@@ -5603,29 +5610,29 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         // For symbolic expressions, we need a model
 
         // Try to get concrete value directly
-        if let Some(int_val) = z3_expr.as_int() {
-            if let Some(value) = int_val.as_i64() {
-                self.solver.pop(1);
-                return Ok(Expression::Const(value.to_string()));
-            }
+        if let Some(int_val) = z3_expr.as_int()
+            && let Some(value) = int_val.as_i64()
+        {
+            self.solver.pop(1);
+            return Ok(Expression::Const(value.to_string()));
         }
 
-        if let Some(bool_val) = z3_expr.as_bool() {
-            if let Some(value) = bool_val.as_bool() {
-                self.solver.pop(1);
-                return Ok(Expression::Const(value.to_string()));
-            }
+        if let Some(bool_val) = z3_expr.as_bool()
+            && let Some(value) = bool_val.as_bool()
+        {
+            self.solver.pop(1);
+            return Ok(Expression::Const(value.to_string()));
         }
 
-        if let Some(real_val) = z3_expr.as_real() {
-            if let Some((num, den)) = real_val.as_rational() {
-                self.solver.pop(1);
-                if den == 1 {
-                    return Ok(Expression::Const(num.to_string()));
-                } else {
-                    let decimal = num as f64 / den as f64;
-                    return Ok(Expression::Const(decimal.to_string()));
-                }
+        if let Some(real_val) = z3_expr.as_real()
+            && let Some((num, den)) = real_val.as_rational()
+        {
+            self.solver.pop(1);
+            if den == 1 {
+                return Ok(Expression::Const(num.to_string()));
+            } else {
+                let decimal = num as f64 / den as f64;
+                return Ok(Expression::Const(decimal.to_string()));
             }
         }
 
@@ -5834,7 +5841,11 @@ impl<'r> SolverBackend for Z3Backend<'r> {
         let wall_timeout =
             std::time::Duration::from_millis((timeout_ms as u64).saturating_add(2000));
         if z3_debug {
-            eprintln!("   [Z3 DEBUG] check_consistency Phase 1: solver.check() with {}ms timeout ({}ms watchdog)...", timeout_ms, wall_timeout.as_millis());
+            eprintln!(
+                "   [Z3 DEBUG] check_consistency Phase 1: solver.check() with {}ms timeout ({}ms watchdog)...",
+                timeout_ms,
+                wall_timeout.as_millis()
+            );
         }
         let t0 = std::time::Instant::now();
         self.solver.push();
