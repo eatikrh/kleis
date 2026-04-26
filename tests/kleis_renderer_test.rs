@@ -358,3 +358,62 @@ fn kleis_render_placeholder() {
     assert_eq!(out, "□", "Placeholder should be □");
     println!("Placeholder: {}", out);
 }
+
+// ============================================================
+// Scientific Notation Pretty-Rendering
+// ============================================================
+
+#[test]
+fn scientific_renders_pretty_across_targets() {
+    let ctx = build_default_context();
+    let expr = c("6.674e-11");
+
+    let kleis = render_expression(&expr, &ctx, &RenderTarget::Kleis);
+    assert_eq!(kleis, "6.674e-11", "Kleis target: pass-through");
+
+    let typst = render_expression(&expr, &ctx, &RenderTarget::Typst);
+    assert_eq!(typst, "6.674 times 10^(-11)");
+
+    let latex = render_expression(&expr, &ctx, &RenderTarget::LaTeX);
+    assert_eq!(latex, "6.674 \\times 10^{-11}");
+
+    let unicode = render_expression(&expr, &ctx, &RenderTarget::Unicode);
+    assert_eq!(unicode, "6.674 × 10⁻¹¹");
+
+    let html = render_expression(&expr, &ctx, &RenderTarget::HTML);
+    assert!(html.contains("6.674 &times; 10<sup>-11</sup>"));
+}
+
+#[test]
+fn scientific_speed_of_light_renders_correctly() {
+    let ctx = build_default_context();
+    let expr = c("2.998e8");
+
+    assert_eq!(
+        render_expression(&expr, &ctx, &RenderTarget::Typst),
+        "2.998 times 10^(8)"
+    );
+    assert_eq!(
+        render_expression(&expr, &ctx, &RenderTarget::Unicode),
+        "2.998 × 10⁸"
+    );
+}
+
+#[test]
+fn non_scientific_number_unchanged() {
+    let ctx = build_default_context();
+    let expr = c("3.14159");
+
+    assert_eq!(
+        render_expression(&expr, &ctx, &RenderTarget::Typst),
+        "3.14159"
+    );
+    assert_eq!(
+        render_expression(&expr, &ctx, &RenderTarget::LaTeX),
+        "3.14159"
+    );
+    assert_eq!(
+        render_expression(&expr, &ctx, &RenderTarget::Unicode),
+        "3.14159"
+    );
+}
