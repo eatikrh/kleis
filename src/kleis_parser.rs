@@ -318,6 +318,31 @@ impl KleisParser {
             }
         }
 
+        // Optional scientific notation exponent: e/E followed by optional +/- and digits.
+        // Grammar: scientific ::= decimal "e" [ "+" | "-" ] digit { digit }
+        // Disambiguate from identifier `e`: only consume if a digit (or sign+digit) follows.
+        if matches!(self.peek(), Some('e' | 'E')) {
+            let after_e = self.peek_ahead(1);
+            let is_scientific = match after_e {
+                Some(ch) if ch.is_numeric() => true,
+                Some('+' | '-') => self.peek_ahead(2).is_some_and(|ch| ch.is_numeric()),
+                _ => false,
+            };
+            if is_scientific {
+                self.advance(); // consume 'e' or 'E'
+                if matches!(self.peek(), Some('+' | '-')) {
+                    self.advance(); // consume sign
+                }
+                while let Some(ch) = self.peek() {
+                    if ch.is_numeric() {
+                        self.advance();
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+
         Ok(self.input[start..self.pos].iter().collect())
     }
 
@@ -4677,6 +4702,118 @@ mod tests {
     fn test_number() {
         let result = parse_kleis("42").unwrap();
         assert!(matches!(result, Expression::Const(ref s) if s == "42"));
+    }
+
+    #[test]
+    fn test_scientific_notation_basic() {
+        let result = parse_kleis("1e5").unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "1e5"));
+    }
+
+    #[test]
+    fn test_scientific_notation_decimal() {
+        let result = parse_kleis("6.674e-11").unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "6.674e-11"));
+    }
+
+    #[test]
+    fn test_scientific_notation_positive_exponent() {
+        let result = parse_kleis("1.5e+3").unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "1.5e+3"));
+    }
+
+    #[test]
+    fn test_scientific_notation_uppercase() {
+        let result = parse_kleis("2.99E8").unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "2.99E8"));
+    }
+
+    #[test]
+    fn test_scientific_notation_zero_exponent() {
+        let result = parse_kleis("1.0e0").unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "1.0e0"));
+    }
+
+    #[test]
+    fn test_scientific_notation_no_decimal() {
+        let result = parse_kleis("5e3").unwrap();
+        assert!(matches!(result, Expression::Const(ref s) if s == "5e3"));
+    }
+
+    #[test]
+    fn test_euler_e_not_consumed() {
+        let result = parse_kleis("e").unwrap();
+        assert!(
+            matches!(result, Expression::Object(ref s) if s == "e"),
+            "Bare 'e' should parse as identifier, got: {:?}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_number_times_e() {
+        let result = parse_kleis("2 * e").unwrap();
+        match result {
+            Expression::Operation { name, args, .. } => {
+                assert_eq!(name, "times");
+                assert!(matches!(args[0], Expression::Const(ref s) if s == "2"));
+                assert!(matches!(args[1], Expression::Object(ref s) if s == "e"));
+            }
+            _ => panic!("Expected multiplication operation, got: {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_scientific_in_expression() {
+        let result = parse_kleis("1.5e3 + 2.0e-1").unwrap();
+        match result {
+            Expression::Operation { name, args, .. } => {
+                assert_eq!(name, "plus");
+                assert!(matches!(args[0], Expression::Const(ref s) if s == "1.5e3"));
+                assert!(matches!(args[1], Expression::Const(ref s) if s == "2.0e-1"));
+            }
+            _ => panic!("Expected addition, got: {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_scientific_in_define() {
+        let code = "define G = 6.674e-11";
+        let mut parser = KleisParser::new(code);
+        let result = parser.parse_function_def().unwrap();
+        assert_eq!(result.name, "G");
+        assert!(
+            matches!(result.body, Expression::Const(ref s) if s == "6.674e-11"),
+            "Expected Const(\"6.674e-11\"), got: {:?}",
+            result.body
+        );
+    }
+
+    #[test]
+    fn test_scientific_no_digit_after_e() {
+        // "3.14e" — the 'e' without a following digit/sign should NOT be consumed
+        // Parser parses "3.14" as a number, then "e" is a separate identifier token
+        let result = parse_kleis("3.14 * e").unwrap();
+        match result {
+            Expression::Operation { name, args, .. } => {
+                assert_eq!(name, "times");
+                assert!(matches!(args[0], Expression::Const(ref s) if s == "3.14"));
+                assert!(matches!(args[1], Expression::Object(ref s) if s == "e"));
+            }
+            _ => panic!("Expected multiplication, got: {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_scientific_negative_decimal() {
+        let result = parse_kleis("-1.5e3").unwrap();
+        match result {
+            Expression::Operation { name, args, .. } => {
+                assert_eq!(name, "negate");
+                assert!(matches!(args[0], Expression::Const(ref s) if s == "1.5e3"));
+            }
+            _ => panic!("Expected negate operation, got: {:?}", result),
+        }
     }
 
     #[test]

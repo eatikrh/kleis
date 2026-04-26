@@ -192,3 +192,59 @@ fn test_type_promotion_in_division() {
         ty
     );
 }
+
+// =============================================================================
+// Scientific Notation Type Tests
+// =============================================================================
+
+#[test]
+fn test_type_of_scientific_literal() {
+    let mut checker = create_checker();
+
+    let ty = infer_type(&mut checker, "6.674e-11").expect("type inference failed");
+    let con = get_constructor(&ty);
+    assert!(
+        con.as_deref() == Some("Scalar"),
+        "6.674e-11 should be Scalar, got {:?}",
+        ty
+    );
+}
+
+#[test]
+fn test_type_of_scientific_no_decimal() {
+    let mut checker = create_checker();
+
+    let ty = infer_type(&mut checker, "1e5").expect("type inference failed");
+    let con = get_constructor(&ty);
+    assert!(
+        con.as_deref() == Some("Scalar"),
+        "1e5 should be Scalar (not Int), got {:?}",
+        ty
+    );
+}
+
+#[test]
+fn test_type_scientific_plus_int() {
+    let mut checker = create_checker();
+
+    let ty = infer_type(&mut checker, "1e3 + 1").expect("type inference failed");
+    let con = get_constructor(&ty);
+    assert!(
+        con.as_deref() == Some("Scalar"),
+        "1e3 + 1 should be Scalar (promoted), got {:?}",
+        ty
+    );
+}
+
+#[test]
+fn test_type_scientific_plus_real() {
+    let mut checker = create_checker();
+
+    let ty = infer_type(&mut checker, "1e3 + 3.14").expect("type inference failed");
+    let con = get_constructor(&ty);
+    assert!(
+        con.as_deref() == Some("Scalar"),
+        "1e3 + 3.14 should be Scalar, got {:?}",
+        ty
+    );
+}
