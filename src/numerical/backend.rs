@@ -8,7 +8,7 @@
 
 use ndarray::{Array1, Array2};
 use ndarray_linalg::types::c64;
-use ndarray_linalg::{Cholesky, Eig, Inverse, Norm, Solve, QR, SVD, UPLO};
+use ndarray_linalg::{Cholesky, Eig, Inverse, Norm, QR, SVD, Solve, UPLO};
 use std::fmt;
 
 /// Error type for numerical operations

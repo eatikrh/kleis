@@ -175,10 +175,10 @@ impl KleisConfig {
             }
         }
 
-        if let Some(z3) = partial.z3 {
-            if let Some(timeout_ms) = z3.timeout_ms {
-                self.z3.timeout_ms = timeout_ms;
-            }
+        if let Some(z3) = partial.z3
+            && let Some(timeout_ms) = z3.timeout_ms
+        {
+            self.z3.timeout_ms = timeout_ms;
         }
 
         if let Some(t) = partial.timeouts {
@@ -220,30 +220,30 @@ fn apply_env_overrides(cfg: &mut KleisConfig) {
     if let Ok(host) = std::env::var("KLEIS_SERVER_HOST") {
         cfg.server.host = host;
     }
-    if let Ok(port) = std::env::var("KLEIS_SERVER_PORT") {
-        if let Ok(p) = port.parse::<u16>() {
-            cfg.server.port = p;
-        }
+    if let Ok(port) = std::env::var("KLEIS_SERVER_PORT")
+        && let Ok(p) = port.parse::<u16>()
+    {
+        cfg.server.port = p;
     }
-    if let Ok(timeout) = std::env::var("KLEIS_Z3_TIMEOUT_MS") {
-        if let Ok(v) = timeout.parse::<u64>() {
-            cfg.z3.timeout_ms = v;
-        }
+    if let Ok(timeout) = std::env::var("KLEIS_Z3_TIMEOUT_MS")
+        && let Ok(v) = timeout.parse::<u64>()
+    {
+        cfg.z3.timeout_ms = v;
     }
-    if let Ok(v) = std::env::var("KLEIS_IPC_TIMEOUT_SHORT_MS") {
-        if let Ok(v) = v.parse::<u64>() {
-            cfg.timeouts.ipc_short_ms = v;
-        }
+    if let Ok(v) = std::env::var("KLEIS_IPC_TIMEOUT_SHORT_MS")
+        && let Ok(v) = v.parse::<u64>()
+    {
+        cfg.timeouts.ipc_short_ms = v;
     }
-    if let Ok(v) = std::env::var("KLEIS_IPC_TIMEOUT_MEDIUM_MS") {
-        if let Ok(v) = v.parse::<u64>() {
-            cfg.timeouts.ipc_medium_ms = v;
-        }
+    if let Ok(v) = std::env::var("KLEIS_IPC_TIMEOUT_MEDIUM_MS")
+        && let Ok(v) = v.parse::<u64>()
+    {
+        cfg.timeouts.ipc_medium_ms = v;
     }
-    if let Ok(v) = std::env::var("KLEIS_IPC_TIMEOUT_LONG_MS") {
-        if let Ok(v) = v.parse::<u64>() {
-            cfg.timeouts.ipc_long_ms = v;
-        }
+    if let Ok(v) = std::env::var("KLEIS_IPC_TIMEOUT_LONG_MS")
+        && let Ok(v) = v.parse::<u64>()
+    {
+        cfg.timeouts.ipc_long_ms = v;
     }
     if let Ok(v) = std::env::var("KLEIS_LLM_ENDPOINT") {
         cfg.llm.endpoint = v;

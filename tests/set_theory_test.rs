@@ -354,14 +354,13 @@ fn test_set_type_inference() {
             {
                 assert_eq!(constructor, "Set", "insert should return Set");
                 // Element type should be inferred from the argument (5 is Int)
-                if !args.is_empty() {
-                    if let Type::Data {
+                if !args.is_empty()
+                    && let Type::Data {
                         constructor: elem_con,
                         ..
                     } = &args[0]
-                    {
-                        assert_eq!(elem_con, "Int", "insert(5, S) should return Set(Int)");
-                    }
+                {
+                    assert_eq!(elem_con, "Int", "insert(5, S) should return Set(Int)");
                 }
             } else {
                 panic!("insert should return Data type");

@@ -86,7 +86,7 @@ mod inner {
             }
         }
 
-        if let Some(ref cfg_path) = config_override {
+        if let Some(cfg_path) = config_override {
             let p = PathBuf::from(cfg_path);
             if p.exists() {
                 return Some(p);
@@ -108,14 +108,14 @@ mod inner {
 
     fn auto_discovery_dirs() -> Vec<PathBuf> {
         let mut dirs = Vec::new();
-        if let Ok(exe) = std::env::current_exe() {
-            if let Some(bin_dir) = exe.parent() {
-                // kleis installed in repo: <repo>/target/debug/kleis or <repo>/target/release/kleis
-                if let Some(target_dir) = bin_dir.parent() {
-                    if let Some(repo_root) = target_dir.parent() {
-                        dirs.push(repo_root.to_path_buf());
-                    }
-                }
+        if let Ok(exe) = std::env::current_exe()
+            && let Some(bin_dir) = exe.parent()
+        {
+            // kleis installed in repo: <repo>/target/debug/kleis or <repo>/target/release/kleis
+            if let Some(target_dir) = bin_dir.parent()
+                && let Some(repo_root) = target_dir.parent()
+            {
+                dirs.push(repo_root.to_path_buf());
             }
         }
         if let Ok(cwd) = std::env::current_dir() {
@@ -131,11 +131,7 @@ mod inner {
         let has_substance = content
             .lines()
             .any(|line| !line.trim().is_empty() && !line.trim_start().starts_with('#'));
-        if has_substance {
-            Some(content)
-        } else {
-            None
-        }
+        if has_substance { Some(content) } else { None }
     }
 
     impl AdvisoryConfig {

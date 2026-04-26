@@ -9,7 +9,7 @@
 //! Each template is tested across all render targets: Unicode, LaTeX, HTML, Typst, Kleis
 
 use kleis::editor_ast::{EditorNode, OperationData};
-use kleis::render_editor::{render_editor_node, RenderTarget};
+use kleis::render_editor::{RenderTarget, render_editor_node};
 
 // =============================================================================
 // Helper Functions

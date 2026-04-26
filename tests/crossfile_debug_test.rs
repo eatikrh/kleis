@@ -103,11 +103,11 @@ fn test_debug_all_operation_types() {
 
     // Find and run the example block
     for item in &main_program.items {
-        if let TopLevel::ExampleBlock(example) = item {
-            if example.name == "cross-file debugging" {
-                println!("\n=== Running example: {} ===\n", example.name);
-                let _ = evaluator.eval_example_block(example);
-            }
+        if let TopLevel::ExampleBlock(example) = item
+            && example.name == "cross-file debugging"
+        {
+            println!("\n=== Running example: {} ===\n", example.name);
+            let _ = evaluator.eval_example_block(example);
         }
     }
 
@@ -115,14 +115,22 @@ fn test_debug_all_operation_types() {
     let all_events = events.lock().unwrap();
 
     // Print complete output
-    println!("\n╔════════════════════════════════════════════════════════════════════════════════════════╗");
-    println!("║                     DAP STEP EVENTS - ALL OPERATION TYPES                              ║");
-    println!("╠════════════════════════════════════════════════════════════════════════════════════════╣");
+    println!(
+        "\n╔════════════════════════════════════════════════════════════════════════════════════════╗"
+    );
+    println!(
+        "║                     DAP STEP EVENTS - ALL OPERATION TYPES                              ║"
+    );
+    println!(
+        "╠════════════════════════════════════════════════════════════════════════════════════════╣"
+    );
     println!(
         "║ {:>4} │ {:>6}:{:<3} │ {:25} │ {:20} ║",
         "Step", "Line", "Col", "File", "Operation"
     );
-    println!("╠════════════════════════════════════════════════════════════════════════════════════════╣");
+    println!(
+        "╠════════════════════════════════════════════════════════════════════════════════════════╣"
+    );
 
     for event in all_events.iter() {
         let file_name = event
@@ -139,7 +147,9 @@ fn test_debug_all_operation_types() {
             event.step_number, event.line, event.column, file_name, op_name
         );
     }
-    println!("╚════════════════════════════════════════════════════════════════════════════════════════╝");
+    println!(
+        "╚════════════════════════════════════════════════════════════════════════════════════════╝"
+    );
 
     // Collect operations from helper file
     let helper_ops: Vec<_> = all_events
@@ -359,20 +369,19 @@ fn test_breakpoints_in_both_files() {
         ) -> DebugAction {
             // Check if this location matches a breakpoint
             for (file_suffix, line) in &self.breakpoints {
-                if loc.line == *line {
-                    if let Some(ref file) = loc.file {
-                        if file.to_string_lossy().ends_with(*file_suffix) {
-                            let op_name = match expr {
-                                Expression::Operation { name, .. } => name.clone(),
-                                _ => "-".to_string(),
-                            };
-                            self.hits.lock().unwrap().push(BreakpointHit {
-                                line: loc.line,
-                                file: file_suffix.to_string(),
-                                operation: op_name,
-                            });
-                        }
-                    }
+                if loc.line == *line
+                    && let Some(ref file) = loc.file
+                    && file.to_string_lossy().ends_with(*file_suffix)
+                {
+                    let op_name = match expr {
+                        Expression::Operation { name, .. } => name.clone(),
+                        _ => "-".to_string(),
+                    };
+                    self.hits.lock().unwrap().push(BreakpointHit {
+                        line: loc.line,
+                        file: file_suffix.to_string(),
+                        operation: op_name,
+                    });
                 }
             }
             DebugAction::Continue
@@ -423,10 +432,10 @@ fn test_breakpoints_in_both_files() {
         parse_kleis_program_with_file(&main_source, main_path.to_str().unwrap()).unwrap();
 
     for item in &main_program.items {
-        if let TopLevel::ExampleBlock(example) = item {
-            if example.name == "cross-file debugging" {
-                let _ = evaluator.eval_example_block(example);
-            }
+        if let TopLevel::ExampleBlock(example) = item
+            && example.name == "cross-file debugging"
+        {
+            let _ = evaluator.eval_example_block(example);
         }
     }
 
@@ -586,10 +595,10 @@ fn test_variables_and_stack_frames() {
         parse_kleis_program_with_file(&main_source, main_path.to_str().unwrap()).unwrap();
 
     for item in &main_program.items {
-        if let TopLevel::ExampleBlock(example) = item {
-            if example.name == "cross-file debugging" {
-                let _ = evaluator.eval_example_block(example);
-            }
+        if let TopLevel::ExampleBlock(example) = item
+            && example.name == "cross-file debugging"
+        {
+            let _ = evaluator.eval_example_block(example);
         }
     }
 
@@ -676,16 +685,16 @@ example "test commutativity" {
             // - Pass (Z3 verified commutativity)
             // - Be Unknown (Z3 feature disabled or couldn't determine)
             // It should NOT fail with "Assertion failed"
-            if !result.passed {
-                if let Some(ref err) = result.error {
-                    // "Disproved" or "Unknown" is acceptable (feature may be disabled)
-                    // "Assertion failed: expected" means Z3 wasn't used
-                    assert!(
-                        !err.contains("Assertion failed: expected"),
-                        "Z3 should have handled symbolic assertion, got: {}",
-                        err
-                    );
-                }
+            if !result.passed
+                && let Some(ref err) = result.error
+            {
+                // "Disproved" or "Unknown" is acceptable (feature may be disabled)
+                // "Assertion failed: expected" means Z3 wasn't used
+                assert!(
+                    !err.contains("Assertion failed: expected"),
+                    "Z3 should have handled symbolic assertion, got: {}",
+                    err
+                );
             }
         }
     }
@@ -797,14 +806,14 @@ example "test associativity" {
             );
 
             // Should pass via Z3 or be treated as unknown
-            if !result.passed {
-                if let Some(ref err) = result.error {
-                    assert!(
-                        !err.contains("Assertion failed: expected"),
-                        "Z3 should handle associativity, got: {}",
-                        err
-                    );
-                }
+            if !result.passed
+                && let Some(ref err) = result.error
+            {
+                assert!(
+                    !err.contains("Assertion failed: expected"),
+                    "Z3 should handle associativity, got: {}",
+                    err
+                );
             }
         }
     }

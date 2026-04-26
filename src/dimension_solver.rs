@@ -126,22 +126,24 @@ pub fn unify_dims(e1: &DimExpr, e2: &DimExpr) -> DimUnifyResult {
         // Try to solve linear equations
         (DimExpr::Mul(coef, var), DimExpr::Lit(n)) | (DimExpr::Lit(n), DimExpr::Mul(coef, var)) => {
             // Pattern: c * x = n  =>  x = n / c
-            if let (DimExpr::Lit(c), DimExpr::Var(v)) = (coef.as_ref(), var.as_ref()) {
-                if *c != 0 && n % c == 0 {
-                    return DimUnifyResult::Equal(DimSubstitution::singleton(
-                        v.clone(),
-                        DimExpr::Lit(n / c),
-                    ));
-                }
+            if let (DimExpr::Lit(c), DimExpr::Var(v)) = (coef.as_ref(), var.as_ref())
+                && *c != 0
+                && n % c == 0
+            {
+                return DimUnifyResult::Equal(DimSubstitution::singleton(
+                    v.clone(),
+                    DimExpr::Lit(n / c),
+                ));
             }
             // Try the other order: x * c = n
-            if let (DimExpr::Var(v), DimExpr::Lit(c)) = (coef.as_ref(), var.as_ref()) {
-                if *c != 0 && n % c == 0 {
-                    return DimUnifyResult::Equal(DimSubstitution::singleton(
-                        v.clone(),
-                        DimExpr::Lit(n / c),
-                    ));
-                }
+            if let (DimExpr::Var(v), DimExpr::Lit(c)) = (coef.as_ref(), var.as_ref())
+                && *c != 0
+                && n % c == 0
+            {
+                return DimUnifyResult::Equal(DimSubstitution::singleton(
+                    v.clone(),
+                    DimExpr::Lit(n / c),
+                ));
             }
             DimUnifyResult::Unequal(format!(
                 "Cannot solve: {} = {}",
@@ -153,22 +155,22 @@ pub fn unify_dims(e1: &DimExpr, e2: &DimExpr) -> DimUnifyResult {
         // Try to solve: x + c = n  =>  x = n - c
         (DimExpr::Add(var, delta), DimExpr::Lit(n))
         | (DimExpr::Lit(n), DimExpr::Add(var, delta)) => {
-            if let (DimExpr::Var(v), DimExpr::Lit(d)) = (var.as_ref(), delta.as_ref()) {
-                if *n >= *d {
-                    return DimUnifyResult::Equal(DimSubstitution::singleton(
-                        v.clone(),
-                        DimExpr::Lit(n - d),
-                    ));
-                }
+            if let (DimExpr::Var(v), DimExpr::Lit(d)) = (var.as_ref(), delta.as_ref())
+                && *n >= *d
+            {
+                return DimUnifyResult::Equal(DimSubstitution::singleton(
+                    v.clone(),
+                    DimExpr::Lit(n - d),
+                ));
             }
             // Try: c + x = n
-            if let (DimExpr::Lit(d), DimExpr::Var(v)) = (var.as_ref(), delta.as_ref()) {
-                if *n >= *d {
-                    return DimUnifyResult::Equal(DimSubstitution::singleton(
-                        v.clone(),
-                        DimExpr::Lit(n - d),
-                    ));
-                }
+            if let (DimExpr::Lit(d), DimExpr::Var(v)) = (var.as_ref(), delta.as_ref())
+                && *n >= *d
+            {
+                return DimUnifyResult::Equal(DimSubstitution::singleton(
+                    v.clone(),
+                    DimExpr::Lit(n - d),
+                ));
             }
             DimUnifyResult::Unequal(format!(
                 "Cannot solve: {} = {}",
@@ -202,21 +204,21 @@ pub fn unify_dims(e1: &DimExpr, e2: &DimExpr) -> DimUnifyResult {
                 }
             }
             // Try c^x = n (exponential)
-            if let (DimExpr::Lit(c), DimExpr::Var(v)) = (base.as_ref(), exp.as_ref()) {
-                if *c > 1 {
-                    // Find x such that c^x = n
-                    let mut power = 1usize;
-                    let mut x = 0usize;
-                    while power < *n {
-                        power *= c;
-                        x += 1;
-                    }
-                    if power == *n {
-                        return DimUnifyResult::Equal(DimSubstitution::singleton(
-                            v.clone(),
-                            DimExpr::Lit(x),
-                        ));
-                    }
+            if let (DimExpr::Lit(c), DimExpr::Var(v)) = (base.as_ref(), exp.as_ref())
+                && *c > 1
+            {
+                // Find x such that c^x = n
+                let mut power = 1usize;
+                let mut x = 0usize;
+                while power < *n {
+                    power *= c;
+                    x += 1;
+                }
+                if power == *n {
+                    return DimUnifyResult::Equal(DimSubstitution::singleton(
+                        v.clone(),
+                        DimExpr::Lit(x),
+                    ));
                 }
             }
             DimUnifyResult::Unequal(format!(
@@ -407,10 +409,10 @@ pub fn simplify(expr: &DimExpr) -> DimExpr {
         DimExpr::Call(name, args) => {
             let sargs: Vec<_> = args.iter().map(simplify).collect();
             // Try to evaluate if all args are concrete
-            if sargs.iter().all(|a| matches!(a, DimExpr::Lit(_))) {
-                if let Some(n) = evaluate(&DimExpr::Call(name.clone(), sargs.clone())) {
-                    return DimExpr::Lit(n);
-                }
+            if sargs.iter().all(|a| matches!(a, DimExpr::Lit(_)))
+                && let Some(n) = evaluate(&DimExpr::Call(name.clone(), sargs.clone()))
+            {
+                return DimExpr::Lit(n);
             }
             DimExpr::Call(name.clone(), sargs)
         }
@@ -450,11 +452,7 @@ pub fn format_dim(expr: &DimExpr) -> String {
 
 /// Greatest common divisor
 fn gcd(a: usize, b: usize) -> usize {
-    if b == 0 {
-        a
-    } else {
-        gcd(b, a % b)
-    }
+    if b == 0 { a } else { gcd(b, a % b) }
 }
 
 /// Least common multiple

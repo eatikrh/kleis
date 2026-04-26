@@ -12,7 +12,7 @@
 ///!   cargo run --bin kleis_doc stdlib/matrices.kleis --format html > matrices.html
 use kleis::kleis_ast::{ImplementsDef, StructureDef, StructureMember, TopLevel};
 use kleis::kleis_parser::KleisParser;
-use kleis::render::{build_default_context, render_expression, RenderTarget};
+use kleis::render::{RenderTarget, build_default_context, render_expression};
 use std::env;
 use std::fs;
 

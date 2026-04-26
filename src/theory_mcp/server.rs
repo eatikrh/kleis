@@ -243,18 +243,19 @@ impl TheoryMcpServer {
 
         let result = self.engine.evaluate_expression(expr_str);
 
-        if let Some(ref err) = result.error {
-            if result.value.is_none() && result.verified.is_none() {
-                self.log(&format!("  → error: {}", err));
-                let content = McpToolContent {
-                    content_type: "text".to_string(),
-                    text: format!("❌ {}\n\nExpression: {}", err, expr_str),
-                };
-                return serde_json::json!({
-                    "content": [content],
-                    "isError": true,
-                });
-            }
+        if let Some(ref err) = result.error
+            && result.value.is_none()
+            && result.verified.is_none()
+        {
+            self.log(&format!("  → error: {}", err));
+            let content = McpToolContent {
+                content_type: "text".to_string(),
+                text: format!("❌ {}\n\nExpression: {}", err, expr_str),
+            };
+            return serde_json::json!({
+                "content": [content],
+                "isError": true,
+            });
         }
 
         if let Some(verified) = result.verified {
@@ -392,77 +393,77 @@ impl TheoryMcpServer {
                 .unwrap_or(0),
         ));
 
-        if let Some(structures) = schema.get("structures").and_then(|s| s.as_array()) {
-            if !structures.is_empty() {
-                text.push_str("\n## Structures\n\n");
-                for s in structures {
-                    let name = s.get("name").and_then(|n| n.as_str()).unwrap_or("?");
-                    let params = s
-                        .get("type_params")
-                        .and_then(|p| p.as_array())
-                        .map(|arr| {
-                            arr.iter()
-                                .filter_map(|v| v.as_str())
-                                .collect::<Vec<_>>()
-                                .join(", ")
-                        })
-                        .unwrap_or_default();
-                    text.push_str(&format!("### structure {}({})\n", name, params));
+        if let Some(structures) = schema.get("structures").and_then(|s| s.as_array())
+            && !structures.is_empty()
+        {
+            text.push_str("\n## Structures\n\n");
+            for s in structures {
+                let name = s.get("name").and_then(|n| n.as_str()).unwrap_or("?");
+                let params = s
+                    .get("type_params")
+                    .and_then(|p| p.as_array())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|v| v.as_str())
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    })
+                    .unwrap_or_default();
+                text.push_str(&format!("### structure {}({})\n", name, params));
 
-                    if let Some(fields) = s.get("fields").and_then(|f| f.as_array()) {
-                        for field in fields {
-                            let fn_ = field.get("name").and_then(|n| n.as_str()).unwrap_or("?");
-                            let ft = field.get("type").and_then(|t| t.as_str()).unwrap_or("?");
-                            text.push_str(&format!("  field {} : {}\n", fn_, ft));
-                        }
+                if let Some(fields) = s.get("fields").and_then(|f| f.as_array()) {
+                    for field in fields {
+                        let fn_ = field.get("name").and_then(|n| n.as_str()).unwrap_or("?");
+                        let ft = field.get("type").and_then(|t| t.as_str()).unwrap_or("?");
+                        text.push_str(&format!("  field {} : {}\n", fn_, ft));
                     }
-                    if let Some(ops) = s.get("operations").and_then(|o| o.as_array()) {
-                        for op in ops {
-                            let on = op.get("name").and_then(|n| n.as_str()).unwrap_or("?");
-                            let ot = op.get("type").and_then(|t| t.as_str()).unwrap_or("?");
-                            text.push_str(&format!("  operation {} : {}\n", on, ot));
-                        }
-                    }
-                    if let Some(axioms) = s.get("axioms").and_then(|a| a.as_array()) {
-                        for ax in axioms {
-                            let an = ax.get("name").and_then(|n| n.as_str()).unwrap_or("?");
-                            let ak = ax.get("kleis").and_then(|k| k.as_str()).unwrap_or("?");
-                            text.push_str(&format!("  axiom {} : {}\n", an, ak));
-                        }
-                    }
-                    text.push('\n');
                 }
-            }
-        }
-
-        if let Some(data_types) = schema.get("data_types").and_then(|d| d.as_array()) {
-            if !data_types.is_empty() {
-                text.push_str("## Data Types\n\n");
-                for d in data_types {
-                    let name = d.get("name").and_then(|n| n.as_str()).unwrap_or("?");
-                    let variants = d
-                        .get("variants")
-                        .and_then(|v| v.as_array())
-                        .map(|arr| {
-                            arr.iter()
-                                .filter_map(|v| v.get("name").and_then(|n| n.as_str()))
-                                .collect::<Vec<_>>()
-                                .join(" | ")
-                        })
-                        .unwrap_or_default();
-                    text.push_str(&format!("data {} = {}\n", name, variants));
+                if let Some(ops) = s.get("operations").and_then(|o| o.as_array()) {
+                    for op in ops {
+                        let on = op.get("name").and_then(|n| n.as_str()).unwrap_or("?");
+                        let ot = op.get("type").and_then(|t| t.as_str()).unwrap_or("?");
+                        text.push_str(&format!("  operation {} : {}\n", on, ot));
+                    }
+                }
+                if let Some(axioms) = s.get("axioms").and_then(|a| a.as_array()) {
+                    for ax in axioms {
+                        let an = ax.get("name").and_then(|n| n.as_str()).unwrap_or("?");
+                        let ak = ax.get("kleis").and_then(|k| k.as_str()).unwrap_or("?");
+                        text.push_str(&format!("  axiom {} : {}\n", an, ak));
+                    }
                 }
                 text.push('\n');
             }
         }
 
-        if let Some(fns) = schema.get("functions").and_then(|f| f.as_array()) {
-            if !fns.is_empty() {
-                text.push_str("## Functions\n\n");
-                for f in fns {
-                    if let Some(kleis) = f.get("kleis").and_then(|k| k.as_str()) {
-                        text.push_str(&format!("```\n{}\n```\n\n", kleis));
-                    }
+        if let Some(data_types) = schema.get("data_types").and_then(|d| d.as_array())
+            && !data_types.is_empty()
+        {
+            text.push_str("## Data Types\n\n");
+            for d in data_types {
+                let name = d.get("name").and_then(|n| n.as_str()).unwrap_or("?");
+                let variants = d
+                    .get("variants")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|v| v.get("name").and_then(|n| n.as_str()))
+                            .collect::<Vec<_>>()
+                            .join(" | ")
+                    })
+                    .unwrap_or_default();
+                text.push_str(&format!("data {} = {}\n", name, variants));
+            }
+            text.push('\n');
+        }
+
+        if let Some(fns) = schema.get("functions").and_then(|f| f.as_array())
+            && !fns.is_empty()
+        {
+            text.push_str("## Functions\n\n");
+            for f in fns {
+                if let Some(kleis) = f.get("kleis").and_then(|k| k.as_str()) {
+                    text.push_str(&format!("```\n{}\n```\n\n", kleis));
                 }
             }
         }

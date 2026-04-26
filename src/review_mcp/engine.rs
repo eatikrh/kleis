@@ -7,7 +7,7 @@
 use crate::ast::Expression;
 use crate::evaluator::{AssertResult, Evaluator};
 use crate::kleis_ast::{Program, StructureMember, TopLevel};
-use crate::kleis_parser::{parse_kleis_program_with_file, KleisParser};
+use crate::kleis_parser::{KleisParser, parse_kleis_program_with_file};
 use crate::pretty_print::PrettyPrinter;
 use crate::solvers::backend::Witness;
 use serde_json::Value;
@@ -342,11 +342,7 @@ impl ReviewEngine {
                     .map(|f| f.trim().to_string())
                     .filter(|f| !f.is_empty())
                     .collect();
-                if files.is_empty() {
-                    None
-                } else {
-                    Some(files)
-                }
+                if files.is_empty() { None } else { Some(files) }
             }
             _ => None,
         }
@@ -671,23 +667,23 @@ impl ReviewEngine {
 
         match self.evaluator.eval_concrete(&expr) {
             Ok(result) => {
-                if let Expression::Operation { ref name, .. } = result {
-                    if let Some(structure_name) = self.find_owner_structure(name) {
-                        if let Some(z3_result) = self
-                            .evaluator
-                            .verify_structure_operation(&expr, &structure_name)
-                        {
-                            return Self::proposition_result(&z3_result);
-                        }
-                        return EvalResult {
-                            value: None,
-                            verified: None,
-                            witness: None,
-                            error: Some(
-                                "Z3 unavailable for structure operation verification".to_string(),
-                            ),
-                        };
+                if let Expression::Operation { ref name, .. } = result
+                    && let Some(structure_name) = self.find_owner_structure(name)
+                {
+                    if let Some(z3_result) = self
+                        .evaluator
+                        .verify_structure_operation(&expr, &structure_name)
+                    {
+                        return Self::proposition_result(&z3_result);
                     }
+                    return EvalResult {
+                        value: None,
+                        verified: None,
+                        witness: None,
+                        error: Some(
+                            "Z3 unavailable for structure operation verification".to_string(),
+                        ),
+                    };
                 }
                 EvalResult {
                     value: Some(Self::expression_to_string(&result)),
@@ -708,10 +704,10 @@ impl ReviewEngine {
     fn find_owner_structure(&self, name: &str) -> Option<String> {
         for structure in self.evaluator.get_structures() {
             for member in &structure.members {
-                if let crate::kleis_ast::StructureMember::Operation { name: op_name, .. } = member {
-                    if op_name == name {
-                        return Some(structure.name.clone());
-                    }
+                if let crate::kleis_ast::StructureMember::Operation { name: op_name, .. } = member
+                    && op_name == name
+                {
+                    return Some(structure.name.clone());
                 }
             }
         }

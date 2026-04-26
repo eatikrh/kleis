@@ -4,11 +4,11 @@
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 use axum::{
+    Router,
     extract::State,
     http::StatusCode,
     response::{Html, IntoResponse, Json},
     routing::{get, post},
-    Router,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -689,11 +689,7 @@ fn json_to_editor_node(json: &serde_json::Value) -> Result<kleis::editor_ast::Ed
                             .iter()
                             .map(|(k, v)| (k.clone(), v.clone()))
                             .collect();
-                        if map.is_empty() {
-                            None
-                        } else {
-                            Some(map)
-                        }
+                        if map.is_empty() { None } else { Some(map) }
                     } else {
                         None
                     }

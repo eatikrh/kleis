@@ -126,7 +126,9 @@ fn test_matrix_multiply_non_square() {
     // 2×3 matrix times 3×4 matrix = 2×4 matrix
     // [1,2,3; 4,5,6] × [1,2,3,4; 5,6,7,8; 9,10,11,12]
     // Result[0,0] = 1*1 + 2*5 + 3*9 = 1 + 10 + 27 = 38
-    let result = eval("multiply(Matrix(2, 3, [1, 2, 3, 4, 5, 6]), Matrix(3, 4, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]))");
+    let result = eval(
+        "multiply(Matrix(2, 3, [1, 2, 3, 4, 5, 6]), Matrix(3, 4, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]))",
+    );
     assert!(result.contains("Matrix"));
     assert!(result.contains("38")); // First element
 }

@@ -1,0 +1,280 @@
+#import "@preview/lilaq:0.5.0" as lq
+#set page(
+  paper: "us-letter",
+  margin: (top: 1in, bottom: 1in, left: 1in, right: 1in),
+  numbering: "1",
+  header: align(right)[_Preprint_],
+)
+#set text(
+  font: "New Computer Modern",
+  size: 11pt,
+  lang: "en",
+)
+#set par(
+  justify: true,
+  leading: 0.65em,
+  first-line-indent: 1em,
+)
+
+// No indent after headings
+#show heading: it => {
+  it
+  par(text(size: 0pt, ""))
+}
+#set heading(numbering: "1.1")
+
+// Section headings (level 1)
+#show heading.where(level: 1): it => {
+  v(1em)
+  text(size: 12pt, weight: "bold")[#counter(heading).display() #it.body]
+  v(0.5em)
+}
+
+// Subsection headings (level 2)
+#show heading.where(level: 2): it => {
+  v(0.8em)
+  text(size: 11pt, weight: "bold")[#counter(heading).display() #it.body]
+  v(0.4em)
+}
+
+// Subsubsection headings (level 3)
+#show heading.where(level: 3): it => {
+  v(0.6em)
+  text(size: 10pt, weight: "bold", style: "italic")[#counter(heading).display() #it.body]
+  v(0.3em)
+}
+#set figure(placement: auto)
+#show figure.caption: it => {
+  text(size: 9pt)[#it]
+}
+#show link: it => text(fill: blue.darken(20%))[#underline[#it]]
+
+
+#align(center)[
+  #text(size: 17pt, weight: "bold")[Gauge Dependence and the Boundary of Ghost Activity]
+  
+  #v(1em)
+  
+  Engin Atik#super[1]
+  
+  #v(0.5em)
+  
+  #super[1]Kleis Research, https://kleis.io
+]
+
+#v(1em)
+
+#align(center)[
+  #rect(width: 85%, stroke: none)[
+    #align(left)[
+      #text(weight: "bold")[Abstract]
+      #v(0.3em)
+      #text(size: 10pt)[We stress-test the ghost-mediated null-space activity theorem of [AtikGhost] against changes of gauge fixing. The theorem states that the ghost sector $S_("gh") subset.eq ker(Q)$ is active if and only if $f^(a b c) != 0$. We ask: is this a property of the gauge theory, or only of the Faddeev-Popov (FP) representation? Three tests answer the question. First, in the covariant $R_xi$ gauge family, the ghost propagator, vertex, and loop contribution are all $xi$-independent; the theorem survives unchanged across all covariant gauges, which is stronger than mere survival. Second, in axial gauge ($n dot A = 0$), the FP determinant becomes field-independent, ghost loops vanish, and the ghost sector is trivially inert --- even for $"SU"(N)$. The forward direction of the biconditional breaks: $f^(a b c) != 0$ does not imply ghost activity in every representation. This is not a failure but a boundary theorem. Third, BRST cohomology provides the representation-independent formulation: ghosts participate in defining physical states regardless of gauge choice. The physical content encoded by ghost activity --- that non-abelian structure forces the $beta$-function sign --- is representation-independent. Only the diagrammatic mechanism (ghost loops vs. modified gluon algebra) is representation-specific. All 16 structural results are machine-verified by Z3.]
+    ]
+  ]
+]
+
+#text(size: 9pt)[*Keywords:* gauge dependence, ghost activity, Faddeev-Popov, axial gauge, BRST cohomology, covariant gauge, representation invariance, formal verification, Z3]
+
+#v(1em)
+
+
+= Introduction
+
+The ghost-mediated null-space activity theorem [AtikGhost] states: in perturbative gauge theory, the ghost sector $S_("gh") subset.eq ker(Q)$ is active if and only if the gauge algebra is non-abelian ($f^(a b c) != 0$). The proof was constructive, with QED ($f^(a b c) = 0$, inert) and Yang-Mills ($f^(a b c) != 0$, active) as witnesses.
+
+A natural objection arises immediately: *is ghost activity a property of the gauge theory, or merely of the Faddeev-Popov (FP) gauge-fixing procedure?*
+
+This is the strongest objection available. If ghost activity is representation-dependent, then the theorem is not about gauge theory --- it is about a particular method of computing in gauge theory. The objection must be answered precisely, not deflected.
+
+This note performs three tests:
+
++ *Covariant $R_xi$ gauges* (Section 2): Does the ghost contribution change with the gauge parameter $xi$?
+
++ *Axial gauge* (Section 3): In a ghost-free representation, does the theorem survive?
+
++ *BRST cohomology* (Section 5): Is there a representation-independent notion of the physical content that ghost activity captures?
+
+The results are definitive. Ghost activity is an invariant within the covariant gauge family, is not an invariant across all gauge-fixing schemes, and the physical content it encodes is representation-independent. This note defines the exact boundary.
+
+= The Covariant Gauge Family
+
+The $R_xi$ gauges are the standard covariant gauge family. The gauge-fixing term is $cal(L)_("gf") = 1 \/ (2 xi) (partial dot A^a)^2$, where $xi$ is the gauge parameter. Feynman gauge is $xi = 1$; Landau gauge is $xi arrow 0$.
+
+The ghost Lagrangian is $cal(L)_("gh") = macron(c)^a (-partial_mu D_mu^(a b)) c^b$, where $D_mu^(a b) = delta^(a b) partial_mu + g f^(a c b) A_mu^c$ is the covariant derivative. From this Lagrangian:
+
+$ "Ghost propagator:" quad G^(a b)(k) = i delta^(a b) / k^2 $
+
+$ "Ghost-gluon vertex:" quad V_("gh")^(a b c)_mu = g f^(a b c) p_mu $
+
+Neither depends on $xi$. The ghost propagator is $i delta^(a b) \/ k^2$ in Feynman gauge, Landau gauge, and every $R_xi$ gauge. The ghost-gluon vertex is $g f^(a b c) p_mu$ regardless of $xi$.
+
+Since the ghost loop is built from the ghost propagator and the ghost-gluon vertex, and neither depends on $xi$, the ghost loop contribution to the gluon self-energy is identical in all $R_xi$ gauges:
+
+$ I_("gh")(rho) = C_A integral_0^1 d x thin x(1 - x) ln(1 + rho thin x(1 - x)) $
+
+This is the same integrand, the same integral, the same number, for every value of $xi$.
+
+The gluon propagator *does* depend on $xi$:
+
+$ D_(mu nu)(k) = (g_(mu nu) - (1 - xi) k_mu k_nu \/ k^2) / k^2 $
+
+So the gluon loop contribution to the gluon self-energy changes with $xi$. But the total --- gluon loop plus ghost loop plus fermion loop --- gives a $xi$-independent $beta_0$. The ghost contribution is *individually* $xi$-invariant.
+
+This is stronger than the theorem merely surviving within the $R_xi$ family. The ghost sector's contribution is not just "present in all covariant gauges" --- it is *numerically identical* in all covariant gauges.
+
+Z3-verified: ghost propagator $xi$-independent, ghost vertex $xi$-independent, ghost loop $xi$-independent, ghost sector active in all $R_xi$ gauges (4 results).
+
+= Axial Gauge
+
+Axial gauge is defined by the constraint $n dot A^a = 0$, where $n_mu$ is a fixed reference vector. Temporal gauge ($A_0 = 0$) and light-cone gauge ($A^+ = 0$) are special cases.
+
+The Faddeev-Popov procedure in axial gauge produces the ghost action:
+
+$ cal(L)_("gh") = macron(c)^a (n dot D^(a b)) c^b = macron(c)^a (n dot partial thin delta^(a b) + g f^(a c b) n dot A^c) c^b $
+
+The FP determinant is $det(n dot D)$. After careful treatment of boundary conditions, this determinant becomes field-independent [LeibnNakanishi]: the ghost-gluon vertex term $g f^(a c b) n dot A^c$ does not contribute to loops because the gauge constraint $n dot A = 0$ kills it. The ghost propagator is $1 \/ (n dot k)$ and never appears in a closed loop.
+
+Ghost loops vanish identically. The ghost sector is trivially inert --- *even for $"SU"(N)$, where $f^(a b c) != 0$*.
+
+This breaks the forward direction of the ghost-activity theorem as stated. The theorem claims: $f^(a b c) != 0$ implies ghost sector active. In axial gauge, $f^(a b c) != 0$ but the ghost sector is inert.
+
+Yet $beta_0$ is unchanged:
+
+$ beta_0 = 11/3 C_A - 4/3 T_F n_f $
+
+The same number, the same observable. In axial gauge, the contribution that was "carried" by ghost loops in covariant gauge is now absorbed into the modified gluon propagator, which has the tensor structure:
+
+$ D_(mu nu)^("axial")(k) = (g_(mu nu) - (n_mu k_nu + n_nu k_mu) / (n dot k) + n^2 k_mu k_nu / (n dot k)^2) / k^2 $
+
+The spurious $1 \/ (n dot k)$ poles and the additional tensor structures compensate exactly for the absent ghost loops. The physics is unchanged; the bookkeeping is redistributed.
+
+Z3-verified: FP determinant field-independent, ghost loops vanish, ghost sector inert despite $f^(a b c) != 0$, $beta_0$ unchanged (4 results).
+
+= The Boundary of Ghost Activity
+
+The covariant and axial gauge tests together define the boundary of the ghost-activity theorem:
+
+#table(
+    columns: 4,
+    [*Gauge family*], [*Ghost sector*], [*$beta_0$*], [*Theorem status*],
+    [$R_xi$ covariant], [Active ($xi$-invariant)], [Correct], [Holds],
+    [Axial / light-cone], [Inert (ghosts decouple)], [Correct], [Breaks (forward)],
+)
+
+The ghost-activity theorem is a property of the Faddeev-Popov representation of perturbative gauge theory. It is not a property of gauge theory simpliciter.
+
+Within the FP representation, the theorem is robust: it holds identically in every covariant gauge, with no $xi$ dependence whatsoever. This is the maximal domain within which the theorem is true.
+
+Outside the FP representation --- in ghost-free gauges like axial or light-cone --- the theorem's forward direction fails. The observable ($beta_0$) is unchanged, but the mechanism that produces it is different: ghost loops are replaced by modified gluon algebra.
+
+This is not a refutation. It is a scope theorem: *ghost activity is representation-local*. The theorem says something true and precise about how the FP representation works. It does not say something about all possible representations.
+
+= BRST Cohomology
+
+BRST (Becchi-Rouet-Stora-Tyutin) symmetry provides a representation-independent framework for gauge theory [BRS1976]. The BRST charge is:
+
+$ Q_("BRST") = integral d^3 x thin (c^a G^a + 1/2 g f^(a b c) c^b c^c macron(b)^a + dots.c) $
+
+where $G^a$ is the gauge constraint and $c^a$, $macron(c)^a$ are ghost and antighost fields. Physical states are defined as the BRST cohomology:
+
+$ cal(H)_("phys") = ker(Q_("BRST")) \/ "im"(Q_("BRST")) $
+
+Ghost fields participate in defining $Q_("BRST")$ regardless of gauge choice. Even in axial gauge, where ghost loops vanish, the BRST charge still involves ghost operators. The cohomological role of ghosts --- defining which states are physical --- is representation-independent.
+
+This suggests a resolution of the apparent tension between covariant and axial gauge:
+
++ In the FP representation: ghosts contribute via *loop diagrams* (diagrammatic activity). The information about the non-abelian constraint structure flows through ghost propagators and vertices.
+
++ In axial gauge: ghosts do not loop, but the *same physical information* --- that non-abelian structure constrains the observable space --- is encoded in the modified gluon propagator's tensor structure and spurious poles.
+
++ In BRST language: the constraint is *cohomological*. Ghosts define the equivalence classes of physical states. The mechanism is representation-independent; only its diagrammatic realization changes.
+
+The physical content encoded by ghost activity --- that $f^(a b c) != 0$ forces specific constraints on $"im"(Q)$, including the sign of $beta_0$ --- does not depend on whether ghost loops are the carrier. It depends on the gauge algebra.
+
+Z3-verified: BRST charge involves ghosts, physical states are cohomology, cohomological role is representation-independent, BRST operator defined for $"SU"(N)$ (4 results).
+
+= The Refined Theorem
+
+We can now state the ghost-activity theorem with its correct scope.
+
+#strong[Refined Theorem] (Ghost Activity in the Faddeev-Popov Representation). Let $cal(G)$ be a perturbative gauge theory with gauge algebra $frak(g)$ and structure constants $f^(a b c)$.
+
+(a) In any covariant $R_xi$ gauge, the ghost sector $S_("gh") subset.eq ker(Q)$ is active if and only if $f^(a b c) != 0$. The ghost contribution is $xi$-independent.
+
+(b) In axial gauge, the ghost sector is inert regardless of the gauge algebra.
+
+(c) The observable $beta_0$ is gauge-fixing invariant.
+
+(d) The attribution of $beta_0$ to null-space sectors is representation-dependent.
+
+#strong[Representation Invariance Corollary.] The physical content encoded by ghost activity --- that non-abelian gauge structure forces the $beta$-function sign --- is representation-independent. Only the diagrammatic mechanism (ghost loops in FP gauge, modified gluon algebra in axial gauge) is representation-specific.
+
+The original theorem [AtikGhost] is correct within its domain: the Faddeev-Popov representation. This note defines that domain precisely.
+
+=== What changes and what does not
+
+#table(
+    columns: 3,
+    [*Property*], [*FP representation*], [*All representations*],
+    [Ghost sector active], [iff $f^(a b c) != 0$], [Not guaranteed],
+    [$beta_0$ value], [$11 C_A \/ 3 - 4 T_F n_f \/ 3$], [Same (gauge-invariant)],
+    [Asymptotic freedom], [Determined by ghost + gluon loops], [Determined by gluon algebra],
+    [Non-abelian structure], [Encoded in ghost vertex], [Encoded in propagator / cohomology],
+)
+
+Z3-verified: ghost activity FP-specific, observable gauge-invariant, attribution representation-dependent, physical content representation-independent (4 results).
+
+= Implications
+
+=== The status of the ghost-activity theorem
+
+The theorem is not weakened by the axial gauge test. It is *scoped*. A theorem that holds in the FP representation and is $xi$-invariant within the covariant gauge family is a theorem about the most widely used computational framework in perturbative QFT. Every textbook calculation, every Feynman diagram computation, every perturbative result in the Standard Model uses the FP representation (or its BRST extension). The theorem's domain is not small.
+
+=== Representation-local vs. representation-universal
+
+The gauge-dependence analysis introduces a distinction that may be useful beyond ghost activity:
+
++ *Representation-universal* properties: the value of $beta_0$, the sign of asymptotic freedom, the existence of a perturbative boundary at $Lambda_("QCD")$. These do not depend on how we compute.
+
++ *Representation-local* properties: which null-space sector "carries" a given contribution, whether ghosts loop or decouple, which diagrams contribute. These depend on the gauge-fixing scheme.
+
+The $K$--$Q$ framework naturally distinguishes these: $"im"(Q)$ is representation-universal (it contains the observables), while the internal structure of $ker(Q)$ --- including which sectors are active --- is representation-local.
+
+=== Implications for the confinement question
+
+The ghost-activity theorem [AtikGhost] linked active $ker(Q)$ to the perturbative boundary: active ghosts $arrow$ asymptotic freedom $arrow$ coupling grows $arrow$ perturbative breakdown. The gauge-dependence test confirms that this chain is representation-local in its mechanism but representation-universal in its consequence:
+
++ In FP gauge: ghost loops drive the $beta$-function sign, causing the perturbative boundary.
+
++ In axial gauge: modified gluon algebra drives the same $beta$-function sign, causing the same boundary.
+
++ The perturbative boundary at $Lambda_("QCD")$ exists regardless of representation.
+
+For the confinement question, this means: the perturbative boundary is a gauge-invariant fact, not a FP artifact. Whatever causes the boundary to exist is a property of the theory, not of the bookkeeping.
+
+=== What this note does and does not claim
+
+This note claims: ghost-mediated null-space activity is a property of the FP representation, invariant within the covariant gauge family, and the physical content it encodes is representation-independent.
+
+This note does not claim: that the ghost-activity theorem is "wrong" (it is correct within its domain), that axial gauge is "better" (it has its own complications: spurious poles, prescription dependence), or that BRST cohomology resolves all representation dependence (it resolves the conceptual issue but introduces its own technical apparatus).
+
+The honest statement is: the theorem has a boundary, the boundary is now defined, and the physics on both sides of the boundary is the same.
+
+
+
+#heading(numbering: none)[References]
+#set text(size: 9pt)
+#par(hanging-indent: 1.5em)[\[AtikGhost\] Atik, E. Ghost-mediated null-space activity: a structural theorem from the K-Q framework. POT VUFT Series. *Preprint* (2026).]
+
+#par(hanging-indent: 1.5em)[\[AtikPhi4\] Atik, E. Renormalization without infinities: one-loop $phi^4$ physics from convergent integrals. POT VUFT Series. *Preprint* (2026).]
+
+#par(hanging-indent: 1.5em)[\[AtikQED\] Atik, E. Gauge symmetry reduces the null space: QED vacuum polarization from convergent integrals. POT VUFT Series. *Preprint* (2026).]
+
+#par(hanging-indent: 1.5em)[\[AtikYM\] Atik, E. The null space is not inert: Yang-Mills vacuum polarization from convergent integrals. POT VUFT Series. *Preprint* (2026).]
+
+#par(hanging-indent: 1.5em)[\[BRS1976\] Becchi, C., Rouet, A. and Stora, R. Renormalization of gauge theories. *Ann. Phys.* 98, 287--321 (1976).]
+
+#par(hanging-indent: 1.5em)[\[LeibnNakanishi\] Leibbrandt, G. Introduction to noncovariant gauges. *Rev. Mod. Phys.* 59, 1067--1119 (1987).]
+
+

@@ -16,8 +16,8 @@ use typst::{Library, World};
 use crate::ast::Expression;
 use crate::editor_ast::EditorNode;
 use crate::render::{
-    build_default_context, render_expression, render_expression_with_ids, GlyphContext,
-    RenderTarget,
+    GlyphContext, RenderTarget, build_default_context, render_expression,
+    render_expression_with_ids,
 };
 use crate::render_editor::render_editor_node_with_uuids;
 
@@ -288,17 +288,17 @@ fn extract_boxes_recursive_editor(
         }
         EditorNode::Operation { operation } => {
             // Check if this node has a UUID position
-            if let Some(uuid) = node_id_to_uuid.get(node_id) {
-                if let Some((x, y, w, h)) = uuid_positions.get(uuid) {
-                    boxes.push(ArgumentBoundingBox {
-                        arg_index: 0, // Will be filled by caller
-                        node_id: node_id.to_string(),
-                        x: *x,
-                        y: *y,
-                        width: *w,
-                        height: *h,
-                    });
-                }
+            if let Some(uuid) = node_id_to_uuid.get(node_id)
+                && let Some((x, y, w, h)) = uuid_positions.get(uuid)
+            {
+                boxes.push(ArgumentBoundingBox {
+                    arg_index: 0, // Will be filled by caller
+                    node_id: node_id.to_string(),
+                    x: *x,
+                    y: *y,
+                    width: *w,
+                    height: *h,
+                });
             }
 
             // Recurse into args
@@ -337,17 +337,17 @@ fn extract_boxes_recursive_editor(
         }
         EditorNode::Object { .. } | EditorNode::Const { .. } => {
             // Check if this node has a UUID position
-            if let Some(uuid) = node_id_to_uuid.get(node_id) {
-                if let Some((x, y, w, h)) = uuid_positions.get(uuid) {
-                    boxes.push(ArgumentBoundingBox {
-                        arg_index: 0,
-                        node_id: node_id.to_string(),
-                        x: *x,
-                        y: *y,
-                        width: *w,
-                        height: *h,
-                    });
-                }
+            if let Some(uuid) = node_id_to_uuid.get(node_id)
+                && let Some((x, y, w, h)) = uuid_positions.get(uuid)
+            {
+                boxes.push(ArgumentBoundingBox {
+                    arg_index: 0,
+                    node_id: node_id.to_string(),
+                    x: *x,
+                    y: *y,
+                    width: *w,
+                    height: *h,
+                });
             }
         }
     }
@@ -495,10 +495,10 @@ fn fix_matrix_cell_order(
             let old_id = b.node_id.clone();
             b.node_id = new_id.clone();
             // Extract the arg_index from new node_id
-            if let Some(idx_str) = new_id.split('.').next_back() {
-                if let Ok(idx) = idx_str.parse::<usize>() {
-                    b.arg_index = idx;
-                }
+            if let Some(idx_str) = new_id.split('.').next_back()
+                && let Ok(idx) = idx_str.parse::<usize>()
+            {
+                b.arg_index = idx;
             }
             eprintln!("     Remapped: {} -> {}", old_id, new_id);
         } else {
@@ -851,37 +851,37 @@ fn assign_boxes_recursive(
             );
 
             // Check if this element has a UUID position (for filled values)
-            if let Some(uuid) = node_id_to_uuid.get(&child_node_id) {
-                if let Some((x, y, w, h)) = uuid_positions.get(uuid) {
-                    let display_uuid = &uuid[..8.min(uuid.len())];
-                    eprintln!(
-                        "  List element {}: 🔑 UUID match! {}... -> ({:.1}, {:.1})",
-                        idx, display_uuid, x, y
-                    );
+            if let Some(uuid) = node_id_to_uuid.get(&child_node_id)
+                && let Some((x, y, w, h)) = uuid_positions.get(uuid)
+            {
+                let display_uuid = &uuid[..8.min(uuid.len())];
+                eprintln!(
+                    "  List element {}: 🔑 UUID match! {}... -> ({:.1}, {:.1})",
+                    idx, display_uuid, x, y
+                );
 
-                    result.push(ArgumentBoundingBox {
-                        arg_index: idx,
-                        node_id: child_node_id.clone(),
-                        x: *x,
-                        y: *y,
-                        width: *w,
-                        height: *h,
-                    });
+                result.push(ArgumentBoundingBox {
+                    arg_index: idx,
+                    node_id: child_node_id.clone(),
+                    x: *x,
+                    y: *y,
+                    width: *w,
+                    height: *h,
+                });
 
-                    // Recursively process children if any
-                    assign_boxes_recursive(
-                        elem,
-                        ctx,
-                        &[],
-                        &child_node_id,
-                        cache,
-                        labeled_positions,
-                        node_id_to_uuid,
-                        uuid_positions,
-                        result,
-                    )?;
-                    continue;
-                }
+                // Recursively process children if any
+                assign_boxes_recursive(
+                    elem,
+                    ctx,
+                    &[],
+                    &child_node_id,
+                    cache,
+                    labeled_positions,
+                    node_id_to_uuid,
+                    uuid_positions,
+                    result,
+                )?;
+                continue;
             }
 
             // No UUID found, try recursive processing
@@ -901,23 +901,23 @@ fn assign_boxes_recursive(
     } else {
         // Leaf nodes (Const, Object, Placeholder, Match)
         // If we reach here with a leaf node, try UUID lookup
-        if let Some(uuid) = node_id_to_uuid.get(node_id) {
-            if let Some((x, y, w, h)) = uuid_positions.get(uuid) {
-                let display_uuid = &uuid[..8.min(uuid.len())];
-                eprintln!(
-                    "  Leaf node at {}: 🔑 UUID match! {}... -> ({:.1}, {:.1})",
-                    node_id, display_uuid, x, y
-                );
+        if let Some(uuid) = node_id_to_uuid.get(node_id)
+            && let Some((x, y, w, h)) = uuid_positions.get(uuid)
+        {
+            let display_uuid = &uuid[..8.min(uuid.len())];
+            eprintln!(
+                "  Leaf node at {}: 🔑 UUID match! {}... -> ({:.1}, {:.1})",
+                node_id, display_uuid, x, y
+            );
 
-                result.push(ArgumentBoundingBox {
-                    arg_index: 0,
-                    node_id: node_id.to_string(),
-                    x: *x,
-                    y: *y,
-                    width: *w,
-                    height: *h,
-                });
-            }
+            result.push(ArgumentBoundingBox {
+                arg_index: 0,
+                node_id: node_id.to_string(),
+                x: *x,
+                y: *y,
+                width: *w,
+                height: *h,
+            });
         }
     }
 
@@ -1086,10 +1086,10 @@ fn find_matching_slice_spatial(
 
 /// Determine if two text boxes represent the same glyph run
 fn boxes_match(full: &LayoutBoundingBox, pattern: &LayoutBoundingBox) -> bool {
-    if let (Some(full_text), Some(pattern_text)) = (&full.text, &pattern.text) {
-        if !full_text.is_empty() || !pattern_text.is_empty() {
-            return full_text == pattern_text;
-        }
+    if let (Some(full_text), Some(pattern_text)) = (&full.text, &pattern.text)
+        && (!full_text.is_empty() || !pattern_text.is_empty())
+    {
+        return full_text == pattern_text;
     }
 
     if !pattern.glyph_ids.is_empty() {
@@ -1282,73 +1282,72 @@ pub fn compile_math_to_svg_with_ids(
         eprintln!("Calibration disabled - using layout boxes as-is (may not align with SVG)");
     }
 
-    if USE_CALIBRATION {
-        if let Some(first_ph) = placeholder_positions.first() {
-            // Find corresponding box in layout tree (Text element with similar size/position relative to others)
-            // The square symbol in Typst is a text glyph
-            // We look for a text box with width ~18pt (square.stroked size)
+    if USE_CALIBRATION && let Some(first_ph) = placeholder_positions.first() {
+        // Find corresponding box in layout tree (Text element with similar size/position relative to others)
+        // The square symbol in Typst is a text glyph
+        // We look for a text box with width ~18pt (square.stroked size)
 
-            // Find text boxes with width between 10 and 25 (likely squares)
-            let candidates: Vec<&LayoutBoundingBox> = all_boxes
+        // Find text boxes with width between 10 and 25 (likely squares)
+        let candidates: Vec<&LayoutBoundingBox> = all_boxes
+            .iter()
+            .filter(|b| b.content_type == "text" && b.width > 10.0 && b.width < 25.0)
+            .collect();
+
+        eprintln!(
+            "Found {} candidate boxes for calibration (width 10-25pt)",
+            candidates.len()
+        );
+
+        // IMPROVED: Find the box closest to the first placeholder's relative position
+        // Instead of just taking first(), find the one with similar relative position
+        let match_box = if candidates.len() > 1 {
+            // If we have multiple candidates, find the best match by position
+            // The first placeholder in SVG should correspond to first square in layout
+            // They should have similar relative positions within their coordinate systems
+            candidates
                 .iter()
-                .filter(|b| b.content_type == "text" && b.width > 10.0 && b.width < 25.0)
-                .collect();
+                .min_by(|a, b| {
+                    // Prefer boxes closer to origin (likely the first one)
+                    let dist_a = (a.x * a.x + a.y * a.y).sqrt();
+                    let dist_b = (b.x * b.x + b.y * b.y).sqrt();
+                    dist_a
+                        .partial_cmp(&dist_b)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })
+                .copied()
+        } else {
+            candidates.first().copied()
+        };
+
+        if let Some(match_box) = match_box {
+            // Calculate offset
+            // SVG = Layout + Offset
+            // Offset = SVG - Layout
+            offset_x = first_ph.x - match_box.x;
+            offset_y = first_ph.y - match_box.y;
 
             eprintln!(
-                "Found {} candidate boxes for calibration (width 10-25pt)",
-                candidates.len()
+                "Calibrated offset: ({:.2}, {:.2}) using placeholder ID {} matched to layout box at ({:.2}, {:.2})",
+                offset_x, offset_y, first_ph.id, match_box.x, match_box.y
             );
 
-            // IMPROVED: Find the box closest to the first placeholder's relative position
-            // Instead of just taking first(), find the one with similar relative position
-            let match_box = if candidates.len() > 1 {
-                // If we have multiple candidates, find the best match by position
-                // The first placeholder in SVG should correspond to first square in layout
-                // They should have similar relative positions within their coordinate systems
-                candidates
-                    .iter()
-                    .min_by(|a, b| {
-                        // Prefer boxes closer to origin (likely the first one)
-                        let dist_a = (a.x * a.x + a.y * a.y).sqrt();
-                        let dist_b = (b.x * b.x + b.y * b.y).sqrt();
-                        dist_a
-                            .partial_cmp(&dist_b)
-                            .unwrap_or(std::cmp::Ordering::Equal)
-                    })
-                    .copied()
-            } else {
-                candidates.first().copied()
-            };
-
-            if let Some(match_box) = match_box {
-                // Calculate offset
-                // SVG = Layout + Offset
-                // Offset = SVG - Layout
-                offset_x = first_ph.x - match_box.x;
-                offset_y = first_ph.y - match_box.y;
-
+            // Sanity check: offset shouldn't be too large
+            if offset_x.abs() > 50.0 || offset_y.abs() > 50.0 {
                 eprintln!(
-                    "Calibrated offset: ({:.2}, {:.2}) using placeholder ID {} matched to layout box at ({:.2}, {:.2})",
-                    offset_x, offset_y, first_ph.id, match_box.x, match_box.y
+                    "⚠️ WARNING: Large calibration offset detected! This may indicate matching error."
                 );
-
-                // Sanity check: offset shouldn't be too large
-                if offset_x.abs() > 50.0 || offset_y.abs() > 50.0 {
-                    eprintln!(
-                        "⚠️ WARNING: Large calibration offset detected! This may indicate matching error."
-                    );
-                    eprintln!(
-                        "   First placeholder SVG: ({:.2}, {:.2})",
-                        first_ph.x, first_ph.y
-                    );
-                    eprintln!(
-                        "   Matched layout box: ({:.2}, {:.2})",
-                        match_box.x, match_box.y
-                    );
-                }
+                eprintln!(
+                    "   First placeholder SVG: ({:.2}, {:.2})",
+                    first_ph.x, first_ph.y
+                );
+                eprintln!(
+                    "   Matched layout box: ({:.2}, {:.2})",
+                    match_box.x, match_box.y
+                );
             }
-        } // End of if let Some(first_ph)
-    } // End of if USE_CALIBRATION
+        }
+    } // End of if let Some(first_ph)
+    // End of if USE_CALIBRATION
 
     // Apply offset to all layout boxes (if calibration enabled)
     let calibrated_boxes: Vec<LayoutBoundingBox> = if USE_CALIBRATION {
@@ -1550,10 +1549,10 @@ fn find_marker_in_frame(frame: &Frame, source: &Source) -> Option<usize> {
                         }
                     }
                     // Try slot marker (format: "SN")
-                    else if let Some(stripped) = text_content.strip_prefix('S') {
-                        if let Ok(id) = stripped.parse::<usize>() {
-                            return Some(id);
-                        }
+                    else if let Some(stripped) = text_content.strip_prefix('S')
+                        && let Ok(id) = stripped.parse::<usize>()
+                    {
+                        return Some(id);
                     }
                 }
             }
@@ -1983,15 +1982,15 @@ fn accumulate_ancestor_translates(node: &roxmltree::Node) -> (f64, f64) {
 
     let mut current = node.parent();
     while let Some(parent) = current {
-        if let Some(transform) = parent.attribute("transform") {
-            if let Some((x, y)) = parse_translate(transform) {
-                total_x += x;
-                total_y += y;
-                eprintln!(
-                    "    depth {}: translate({}, {}) -> cumulative ({}, {})",
-                    depth, x, y, total_x, total_y
-                );
-            }
+        if let Some(transform) = parent.attribute("transform")
+            && let Some((x, y)) = parse_translate(transform)
+        {
+            total_x += x;
+            total_y += y;
+            eprintln!(
+                "    depth {}: translate({}, {}) -> cumulative ({}, {})",
+                depth, x, y, total_x, total_y
+            );
         }
         depth += 1;
         current = parent.parent();
@@ -2016,24 +2015,23 @@ fn extract_all_glyph_positions(svg: &str) -> Result<Vec<SvgGlyphPosition>, Strin
     let mut first_logged = false;
 
     for node in doc.descendants() {
-        if node.tag_name().name() == "use" {
-            if let Some(href) = node.attribute(("http://www.w3.org/1999/xlink", "href")) {
-                if let Some(glyph_id) = href.strip_prefix("#g") {
-                    if !first_logged {
-                        eprintln!(
-                            "DEBUG: Processing first <use> element with glyph #{}",
-                            glyph_id
-                        );
-                        first_logged = true;
-                    }
-                    let (x, y) = accumulate_ancestor_translates(&node);
-                    positions.push(SvgGlyphPosition {
-                        glyph_id: glyph_id.to_string(),
-                        x,
-                        y,
-                    });
-                }
+        if node.tag_name().name() == "use"
+            && let Some(href) = node.attribute(("http://www.w3.org/1999/xlink", "href"))
+            && let Some(glyph_id) = href.strip_prefix("#g")
+        {
+            if !first_logged {
+                eprintln!(
+                    "DEBUG: Processing first <use> element with glyph #{}",
+                    glyph_id
+                );
+                first_logged = true;
             }
+            let (x, y) = accumulate_ancestor_translates(&node);
+            positions.push(SvgGlyphPosition {
+                glyph_id: glyph_id.to_string(),
+                x,
+                y,
+            });
         }
     }
 
@@ -2434,11 +2432,11 @@ fn extract_argument_bounding_boxes_markers(svg: &str) -> Result<Vec<ArgumentBoun
     let mut marker_positions: Vec<(f64, f64)> = Vec::new();
 
     for cap in transform_pattern.captures_iter(svg) {
-        if let (Some(x_str), Some(y_str)) = (cap.get(1), cap.get(2)) {
-            if let (Ok(x), Ok(y)) = (x_str.as_str().parse::<f64>(), y_str.as_str().parse::<f64>()) {
-                marker_positions.push((x, y));
-                eprintln!("  Found white marker at ({:.1}, {:.1})", x, y);
-            }
+        if let (Some(x_str), Some(y_str)) = (cap.get(1), cap.get(2))
+            && let (Ok(x), Ok(y)) = (x_str.as_str().parse::<f64>(), y_str.as_str().parse::<f64>())
+        {
+            marker_positions.push((x, y));
+            eprintln!("  Found white marker at ({:.1}, {:.1})", x, y);
         }
     }
 
@@ -2502,22 +2500,21 @@ fn extract_colored_boxes(svg: &str) -> Result<Vec<BoundingBox>, String> {
     for cap in rect_pattern.captures_iter(svg) {
         if let (Some(x_str), Some(y_str), Some(w_str), Some(h_str)) =
             (cap.get(1), cap.get(2), cap.get(3), cap.get(4))
-        {
-            if let (Ok(x), Ok(y), Ok(w), Ok(h)) = (
+            && let (Ok(x), Ok(y), Ok(w), Ok(h)) = (
                 x_str.as_str().parse::<f64>(),
                 y_str.as_str().parse::<f64>(),
                 w_str.as_str().parse::<f64>(),
                 h_str.as_str().parse::<f64>(),
-            ) {
-                eprintln!("Found colored box at ({}, {}) size {}x{}", x, y, w, h);
+            )
+        {
+            eprintln!("Found colored box at ({}, {}) size {}x{}", x, y, w, h);
 
-                boxes.push(BoundingBox {
-                    x,
-                    y,
-                    width: w,
-                    height: h,
-                });
-            }
+            boxes.push(BoundingBox {
+                x,
+                y,
+                width: w,
+                height: h,
+            });
         }
     }
 
@@ -2609,31 +2606,31 @@ fn extract_uuid_positions(
         positions: &mut std::collections::HashMap<String, (f64, f64, f64, f64)>,
     ) {
         let mut current_transforms = parent_transforms.to_vec();
-        if let Some(transform) = node.attribute("transform") {
-            if let Some((tx, ty)) = parse_translate(transform) {
-                current_transforms.push((tx, ty));
-            }
+        if let Some(transform) = node.attribute("transform")
+            && let Some((tx, ty)) = parse_translate(transform)
+        {
+            current_transforms.push((tx, ty));
         }
 
-        if let Some(label) = node.attribute("data-typst-label") {
-            if let Some(uuid_part) = label.strip_prefix("id") {
-                // Remove "id" prefix (rest is the UUID)
-                let (abs_x, abs_y) = current_transforms
-                    .iter()
-                    .fold((0.0, 0.0), |(ax, ay), (tx, ty)| (ax + tx, ay + ty));
+        if let Some(label) = node.attribute("data-typst-label")
+            && let Some(uuid_part) = label.strip_prefix("id")
+        {
+            // Remove "id" prefix (rest is the UUID)
+            let (abs_x, abs_y) = current_transforms
+                .iter()
+                .fold((0.0, 0.0), |(ax, ay), (tx, ty)| (ax + tx, ay + ty));
 
-                let (width, height) = estimate_group_size(&node);
+            let (width, height) = estimate_group_size(&node);
 
-                positions.insert(uuid_part.to_string(), (abs_x, abs_y, width, height));
-                let display_uuid = &uuid_part[..8.min(uuid_part.len())];
-                eprintln!(
-                    "Found UUID label: id={}... (len={}) at ({:.1}, {:.1})",
-                    display_uuid,
-                    uuid_part.len(),
-                    abs_x,
-                    abs_y
-                );
-            }
+            positions.insert(uuid_part.to_string(), (abs_x, abs_y, width, height));
+            let display_uuid = &uuid_part[..8.min(uuid_part.len())];
+            eprintln!(
+                "Found UUID label: id={}... (len={}) at ({:.1}, {:.1})",
+                display_uuid,
+                uuid_part.len(),
+                abs_x,
+                abs_y
+            );
         }
 
         for child in node.children() {
@@ -2669,10 +2666,10 @@ fn extract_positions_from_labels(svg: &str) -> Result<Vec<PlaceholderPosition>, 
     ) {
         // Check for transform on this node
         let mut current_transforms = parent_transforms.to_vec();
-        if let Some(transform) = node.attribute("transform") {
-            if let Some((tx, ty)) = parse_translate(transform) {
-                current_transforms.push((tx, ty));
-            }
+        if let Some(transform) = node.attribute("transform")
+            && let Some((tx, ty)) = parse_translate(transform)
+        {
+            current_transforms.push((tx, ty));
         }
 
         // Check for data-typst-label attribute

@@ -1175,10 +1175,10 @@ pub fn generate_diagram_code(elements: &[PlotElement], options: &DiagramOptions)
     // X-axis options
     let mut xaxis_opts = Vec::new();
     // Scale: "linear" (default), "log", "symlog"
-    if let Some(ref xscale) = options.xscale {
-        if xscale != "linear" {
-            xaxis_opts.push(format!("scale: \"{}\"", xscale));
-        }
+    if let Some(ref xscale) = options.xscale
+        && xscale != "linear"
+    {
+        xaxis_opts.push(format!("scale: \"{}\"", xscale));
     }
     if options.xaxis_ticks_none == Some(true) {
         xaxis_opts.push("ticks: none".to_string());
@@ -1200,27 +1200,27 @@ pub fn generate_diagram_code(elements: &[PlotElement], options: &DiagramOptions)
             suffix
         ));
     }
-    if options.xaxis_ticks_none != Some(true) {
-        if let Some(ref ticks) = options.xaxis_ticks {
-            // Format ticks as enumerated pairs: ((0, "Jan"), (1, "Feb"), ...)
-            // Apply rotation if specified
-            let tick_strs: Vec<String> = if let Some(degrees) = options.xaxis_tick_rotate {
-                ticks
-                    .iter()
-                    .enumerate()
-                    .map(|(i, label)| {
-                        format!("({}, rotate({}deg, reflow: true)[{}])", i, degrees, label)
-                    })
-                    .collect()
-            } else {
-                ticks
-                    .iter()
-                    .enumerate()
-                    .map(|(i, label)| format!("({}, [{}])", i, label))
-                    .collect()
-            };
-            xaxis_opts.push(format!("ticks: ({})", tick_strs.join(", ")));
-        }
+    if options.xaxis_ticks_none != Some(true)
+        && let Some(ref ticks) = options.xaxis_ticks
+    {
+        // Format ticks as enumerated pairs: ((0, "Jan"), (1, "Feb"), ...)
+        // Apply rotation if specified
+        let tick_strs: Vec<String> = if let Some(degrees) = options.xaxis_tick_rotate {
+            ticks
+                .iter()
+                .enumerate()
+                .map(|(i, label)| {
+                    format!("({}, rotate({}deg, reflow: true)[{}])", i, degrees, label)
+                })
+                .collect()
+        } else {
+            ticks
+                .iter()
+                .enumerate()
+                .map(|(i, label)| format!("({}, [{}])", i, label))
+                .collect()
+        };
+        xaxis_opts.push(format!("ticks: ({})", tick_strs.join(", ")));
     }
     if !xaxis_opts.is_empty() {
         code.push_str(&format!("  xaxis: ({}),\n", xaxis_opts.join(", ")));
@@ -1229,10 +1229,10 @@ pub fn generate_diagram_code(elements: &[PlotElement], options: &DiagramOptions)
     // Y-axis options
     let mut yaxis_opts = Vec::new();
     // Scale: "linear" (default), "log", "symlog"
-    if let Some(ref yscale) = options.yscale {
-        if yscale != "linear" {
-            yaxis_opts.push(format!("scale: \"{}\"", yscale));
-        }
+    if let Some(ref yscale) = options.yscale
+        && yscale != "linear"
+    {
+        yaxis_opts.push(format!("scale: \"{}\"", yscale));
     }
     if options.yaxis_ticks_none == Some(true) {
         yaxis_opts.push("ticks: none".to_string());
@@ -1756,9 +1756,7 @@ fn generate_xaxis_element(element: &PlotElement) -> String {
     }
 
     // Transformation functions (forward and inverse)
-    if let (Some(ref forward), Some(ref inverse)) =
-        (&opts.transform_forward, &opts.transform_inverse)
-    {
+    if let (Some(forward), Some(inverse)) = (&opts.transform_forward, &opts.transform_inverse) {
         code.push_str(&format!("    functions: ({}, {}),\n", forward, inverse));
     }
 
@@ -1782,7 +1780,7 @@ fn generate_path_element(element: &PlotElement) -> String {
     code.push_str("  lq.path(\n");
 
     // Output each point as (x, y) - matching Lilaq's spread syntax
-    if let (Some(ref x_data), Some(ref y_data)) = (&element.x_data, &element.y_data) {
+    if let (Some(x_data), Some(y_data)) = (&element.x_data, &element.y_data) {
         for (x, y) in x_data.iter().zip(y_data.iter()) {
             code.push_str(&format!("    ({}, {}),\n", x, y));
         }

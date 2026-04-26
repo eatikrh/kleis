@@ -8,7 +8,7 @@
 //! - Ricci tensor from curvature
 
 use kleis::evaluator::Evaluator;
-use kleis::kleis_parser::{parse_kleis_program, KleisParser};
+use kleis::kleis_parser::{KleisParser, parse_kleis_program};
 use kleis::pretty_print::PrettyPrinter;
 
 /// Load both symbolic_diff.kleis and cartan_compute.kleis

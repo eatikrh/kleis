@@ -10,7 +10,7 @@
 
 use kleis::ast::Expression;
 use kleis::kleis_parser::parse_kleis;
-use kleis::render::{build_default_context, render_expression, RenderTarget};
+use kleis::render::{RenderTarget, build_default_context, render_expression};
 
 // Helper functions
 fn c(s: &str) -> Expression {

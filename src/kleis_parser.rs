@@ -1740,7 +1740,7 @@ impl KleisParser {
             // Check for comma (more variable groups) or end
             if self.peek() == Some(',') {
                 self.advance(); // consume comma
-                                // Continue to parse next group
+            // Continue to parse next group
             } else {
                 // No more groups
                 break;
@@ -5622,7 +5622,7 @@ mod tests {
         assert_eq!(result.variants[1].name, "Some");
         assert_eq!(result.variants[1].fields.len(), 1);
         assert!(result.variants[1].fields[0].name.is_none()); // Positional
-                                                              // Note: Type variables are parsed as Named types at this stage
+        // Note: Type variables are parsed as Named types at this stage
         assert!(matches!(
             result.variants[1].fields[0].type_expr,
             TypeExpr::Named(ref s) if s == "T"
@@ -6145,10 +6145,12 @@ mod tests {
         let result = parser.parse();
 
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .message
-            .contains("must have at least one case"));
+        assert!(
+            result
+                .unwrap_err()
+                .message
+                .contains("must have at least one case")
+        );
     }
 
     #[test]
@@ -6729,7 +6731,7 @@ mod tests {
                         ..
                     } => {
                         assert!(
-                            matches!(inner_pattern, crate::ast::Pattern::Variable(ref n) if n == "b")
+                            matches!(inner_pattern, crate::ast::Pattern::Variable(n) if n == "b")
                         );
                         assert_eq!(**inner_value, Expression::Const("2".to_string()));
                         match inner_body.as_ref() {
@@ -6922,7 +6924,7 @@ mod tests {
                         ..
                     } => {
                         assert!(
-                            matches!(inner_pattern, crate::ast::Pattern::Variable(ref n) if n == "b")
+                            matches!(inner_pattern, crate::ast::Pattern::Variable(n) if n == "b")
                         );
                         assert_eq!(*inner_type, Some("ℤ".to_string()));
                     }
@@ -6972,7 +6974,7 @@ mod tests {
                 type_annotation,
                 ..
             } => {
-                assert!(matches!(pattern, crate::ast::Pattern::Variable(ref n) if n == "y"));
+                assert!(matches!(pattern, crate::ast::Pattern::Variable(n) if n == "y"));
                 assert_eq!(*type_annotation, Some("ℝ".to_string()));
             }
             _ => panic!("Expected Let in function body"),

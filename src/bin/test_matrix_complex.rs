@@ -5,7 +5,7 @@
 #![allow(unused_imports)]
 use kleis::ast::Expression;
 use kleis::math_layout::compile_with_semantic_boxes;
-use kleis::render::{build_default_context, render_expression, RenderTarget};
+use kleis::render::{RenderTarget, build_default_context, render_expression};
 
 fn main() {
     let matrix = complex_matrix();

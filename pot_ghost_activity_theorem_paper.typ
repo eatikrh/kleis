@@ -1,0 +1,262 @@
+#import "@preview/lilaq:0.5.0" as lq
+#set page(
+  paper: "us-letter",
+  margin: (top: 1in, bottom: 1in, left: 1in, right: 1in),
+  numbering: "1",
+  header: align(right)[_Preprint_],
+)
+#set text(
+  font: "New Computer Modern",
+  size: 11pt,
+  lang: "en",
+)
+#set par(
+  justify: true,
+  leading: 0.65em,
+  first-line-indent: 1em,
+)
+
+// No indent after headings
+#show heading: it => {
+  it
+  par(text(size: 0pt, ""))
+}
+#set heading(numbering: "1.1")
+
+// Section headings (level 1)
+#show heading.where(level: 1): it => {
+  v(1em)
+  text(size: 12pt, weight: "bold")[#counter(heading).display() #it.body]
+  v(0.5em)
+}
+
+// Subsection headings (level 2)
+#show heading.where(level: 2): it => {
+  v(0.8em)
+  text(size: 11pt, weight: "bold")[#counter(heading).display() #it.body]
+  v(0.4em)
+}
+
+// Subsubsection headings (level 3)
+#show heading.where(level: 3): it => {
+  v(0.6em)
+  text(size: 10pt, weight: "bold", style: "italic")[#counter(heading).display() #it.body]
+  v(0.3em)
+}
+#set figure(placement: auto)
+#show figure.caption: it => {
+  text(size: 9pt)[#it]
+}
+#show link: it => text(fill: blue.darken(20%))[#underline[#it]]
+
+
+#align(center)[
+  #text(size: 17pt, weight: "bold")[Ghost-Mediated Null-Space Activity: A Structural Theorem from the K-Q Framework]
+  
+  #v(1em)
+  
+  Engin Atik#super[1]
+  
+  #v(0.5em)
+  
+  #super[1]Kleis Research, https://kleis.io
+]
+
+#v(1em)
+
+#align(center)[
+  #rect(width: 85%, stroke: none)[
+    #align(left)[
+      #text(weight: "bold")[Abstract]
+      #v(0.3em)
+      #text(size: 10pt)[We state and prove a structural theorem arising from the $K$--$Q$ operator framework for perturbative quantum field theory. Three preceding papers computed one-loop observables in $phi^4$ theory, QED, and $"SU"(N)$ Yang-Mills theory entirely from convergent Feynman parameter integrals, using the kernel operator $K$ and observable projection $Q$. A pattern emerged: in $phi^4$ and QED, the null space $ker(Q)$ is passive --- its elements (tadpoles, scheme-dependent constants, decoupled ghosts) contribute nothing to observables through the composed map $Q compose K$. In Yang-Mills theory, the null space becomes active: Faddeev-Popov ghosts lie in $ker(Q)$ (they are unphysical) yet their loop integrals determine the sign of asymptotic freedom through $Q compose K$. This note makes the pattern precise. We define *inert* and *active* null-space sectors and prove: the ghost sector of $ker(Q)$ is active if and only if the gauge algebra is non-abelian ($f^(a b c) != 0$). The proof is constructive: QED ($f^(a b c) = 0$, ghost vertex vanishes, sector inert) and Yang-Mills ($f^(a b c) != 0$, ghost vertex present, sector active) serve as witnesses. The corollary: gauge symmetry alone does not activate $ker(Q)$; the non-abelian Lie algebra structure is the algebraic switch. All 17 proof components are machine-verified by the Z3 SMT solver in the Kleis formal verification language.]
+    ]
+  ]
+]
+
+#text(size: 9pt)[*Keywords:* ghost, Faddeev-Popov, null space, kernel-projection, gauge algebra, non-abelian, asymptotic freedom, formal verification, Z3]
+
+#v(1em)
+
+
+= Introduction
+
+Three preceding papers [AtikPhi4, AtikQED, AtikYM] computed one-loop observables in $phi^4$ theory, QED, and $"SU"(N)$ Yang-Mills theory using the $K$--$Q$ operator framework: the Feynman integral kernel $K$ maps the Lagrangian and diagram topologies to convergent Feynman parameter integrands, and the observable projection $Q$ maps formal loop expressions to the space of physical predictions. The composed map $Q compose K$ admits a representation in which no intermediate quantity diverges.
+
+A structural pattern emerged across the three calculations:
+
++ *$phi^4$ theory:* No gauge symmetry. The null space $ker(Q)$ contains the tadpole $A_0$ and scheme-dependent constants. These are passive --- they contribute nothing to observables through $Q compose K$. The null space is inert.
+
++ *QED:* Abelian $"U"(1)$ gauge symmetry. The Ward identity $Pi(0) = 0$ reduces $ker(Q)$, promoting individual vacuum polarization values to observables. Faddeev-Popov ghosts formally exist but decouple: $f^(a b c) = 0$ kills the ghost-photon vertex. The ghost sector of $ker(Q)$ is present but inert.
+
++ *Yang-Mills:* Non-abelian $"SU"(N)$ gauge symmetry. Faddeev-Popov ghosts lie in $ker(Q)$ --- they are unphysical, violate the spin-statistics theorem, and carry no particle interpretation. Yet ghost loop integrals contribute to the $beta$-function coefficient $beta_0 = 11 C_A \/ 3 - 4 T_F n_f \/ 3$. The ghost sector of $ker(Q)$ is active: it shapes observables through $Q compose K$.
+
+The pattern is: *passive null space $arrow.r$ passive null space $arrow.r$ active null space*, and the transition from passive to active coincides exactly with the transition from abelian to non-abelian gauge algebra.
+
+This note states the pattern as a precise theorem, proves both directions, and identifies the algebraic switch.
+
+= Definitions
+
+We work within the $K$--$Q$ framework of [AtikPhi4, AtikQED, AtikYM]. The kernel $K$ maps a Lagrangian $cal(L)$ and a diagram topology $Gamma$ to a Feynman parameter integrand. The observable projection $Q$ maps formal loop expressions to the quotient space of physical predictions. The null space $ker(Q)$ consists of loop expressions that carry no physical information (scheme-dependent constants, unphysical fields, mass renormalization terms).
+
+#strong[Definition 1] (Null-space sector). A *null-space sector* $S subset.eq ker(Q)$ is a subspace of the null space consisting of contributions from a specific class of fields. The *ghost sector* $S_("gh")$ is the null-space sector consisting of Faddeev-Popov ghost field contributions.
+
+#strong[Definition 2] (Inert sector). A null-space sector $S$ is *inert* if for every diagram topology $Gamma$, the kernel $K(cal(L), Gamma)$ receives no contribution from $S$. Formally: the $S$-loop integral vanishes identically for all $Gamma$.
+
+#strong[Definition 3] (Active sector). A null-space sector $S$ is *active* if there exists a diagram topology $Gamma$ such that $K(cal(L), Gamma)$ receives a nonzero contribution from $S$, and this contribution affects an element of $"im"(Q)$ through the composed map $Q compose K$.
+
+The distinction between inert and active is the key. An inert sector is structurally irrelevant: it exists formally in $ker(Q)$ but has no effect on any observable. An active sector participates in determining observables despite its elements being individually unphysical.
+
+Z3-verified: ghost sector definitions for trivial, $"U"(1)$, and $"SU"(N)$ algebras; all ghost sectors lie in $ker(Q)$ (4 results in `theories/pot_ghost_activity_theorem.kleis`).
+
+= Theorem Statement
+
+#strong[Theorem] (Ghost-Mediated Null-Space Activity). In perturbative gauge theory, the ghost sector $S_("gh") subset.eq ker(Q)$ is active if and only if the gauge algebra is non-abelian, equivalently $f^(a b c) != 0$.
+
+The proof proceeds in two directions: abelian implies inert (Section 4), and non-abelian implies active (Section 5).
+
+= Proof: Abelian Implies Inert
+
+Suppose the gauge algebra is abelian: $f^(a b c) = 0$. The ghost-gluon vertex in any gauge theory is:
+
+$ V_("gh"))^(a b c)_mu = g f^(a b c) p_mu $
+
+where $p_mu$ is the ghost momentum. With $f^(a b c) = 0$, the vertex vanishes:
+
+$ V_("gh")) = 0 $
+
+If the ghost vertex vanishes, the kernel $K$ generates no ghost loop diagrams for any topology $Gamma$. The ghost propagator exists formally, but it never appears in a loop because there is no vertex to connect it. The ghost-loop integral is identically zero for every external momentum.
+
+Therefore: $S_("gh"))$ is inert. Ghost fields are in $ker(Q)$ and contribute nothing to $"im"(Q)$ through $Q compose K$.
+
+=== Witness: QED
+
+Quantum electrodynamics has the abelian gauge group $"U"(1)$. The photon field $A_mu$ has no self-coupling. The structure constants of $"U"(1)$ are $f^(a b c) = 0$ (there is only one generator, so the commutator vanishes). Faddeev-Popov ghosts are introduced formally by the gauge-fixing procedure, but the ghost-photon vertex is proportional to $f^(a b c) = 0$ and vanishes.
+
+Concretely: the QED $beta$-function is $beta(alpha) = 2 alpha^2 \/ (3 pi)$, arising entirely from the electron loop. The ghost sector contributes zero. In the QED paper [AtikQED], the ghost sector was not even mentioned in the computation --- because there was nothing to compute.
+
+=== Witness: $phi^4$ theory
+
+$phi^4$ theory has no gauge symmetry at all. There are no gauge fields, no ghosts, no structure constants. The ghost sector is empty, hence trivially inert.
+
+Z3-verified: ghost vertex vanishes for trivial and $"U"(1)$ algebras, ghost loop contribution is zero, ghost sector is inert (4 results).
+
+= Proof: Non-Abelian Implies Active
+
+Suppose the gauge algebra is non-abelian: $f^(a b c) != 0$. The ghost-gluon vertex is:
+
+$ V_("gh"))^(a b c)_mu = g f^(a b c) p_mu != 0 $
+
+With a nonzero vertex, the kernel $K$ generates ghost loop diagrams. Specifically, the one-loop gluon self-energy receives a ghost loop contribution: two ghost-gluon vertices connected by two ghost propagators, forming a closed loop.
+
+The ghost loop integral, after Feynman parametrization, is convergent on $[0,1]$:
+
+$ I_("gh")(rho) tilde.op C_A integral_0^1 d x thin x(1-x) ln(1 + rho thin x(1-x)) $
+
+where $rho = q_E^2 \/ m^2$ and $C_A = f^(a c d) f^(b c d) \/ delta^(a b)$ is the adjoint Casimir (which is nonzero precisely when $f^(a b c) != 0$). The $x(1-x)$ factor arises from the derivative coupling of the ghost-gluon vertex.
+
+The derivative at $rho = 0$ determines the ghost's contribution to the $beta$-function:
+
+$ (d I_("gh"))) / (d rho) bar_(rho = 0) = C_A integral_0^1 d x thin [x(1-x)]^2 = C_A / 30 $
+
+This is a nonzero contribution to the $beta$-function coefficient $beta_0 = 11 C_A \/ 3 - 4 T_F n_f \/ 3$. The ghost contribution (together with the gluon loop) produces the $11 C_A \/ 3$ that is responsible for asymptotic freedom.
+
+The $beta$-function is in $"im"(Q)$ --- it is an observable (measured in jet cross-sections, deep inelastic scattering, lattice QCD). Therefore: $S_("gh")) subset.eq ker(Q)$ contributes to an element of $"im"(Q)$ through $Q compose K$. The ghost sector is active.
+
+=== Witness: $"SU"(3)$ Yang-Mills (QCD)
+
+With $C_A = 3$ and $n_f = 6$ active quark flavors:
+
+$ beta_0 = 11/3 times 3 - 4/3 times 1/2 times 6 = 11 - 4 = 7 $
+
+The ghost loop integral, verified numerically in [AtikYM]:
+
+$ integral_0^1 d x thin [x(1-x)]^2 = 1/30 = 0.03333... $
+
+agrees with the exact value to machine precision ($< 10^(-16)$). Without the ghost contribution, the $beta$-function coefficient would differ, and asymptotic freedom might not hold at its observed strength.
+
+The ghost --- an unphysical scalar field that violates the spin-statistics theorem, carries no particle interpretation, and cannot appear as an asymptotic state --- determines the sign of the most important one-loop prediction in quantum field theory.
+
+Z3-verified: ghost-gluon vertex nonzero, ghost loop nonzero, ghost shapes $beta$-function, ghost integral convergent, ghost sector active (5 results).
+
+= Corollary and Evidence
+
+#strong[Corollary.] Gauge symmetry alone does not activate $ker(Q)$. Abelian gauge symmetry ($"U"(1)$) has ghosts in $ker(Q)$ but they are inert. Non-abelian gauge structure --- specifically, $f^(a b c) != 0$ --- is the algebraic switch that activates the ghost sector.
+
+This corollary sharpens the relationship between symmetry and observables. It is not the *presence* of gauge symmetry that determines whether $ker(Q)$ participates in observable predictions. It is the *algebra* of the gauge group. The structure constants $f^(a b c)$ are the switch.
+
+=== Three-theory evidence
+
+#table(
+    columns: 5,
+    [*Theory*], [*Gauge algebra*], [*$f^(a b c)$*], [*Ghost sector*], [*$ker(Q)$ role*],
+    [$phi^4$], [None], [N/A], [Empty], [Passive (inert)],
+    [QED], [$"U"(1)$], [$= 0$], [Present, decoupled], [Passive (inert)],
+    [Yang-Mills], [$"SU"(N)$], [$!= 0$], [Present, coupled], [Active],
+)
+
+The transition from passive to active coincides exactly with $f^(a b c)$ becoming nonzero. There is no intermediate case in these examples: the ghost sector is either completely inert (zero vertex) or fully active (nonzero vertex, nonzero loop integral, observable affected).
+
+=== The structural taxonomy
+
+The theorem and its proof yield a taxonomy of perturbative QFT theories by their null-space structure:
+
++ *No gauge symmetry* ($phi^4$, Yukawa, scalar QED without ghosts): $ker(Q)$ contains only mass renormalization and scheme-dependent constants. Passive. Observables are differences.
+
++ *Abelian gauge symmetry* (QED): $ker(Q)$ is reduced by the Ward identity. Ghost sector present but inert. Individual vacuum polarization values are observable.
+
++ *Non-abelian gauge symmetry* (Yang-Mills, QCD, electroweak): $ker(Q)$ is richer --- contains active ghosts. Ghost sector shapes observables through $Q compose K$. Asymptotic freedom is the signature.
+
+This is not a classification by Lagrangian or coupling constant. It is a classification by the algebraic structure of the null space --- a structural property of the $K$--$Q$ decomposition itself.
+
+Z3-verified: abelian witness inert, non-abelian witness active, theorem holds, corollary holds (4 results).
+
+= Implications
+
+The theorem converts a pattern observed across three calculations into a structural statement. Several implications follow.
+
+=== The null space as structural data
+
+In standard QFT, the null space of the renormalization procedure is treated as waste --- divergent intermediates to be subtracted away. The $K$--$Q$ framework reinterprets $ker(Q)$ as *structural data*: its internal composition (which fields contribute, whether they couple, what algebra governs them) determines properties of the observable space $"im"(Q)$.
+
+The ghost-activity theorem is the first precise instance of this principle. The theorem says: knowing whether $ker(Q)$ is active or inert is equivalent to knowing whether $f^(a b c) != 0$. The null space encodes the gauge algebra.
+
+=== From classification to prediction
+
+The three-paper ladder was constructed to *validate* the $K$--$Q$ framework against known physics. The theorem now points toward *prediction*: if the structure of $ker(Q)$ (active vs. inert, size, algebraic properties) determines observable features ($beta$-function sign, running direction, perturbative domain), then $ker(Q)$ analysis may predict features that are harder to see from the Lagrangian alone.
+
+=== The confinement question
+
+The Yang-Mills paper [AtikYM] identified a perturbative boundary: the Landau pole at $Lambda_("QCD")$ where the one-loop composed map $Q compose K$ ceases to be reliable. The ghost-activity theorem connects this boundary to the non-abelian structure:
+
++ Active $ker(Q)$ (non-abelian) $arrow.r$ ghost contributions $arrow.r$ asymptotic freedom $arrow.r$ coupling grows at low energy $arrow.r$ perturbative boundary.
+
++ Inert $ker(Q)$ (abelian) $arrow.r$ no ghost contributions $arrow.r$ charge screening $arrow.r$ no low-energy perturbative boundary (QED is perturbative at all accessible scales).
+
+The perturbative boundary exists *only* when $ker(Q)$ is active. This raises a precise question for future work:
+
+*Does the activity of $ker(Q)$ force a perturbative boundary for the composed map $Q compose K$? And does that boundary relate to confinement?*
+
+The ghost-activity theorem does not answer this question. But it makes the question precise, and it identifies the algebraic structure ($f^(a b c) != 0$) that governs the answer.
+
+=== What this note does and does not claim
+
+This note claims: ghost-mediated null-space activity is equivalent to non-abelian gauge structure. This is a theorem about perturbative one-loop gauge theory, proved by constructive witnesses and verified by Z3.
+
+This note does not claim: that all forms of null-space activity reduce to the ghost sector, that the theorem extends beyond one loop, or that the perturbative boundary implies confinement. These are open questions that the theorem enables but does not settle.
+
+
+
+#heading(numbering: none)[References]
+#set text(size: 9pt)
+#par(hanging-indent: 1.5em)[\[AtikPhi4\] Atik, E. Renormalization without infinities: one-loop $phi^4$ physics from convergent integrals. Volume X Supplement of the POT VUFT Series. *Preprint* (2026).]
+
+#par(hanging-indent: 1.5em)[\[AtikQED\] Atik, E. Gauge symmetry reduces the null space: QED vacuum polarization from convergent integrals. POT VUFT Series. *Preprint* (2026).]
+
+#par(hanging-indent: 1.5em)[\[AtikYM\] Atik, E. The null space is not inert: Yang-Mills vacuum polarization from convergent integrals. POT VUFT Series. *Preprint* (2026).]
+
+#par(hanging-indent: 1.5em)[\[FP1967\] Faddeev, L. D. and Popov, V. N. Feynman diagrams for the Yang-Mills field. *Phys. Lett. B* 25, 29--30 (1967).]
+
+#par(hanging-indent: 1.5em)[\[GW1973\] Gross, D. J. and Wilczek, F. Ultraviolet behavior of non-abelian gauge theories. *Phys. Rev. Lett.* 30, 1343--1346 (1973).]
+
+

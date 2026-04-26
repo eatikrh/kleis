@@ -32,8 +32,8 @@ use crate::ast::Expression;
 use crate::solvers::backend::{Witness, WitnessBinding};
 use crate::solvers::result_converter::ResultConverter;
 use crate::solvers::z3::converter::Z3ResultConverter;
-use z3::ast::{Ast, Dynamic};
 use z3::Model;
+use z3::ast::{Ast, Dynamic};
 
 /// Extract a structured `Witness` from a Z3 model using tracked quantifier variables.
 ///
@@ -160,32 +160,32 @@ fn try_reverse_map_datatype(
             let test_result = tester.apply(&[value]).simplify();
 
             // If the tester evaluates to true, this is our constructor
-            if let Some(bool_val) = test_result.as_bool() {
-                if bool_val.as_bool() == Some(true) {
-                    if variant.accessors.is_empty() {
-                        // Nullary constructor: just the name
-                        return Some(Expression::Object(constructor_name));
-                    } else {
-                        // Constructor with fields: extract each field
-                        let mut args = Vec::new();
-                        for accessor in &variant.accessors {
-                            let field_val = accessor.apply(&[value]);
-                            // Recursively try reverse-mapping nested datatypes
-                            if let Some(nested) =
-                                try_reverse_map_datatype(&field_val, declared_data_types)
-                            {
-                                args.push(nested);
-                            } else {
-                                // Standard conversion for primitive fields
-                                let converter = Z3ResultConverter;
-                                match converter.to_expression(&field_val) {
-                                    Ok(expr) => args.push(expr),
-                                    Err(_) => args.push(Expression::Const(field_val.to_string())),
-                                }
+            if let Some(bool_val) = test_result.as_bool()
+                && bool_val.as_bool() == Some(true)
+            {
+                if variant.accessors.is_empty() {
+                    // Nullary constructor: just the name
+                    return Some(Expression::Object(constructor_name));
+                } else {
+                    // Constructor with fields: extract each field
+                    let mut args = Vec::new();
+                    for accessor in &variant.accessors {
+                        let field_val = accessor.apply(&[value]);
+                        // Recursively try reverse-mapping nested datatypes
+                        if let Some(nested) =
+                            try_reverse_map_datatype(&field_val, declared_data_types)
+                        {
+                            args.push(nested);
+                        } else {
+                            // Standard conversion for primitive fields
+                            let converter = Z3ResultConverter;
+                            match converter.to_expression(&field_val) {
+                                Ok(expr) => args.push(expr),
+                                Err(_) => args.push(Expression::Const(field_val.to_string())),
                             }
                         }
-                        return Some(Expression::operation(constructor_name, args));
                     }
+                    return Some(Expression::operation(constructor_name, args));
                 }
             }
         }
@@ -197,8 +197,8 @@ fn try_reverse_map_datatype(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use z3::ast::Int;
     use z3::Solver;
+    use z3::ast::Int;
 
     #[test]
     fn test_model_to_witness_basic_int() {

@@ -338,11 +338,11 @@ impl<'a> Tokenizer<'a> {
                         if c == '\n' {
                             self.line += 1;
                             self.column = 1;
-                        } else if c == '*' {
-                            if let Some(&(_, '/')) = self.chars.peek() {
-                                self.chars.next();
-                                break;
-                            }
+                        } else if c == '*'
+                            && let Some(&(_, '/')) = self.chars.peek()
+                        {
+                            self.chars.next();
+                            break;
                         }
                     }
                     continue;
@@ -547,7 +547,7 @@ impl<'a> KleistParser<'a> {
                     _ => {
                         return Err(self
                             .tokenizer
-                            .error("Expected 'template', 'tool', or 'palette' after @"))
+                            .error("Expected 'template', 'tool', or 'palette' after @"));
                     }
                 }
             } else {
@@ -620,7 +620,7 @@ impl<'a> KleistParser<'a> {
                 _ => {
                     return Err(self
                         .tokenizer
-                        .error(&format!("Unexpected token in template: {:?}", self.current)))
+                        .error(&format!("Unexpected token in template: {:?}", self.current)));
                 }
             }
         }
@@ -667,7 +667,7 @@ impl<'a> KleistParser<'a> {
                 _ => {
                     return Err(self
                         .tokenizer
-                        .error(&format!("Unexpected token in tool: {:?}", self.current)))
+                        .error(&format!("Unexpected token in tool: {:?}", self.current)));
                 }
             }
         }
@@ -692,7 +692,7 @@ impl<'a> KleistParser<'a> {
                     return Err(self.tokenizer.error(&format!(
                         "Expected 'tab' in palette, got {:?}",
                         self.current
-                    )))
+                    )));
                 }
             }
         }
@@ -734,7 +734,7 @@ impl<'a> KleistParser<'a> {
                 _ => {
                     return Err(self
                         .tokenizer
-                        .error(&format!("Unexpected token in tab: {:?}", self.current)))
+                        .error(&format!("Unexpected token in tab: {:?}", self.current)));
                 }
             }
         }

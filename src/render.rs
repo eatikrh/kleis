@@ -651,10 +651,10 @@ fn render_literal_chain(
             let rendered = render_expression_internal(arg, ctx, target, &child_id, node_id_to_uuid);
 
             // For Typst: wrap each child with UUID label so they're individually editable
-            if *target == RenderTarget::Typst {
-                if let Some(uuid) = node_id_to_uuid.get(&child_id) {
-                    return format!("#[#box[${}$]<id{}>]", rendered, uuid);
-                }
+            if *target == RenderTarget::Typst
+                && let Some(uuid) = node_id_to_uuid.get(&child_id)
+            {
+                return format!("#[#box[${}$]<id{}>]", rendered, uuid);
             }
 
             rendered
@@ -996,10 +996,10 @@ fn render_expression_internal(
                             render_expression_internal(arg, ctx, target, &arg_id, node_id_to_uuid);
 
                         // For Typst: wrap each argument with UUID label inside the parentheses
-                        if *target == RenderTarget::Typst {
-                            if let Some(uuid) = node_id_to_uuid.get(&arg_id) {
-                                return format!("#[#box[${}$]<id{}>]", rendered, uuid);
-                            }
+                        if *target == RenderTarget::Typst
+                            && let Some(uuid) = node_id_to_uuid.get(&arg_id)
+                        {
+                            return format!("#[#box[${}$]<id{}>]", rendered, uuid);
                         }
                         rendered
                     })
@@ -1010,28 +1010,23 @@ fn render_expression_internal(
             }
 
             // Special handling for unary minus: minus(0, x) -> -x
-            if name == "minus" && args.len() == 2 {
-                if let Expression::Const(val) = &args[0] {
-                    if val == "0" {
-                        let operand_id = format!("{}.1", node_id);
-                        let operand = render_expression_internal(
-                            &args[1],
-                            ctx,
-                            target,
-                            &operand_id,
-                            node_id_to_uuid,
-                        );
+            if name == "minus"
+                && args.len() == 2
+                && let Expression::Const(val) = &args[0]
+                && val == "0"
+            {
+                let operand_id = format!("{}.1", node_id);
+                let operand =
+                    render_expression_internal(&args[1], ctx, target, &operand_id, node_id_to_uuid);
 
-                        // For Typst: wrap the negated operand with UUID if available
-                        if *target == RenderTarget::Typst {
-                            if let Some(uuid) = node_id_to_uuid.get(&operand_id) {
-                                return format!("-#[#box[${}$]<id{}>]", operand, uuid);
-                            }
-                        }
-
-                        return format!("-{}", operand);
-                    }
+                // For Typst: wrap the negated operand with UUID if available
+                if *target == RenderTarget::Typst
+                    && let Some(uuid) = node_id_to_uuid.get(&operand_id)
+                {
+                    return format!("-#[#box[${}$]<id{}>]", operand, uuid);
                 }
+
+                return format!("-{}", operand);
             }
 
             // xAct/xTensor-style tensor notation: T(μ, -ν) → T^μ_ν
@@ -1324,7 +1319,7 @@ fn render_expression_internal(
                 result = result.replace("{value}", first);
                 result = result.replace("{content}", first); // for brackets: parens, brackets, braces, angle_brackets
                 result = result.replace("{bra}", first); // for inner product (arg 0)
-                                                         // For outer product, {ket} is arg 0, but for inner product, {ket} is arg 1
+                // For outer product, {ket} is arg 0, but for inner product, {ket} is arg 1
                 if name != "inner" {
                     result = result.replace("{ket}", first); // for outer product
                 }
@@ -1352,7 +1347,7 @@ fn render_expression_internal(
                 result = result.replace("{exponent}", second);
                 result = result.replace("{lower1}", second); // For tensor_lower_pair arg1
                 result = result.replace("{upper1}", second); // For tensor_2up_2down arg1
-                                                             // Use arg1 as {from} for 2-3 arg operations, not for cases2 or cases3
+                // Use arg1 as {from} for 2-3 arg operations, not for cases2 or cases3
                 if name != "cases2" && name != "cases3" {
                     result = result.replace("{from}", second);
                 }
@@ -1406,7 +1401,7 @@ fn render_expression_internal(
                     result = result.replace("{subscript}", second); // subsup: arg 1 is subscript
                 }
                 result = result.replace("{ket}", second); // for inner product
-                                                          // For outer product, {bra} is arg 1, but for inner product, {bra} is arg 0
+                // For outer product, {bra} is arg 1, but for inner product, {bra} is arg 0
                 if name != "inner" {
                     result = result.replace("{bra}", second); // for outer product
                 }
@@ -1428,7 +1423,7 @@ fn render_expression_internal(
                 }
                 result = result.replace("{lower2}", third); // For tensor_lower_pair arg2
                 result = result.replace("{upper2}", third); // For tensor_2up_2down arg2
-                                                            // Added for coverage
+                // Added for coverage
                 if name == "int_bounds" {
                     result = result.replace("{upper}", third); // integral upper bound: arg 2
                 } else if name == "index_mixed" {
@@ -1453,7 +1448,7 @@ fn render_expression_internal(
                 }
                 result = result.replace("{idx3}", fourth);
                 result = result.replace("{lower1}", fourth); // For tensor_2up_2down arg3 (first lower index)
-                                                             // Added for coverage
+                // Added for coverage
                 if name == "int_bounds" || name == "kernel_integral" {
                     result = result.replace("{variable}", fourth); // int_bounds and kernel_integral variable
                 }
@@ -1462,7 +1457,7 @@ fn render_expression_internal(
             if let Some(fifth) = rendered_args.get(4) {
                 result = result.replace("{idx4}", fifth);
                 result = result.replace("{lower2}", fifth); // For tensor_2up_2down arg4 (second lower index)
-                                                            // For 6-arg operations (cases3), use arg4 as {body}
+                // For 6-arg operations (cases3), use arg4 as {body}
                 if rendered_args.len() == 6 {
                     result = result.replace("{body}", fifth);
                 }
@@ -1717,10 +1712,10 @@ fn render_expression_internal(
                 result = result.replace("{args}", &matrix_content);
             }
             // Special handling for integral var position: int_bounds(integrand, from, to, var)
-            if name == "int_bounds" {
-                if let Some(var) = rendered_args.get(3) {
-                    result = result.replace("{int_var}", var);
-                }
+            if name == "int_bounds"
+                && let Some(var) = rendered_args.get(3)
+            {
+                result = result.replace("{int_var}", var);
             }
             result
         }
@@ -1800,10 +1795,10 @@ fn render_expression_internal(
 
                     // For Typst: wrap list elements with UUID labels for position tracking
                     // This is critical for Matrix List format where each element needs tracking
-                    if *target == RenderTarget::Typst {
-                        if let Some(uuid) = node_id_to_uuid.get(&child_id) {
-                            return format!("#[#box[${}$]<id{}>]", rendered, uuid);
-                        }
+                    if *target == RenderTarget::Typst
+                        && let Some(uuid) = node_id_to_uuid.get(&child_id)
+                    {
+                        return format!("#[#box[${}$]<id{}>]", rendered, uuid);
                     }
 
                     rendered

@@ -486,59 +486,56 @@ impl DapDebugger {
         // Collect error message outside the borrow scope to avoid borrow conflicts
         let mut error_message: Option<String> = None;
 
-        if let Some(ref ctx) = self.context {
-            if let Ok(mut ctx_guard) = ctx.write() {
-                // Read and parse the file
-                match std::fs::read_to_string(program_path) {
-                    Ok(source) => {
-                        use crate::kleis_parser::parse_kleis_program;
-                        match parse_kleis_program(&source) {
-                            Ok(program) => {
-                                if let Err(e) = ctx_guard.evaluator.load_program(&program) {
-                                    dap_log!("Failed to load program: {}", e);
-                                    error_message = Some(format!("Failed to load: {}", e));
-                                } else {
-                                    dap_log!("Program loaded successfully");
+        if let Some(ref ctx) = self.context
+            && let Ok(mut ctx_guard) = ctx.write()
+        {
+            // Read and parse the file
+            match std::fs::read_to_string(program_path) {
+                Ok(source) => {
+                    use crate::kleis_parser::parse_kleis_program;
+                    match parse_kleis_program(&source) {
+                        Ok(program) => {
+                            if let Err(e) = ctx_guard.evaluator.load_program(&program) {
+                                dap_log!("Failed to load program: {}", e);
+                                error_message = Some(format!("Failed to load: {}", e));
+                            } else {
+                                dap_log!("Program loaded successfully");
 
-                                    // Store the program path for breakpoint matching
-                                    self.current_file = Some(program_path.to_string());
+                                // Store the program path for breakpoint matching
+                                self.current_file = Some(program_path.to_string());
 
-                                    // Detect example blocks (v0.93)
-                                    use crate::kleis_ast::TopLevel;
-                                    self.example_blocks.clear();
-                                    for (idx, item) in program.items.iter().enumerate() {
-                                        if let TopLevel::ExampleBlock(ex) = item {
-                                            self.example_blocks.push(ExampleBlockInfo {
-                                                name: ex.name.clone(),
-                                                start_line: (idx + 1) as u32, // Approximate line
-                                                statement_count: ex.statements.len(),
-                                            });
-                                            dap_log!(
-                                                "Found example: {} ({} statements)",
-                                                ex.name,
-                                                ex.statements.len()
-                                            );
-                                        }
-                                    }
-
-                                    if !self.example_blocks.is_empty() {
+                                // Detect example blocks (v0.93)
+                                use crate::kleis_ast::TopLevel;
+                                self.example_blocks.clear();
+                                for (idx, item) in program.items.iter().enumerate() {
+                                    if let TopLevel::ExampleBlock(ex) = item {
+                                        self.example_blocks.push(ExampleBlockInfo {
+                                            name: ex.name.clone(),
+                                            start_line: (idx + 1) as u32, // Approximate line
+                                            statement_count: ex.statements.len(),
+                                        });
                                         dap_log!(
-                                            "Found {} example blocks",
-                                            self.example_blocks.len()
+                                            "Found example: {} ({} statements)",
+                                            ex.name,
+                                            ex.statements.len()
                                         );
                                     }
                                 }
-                            }
-                            Err(e) => {
-                                dap_log!("Parse error: {}", e);
-                                error_message = Some(format!("Parse error: {}", e));
+
+                                if !self.example_blocks.is_empty() {
+                                    dap_log!("Found {} example blocks", self.example_blocks.len());
+                                }
                             }
                         }
+                        Err(e) => {
+                            dap_log!("Parse error: {}", e);
+                            error_message = Some(format!("Parse error: {}", e));
+                        }
                     }
-                    Err(e) => {
-                        dap_log!("Cannot read file: {}", e);
-                        error_message = Some(format!("Cannot read file: {}", e));
-                    }
+                }
+                Err(e) => {
+                    dap_log!("Cannot read file: {}", e);
+                    error_message = Some(format!("Cannot read file: {}", e));
                 }
             }
         }
@@ -772,25 +769,25 @@ impl DapDebugger {
         // Get variables from the shared evaluator
         let mut variables = Vec::new();
 
-        if let Some(ref ctx) = self.context {
-            if let Ok(ctx_guard) = ctx.read() {
-                // Get all bindings from evaluator
-                for (name, value) in ctx_guard.evaluator.get_all_bindings() {
-                    variables.push(serde_json::json!({
-                        "name": name,
-                        "value": format!("{:?}", value),
-                        "variablesReference": 0  // No nested variables for now
-                    }));
-                }
+        if let Some(ref ctx) = self.context
+            && let Ok(ctx_guard) = ctx.read()
+        {
+            // Get all bindings from evaluator
+            for (name, value) in ctx_guard.evaluator.get_all_bindings() {
+                variables.push(serde_json::json!({
+                    "name": name,
+                    "value": format!("{:?}", value),
+                    "variablesReference": 0  // No nested variables for now
+                }));
+            }
 
-                // Also show defined functions
-                for func_name in ctx_guard.evaluator.list_functions() {
-                    variables.push(serde_json::json!({
-                        "name": func_name,
-                        "value": "<function>",
-                        "variablesReference": 0
-                    }));
-                }
+            // Also show defined functions
+            for func_name in ctx_guard.evaluator.list_functions() {
+                variables.push(serde_json::json!({
+                    "name": func_name,
+                    "value": "<function>",
+                    "variablesReference": 0
+                }));
             }
         }
 
@@ -827,17 +824,17 @@ impl DapDebugger {
         self.current_line += 1;
 
         // Skip empty lines and comments
-        if let Some(ref file) = self.current_file {
-            if let Ok(content) = std::fs::read_to_string(file) {
-                let lines: Vec<&str> = content.lines().collect();
-                while (self.current_line as usize) <= lines.len() {
-                    let line = lines.get((self.current_line - 1) as usize).unwrap_or(&"");
-                    let trimmed = line.trim();
-                    if !trimmed.is_empty() && !trimmed.starts_with("//") {
-                        break;
-                    }
-                    self.current_line += 1;
+        if let Some(ref file) = self.current_file
+            && let Ok(content) = std::fs::read_to_string(file)
+        {
+            let lines: Vec<&str> = content.lines().collect();
+            while (self.current_line as usize) <= lines.len() {
+                let line = lines.get((self.current_line - 1) as usize).unwrap_or(&"");
+                let trimmed = line.trim();
+                if !trimmed.is_empty() && !trimmed.starts_with("//") {
+                    break;
                 }
+                self.current_line += 1;
             }
         }
 

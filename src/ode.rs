@@ -2,8 +2,8 @@
 //!
 //! Provides Runge-Kutta integration for Kleis.
 
-use ode_solvers::dopri5::Dopri5;
 use ode_solvers::DVector;
+use ode_solvers::dopri5::Dopri5;
 
 /// State vector type
 type State = DVector<f64>;

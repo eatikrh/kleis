@@ -10,7 +10,7 @@
 //! for data constructors.
 
 use kleis::evaluator::Evaluator;
-use kleis::kleis_parser::{parse_kleis_program, KleisParser};
+use kleis::kleis_parser::{KleisParser, parse_kleis_program};
 use kleis::pretty_print::PrettyPrinter;
 
 /// Load the symbolic_diff.kleis stdlib and return an evaluator

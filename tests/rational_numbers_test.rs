@@ -2,7 +2,7 @@
 //!
 //! Tests parsing, type inference, and axiom verification for ℚ
 
-use kleis::kleis_parser::{parse_kleis_program, KleisParser};
+use kleis::kleis_parser::{KleisParser, parse_kleis_program};
 use kleis::lowering::SemanticLowering;
 use kleis::solvers::z3::translators::rational::RationalZ3;
 use kleis::type_context::TypeContextBuilder;
