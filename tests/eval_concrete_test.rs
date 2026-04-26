@@ -474,3 +474,43 @@ fn test_negative_numbers() {
     assert_eq!(eval(&evaluator, "5 - 10").unwrap(), "-5");
     assert_eq!(eval(&evaluator, "0 - 42").unwrap(), "-42");
 }
+
+// =============================================================================
+// Scientific Notation Tests
+// =============================================================================
+
+#[test]
+fn test_eval_scientific_literal() {
+    let evaluator = Evaluator::new();
+    let result = eval(&evaluator, "6.674e-11").unwrap();
+    let val: f64 = result.parse().expect("should be a valid f64");
+    assert!((val - 6.674e-11).abs() < 1e-25);
+}
+
+#[test]
+fn test_eval_scientific_arithmetic() {
+    let evaluator = Evaluator::new();
+    assert_eq!(eval(&evaluator, "1e3 + 2e3").unwrap(), "3000");
+}
+
+#[test]
+fn test_eval_scientific_multiplication() {
+    let evaluator = Evaluator::new();
+    assert_eq!(eval(&evaluator, "2.5e2 * 4e-1").unwrap(), "100");
+}
+
+#[test]
+fn test_eval_scientific_large_exponent() {
+    let evaluator = Evaluator::new();
+    let result = eval(&evaluator, "3e8").unwrap();
+    let val: f64 = result.parse().expect("should be a valid f64");
+    assert!((val - 3e8).abs() < 1.0);
+}
+
+#[test]
+fn test_eval_scientific_small_exponent() {
+    let evaluator = Evaluator::new();
+    let result = eval(&evaluator, "1.6e-19").unwrap();
+    let val: f64 = result.parse().expect("should be a valid f64");
+    assert!((val - 1.6e-19).abs() < 1e-33);
+}

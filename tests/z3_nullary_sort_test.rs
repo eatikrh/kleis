@@ -249,3 +249,95 @@ example "transitive" {
         results[0].2
     );
 }
+
+// =============================================================================
+// Scientific Notation Z3 Tests
+// =============================================================================
+
+/// Scientific notation constant can be assigned to ℝ operation and verified
+#[test]
+fn test_z3_scientific_notation() {
+    let source = r#"
+operation G : ℝ
+
+structure S {
+    axiom val : G = 6.674e-11
+}
+
+example "scientific notation constant" {
+    assert(G = 6.674e-11)
+}
+"#;
+
+    let results = run_examples(source, "test_sci.kleis");
+    assert_eq!(results.len(), 1);
+    assert!(
+        results[0].1,
+        "Scientific notation constant should verify: {:?}",
+        results[0].2
+    );
+}
+
+/// Z3 can verify that a scientific notation value is positive
+#[test]
+fn test_z3_scientific_comparison() {
+    let source = r#"
+operation G : ℝ
+
+structure S {
+    axiom val : G = 6.674e-11
+}
+
+example "scientific > 0" {
+    assert(G > 0)
+}
+"#;
+
+    let results = run_examples(source, "test_sci_cmp.kleis");
+    assert_eq!(results.len(), 1);
+    assert!(
+        results[0].1,
+        "Scientific notation comparison should verify: {:?}",
+        results[0].2
+    );
+}
+
+/// Z3 can verify arithmetic equivalence: 1e3 = 1000
+#[test]
+fn test_z3_scientific_arithmetic() {
+    let source = r#"
+operation c : ℝ
+
+structure S {
+    axiom val : c = 1e3
+}
+
+example "1e3 equals 1000" {
+    assert(c = 1000)
+}
+"#;
+
+    let results = run_examples(source, "test_sci_arith.kleis");
+    assert_eq!(results.len(), 1);
+    assert!(results[0].1, "1e3 should equal 1000: {:?}", results[0].2);
+}
+
+/// Scientific notation with positive exponent sign: 2.5e+2 = 250
+#[test]
+fn test_z3_scientific_positive_exp() {
+    let source = r#"
+operation v : ℝ
+
+structure S {
+    axiom val : v = 2.5e+2
+}
+
+example "2.5e+2 equals 250" {
+    assert(v = 250)
+}
+"#;
+
+    let results = run_examples(source, "test_sci_pos.kleis");
+    assert_eq!(results.len(), 1);
+    assert!(results[0].1, "2.5e+2 should equal 250: {:?}", results[0].2);
+}

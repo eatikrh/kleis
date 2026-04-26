@@ -296,6 +296,47 @@ impl<'r> Z3Backend<'r> {
         }
     }
 
+    /// Convert a numeric string (integer, decimal, or scientific notation) to
+    /// exact numerator/denominator strings suitable for `z3::ast::Real::from_rational_str`.
+    ///
+    /// Examples:
+    ///   "3.14"     -> ("314", "100")
+    ///   "5"        -> ("5", "1")
+    ///   "1.5e3"    -> ("1500", "1")
+    ///   "6.674e-11"-> ("6674", "100000000000000")
+    fn decimal_to_rational_strings(s: &str) -> (String, String) {
+        let lower = s.to_ascii_lowercase();
+        if let Some(e_pos) = lower.find('e') {
+            let mantissa = &s[..e_pos];
+            let exp: i32 = s[e_pos + 1..].parse().unwrap_or(0);
+
+            let (digits, decimal_places) = if let Some(dot_pos) = mantissa.find('.') {
+                let dec = mantissa.len() - dot_pos - 1;
+                let d = mantissa.replace('.', "");
+                (d, dec as i32)
+            } else {
+                (mantissa.to_string(), 0)
+            };
+
+            // Effective power of 10: exponent shifts the decimal point
+            let net_exp = exp - decimal_places;
+            if net_exp >= 0 {
+                let num = format!("{}{}", digits, "0".repeat(net_exp as usize));
+                (num, "1".to_string())
+            } else {
+                let den = format!("1{}", "0".repeat((-net_exp) as usize));
+                (digits, den)
+            }
+        } else if let Some(dot_pos) = s.find('.') {
+            let decimals = s.len() - dot_pos - 1;
+            let num = s.replace('.', "");
+            let den = format!("1{}", "0".repeat(decimals));
+            (num, den)
+        } else {
+            (s.to_string(), "1".to_string())
+        }
+    }
+
     /// Create a new Z3 backend
     ///
     /// # Arguments
@@ -2410,15 +2451,8 @@ impl<'r> Z3Backend<'r> {
                     Ok(Int::from_i64(n).into())
                 } else if s.parse::<f64>().is_ok() {
                     // Use from_rational_str to avoid i32 truncation in Z3_mk_real.
-                    // Strategy: count decimal places, build exact num/den strings.
-                    let (num_str, den_str) = if let Some(dot_pos) = s.find('.') {
-                        let decimals = s.len() - dot_pos - 1;
-                        let num = s.replace('.', "");
-                        let den = format!("1{}", "0".repeat(decimals));
-                        (num, den)
-                    } else {
-                        (s.to_string(), "1".to_string())
-                    };
+                    // Strategy: build exact numerator/denominator strings.
+                    let (num_str, den_str) = Self::decimal_to_rational_strings(s);
                     Real::from_rational_str(&num_str, &den_str)
                         .map(|r| r.into())
                         .ok_or_else(|| format!("Cannot convert decimal to Z3 Real: {}", s))
