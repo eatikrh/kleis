@@ -906,14 +906,17 @@ fn render_expression_internal(
 ) -> String {
     match expr {
         Expression::Const(name) => {
+            if let Some(pretty) = format_scientific_for_target(name, target) {
+                return pretty;
+            }
             match target {
                 RenderTarget::Unicode => name.clone(),
                 RenderTarget::LaTeX => escape_latex_constant(name),
                 RenderTarget::HTML => {
                     format!(r#"<span class="math-const">{}</span>"#, escape_html(name))
                 }
-                RenderTarget::Typst => latex_to_typst_symbol(name), // Convert LaTeX symbols to Typst
-                RenderTarget::Kleis => name.clone(),                // Constants pass through as-is
+                RenderTarget::Typst => latex_to_typst_symbol(name),
+                RenderTarget::Kleis => name.clone(),
             }
         }
         Expression::String(s) => {
@@ -2222,6 +2225,65 @@ fn latex_to_typst_symbol(input: &str) -> String {
 
 fn escape_latex_constant(constant: &str) -> String {
     escape_latex_text(constant)
+}
+
+/// Split a scientific-notation string into (mantissa, exponent).
+/// Returns `None` when the string is not in scientific form.
+fn split_scientific(s: &str) -> Option<(&str, &str)> {
+    let lower = s.to_ascii_lowercase();
+    let e_pos = lower.find('e')?;
+    let mantissa = &s[..e_pos];
+    let exponent = &s[e_pos + 1..];
+    if mantissa.is_empty() || exponent.is_empty() {
+        return None;
+    }
+    // Strip a leading '+' — `1e+3` → exponent "3"
+    let exponent = exponent.strip_prefix('+').unwrap_or(exponent);
+    Some((mantissa, exponent))
+}
+
+/// Render a scientific-notation constant beautifully for the given target.
+/// Falls back to `None` when the string is not scientific notation, so the
+/// caller can use the default rendering path.
+fn format_scientific_for_target(s: &str, target: &RenderTarget) -> Option<String> {
+    let (mantissa, exponent) = split_scientific(s)?;
+    Some(match target {
+        RenderTarget::Typst => {
+            format!("{} times 10^({})", mantissa, exponent)
+        }
+        RenderTarget::LaTeX => {
+            format!("{} \\times 10^{{{}}}", mantissa, exponent)
+        }
+        RenderTarget::HTML => {
+            format!(
+                r#"<span class="math-const">{} &times; 10<sup>{}</sup></span>"#,
+                escape_html(mantissa),
+                escape_html(exponent),
+            )
+        }
+        RenderTarget::Unicode => {
+            let superscript = exponent
+                .chars()
+                .map(|ch| match ch {
+                    '0' => '⁰',
+                    '1' => '¹',
+                    '2' => '²',
+                    '3' => '³',
+                    '4' => '⁴',
+                    '5' => '⁵',
+                    '6' => '⁶',
+                    '7' => '⁷',
+                    '8' => '⁸',
+                    '9' => '⁹',
+                    '-' => '⁻',
+                    '+' => '⁺',
+                    _ => ch,
+                })
+                .collect::<String>();
+            format!("{} × 10{}", mantissa, superscript)
+        }
+        RenderTarget::Kleis => return None,
+    })
 }
 
 fn escape_latex_text(input: &str) -> String {
@@ -5768,6 +5830,114 @@ mod tests {
         let text_expr = op("text", vec![o(", we have ")]);
         let out = render_expression(&text_expr, &ctx, &RenderTarget::LaTeX);
         assert_eq!(out, "\\text{, we have }");
+    }
+
+    // --- Scientific notation rendering ---
+
+    #[test]
+    fn split_scientific_basic() {
+        assert_eq!(split_scientific("6.674e-11"), Some(("6.674", "-11")));
+        assert_eq!(split_scientific("1.5E3"), Some(("1.5", "3")));
+        assert_eq!(split_scientific("3e8"), Some(("3", "8")));
+        assert_eq!(split_scientific("1e+3"), Some(("1", "3")));
+    }
+
+    #[test]
+    fn split_scientific_not_scientific() {
+        assert_eq!(split_scientific("42"), None);
+        assert_eq!(split_scientific("3.14"), None);
+        assert_eq!(split_scientific("0"), None);
+    }
+
+    #[test]
+    fn renders_scientific_typst() {
+        let ctx = build_default_context();
+        let expr = c("6.674e-11");
+        let out = render_expression(&expr, &ctx, &RenderTarget::Typst);
+        assert_eq!(out, "6.674 times 10^(-11)");
+    }
+
+    #[test]
+    fn renders_scientific_latex() {
+        let ctx = build_default_context();
+        let expr = c("6.674e-11");
+        let out = render_expression(&expr, &ctx, &RenderTarget::LaTeX);
+        assert_eq!(out, "6.674 \\times 10^{-11}");
+    }
+
+    #[test]
+    fn renders_scientific_html() {
+        let ctx = build_default_context();
+        let expr = c("6.674e-11");
+        let out = render_expression(&expr, &ctx, &RenderTarget::HTML);
+        assert!(out.contains("6.674 &times; 10<sup>-11</sup>"));
+    }
+
+    #[test]
+    fn renders_scientific_unicode() {
+        let ctx = build_default_context();
+        let expr = c("6.674e-11");
+        let out = render_expression(&expr, &ctx, &RenderTarget::Unicode);
+        assert_eq!(out, "6.674 × 10⁻¹¹");
+    }
+
+    #[test]
+    fn renders_scientific_kleis_passthrough() {
+        let ctx = build_default_context();
+        let expr = c("6.674e-11");
+        let out = render_expression(&expr, &ctx, &RenderTarget::Kleis);
+        assert_eq!(out, "6.674e-11");
+    }
+
+    #[test]
+    fn renders_scientific_positive_exponent() {
+        let ctx = build_default_context();
+        let expr = c("3e8");
+        assert_eq!(
+            render_expression(&expr, &ctx, &RenderTarget::Typst),
+            "3 times 10^(8)"
+        );
+        assert_eq!(
+            render_expression(&expr, &ctx, &RenderTarget::LaTeX),
+            "3 \\times 10^{8}"
+        );
+        assert_eq!(
+            render_expression(&expr, &ctx, &RenderTarget::Unicode),
+            "3 × 10⁸"
+        );
+    }
+
+    #[test]
+    fn renders_scientific_explicit_plus_sign() {
+        let ctx = build_default_context();
+        let expr = c("1.5e+3");
+        assert_eq!(
+            render_expression(&expr, &ctx, &RenderTarget::Typst),
+            "1.5 times 10^(3)"
+        );
+        assert_eq!(
+            render_expression(&expr, &ctx, &RenderTarget::Unicode),
+            "1.5 × 10³"
+        );
+    }
+
+    #[test]
+    fn renders_plain_number_unchanged() {
+        let ctx = build_default_context();
+        let expr = c("42");
+        assert_eq!(render_expression(&expr, &ctx, &RenderTarget::Typst), "42");
+        assert_eq!(render_expression(&expr, &ctx, &RenderTarget::LaTeX), "42");
+        assert_eq!(render_expression(&expr, &ctx, &RenderTarget::Unicode), "42");
+    }
+
+    #[test]
+    fn renders_scientific_uppercase_e() {
+        let ctx = build_default_context();
+        let expr = c("2.998E8");
+        assert_eq!(
+            render_expression(&expr, &ctx, &RenderTarget::LaTeX),
+            "2.998 \\times 10^{8}"
+        );
     }
 }
 
