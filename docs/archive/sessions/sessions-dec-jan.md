@@ -630,7 +630,7 @@ Expression → translate_to_editor() → EditorNode → render(Typst) → SVG
 └─────────────────┘          └─────────────────┘
 ```
 
-The Equation Editor is a web app (`static/index.html` or `patternfly-editor/`) that requires `kleis server` running. Jupyter has its own Python kernel. These are separate processes.
+The Equation Editor is a web app (`static/index.html` or `react-editor/`) that requires `kleis server` running. Jupyter has its own Python kernel. These are separate processes.
 
 **Key insight:** The deliverable is the **rendered SVG**, not Kleis code. Scientists want:
 ```
@@ -689,14 +689,14 @@ Standard template library: `std_template_lib/*.kleist` (12 files: basic, calculu
 4. **File upload** mechanism for custom templates in browser
 
 **Components to study:**
-- `patternfly-editor/` — React app, could become ipywidget frontend
+- `react-editor/` — React app, could become ipywidget frontend
 - `src/bin/server.rs` — HTTP API endpoints for rendering
 - `src/typst_renderer.rs` — The Typst code generation
 - `src/render_editor.rs` — Template-based rendering
 
 **Files:**
 - `static/index.html` — Original Equation Editor
-- `patternfly-editor/` — PatternFly/React version
+- `react-editor/` — React version
 - `kleis-notebook/` — Current Jupyter kernel
 - `std_template_lib/*.kleist` — Standard template library (12 files)
 
@@ -764,7 +764,7 @@ When we integrate the Equation Editor with Jupyter notebooks, we will document:
 
 **Documentation approach (lesson learned Jan 2, 2026):**
 Just like we documented the Solver Abstraction Layer by **reading the code first**, we will:
-- Read `static/index.html`, `patternfly-editor/`, `std_template_lib/*.kleist`
+- Read `static/index.html`, `react-editor/`, `std_template_lib/*.kleist`
 - Understand the actual implementation
 - Then document what exists
 
@@ -775,7 +775,7 @@ Just like we documented the Solver Abstraction Layer by **reading the code first
 
 **Files to document when ready:**
 - `static/index.html` — Original Equation Editor
-- `patternfly-editor/` — PatternFly/React version
+- `react-editor/` — React version
 - `std_template_lib/*.kleist` — Standard template library (12 files)
 - `src/typst_renderer.rs` — Template-based rendering
 - `src/render_editor.rs` — EditorNode rendering
@@ -2714,7 +2714,7 @@ The Equation Editor should support Set operations with proper type inference.
 - `static/index.html` - Add buttons to palette
 - `std_template_lib/sets.kleist` - Template definitions
 - `src/render_editor.rs` - Rendering templates
-- `patternfly-editor/` - PatternFly integration
+- `react-editor/` - React editor integration
 
 **Leave for future branch:** `feature/equation-editor-sets`
 

@@ -67,7 +67,7 @@
 - [Grammar Reference](./appendix/grammar.md)
 - [Operators](./appendix/operators.md)
 - [Built-in Functions](./appendix/builtin-functions.md)
-- [LAPACK Functions](./appendix/lapack.md)
+- [Numerical Functions (LAPACK & Tensor)](./appendix/lapack.md)
 - [ODE Solver](./appendix/ode-solver.md)
 - [Standard Library Reference](./appendix/stdlib.md)
 - [LISP Interpreter](./appendix/lisp-interpreter.md)
