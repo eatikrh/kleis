@@ -4,7 +4,7 @@
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 use kleis::ast::Expression;
-use kleis::render::{build_default_context, render_expression, RenderTarget};
+use kleis::render::{RenderTarget, build_default_context, render_expression};
 
 fn main() {
     let expr = Expression::operation(

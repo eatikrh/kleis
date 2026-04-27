@@ -1,6 +1,6 @@
 use crate::ast::Expression;
 
-use super::{eval_numeric, Evaluator};
+use super::{Evaluator, eval_numeric};
 
 impl Evaluator {
     pub(crate) fn extract_bool(&self, expr: &Expression) -> Result<bool, String> {
@@ -152,18 +152,18 @@ impl Evaluator {
             return Ok(result);
         }
 
-        if let Expression::Operation { name, args, .. } = &evaluated {
-            if name == "List" || name == "list" {
-                let mut result = Vec::new();
-                for arg in args {
-                    if let Some(n) = self.as_number(arg) {
-                        result.push(n);
-                    } else {
-                        return Err(format!("Expected number in list, got: {:?}", arg));
-                    }
+        if let Expression::Operation { name, args, .. } = &evaluated
+            && (name == "List" || name == "list")
+        {
+            let mut result = Vec::new();
+            for arg in args {
+                if let Some(n) = self.as_number(arg) {
+                    result.push(n);
+                } else {
+                    return Err(format!("Expected number in list, got: {:?}", arg));
                 }
-                return Ok(result);
             }
+            return Ok(result);
         }
 
         if let Some(elems) = self.extract_flat_list(&evaluated) {
@@ -273,18 +273,13 @@ impl Evaluator {
                         return parts.join("");
                     }
                 }
-                if (name == "Matrix" || name == "matrix") && args.len() == 3 {
-                    if let (Some(rows), Some(cols)) =
+                if (name == "Matrix" || name == "matrix")
+                    && args.len() == 3
+                    && let (Some(rows), Some(cols)) =
                         (self.as_integer(&args[0]), self.as_integer(&args[1]))
-                    {
-                        if let Expression::List(elements) = &args[2] {
-                            return self.pretty_print_flat_matrix(
-                                rows as usize,
-                                cols as usize,
-                                elements,
-                            );
-                        }
-                    }
+                    && let Expression::List(elements) = &args[2]
+                {
+                    return self.pretty_print_flat_matrix(rows as usize, cols as usize, elements);
                 }
                 if args.is_empty() {
                     name.clone()

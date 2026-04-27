@@ -90,12 +90,13 @@ impl Parser {
         let start = self.pos;
 
         // Check for special single-character commands
-        if let Some(ch) = self.peek() {
-            if !ch.is_alphanumeric() && ch != ' ' {
-                // Special chars like \{ \} \, \!
-                self.advance();
-                return Ok(ch.to_string());
-            }
+        if let Some(ch) = self.peek()
+            && !ch.is_alphanumeric()
+            && ch != ' '
+        {
+            // Special chars like \{ \} \, \!
+            self.advance();
+            return Ok(ch.to_string());
         }
 
         // Parse multi-character command
@@ -153,10 +154,10 @@ impl Parser {
 
             if self.peek() == Some('\\') {
                 let saved_pos = self.pos;
-                if let Ok(cmd) = self.parse_command() {
-                    if matches!(cmd.as_str(), "," | ";" | "!" | "quad" | "qquad" | "colon") {
-                        continue;
-                    }
+                if let Ok(cmd) = self.parse_command()
+                    && matches!(cmd.as_str(), "," | ";" | "!" | "quad" | "qquad" | "colon")
+                {
+                    continue;
                 }
                 // Not a spacing command, restore position
                 self.pos = saved_pos;
@@ -293,10 +294,10 @@ impl Parser {
                 self.skip_whitespace();
                 if self.peek() == Some('\\') {
                     let saved = self.pos;
-                    if let Ok(cmd) = self.parse_command() {
-                        if cmd == "rangle" {
-                            return Ok(op("ket", vec![content]));
-                        }
+                    if let Ok(cmd) = self.parse_command()
+                        && cmd == "rangle"
+                    {
+                        return Ok(op("ket", vec![content]));
                     }
                     self.pos = saved;
                 }
@@ -1038,10 +1039,10 @@ impl Parser {
                     // Look for \}
                     if self.peek() == Some('\\') {
                         let saved = self.pos;
-                        if let Ok(cmd) = self.parse_command() {
-                            if cmd == "}" {
-                                return Ok(op("anticommutator", vec![first, second]));
-                            }
+                        if let Ok(cmd) = self.parse_command()
+                            && cmd == "}"
+                        {
+                            return Ok(op("anticommutator", vec![first, second]));
                         }
                         self.pos = saved;
                     }
@@ -1093,27 +1094,27 @@ impl Parser {
                     if ch == '\\' {
                         let cmd_pos = self.pos;
                         self.advance(); // consume \
-                        if let Some(next) = self.peek() {
-                            if next.is_alphabetic() {
-                                // Parse command name
-                                let mut cmd_name = String::new();
-                                while let Some(c) = self.peek() {
-                                    if c.is_alphabetic() {
-                                        cmd_name.push(c);
-                                        self.advance();
-                                    } else {
-                                        break;
-                                    }
+                        if let Some(next) = self.peek()
+                            && next.is_alphabetic()
+                        {
+                            // Parse command name
+                            let mut cmd_name = String::new();
+                            while let Some(c) = self.peek() {
+                                if c.is_alphabetic() {
+                                    cmd_name.push(c);
+                                    self.advance();
+                                } else {
+                                    break;
                                 }
-                                if cmd_name == "rfloor" && depth == 0 {
-                                    let content_str: String =
-                                        self.input[saved_pos..cmd_pos].iter().collect();
-                                    let mut content_parser = Parser::new(&content_str);
-                                    match content_parser.parse() {
-                                        Ok(content) => return Ok(op("floor", vec![content])),
-                                        Err(_) => {
-                                            return Ok(op("floor", vec![o(content_str.trim())]));
-                                        }
+                            }
+                            if cmd_name == "rfloor" && depth == 0 {
+                                let content_str: String =
+                                    self.input[saved_pos..cmd_pos].iter().collect();
+                                let mut content_parser = Parser::new(&content_str);
+                                match content_parser.parse() {
+                                    Ok(content) => return Ok(op("floor", vec![content])),
+                                    Err(_) => {
+                                        return Ok(op("floor", vec![o(content_str.trim())]));
                                     }
                                 }
                             }
@@ -1148,27 +1149,27 @@ impl Parser {
                     if ch == '\\' {
                         let cmd_pos = self.pos;
                         self.advance(); // consume \
-                        if let Some(next) = self.peek() {
-                            if next.is_alphabetic() {
-                                // Parse command name
-                                let mut cmd_name = String::new();
-                                while let Some(c) = self.peek() {
-                                    if c.is_alphabetic() {
-                                        cmd_name.push(c);
-                                        self.advance();
-                                    } else {
-                                        break;
-                                    }
+                        if let Some(next) = self.peek()
+                            && next.is_alphabetic()
+                        {
+                            // Parse command name
+                            let mut cmd_name = String::new();
+                            while let Some(c) = self.peek() {
+                                if c.is_alphabetic() {
+                                    cmd_name.push(c);
+                                    self.advance();
+                                } else {
+                                    break;
                                 }
-                                if cmd_name == "rceil" && depth == 0 {
-                                    let content_str: String =
-                                        self.input[saved_pos..cmd_pos].iter().collect();
-                                    let mut content_parser = Parser::new(&content_str);
-                                    match content_parser.parse() {
-                                        Ok(content) => return Ok(op("ceiling", vec![content])),
-                                        Err(_) => {
-                                            return Ok(op("ceiling", vec![o(content_str.trim())]));
-                                        }
+                            }
+                            if cmd_name == "rceil" && depth == 0 {
+                                let content_str: String =
+                                    self.input[saved_pos..cmd_pos].iter().collect();
+                                let mut content_parser = Parser::new(&content_str);
+                                match content_parser.parse() {
+                                    Ok(content) => return Ok(op("ceiling", vec![content])),
+                                    Err(_) => {
+                                        return Ok(op("ceiling", vec![o(content_str.trim())]));
                                     }
                                 }
                             }
@@ -2074,9 +2075,9 @@ mod tests {
             Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "Piecewise");
                 assert_eq!(args.len(), 3); // n, [exprs], [conds]
-                                           // args[0] = Const("2")
-                                           // args[1] = List([expr1, expr2])
-                                           // args[2] = List([cond1, cond2])
+                // args[0] = Const("2")
+                // args[1] = List([expr1, expr2])
+                // args[2] = List([cond1, cond2])
             }
             _ => panic!("Expected Piecewise operation"),
         }
@@ -2091,9 +2092,9 @@ mod tests {
             Expression::Operation { name, args, .. } => {
                 assert_eq!(name, "Piecewise");
                 assert_eq!(args.len(), 3); // n, [exprs], [conds]
-                                           // args[0] = Const("3")
-                                           // args[1] = List([expr1, expr2, expr3])
-                                           // args[2] = List([cond1, cond2, cond3])
+                // args[0] = Const("3")
+                // args[1] = List([expr1, expr2, expr3])
+                // args[2] = List([cond1, cond2, cond3])
             }
             _ => panic!("Expected Piecewise operation"),
         }

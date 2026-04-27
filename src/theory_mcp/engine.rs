@@ -8,7 +8,7 @@ use crate::ast::Expression;
 use crate::config::TheoryConfig;
 use crate::evaluator::Evaluator;
 use crate::kleis_ast::{Program, StructureMember, TopLevel};
-use crate::kleis_parser::{parse_kleis_program, parse_kleis_program_with_file, KleisParser};
+use crate::kleis_parser::{KleisParser, parse_kleis_program, parse_kleis_program_with_file};
 use crate::pretty_print::PrettyPrinter;
 use crate::solvers::backend::Witness;
 use serde_json::Value;

@@ -4,7 +4,7 @@
 //! conforming to the grammar in docs/grammar/kleis_grammar_v05.ebnf
 
 use kleis::ast::Expression;
-use kleis::render::{build_default_context, render_expression, RenderTarget};
+use kleis::render::{RenderTarget, build_default_context, render_expression};
 
 // Helper functions
 fn c(s: &str) -> Expression {

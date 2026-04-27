@@ -1,6 +1,6 @@
 use crate::ast::Expression;
 
-use super::{eval_numeric, Evaluator};
+use super::{Evaluator, eval_numeric};
 
 impl Evaluator {
     pub(crate) fn apply_builtin(
@@ -757,10 +757,10 @@ impl Evaluator {
                 }
 
                 // Also handle Cons/Nil lists for compatibility
-                if let Expression::Object(s) = &evaluated_list {
-                    if s == "Nil" {
-                        return Ok(Some(Expression::List(vec![])));
-                    }
+                if let Expression::Object(s) = &evaluated_list
+                    && s == "Nil"
+                {
+                    return Ok(Some(Expression::List(vec![])));
                 }
                 if let Expression::Operation {
                     name, args: inner, ..
@@ -812,10 +812,10 @@ impl Evaluator {
                             if s == "true" || s == "True" {
                                 results.push(elem.clone());
                             }
-                        } else if let Expression::Const(s) = &result {
-                            if s == "true" || s == "True" {
-                                results.push(elem.clone());
-                            }
+                        } else if let Expression::Const(s) = &result
+                            && (s == "true" || s == "True")
+                        {
+                            results.push(elem.clone());
                         }
                     }
                     return Ok(Some(Expression::List(results)));
@@ -907,10 +907,10 @@ impl Evaluator {
                     args: pair_args,
                     ..
                 } = &evaluated
+                    && name == "Pair"
+                    && pair_args.len() == 2
                 {
-                    if name == "Pair" && pair_args.len() == 2 {
-                        return Ok(Some(pair_args[0].clone()));
-                    }
+                    return Ok(Some(pair_args[0].clone()));
                 }
                 Ok(None)
             }
@@ -927,10 +927,10 @@ impl Evaluator {
                     args: pair_args,
                     ..
                 } = &evaluated
+                    && name == "Pair"
+                    && pair_args.len() == 2
                 {
-                    if name == "Pair" && pair_args.len() == 2 {
-                        return Ok(Some(pair_args[1].clone()));
-                    }
+                    return Ok(Some(pair_args[1].clone()));
                 }
                 Ok(None)
             }
@@ -944,12 +944,12 @@ impl Evaluator {
                 // Evaluate the list argument first
                 let evaluated_list = self.eval_concrete(&args[0])?;
 
-                if let Expression::List(elements) = &evaluated_list {
-                    if let Some(idx) = self.as_number(&args[1]) {
-                        let idx = idx as usize;
-                        if idx < elements.len() {
-                            return Ok(Some(elements[idx].clone()));
-                        }
+                if let Expression::List(elements) = &evaluated_list
+                    && let Some(idx) = self.as_number(&args[1])
+                {
+                    let idx = idx as usize;
+                    if idx < elements.len() {
+                        return Ok(Some(elements[idx].clone()));
                     }
                 }
                 Ok(None)
@@ -1110,10 +1110,10 @@ impl Evaluator {
                     }
                     return Ok(Some(acc));
                 }
-                if let Expression::Object(s) = &evaluated_list {
-                    if s == "Nil" {
-                        return Ok(Some(z.clone()));
-                    }
+                if let Expression::Object(s) = &evaluated_list
+                    && s == "Nil"
+                {
+                    return Ok(Some(z.clone()));
                 }
                 Ok(None)
             }
@@ -1176,10 +1176,10 @@ impl Evaluator {
                     }
                     return Ok(Some(Expression::Object("true".to_string())));
                 }
-                if let Expression::Object(s) = &evaluated_list {
-                    if s == "Nil" {
-                        return Ok(Some(Expression::Object("true".to_string())));
-                    }
+                if let Expression::Object(s) = &evaluated_list
+                    && s == "Nil"
+                {
+                    return Ok(Some(Expression::Object("true".to_string())));
                 }
                 Ok(None)
             }
@@ -1202,10 +1202,10 @@ impl Evaluator {
                     }
                     return Ok(Some(Expression::Object("false".to_string())));
                 }
-                if let Expression::Object(s) = &evaluated_list {
-                    if s == "Nil" {
-                        return Ok(Some(Expression::Object("false".to_string())));
-                    }
+                if let Expression::Object(s) = &evaluated_list
+                    && s == "Nil"
+                {
+                    return Ok(Some(Expression::Object("false".to_string())));
                 }
                 Ok(None)
             }
@@ -1785,7 +1785,7 @@ impl Evaluator {
                             return Err(format!(
                                 "det: only 1x1, 2x2, 3x3 supported, got {}x{}",
                                 m, n
-                            ))
+                            ));
                         }
                     };
                     if det.fract() == 0.0 && det.abs() < 1e15 {
@@ -3191,10 +3191,10 @@ impl Evaluator {
                 let rank_real =
                     self.eval_concrete(&Expression::operation("rank", vec![realified]))?;
                 // Divide by 2 since realification doubles the dimension
-                if let Expression::Const(s) = &rank_real {
-                    if let Ok(r) = s.parse::<i64>() {
-                        return Ok(Some(Expression::Const(format!("{}", r / 2))));
-                    }
+                if let Expression::Const(s) = &rank_real
+                    && let Ok(r) = s.parse::<i64>()
+                {
+                    return Ok(Some(Expression::Const(format!("{}", r / 2))));
                 }
                 Ok(Some(rank_real))
             }
@@ -3312,13 +3312,11 @@ impl Evaluator {
                     if k == 0 {
                         // M^0 = I (complex identity)
                         // Need to get the dimension first
-                        if let Some((a, _b)) = self.extract_complex_matrix(&args[0]) {
-                            if let Some((n, _, _)) = self.extract_matrix(&a) {
-                                return self.apply_builtin(
-                                    "cmat_eye",
-                                    &[Expression::Const(format!("{}", n))],
-                                );
-                            }
+                        if let Some((a, _b)) = self.extract_complex_matrix(&args[0])
+                            && let Some((n, _, _)) = self.extract_matrix(&a)
+                        {
+                            return self
+                                .apply_builtin("cmat_eye", &[Expression::Const(format!("{}", n))]);
                         }
                         return Ok(None);
                     }
@@ -3424,7 +3422,7 @@ impl Evaluator {
                     return Err(format!(
                         "concat(): unsupported argument type {:?}, expected string/object",
                         other
-                    ))
+                    ));
                 }
             }
         }
@@ -3548,19 +3546,19 @@ impl Evaluator {
             );
 
             // Apply lambda using the evaluator
-            if let Expression::Lambda { params, .. } = &f_clone {
-                if params.len() >= 2 {
-                    // SAFETY: eval_ptr points to self which is valid for this function's duration
-                    let evaluator = unsafe { &*eval_ptr };
+            if let Expression::Lambda { params, .. } = &f_clone
+                && params.len() >= 2
+            {
+                // SAFETY: eval_ptr points to self which is valid for this function's duration
+                let evaluator = unsafe { &*eval_ptr };
 
-                    // Use beta reduction to apply lambda: (λ t y . body)(t_val, y_val)
-                    if let Ok(reduced) = evaluator.beta_reduce_multi(&f_clone, &[t_expr, y_expr]) {
-                        // Evaluate the reduced expression
-                        if let Ok(Expression::List(elems)) = evaluator.eval_concrete(&reduced) {
-                            let nums: Option<Vec<f64>> = elems.iter().map(eval_numeric).collect();
-                            if let Some(v) = nums {
-                                return v;
-                            }
+                // Use beta reduction to apply lambda: (λ t y . body)(t_val, y_val)
+                if let Ok(reduced) = evaluator.beta_reduce_multi(&f_clone, &[t_expr, y_expr]) {
+                    // Evaluate the reduced expression
+                    if let Ok(Expression::List(elems)) = evaluator.eval_concrete(&reduced) {
+                        let nums: Option<Vec<f64>> = elems.iter().map(eval_numeric).collect();
+                        if let Some(v) = nums {
+                            return v;
                         }
                     }
                 }

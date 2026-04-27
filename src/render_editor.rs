@@ -1251,10 +1251,10 @@ fn render_object(
     let rendered = render_object_with_context(s, ctx, target);
 
     // Add UUID label for Typst position tracking
-    if matches!(target, RenderTarget::Typst) {
-        if let Some(uuid) = node_id_to_uuid.get(node_id) {
-            return format!("#[#box[${}$]<id{}>]", rendered, uuid);
-        }
+    if matches!(target, RenderTarget::Typst)
+        && let Some(uuid) = node_id_to_uuid.get(node_id)
+    {
+        return format!("#[#box[${}$]<id{}>]", rendered, uuid);
     }
     rendered
 }
@@ -1394,10 +1394,10 @@ fn render_const(
     };
 
     // Add UUID label for Typst
-    if matches!(target, RenderTarget::Typst) {
-        if let Some(uuid) = node_id_to_uuid.get(node_id) {
-            return format!("#[#box[${}$]<id{}>]", rendered, uuid);
-        }
+    if matches!(target, RenderTarget::Typst)
+        && let Some(uuid) = node_id_to_uuid.get(node_id)
+    {
+        return format!("#[#box[${}$]<id{}>]", rendered, uuid);
     }
     rendered
 }
@@ -1686,10 +1686,10 @@ fn render_matrix_constructor(
             let rendered = render_internal(elem, ctx, target, &child_id, node_id_to_uuid);
 
             // Wrap with UUID for Typst
-            if matches!(target, RenderTarget::Typst) {
-                if let Some(uuid) = node_id_to_uuid.get(&child_id) {
-                    return format!("#[#box[${}$]<id{}>]", rendered, uuid);
-                }
+            if matches!(target, RenderTarget::Typst)
+                && let Some(uuid) = node_id_to_uuid.get(&child_id)
+            {
+                return format!("#[#box[${}$]<id{}>]", rendered, uuid);
             }
             rendered
         })
@@ -1720,10 +1720,10 @@ fn render_fixed_matrix(
             let rendered = render_internal(elem, ctx, target, &child_id, node_id_to_uuid);
 
             // Wrap with UUID for Typst
-            if matches!(target, RenderTarget::Typst) {
-                if let Some(uuid) = node_id_to_uuid.get(&child_id) {
-                    return format!("#[#box[${}$]<id{}>]", rendered, uuid);
-                }
+            if matches!(target, RenderTarget::Typst)
+                && let Some(uuid) = node_id_to_uuid.get(&child_id)
+            {
+                return format!("#[#box[${}$]<id{}>]", rendered, uuid);
             }
             rendered
         })
@@ -2118,7 +2118,7 @@ fn apply_template_substitutions(
         result = result.replace("{B}", second);
         result = result.replace("{k}", second); // binomial: n choose k
         result = result.replace("{radicand}", second); // nth_root: radicand
-                                                       // For index_mixed
+        // For index_mixed
         if name == "index_mixed" {
             result = result.replace("{upper}", second);
         }
@@ -2130,7 +2130,7 @@ fn apply_template_substitutions(
         result = result.replace("{idx2}", third);
         result = result.replace("{superscript}", third); // subsup: base_sub^super
         result = result.replace("{target}", third); // lim: limit target
-                                                    // For index_mixed
+        // For index_mixed
         if name == "index_mixed" {
             result = result.replace("{lower}", third);
         }

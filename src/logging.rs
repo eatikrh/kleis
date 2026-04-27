@@ -31,18 +31,17 @@ pub fn init_default_logging() {
 
 /// Log a message to the file
 pub fn log(level: &str, component: &str, message: &str) {
-    if let Some(mutex) = LOG_FILE.get() {
-        if let Ok(mut guard) = mutex.lock() {
-            if let Some(ref mut file) = *guard {
-                let timestamp = chrono_lite_timestamp();
-                let _ = writeln!(
-                    file,
-                    "[{}] [{}] [{}] {}",
-                    timestamp, level, component, message
-                );
-                let _ = file.flush();
-            }
-        }
+    if let Some(mutex) = LOG_FILE.get()
+        && let Ok(mut guard) = mutex.lock()
+        && let Some(ref mut file) = *guard
+    {
+        let timestamp = chrono_lite_timestamp();
+        let _ = writeln!(
+            file,
+            "[{}] [{}] [{}] {}",
+            timestamp, level, component, message
+        );
+        let _ = file.flush();
     }
 }
 

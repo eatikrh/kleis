@@ -105,10 +105,9 @@ impl SignatureInterpreter {
                     name,
                     type_signature,
                 } = member
+                    && name == op_name
                 {
-                    if name == op_name {
-                        return Some(type_signature);
-                    }
+                    return Some(type_signature);
                 }
                 None
             })
@@ -661,14 +660,13 @@ impl SignatureInterpreter {
                         constructor,
                         args: existing_args,
                     } = &binding
+                        && existing_args.is_empty()
                     {
-                        if existing_args.is_empty() {
-                            return Ok(Type::Data {
-                                type_name: type_name.clone(),
-                                constructor: constructor.clone(),
-                                args,
-                            });
-                        }
+                        return Ok(Type::Data {
+                            type_name: type_name.clone(),
+                            constructor: constructor.clone(),
+                            args,
+                        });
                     }
 
                     let mut applied = binding;

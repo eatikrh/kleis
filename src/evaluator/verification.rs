@@ -285,10 +285,11 @@ impl Evaluator {
     /// - Symbolic values - Return Unknown (for future Z3 integration)
     pub(crate) fn eval_assert(&self, condition: &Expression) -> AssertResult {
         // Check if this is an equality assertion: a = b
-        if let Expression::Operation { name, args, .. } = condition {
-            if (name == "eq" || name == "equals" || name == "=") && args.len() == 2 {
-                return self.eval_equality_assert(&args[0], &args[1]);
-            }
+        if let Expression::Operation { name, args, .. } = condition
+            && (name == "eq" || name == "equals" || name == "=")
+            && args.len() == 2
+        {
+            return self.eval_equality_assert(&args[0], &args[1]);
         }
 
         // For quantified assertions, try Z3 first (they can't be evaluated concretely)
@@ -441,14 +442,14 @@ impl Evaluator {
         };
 
         const LARGE_STRING_THRESHOLD: usize = 1_000_000;
-        if let Expression::String(s) = concrete_arg {
-            if s.len() > LARGE_STRING_THRESHOLD {
-                eprintln!(
-                    "[kleis-review] Warning: large string ({} bytes) passed to Z3 — \
+        if let Expression::String(s) = concrete_arg
+            && s.len() > LARGE_STRING_THRESHOLD
+        {
+            eprintln!(
+                "[kleis-review] Warning: large string ({} bytes) passed to Z3 — \
                      temporary memory usage may be high",
-                    s.len()
-                );
-            }
+                s.len()
+            );
         }
 
         let structure = self.structures.iter().find(|s| s.name == structure_name)?;
@@ -462,12 +463,11 @@ impl Evaluator {
                     },
                 ..
             } = member
+                && variables.len() == 1
             {
-                if variables.len() == 1 {
-                    let mut subst = HashMap::new();
-                    subst.insert(variables[0].name.clone(), concrete_arg.clone());
-                    ground_axioms.push(self.substitute(body, &subst));
-                }
+                let mut subst = HashMap::new();
+                subst.insert(variables[0].name.clone(), concrete_arg.clone());
+                ground_axioms.push(self.substitute(body, &subst));
             }
         }
 

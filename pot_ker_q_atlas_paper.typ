@@ -1,0 +1,332 @@
+#import "@preview/lilaq:0.5.0" as lq
+#set page(
+  paper: "us-letter",
+  margin: (top: 1in, bottom: 1in, left: 1in, right: 1in),
+  numbering: "1",
+  header: align(right)[_Preprint_],
+)
+#set text(
+  font: "New Computer Modern",
+  size: 11pt,
+  lang: "en",
+)
+#set par(
+  justify: true,
+  leading: 0.65em,
+  first-line-indent: 1em,
+)
+
+// No indent after headings
+#show heading: it => {
+  it
+  par(text(size: 0pt, ""))
+}
+#set heading(numbering: "1.1")
+
+// Section headings (level 1)
+#show heading.where(level: 1): it => {
+  v(1em)
+  text(size: 12pt, weight: "bold")[#counter(heading).display() #it.body]
+  v(0.5em)
+}
+
+// Subsection headings (level 2)
+#show heading.where(level: 2): it => {
+  v(0.8em)
+  text(size: 11pt, weight: "bold")[#counter(heading).display() #it.body]
+  v(0.4em)
+}
+
+// Subsubsection headings (level 3)
+#show heading.where(level: 3): it => {
+  v(0.6em)
+  text(size: 10pt, weight: "bold", style: "italic")[#counter(heading).display() #it.body]
+  v(0.3em)
+}
+#set figure(placement: auto)
+#show figure.caption: it => {
+  text(size: 9pt)[#it]
+}
+#show link: it => text(fill: blue.darken(20%))[#underline[#it]]
+
+
+#align(center)[
+  #text(size: 17pt, weight: "bold")[The Structural Atlas of ker(Q)]
+  
+  #v(1em)
+  
+  Engin Atik#super[1]
+  
+  #v(0.5em)
+  
+  #super[1]Kleis Research, https://kleis.io
+]
+
+#v(1em)
+
+#align(center)[
+  #rect(width: 85%, stroke: none)[
+    #align(left)[
+      #text(weight: "bold")[Abstract]
+      #v(0.3em)
+      #text(size: 10pt)[Five preceding papers in the $K$--$Q$ operator framework computed one-loop observables in $phi^4$ theory, QED, and Yang-Mills theory, then extracted and stress-tested the ghost-activity theorem. Each paper found structure in the null space $ker(Q)$ of the observable projection --- but piecemeal, one type at a time. This paper maps $ker(Q)$ systematically. We identify six structurally distinct types of elements in $ker(Q)$, classified by their activity mode and loop-order stability: (1) scheme-dependent constants (inert, stable), (2) gauge ghost sectors (active/inert depending on algebra, stable), (3) unphysical polarizations (redistributive, stable), (4) anomalous currents (migratory --- the key new result), (5) confined colored states (active non-perturbatively), and (6) topological sectors (latent). The central observation is that $ker(Q)$ is not loop-order-stable: the chiral anomaly is a structural event in which an element of $ker(Q)$ at tree level migrates to $"im"(Q)$ at one loop via the triangle diagram. This migration --- not the anomaly coefficient itself --- is the structural phenomenon. Types 1--3 are loop-stable; Type 4 is not; Types 5--6 are open. The classification provides the foundation for a representation-invariant decomposition theorem. All 24 structural results are machine-verified by Z3.]
+    ]
+  ]
+]
+
+#text(size: 9pt)[*Keywords:* null space, ker(Q), anomaly, chiral anomaly, confinement, topological sector, ghost, polarization, loop-order stability, structural atlas, Z3]
+
+#v(1em)
+
+
+= Introduction
+
+Five preceding papers [AtikPhi4, AtikQED, AtikYM, AtikGhost, AtikGauge] developed the $K$--$Q$ operator framework for perturbative quantum field theory and found structure in $ker(Q)$ --- the null space of the observable projection --- along the way. Each discovery was local: the $phi^4$ paper found scheme-dependent constants; the Yang-Mills paper found active ghosts; the gauge-dependence paper found representation-local attribution. But no paper asked the systematic question: *what is in $ker(Q)$?*
+
+This paper answers that question. We identify six structurally distinct types of elements living in $ker(Q)$, classified by two properties:
+
++ *Activity mode*: how (or whether) the element couples into $"im"(Q)$ through $Q compose K$.
+
++ *Loop-order stability*: whether the element remains in $ker(Q)$ across loop orders.
+
+The second property is new. The five preceding papers implicitly assumed that $ker(Q)$ is static --- that what is unobservable at tree level remains unobservable at all orders. This is true for Types 1--3 but false for Type 4. The chiral anomaly is a structural event in which an element of $ker(Q)$ at tree level *migrates* to $"im"(Q)$ at one loop. This migration is the central observation of this paper.
+
+The six types, in order of increasing structural complexity:
+
+#table(
+    columns: 4,
+    [*Type*], [*Name*], [*Activity*], [*Loop-stable?*],
+    [1], [Scheme constants], [Inert], [Yes],
+    [2], [Ghost sector], [Active/inert], [Yes],
+    [3], [Unphysical polarizations], [Redistributive], [Yes],
+    [4], [Anomalous currents], [Migratory], [*No*],
+    [5], [Confined states], [Active (non-pert.)], [Open],
+    [6], [Topological sectors], [Latent], [Open],
+)
+
+Types 1--3 are established by the preceding papers. Type 4 is the key new analysis. Types 5--6 are structural predictions that the framework identifies but cannot compute perturbatively.
+
+= Type 1: Scheme-Dependent Constants
+
+The simplest structure in $ker(Q)$ consists of quantities whose values depend on the renormalization scheme: the tadpole integral $A_0$, individual Passarino-Veltman scalar integrals $B_0(rho)$, the Euler-Mascheroni constant $gamma_E$, and logarithms of the renormalization scale $ln(mu^2)$.
+
+These elements are in $ker(Q)$ because they are not individually observable. In the $"overline"("MS")$ scheme, $B_0(rho)$ takes one value; in the on-shell scheme, another; in momentum subtraction, yet another. No experiment can determine which value is "correct" --- because the question is not physical.
+
+What *is* physical is the difference $B_0(rho_1) - B_0(rho_2)$, which is scheme-independent and lies in $"im"(Q)$. The observable projection $Q$ annihilates the individual values and preserves only differences.
+
+*Activity:* Inert. Scheme constants do not couple into $"im"(Q)$ through $Q compose K$. They are passive cargo in $ker(Q)$.
+
+*Loop-order stability:* Yes. A scheme-dependent constant at one loop remains scheme-dependent at all orders. No mechanism promotes it to an observable.
+
+*Representation dependence:* Yes --- different schemes assign different values. But all schemes agree on $"im"(Q)$.
+
+Z3-verified: $A_0$ and individual $B_0$ in $ker(Q)$; scheme type inert; loop-order stable (4 results).
+
+= Type 2: Ghost Sector
+
+Faddeev-Popov ghost fields are in $ker(Q)$: they violate the spin-statistics theorem, carry no particle interpretation, and cannot appear as asymptotic states. The ghost-activity theorem [AtikGhost] established that the ghost sector $S_("gh") subset.eq ker(Q)$ is active if and only if $f^(a b c) != 0$.
+
+The gauge-dependence paper [AtikGauge] refined this: ghost activity is an invariant of the covariant gauge family ($xi$-independent) but not an invariant across all gauge-fixing schemes (in axial gauge, ghosts decouple). The physical content --- that non-abelian structure forces the $beta$-function sign --- is representation-independent.
+
+*Activity:* Active iff the gauge algebra is non-abelian. The algebraic switch is $f^(a b c) != 0$.
+
+*Loop-order stability:* Yes. Ghosts are unphysical at all loop orders. They never migrate to $"im"(Q)$ --- they remain in $ker(Q)$ while shaping $"im"(Q)$ through $Q compose K$.
+
+*Representation dependence:* Yes --- FP-representation-specific. The diagrammatic mechanism changes across gauges; the observable content does not.
+
+Z3-verified: ghost fields in $ker(Q)$; ghost sector active; representation-dependent; loop-order stable (4 results).
+
+= Type 3: Unphysical Polarizations
+
+In covariant gauges, the gauge boson propagator includes unphysical polarization states --- longitudinal and scalar (timelike) modes. In Minkowski space, a massless spin-1 particle has two physical (transverse) polarizations. The covariant propagator,
+
+$ D_(mu nu)(k) = (g_(mu nu) - (1 - xi) k_mu k_nu \/ k^2) / k^2 $
+
+propagates all four polarizations. The $(1 - xi)$ term carries the longitudinal and scalar modes, which are in $ker(Q)$: they cannot appear as asymptotic states.
+
+These modes circulate in loops. The gluon loop contribution to $beta_0$ depends on $xi$ --- specifically, the longitudinal/scalar modes absorb the $xi$ dependence. The ghost loop is $xi$-independent (established in [AtikGauge]). The total (gluon + ghost) is $xi$-independent.
+
+This reveals a new type of null-space activity: *redistributive*. The unphysical polarization sector does not shape a specific observable (like ghosts shape $beta_0$). Instead, it absorbs representation dependence to keep the observable stable across the gauge family. It is the compensating mechanism that allows the total to be $xi$-invariant despite individual contributions changing.
+
+*Activity:* Redistributive --- absorbs $xi$ variation to stabilize $"im"(Q)$.
+
+*Loop-order stability:* Yes. Unphysical polarizations remain unphysical at all orders.
+
+*Representation dependence:* Yes --- the $xi$-dependent contribution exists only in covariant gauges. In axial gauge, the modified propagator tensor structure absorbs both the ghost and polarization roles.
+
+Z3-verified: longitudinal and scalar modes in $ker(Q)$; redistributive type; loop-order stable (4 results).
+
+= Type 4: Anomalous Migration
+
+This is the central new observation of this paper.
+
+=== The classical picture
+
+Consider the axial vector current $j_5^mu = macron(psi) gamma^mu gamma_5 psi$ in massless QED. Classically, this current is conserved:
+
+$ partial_mu j_5^mu = 0 $
+
+This is the axial Ward identity. In $K$--$Q$ language: the divergence of $j_5$ is zero at tree level, so it lies in $ker(Q)$. It contributes nothing to any observable. It is, at tree level, as inert as the tadpole $A_0$.
+
+=== The one-loop picture
+
+At one loop, the kernel $K$ generates the triangle diagram (AVV): a fermion loop with one axial vertex and two vector vertices. This diagram is the Adler-Bell-Jackiw (ABJ) triangle [ABJ1969, Adler1969]. Its evaluation yields:
+
+$ partial_mu j_5^mu = e^2 / (16 pi^2) F_(mu nu) tilde(F)^(mu nu) $
+
+The right-hand side is nonzero. The divergence of the axial current is no longer zero. It is now an observable --- it determines the decay rate $pi^0 arrow gamma gamma$, which is measured experimentally.
+
+=== The structural event
+
+In $K$--$Q$ language, something unprecedented has happened: an element of $ker(Q)$ at tree level has *migrated* to $"im"(Q)$ at one loop. The axial divergence was in $ker(Q)$ (zero, unobservable) and is now in $"im"(Q)$ (nonzero, measurable). The anomaly is the structural event that moved it.
+
+This means $ker(Q)$ is *not loop-order-stable*. The boundary between $ker(Q)$ and $"im"(Q)$ shifts when the loop order increases. The anomaly is the mechanism of migration.
+
+=== Why this is different from Types 1--3
+
+Types 1--3 are loop-stable: scheme constants remain scheme-dependent, ghosts remain unphysical, longitudinal modes remain non-asymptotic, at all loop orders. Their membership in $ker(Q)$ is permanent.
+
+Type 4 is not permanent. The element migrates. The classical symmetry (axial conservation) that placed it in $ker(Q)$ is broken by the quantum correction. The anomaly is not a "failure" of the symmetry --- it is a structural reclassification of the element from $ker(Q)$ to $"im"(Q)$.
+
+=== The anomaly coefficient is exact
+
+The ABJ anomaly coefficient $e^2 \/ (16 pi^2)$ is one-loop exact --- it receives no corrections at higher loops (the Adler-Bardeen theorem [AdlerBardeen1969]). This means the migration event happens precisely at one loop. It is not a perturbative approximation; it is exact.
+
+*Activity:* Migratory --- moves from $ker(Q)$ to $"im"(Q)$ across loop orders.
+
+*Loop-order stability:* *No*. This is the defining property of Type 4.
+
+*Representation dependence:* No --- the anomaly is universal. It does not depend on regularization scheme or gauge-fixing choice (though different regulators may distribute it differently between axial and vector Ward identities).
+
+Z3-verified: axial divergence in $ker(Q)$ at tree level; migrates to $"im"(Q)$ at one loop; axial Ward identity holds classically, broken by anomaly (4 results).
+
+= Type 5: Confined Colored States
+
+Quarks and gluons, as individual particles, are in $ker(Q)$: no isolated color-charged state has ever been observed. This is confinement. Unlike Types 1--4, this is not a perturbative statement --- it is an empirical fact about the non-perturbative theory.
+
+Yet quarks and gluons *completely determine* the hadron spectrum, which is in $"im"(Q)$. Every meson, baryon, and glueball is a bound state of confined constituents. The elements of $ker(Q)$ shape $"im"(Q)$ not through one-loop composition $Q compose K$, but through non-perturbative bound-state formation.
+
+The ghost-activity theorem is the perturbative shadow of this phenomenon. At one loop, ghosts (in $ker(Q)$) shape $beta_0$ (in $"im"(Q)$) through $Q compose K$. Non-perturbatively, quarks and gluons (in $ker(Q)$) shape the entire hadron spectrum (in $"im"(Q)$) through dynamics that the perturbative $K$ cannot access.
+
+*Activity:* Active --- but the coupling route from $ker(Q)$ to $"im"(Q)$ is non-perturbative.
+
+*Loop-order stability:* Open. Quarks and gluons are in $ker(Q)$ at all perturbative orders (they never appear as asymptotic states in perturbation theory). Whether "loop-order stability" even applies in the non-perturbative regime is an open structural question.
+
+*Representation dependence:* Open. Confinement is a non-perturbative phenomenon; its representation dependence (if any) is not accessible to the current framework.
+
+This type is stated as a structural prediction: the $K$--$Q$ framework identifies it, classifies it, but cannot compute it. The perturbative boundary at $Lambda_("QCD")$ --- where the one-loop $Q compose K$ breaks down --- is the edge of the framework's domain, established in [AtikYM] and confirmed as gauge-invariant in [AtikGauge].
+
+Z3-verified: isolated quarks and gluons in $ker(Q)$; determine observables non-perturbatively; confined type active (4 results).
+
+= Type 6: Topological Sectors
+
+The QCD vacuum has a topological structure parametrized by the vacuum angle $theta$. The $theta$ parameter classifies degenerate vacua connected by instanton tunneling. The physical Lagrangian includes a topological term:
+
+$ cal(L)_theta = theta (g^2) / (32 pi^2) F_(mu nu)^a tilde(F)^(a mu nu) $
+
+The angle $theta$ is in $ker(Q)$: it is not directly measurable. No experiment has ever determined its value. The strong CP problem is the experimental observation that $theta$ is extremely small ($theta < 10^(-10)$), despite no known symmetry requiring it to vanish.
+
+If $theta != 0$, it would produce CP violation in strong interactions --- an $"im"(Q)$ effect. The neutron electric dipole moment would be proportional to $theta$. Empirically, this CP violation is absent, so $theta$ remains inert.
+
+We classify this as *latent*: structure in $ker(Q)$ that could in principle migrate to $"im"(Q)$ (if $theta != 0$) but empirically does not. The strong CP problem, in $K$--$Q$ language, is: *why does this sector of $ker(Q)$ remain inert?*
+
+Instantons --- the non-perturbative field configurations that tunnel between topological vacua --- represent structure in $ker(Q)$ invisible to the perturbative kernel $K$. They are a qualitatively different type of $ker(Q)$ element: not a field, not a loop contribution, but a topological feature of the vacuum itself.
+
+Gribov copies (multiple gauge-equivalent configurations satisfying the same gauge condition) add further structure: the space of Gribov copies is part of $ker(Q)$ that the Faddeev-Popov procedure does not fully capture.
+
+*Activity:* Latent --- could migrate to $"im"(Q)$ but doesn't.
+
+*Loop-order stability:* Open. Instantons are non-perturbative; they do not appear at any finite loop order.
+
+*Representation dependence:* Open. Topological features are in principle gauge-invariant, but their description requires care.
+
+Z3-verified: topological sectors latent; $theta$ vacuum in $ker(Q)$; $theta$ is topological (4 results in the classification structure).
+
+= The Classification
+
+The six types are summarized in the following table:
+
+#table(
+    columns: 6,
+    [*Type*], [*Name*], [*Status*], [*Active?*], [*Rep. dep.?*], [*Loop-stable?*],
+    [1], [Scheme constants], [Established], [Inert], [Yes], [Yes],
+    [2], [Ghost sector], [Established], [Iff $f^(a b c) != 0$], [Yes (FP)], [Yes],
+    [3], [Unphys. polarizations], [New analysis], [Redistributive], [Yes ($xi$)], [Yes],
+    [4], [Anomalous currents], [New (key)], [Migratory], [No], [*No*],
+    [5], [Confined states], [Prediction], [Active (non-pert.)], [Open], [Open],
+    [6], [Topological sectors], [Prediction], [Latent], [Open], [Open],
+)
+
+=== The key structural property: loop-order stability
+
+The property that most sharply separates the types is loop-order stability: whether an element of $ker(Q)$ remains in $ker(Q)$ when the loop order increases.
+
+Types 1--3 are stable. Their elements are permanently in $ker(Q)$. Scheme constants are always scheme-dependent. Ghosts are always unphysical. Longitudinal modes are always non-asymptotic. No amount of quantum correction changes their status.
+
+Type 4 is unstable. The chiral anomaly moves an element from $ker(Q)$ to $"im"(Q)$ in exactly one step (tree to one loop). The migration is exact (Adler-Bardeen theorem) and universal (scheme- and gauge-independent).
+
+Types 5--6 are open. Confinement and topological structure are non-perturbative; the question of loop-order stability may not even apply in its perturbative form.
+
+=== Activity modes
+
+The classification identifies four distinct activity modes:
+
++ *Inert*: present in $ker(Q)$, no coupling to $"im"(Q)$. (Type 1)
+
++ *Active*: in $ker(Q)$ but shapes $"im"(Q)$ through $Q compose K$. (Types 2, 5)
+
++ *Redistributive*: absorbs representation dependence to stabilize $"im"(Q)$. (Type 3)
+
++ *Migratory*: moves from $ker(Q)$ to $"im"(Q)$ across loop orders. (Type 4)
+
++ *Latent*: could migrate but empirically doesn't. (Type 6)
+
+These modes are not ad hoc labels --- each corresponds to a distinct structural mechanism verified in the preceding papers or identified in this one.
+
+Z3-verified: all 24 results across 6 structures.
+
+= Implications
+
+=== ker(Q) is not homogeneous
+
+The standard QFT treatment of renormalization treats $ker(Q)$ as waste --- divergent intermediates to be subtracted. The $K$--$Q$ framework has progressively revealed that $ker(Q)$ is structured: it contains active sectors, redistributive sectors, and now migratory sectors. The null space is not a featureless void; it is an organized space with internal distinctions that matter for observables.
+
+=== Anomalies as boundary events
+
+The most important new observation is that anomalies are *boundary events of $ker(Q)$*: structural transitions in which elements cross from $ker(Q)$ to $"im"(Q)$. This reinterpretation does not change the physics of the chiral anomaly --- the triangle diagram, the ABJ coefficient, the $pi^0 arrow gamma gamma$ prediction are all unchanged. What changes is the structural context: the anomaly is not merely "a classical symmetry broken by quantum effects" but "a migration event at the boundary of $ker(Q)$."
+
+This reinterpretation unifies the anomaly with the other $ker(Q)$ phenomena. Ghosts are active ker elements. Scheme constants are inert ker elements. Anomalous currents are *transient* ker elements --- they pass through $ker(Q)$ on their way to $"im"(Q)$. The classification makes these three cases instances of a single structural framework.
+
+=== The atlas as foundation
+
+The six-type classification provides the foundation for the representation-invariant decomposition theorem identified in [AtikGauge]: different gauge-fixing schemes correspond to different factorizations of $Q compose K$ with the same image and different kernel realizations. The atlas specifies *what* is being redistributed (Types 1--3), *what* migrates (Type 4), and *what* lies beyond the perturbative domain (Types 5--6).
+
+=== What this atlas does and does not claim
+
+This atlas claims: $ker(Q)$ contains at least six structurally distinct types of elements, classified by activity mode and loop-order stability, with the anomalous migration type being the key new identification.
+
+This atlas does not claim: that these six types are exhaustive (there may be others), that Types 5--6 are computable in the current framework (they are not), or that the classification extends straightforwardly beyond one loop (the Adler-Bardeen theorem gives exactness for Type 4; the other types require separate analysis at higher orders).
+
+The atlas is a map, not the territory. But it is the first systematic map of $ker(Q)$, and it identifies the most important structural property --- loop-order stability --- that was invisible before the anomalous migration type was recognized.
+
+
+
+#heading(numbering: none)[References]
+#set text(size: 9pt)
+#par(hanging-indent: 1.5em)[\[AtikPhi4\] Atik, E. Renormalization without infinities: one-loop $phi^4$ physics from convergent integrals. POT VUFT Series. *Preprint* (2026).]
+
+#par(hanging-indent: 1.5em)[\[AtikQED\] Atik, E. Gauge symmetry reduces the null space: QED vacuum polarization from convergent integrals. POT VUFT Series. *Preprint* (2026).]
+
+#par(hanging-indent: 1.5em)[\[AtikYM\] Atik, E. The null space is not inert: Yang-Mills vacuum polarization from convergent integrals. POT VUFT Series. *Preprint* (2026).]
+
+#par(hanging-indent: 1.5em)[\[AtikGhost\] Atik, E. Ghost-mediated null-space activity: a structural theorem from the K-Q framework. POT VUFT Series. *Preprint* (2026).]
+
+#par(hanging-indent: 1.5em)[\[AtikGauge\] Atik, E. Gauge dependence and the boundary of ghost activity. POT VUFT Series. *Preprint* (2026).]
+
+#par(hanging-indent: 1.5em)[\[ABJ1969\] Bell, J. S. and Jackiw, R. A PCAC puzzle: $pi^0 arrow gamma gamma$ in the $sigma$-model. *Nuovo Cim. A* 60, 47--61 (1969).]
+
+#par(hanging-indent: 1.5em)[\[Adler1969\] Adler, S. L. Axial-vector vertex in spinor electrodynamics. *Phys. Rev.* 177, 2426--2438 (1969).]
+
+#par(hanging-indent: 1.5em)[\[AdlerBardeen1969\] Adler, S. L. and Bardeen, W. A. Absence of higher-order corrections in the anomalous axial-vector divergence equation. *Phys. Rev.* 182, 1517--1536 (1969).]
+
+

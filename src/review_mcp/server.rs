@@ -687,26 +687,26 @@ impl ReviewMcpServer {
                 .unwrap_or("?")
         ));
 
-        if let Some(fns) = schema.get("check_functions").and_then(|f| f.as_array()) {
-            if !fns.is_empty() {
-                text.push_str("\n## Check Functions (blocking errors)\n\n");
-                text.push_str("Each function receives source code and returns \"pass\" or \"fail: <reason>\".\n\n");
-                for f in fns {
-                    if let Some(kleis) = f.get("kleis").and_then(|k| k.as_str()) {
-                        text.push_str(&format!("```\n{}\n```\n\n", kleis));
-                    }
+        if let Some(fns) = schema.get("check_functions").and_then(|f| f.as_array())
+            && !fns.is_empty()
+        {
+            text.push_str("\n## Check Functions (blocking errors)\n\n");
+            text.push_str("Each function receives source code and returns \"pass\" or \"fail: <reason>\".\n\n");
+            for f in fns {
+                if let Some(kleis) = f.get("kleis").and_then(|k| k.as_str()) {
+                    text.push_str(&format!("```\n{}\n```\n\n", kleis));
                 }
             }
         }
 
-        if let Some(fns) = schema.get("advise_functions").and_then(|f| f.as_array()) {
-            if !fns.is_empty() {
-                text.push_str("\n## Advise Functions (non-blocking advisories)\n\n");
-                text.push_str("Each function receives source code and returns \"pass\" or \"fail: <reason>\".\nAdvisory failures warn but do not block CI.\n\n");
-                for f in fns {
-                    if let Some(kleis) = f.get("kleis").and_then(|k| k.as_str()) {
-                        text.push_str(&format!("```\n{}\n```\n\n", kleis));
-                    }
+        if let Some(fns) = schema.get("advise_functions").and_then(|f| f.as_array())
+            && !fns.is_empty()
+        {
+            text.push_str("\n## Advise Functions (non-blocking advisories)\n\n");
+            text.push_str("Each function receives source code and returns \"pass\" or \"fail: <reason>\".\nAdvisory failures warn but do not block CI.\n\n");
+            for f in fns {
+                if let Some(kleis) = f.get("kleis").and_then(|k| k.as_str()) {
+                    text.push_str(&format!("```\n{}\n```\n\n", kleis));
                 }
             }
         }
@@ -750,35 +750,35 @@ impl ReviewMcpServer {
             }
         }
 
-        if let Some(structures) = schema.get("structures").and_then(|s| s.as_array()) {
-            if !structures.is_empty() {
-                text.push_str("## Structures\n\n");
-                for s in structures {
-                    let name = s.get("name").and_then(|n| n.as_str()).unwrap_or("?");
-                    text.push_str(&format!("### {}\n", name));
-                    if let Some(axioms) = s.get("axioms").and_then(|a| a.as_array()) {
-                        for ax in axioms {
-                            let an = ax.get("name").and_then(|n| n.as_str()).unwrap_or("?");
-                            let ak = ax.get("kleis").and_then(|k| k.as_str()).unwrap_or("?");
-                            text.push_str(&format!("  axiom {} : {}\n", an, ak));
-                        }
-                    }
-                    text.push('\n');
-                }
-            }
-        }
-
-        if let Some(files) = schema.get("extra_review_files").and_then(|f| f.as_array()) {
-            if !files.is_empty() {
-                text.push_str("\n## Extra Review Files\n\n");
-                text.push_str("These non-source files should also be included in reviews:\n\n");
-                for f in files {
-                    if let Some(s) = f.as_str() {
-                        text.push_str(&format!("  - {}\n", s));
+        if let Some(structures) = schema.get("structures").and_then(|s| s.as_array())
+            && !structures.is_empty()
+        {
+            text.push_str("## Structures\n\n");
+            for s in structures {
+                let name = s.get("name").and_then(|n| n.as_str()).unwrap_or("?");
+                text.push_str(&format!("### {}\n", name));
+                if let Some(axioms) = s.get("axioms").and_then(|a| a.as_array()) {
+                    for ax in axioms {
+                        let an = ax.get("name").and_then(|n| n.as_str()).unwrap_or("?");
+                        let ak = ax.get("kleis").and_then(|k| k.as_str()).unwrap_or("?");
+                        text.push_str(&format!("  axiom {} : {}\n", an, ak));
                     }
                 }
                 text.push('\n');
             }
+        }
+
+        if let Some(files) = schema.get("extra_review_files").and_then(|f| f.as_array())
+            && !files.is_empty()
+        {
+            text.push_str("\n## Extra Review Files\n\n");
+            text.push_str("These non-source files should also be included in reviews:\n\n");
+            for f in files {
+                if let Some(s) = f.as_str() {
+                    text.push_str(&format!("  - {}\n", s));
+                }
+            }
+            text.push('\n');
         }
 
         let content = McpToolContent {

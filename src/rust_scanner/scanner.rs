@@ -2064,7 +2064,7 @@ impl<'a> Parser<'a> {
             return;
         }
         self.advance(); // where
-                        // Skip until `{` or `;`
+        // Skip until `{` or `;`
         while !self.at_eof() {
             self.skip_comments();
             match self.peek_kind() {

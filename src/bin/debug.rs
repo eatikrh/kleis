@@ -22,7 +22,7 @@ use kleis::debug::{
 use kleis::evaluator::Evaluator;
 use kleis::kleis_parser::parse_kleis_program;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::fs;
 use std::io::{self, BufRead, BufReader, Read, Write};
@@ -309,11 +309,7 @@ impl DebugHook for DapDebugHook {
 
     fn pop_frame(&mut self) -> Option<DebugStackFrame> {
         let mut stack = self.stack.lock().unwrap();
-        if stack.len() > 1 {
-            stack.pop()
-        } else {
-            None
-        }
+        if stack.len() > 1 { stack.pop() } else { None }
     }
 }
 
@@ -539,33 +535,33 @@ impl DebugAdapter {
     fn handle_set_breakpoints(&mut self, request: &DapRequest) -> io::Result<()> {
         let mut breakpoints = Vec::new();
 
-        if let Some(args) = &request.arguments {
-            if let Some(source) = args.get("source") {
-                let path = source.get("path").and_then(|p| p.as_str()).unwrap_or("");
+        if let Some(args) = &request.arguments
+            && let Some(source) = args.get("source")
+        {
+            let path = source.get("path").and_then(|p| p.as_str()).unwrap_or("");
 
-                if let Some(bps) = args.get("breakpoints").and_then(|b| b.as_array()) {
-                    let mut file_breakpoints = Vec::new();
+            if let Some(bps) = args.get("breakpoints").and_then(|b| b.as_array()) {
+                let mut file_breakpoints = Vec::new();
 
-                    for bp in bps {
-                        if let Some(line) = bp.get("line").and_then(|l| l.as_i64()) {
-                            file_breakpoints.push(DapBreakpoint {
-                                line,
-                                verified: true,
-                            });
-                            breakpoints.push(json!({
-                                "verified": true,
-                                "line": line
-                            }));
-                        }
+                for bp in bps {
+                    if let Some(line) = bp.get("line").and_then(|l| l.as_i64()) {
+                        file_breakpoints.push(DapBreakpoint {
+                            line,
+                            verified: true,
+                        });
+                        breakpoints.push(json!({
+                            "verified": true,
+                            "line": line
+                        }));
                     }
-
-                    let num_breakpoints = file_breakpoints.len();
-                    self.breakpoints.insert(path.to_string(), file_breakpoints);
-                    eprintln!(
-                        "[kleis-debug] Set {} breakpoints in {}",
-                        num_breakpoints, path
-                    );
                 }
+
+                let num_breakpoints = file_breakpoints.len();
+                self.breakpoints.insert(path.to_string(), file_breakpoints);
+                eprintln!(
+                    "[kleis-debug] Set {} breakpoints in {}",
+                    num_breakpoints, path
+                );
             }
         }
 

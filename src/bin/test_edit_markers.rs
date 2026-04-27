@@ -6,7 +6,7 @@
 use kleis::ast::Expression;
 use kleis::math_layout::compile_math_to_svg_with_ids;
 use kleis::math_layout::typst_compiler::ArgumentBoundingBox;
-use kleis::render::{build_default_context, render_expression, RenderTarget};
+use kleis::render::{RenderTarget, build_default_context, render_expression};
 
 fn main() {
     println!("=== Edit Marker Placement Test ===\n");

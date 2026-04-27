@@ -465,73 +465,73 @@ impl McpServer {
         ));
 
         // ---- Structures with axioms ----
-        if let Some(structures) = schema.get("structures").and_then(|s| s.as_array()) {
-            if !structures.is_empty() {
-                text.push_str("\n## Structures\n\n");
-                for s in structures {
-                    let name = s.get("name").and_then(|n| n.as_str()).unwrap_or("?");
-                    let params = s
-                        .get("type_params")
-                        .and_then(|p| p.as_array())
-                        .map(|arr| {
-                            arr.iter()
-                                .filter_map(|v| v.as_str())
-                                .collect::<Vec<_>>()
-                                .join(", ")
-                        })
-                        .unwrap_or_default();
-                    text.push_str(&format!("### structure {}({})\n", name, params));
+        if let Some(structures) = schema.get("structures").and_then(|s| s.as_array())
+            && !structures.is_empty()
+        {
+            text.push_str("\n## Structures\n\n");
+            for s in structures {
+                let name = s.get("name").and_then(|n| n.as_str()).unwrap_or("?");
+                let params = s
+                    .get("type_params")
+                    .and_then(|p| p.as_array())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|v| v.as_str())
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    })
+                    .unwrap_or_default();
+                text.push_str(&format!("### structure {}({})\n", name, params));
 
-                    if let Some(ops) = s.get("operations").and_then(|o| o.as_array()) {
-                        for op in ops {
-                            let on = op.get("name").and_then(|n| n.as_str()).unwrap_or("?");
-                            let ot = op.get("type").and_then(|t| t.as_str()).unwrap_or("?");
-                            text.push_str(&format!("  operation {} : {}\n", on, ot));
-                        }
+                if let Some(ops) = s.get("operations").and_then(|o| o.as_array()) {
+                    for op in ops {
+                        let on = op.get("name").and_then(|n| n.as_str()).unwrap_or("?");
+                        let ot = op.get("type").and_then(|t| t.as_str()).unwrap_or("?");
+                        text.push_str(&format!("  operation {} : {}\n", on, ot));
                     }
-                    if let Some(axioms) = s.get("axioms").and_then(|a| a.as_array()) {
-                        for ax in axioms {
-                            let an = ax.get("name").and_then(|n| n.as_str()).unwrap_or("?");
-                            let ak = ax.get("kleis").and_then(|k| k.as_str()).unwrap_or("?");
-                            text.push_str(&format!("  axiom {} : {}\n", an, ak));
-                        }
-                    }
-                    text.push('\n');
                 }
-            }
-        }
-
-        // ---- Data types ----
-        if let Some(data_types) = schema.get("data_types").and_then(|d| d.as_array()) {
-            if !data_types.is_empty() {
-                text.push_str("## Data Types\n\n");
-                for d in data_types {
-                    let name = d.get("name").and_then(|n| n.as_str()).unwrap_or("?");
-                    let variants = d
-                        .get("variants")
-                        .and_then(|v| v.as_array())
-                        .map(|arr| {
-                            arr.iter()
-                                .filter_map(|v| v.get("name").and_then(|n| n.as_str()))
-                                .collect::<Vec<_>>()
-                                .join(" | ")
-                        })
-                        .unwrap_or_default();
-                    text.push_str(&format!("data {} = {}\n", name, variants));
+                if let Some(axioms) = s.get("axioms").and_then(|a| a.as_array()) {
+                    for ax in axioms {
+                        let an = ax.get("name").and_then(|n| n.as_str()).unwrap_or("?");
+                        let ak = ax.get("kleis").and_then(|k| k.as_str()).unwrap_or("?");
+                        text.push_str(&format!("  axiom {} : {}\n", an, ak));
+                    }
                 }
                 text.push('\n');
             }
         }
 
+        // ---- Data types ----
+        if let Some(data_types) = schema.get("data_types").and_then(|d| d.as_array())
+            && !data_types.is_empty()
+        {
+            text.push_str("## Data Types\n\n");
+            for d in data_types {
+                let name = d.get("name").and_then(|n| n.as_str()).unwrap_or("?");
+                let variants = d
+                    .get("variants")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|v| v.get("name").and_then(|n| n.as_str()))
+                            .collect::<Vec<_>>()
+                            .join(" | ")
+                    })
+                    .unwrap_or_default();
+                text.push_str(&format!("data {} = {}\n", name, variants));
+            }
+            text.push('\n');
+        }
+
         // ---- Check functions (full Kleis source) ----
-        if let Some(fns) = schema.get("check_functions").and_then(|f| f.as_array()) {
-            if !fns.is_empty() {
-                text.push_str("## Policy Check Functions\n\n");
-                text.push_str("These return \"allow\" or \"deny\". Call via `evaluate`.\n\n");
-                for f in fns {
-                    if let Some(kleis) = f.get("kleis").and_then(|k| k.as_str()) {
-                        text.push_str(&format!("```\n{}\n```\n\n", kleis));
-                    }
+        if let Some(fns) = schema.get("check_functions").and_then(|f| f.as_array())
+            && !fns.is_empty()
+        {
+            text.push_str("## Policy Check Functions\n\n");
+            text.push_str("These return \"allow\" or \"deny\". Call via `evaluate`.\n\n");
+            for f in fns {
+                if let Some(kleis) = f.get("kleis").and_then(|k| k.as_str()) {
+                    text.push_str(&format!("```\n{}\n```\n\n", kleis));
                 }
             }
         }
@@ -540,16 +540,15 @@ impl McpServer {
         if let Some(fns) = schema
             .get("precondition_functions")
             .and_then(|f| f.as_array())
+            && !fns.is_empty()
         {
-            if !fns.is_empty() {
-                text.push_str("## Precondition Functions\n\n");
-                text.push_str(
-                    "Return \"none\" or a command to run first. Evaluated via `check_action`.\n\n",
-                );
-                for f in fns {
-                    if let Some(kleis) = f.get("kleis").and_then(|k| k.as_str()) {
-                        text.push_str(&format!("```\n{}\n```\n\n", kleis));
-                    }
+            text.push_str("## Precondition Functions\n\n");
+            text.push_str(
+                "Return \"none\" or a command to run first. Evaluated via `check_action`.\n\n",
+            );
+            for f in fns {
+                if let Some(kleis) = f.get("kleis").and_then(|k| k.as_str()) {
+                    text.push_str(&format!("```\n{}\n```\n\n", kleis));
                 }
             }
         }
@@ -558,26 +557,26 @@ impl McpServer {
         if let Some(props) = schema
             .get("verifiable_propositions")
             .and_then(|p| p.as_array())
+            && !props.is_empty()
         {
-            if !props.is_empty() {
-                text.push_str("## Verifiable Propositions\n\n");
-                text.push_str(
-                    "You can send these to `evaluate` to verify properties of the policy.\n\
+            text.push_str("## Verifiable Propositions\n\n");
+            text.push_str(
+                "You can send these to `evaluate` to verify properties of the policy.\n\
                      Propositions with ∀/∃ are routed to Z3 automatically.\n\n",
-                );
-                for p in props {
-                    let kleis = p.get("kleis").and_then(|k| k.as_str()).unwrap_or("?");
-                    let desc = p.get("description").and_then(|d| d.as_str()).unwrap_or("");
-                    let hint = p.get("hint").and_then(|h| h.as_str()).unwrap_or("evaluate");
-                    text.push_str(&format!("- `{}` — {} [{}]\n", kleis, desc, hint,));
-                }
-                text.push('\n');
-                text.push_str(
+            );
+            for p in props {
+                let kleis = p.get("kleis").and_then(|k| k.as_str()).unwrap_or("?");
+                let desc = p.get("description").and_then(|d| d.as_str()).unwrap_or("");
+                let hint = p.get("hint").and_then(|h| h.as_str()).unwrap_or("evaluate");
+                text.push_str(&format!("- `{}` — {} [{}]\n", kleis, desc, hint,));
+            }
+            text.push('\n');
+            text.push_str(
                     "You can also synthesize your own propositions using the same syntax.\n\
                      Use ∀(x : Type). ... for universal claims, function calls for concrete checks.\n\n"
                 );
-                text.push_str("### Regex in Propositions\n\n");
-                text.push_str(
+            text.push_str("### Regex in Propositions\n\n");
+            text.push_str(
                     "Z3 has native regex support. You can use regex operations in propositions:\n\n\
                      **Matching:** `matches(s, re)` — check if string matches regex\n\n\
                      **Constructors (composable):**\n\
@@ -596,7 +595,6 @@ impl McpServer {
                      - `∀(s : String). implies(isDigits(s), isAlphaNum(s))` — subset proof [verify]\n\
                      - `matches(\"foo42\", re_concat(re_literal(\"foo\"), re_plus(re_range(\"0\", \"9\"))))` [evaluate]\n\n"
                 );
-            }
         }
 
         let content = McpToolContent {

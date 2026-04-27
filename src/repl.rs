@@ -22,10 +22,10 @@ use std::path::{Path, PathBuf};
 use crate::context::SharedContext;
 use crate::evaluator::Evaluator;
 use crate::kleis_ast::TopLevel;
-use crate::kleis_parser::{parse_kleis_program, parse_kleis_program_with_file, KleisParser};
+use crate::kleis_parser::{KleisParser, parse_kleis_program, parse_kleis_program_with_file};
 use crate::lowering::SemanticLowering;
 use crate::pretty_print::PrettyPrinter;
-use crate::render::{build_default_context, render_expression, RenderTarget};
+use crate::render::{RenderTarget, build_default_context, render_expression};
 use crate::structure_registry::StructureRegistry;
 use crate::type_context::TypeContextBuilder;
 use crate::type_inference::TypeInference;
@@ -1165,7 +1165,9 @@ fn verify_expression(input: &str, registry: &StructureRegistry, evaluator: &Eval
                                 println!("⚠️  Verification disabled");
                             }
                             VerificationResult::InconsistentAxioms => {
-                                println!("🚨 AXIOM INCONSISTENCY: loaded axioms are contradictory — all assertions would be vacuously true");
+                                println!(
+                                    "🚨 AXIOM INCONSISTENCY: loaded axioms are contradictory — all assertions would be vacuously true"
+                                );
                             }
                         },
                         Err(e) => {
@@ -1639,7 +1641,9 @@ fn trace_match(input: &str, _registry: &StructureRegistry, evaluator: &Evaluator
         println!("Usage: :trace match <scrutinee> {{ pattern => expr | ... }}");
         println!("       :trace <any-expression>  (shows evaluation trace)");
         println!();
-        println!("Example: :trace match 5 {{ 0 => \"zero\" | n if n > 0 => \"positive\" | _ => \"negative\" }}");
+        println!(
+            "Example: :trace match 5 {{ 0 => \"zero\" | n if n > 0 => \"positive\" | _ => \"negative\" }}"
+        );
         return;
     }
 
@@ -1906,16 +1910,16 @@ fn expand_user_functions(
                 .collect();
 
             // Check if this is a user-defined function
-            if let Some(closure) = evaluator.get_function(name) {
-                if closure.params.len() == expanded_args.len() {
-                    // Substitute parameters with arguments
-                    let mut result = closure.body.clone();
-                    for (param, arg) in closure.params.iter().zip(expanded_args.iter()) {
-                        result = substitute_var(&result, param, arg);
-                    }
-                    // Recursively expand in case the body contains more function calls
-                    return expand_user_functions(&result, evaluator);
+            if let Some(closure) = evaluator.get_function(name)
+                && closure.params.len() == expanded_args.len()
+            {
+                // Substitute parameters with arguments
+                let mut result = closure.body.clone();
+                for (param, arg) in closure.params.iter().zip(expanded_args.iter()) {
+                    result = substitute_var(&result, param, arg);
                 }
+                // Recursively expand in case the body contains more function calls
+                return expand_user_functions(&result, evaluator);
             }
 
             // Not a user function, return with expanded args
@@ -2364,13 +2368,13 @@ fn load_file_recursive(
 
     // Register structures in the StructureRegistry for axiom verification
     for structure in program.structures() {
-        if !registry.has_structure(&structure.name) {
-            if let Err(e) = registry.register(structure.clone()) {
-                eprintln!(
-                    "Warning: Failed to register structure '{}': {}",
-                    structure.name, e
-                );
-            }
+        if !registry.has_structure(&structure.name)
+            && let Err(e) = registry.register(structure.clone())
+        {
+            eprintln!(
+                "Warning: Failed to register structure '{}': {}",
+                structure.name, e
+            );
         }
     }
 

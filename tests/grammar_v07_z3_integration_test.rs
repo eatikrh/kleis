@@ -604,7 +604,9 @@ fn test_let_nested_constructor_destructuring() {
 
     let result = backend.evaluate(&expr).unwrap();
     assert_eq!(result, Expression::Const("10".to_string()));
-    println!("   ✅ let Pair(Point(a, b), Point(c, d)) = Pair(Point(1, 2), Point(3, 4)) in a + b + c + d = 10");
+    println!(
+        "   ✅ let Pair(Point(a, b), Point(c, d)) = Pair(Point(1, 2), Point(3, 4)) in a + b + c + d = 10"
+    );
 }
 
 /// Test Grammar v0.8: Let destructuring with wildcard

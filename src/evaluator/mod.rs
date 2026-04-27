@@ -431,10 +431,10 @@ impl Evaluator {
                 // Use SourceLocation::from_span which extracts file from span.file
                 let mut loc = SourceLocation::from_span(&span);
                 // Fall back to Closure.file if span.file is None (legacy support)
-                if loc.file.is_none() {
-                    if let Some(ref file) = c.file {
-                        loc = loc.with_file(file.clone());
-                    }
+                if loc.file.is_none()
+                    && let Some(ref file) = c.file
+                {
+                    loc = loc.with_file(file.clone());
                 }
                 loc
             })
@@ -565,14 +565,13 @@ impl Evaluator {
                     let func_result = self.apply_function_internal(name, eval_args, depth + 1);
 
                     // Report the result's location (span has line/column/file from source)
-                    if let Ok(ref result_expr) = func_result {
-                        if let Some(span) = result_expr.get_span() {
-                            let result_location = SourceLocation::from_span(span);
-                            let mut hook_ref = self.debug_hook.borrow_mut();
-                            if let Some(ref mut hook) = *hook_ref {
-                                let _action =
-                                    hook.on_eval_start(result_expr, &result_location, depth);
-                            }
+                    if let Ok(ref result_expr) = func_result
+                        && let Some(span) = result_expr.get_span()
+                    {
+                        let result_location = SourceLocation::from_span(span);
+                        let mut hook_ref = self.debug_hook.borrow_mut();
+                        if let Some(ref mut hook) = *hook_ref {
+                            let _action = hook.on_eval_start(result_expr, &result_location, depth);
                         }
                     }
 
