@@ -1039,6 +1039,9 @@ mod verification;
 #[cfg(feature = "numerical")]
 mod lapack;
 
+#[cfg(feature = "numerical")]
+mod tensor;
+
 impl Default for Evaluator {
     fn default() -> Self {
         Self::new()
