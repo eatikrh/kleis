@@ -15,4 +15,6 @@ extern crate blas_src;
 extern crate lapack_src;
 
 pub mod backend;
+pub mod tensor;
 pub use backend::*;
+pub use tensor::*;

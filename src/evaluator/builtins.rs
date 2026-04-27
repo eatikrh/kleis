@@ -3358,6 +3358,30 @@ impl Evaluator {
                 }
             }
 
+            #[cfg(feature = "numerical")]
+            "ndarray_reshape" => self.ndarray_reshape(args),
+
+            #[cfg(feature = "numerical")]
+            "ndarray_contract" => self.ndarray_contract(args),
+
+            #[cfg(feature = "numerical")]
+            "ndarray_moveaxis" => self.ndarray_moveaxis(args),
+
+            #[cfg(feature = "numerical")]
+            "ndarray_flatten" => self.ndarray_flatten(args),
+
+            #[cfg(feature = "numerical")]
+            "dft" => self.builtin_dft(args),
+
+            #[cfg(feature = "numerical")]
+            "fft" => self.builtin_fft(args),
+
+            #[cfg(feature = "numerical")]
+            "idft" => self.builtin_idft(args),
+
+            #[cfg(feature = "numerical")]
+            "ifft" => self.builtin_ifft(args),
+
             // Not a built-in
             _ => Ok(None),
         }
