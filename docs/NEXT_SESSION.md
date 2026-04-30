@@ -46,6 +46,36 @@ Full pipeline:  config → [K_univ ∘ K_dyn ∘ K_rep] → intermediate → Q �
 
 **This is not a contradiction** — the three-factor scheme was developed for admissible sectors (gravity = logarithmic kernel, EM, measurement), while the K-Q pipeline handles non-admissible sectors (full GR, Yang-Mills). The reconciliation likely involves: the three-factor decomposition applies when K is admissible; when K is non-admissible, the factorization breaks and you need the K-Q pipeline instead. But this needs to be formalized.
 
+### Projection Residues as Elementary Objects — NEW RESEARCH DIRECTION
+
+**Status: Not yet started. Needs a dedicated paper.**
+
+The original POT insight: when a projection kernel degenerates, the residues of the Laurent expansion *are* the elementary physical objects — point masses, point charges, angular momenta. Particles are not fundamental inputs to the theory; they are what remains when an ontological projection collapses.
+
+**Core claim:** For a kernel K that degenerates at a point x₀, the Laurent expansion K(x) ~ R/(x - x₀)ⁿ + ... yields residues R that correspond to physical charges (mass, electric charge, spin).
+
+**Connections across existing papers:**
+
+1. **Renormalization → counterterms**: Q's poles in the regularization parameter ε have residues that are the physical coupling constants. This is where the idea originated — the Q operator annihilates infinity and the residue is the finite answer (-1/12, etc.).
+
+2. **Gravity → mass**: Kernel degeneracy at a spatial point → Schwarzschild-like mass as a residue. The 1/r potential is literally the Green's function with a point-source residue.
+
+3. **Electrodynamics → charge**: Kernel degeneracy → Coulomb charge as a residue. The EM kernel from the electrodynamics paper should have pole structure whose residue is e.
+
+4. **Black hole singularities → no-hair theorem**: Complete kernel collapse at the singularity. The no-hair theorem says only mass, charge, and spin survive — these may be exactly the residues of the degenerate projection kernel. If so, no-hair is a corollary of the residue structure, not a separate theorem.
+
+5. **Non-patchability**: The flat rotation curves and GR papers showed that kernels don't patch spatially. The residue analysis may explain *why* — the pole structure creates topological obstructions to global extension (analogous to how a meromorphic function can't be extended across its poles).
+
+**Approach:**
+- Start with the kernels already computed in the GR and electrodynamics papers
+- Identify where they degenerate (poles, essential singularities)
+- Compute the Laurent expansion and characterize residues
+- Show that the residues correspond to known physical quantities
+- Investigate whether the residue structure is invariant across K-Q factorization schemes (scheme independence)
+- Use Kleis numerical tools (eigenvalues, FFT, tensor operations) for explicit computations
+
+**Key question:** Is the residue structure invariant across all non-unique K-Q factorizations? If yes, the residues are the scheme-independent physical content — the part of the theory that doesn't depend on how you split K from Q.
+
 ### Future Research Questions
 
 - **Kernel unification problem**: A reader of the four-kernel table would naturally ask whether a single kernel can reproduce all four properties (rotation curves, frame-dragging, waves, binary pulsar). A naive spatial patch fails because gravitational waves propagate through intergalactic space. A true unified kernel would need to reduce to logarithmic behavior for quasi-static galactic potentials and to linearized GR behavior for dynamical/radiative modes.
@@ -556,6 +586,109 @@ Each volume is independently verifiable via `kleis test`. The substrate (stdlib)
 | 5 | Gauge dependence | pot_gauge_dependence_ghost.kleis | pot_gauge_dependence_ghost_paper.kleis | 16 Z3 |
 | 6 | Structural atlas | pot_ker_q_atlas.kleis | pot_ker_q_atlas_paper.kleis | 24 Z3 |
 | 7 | Abstract K-Q framework | pot_abstract_kq_framework.kleis | pot_abstract_kq_framework_paper.kleis | 24 Z3 |
+
+---
+
+## Growing Brain — Distributed Expert Architecture
+
+**Insight (April 30, 2026):** The self-growing transformer brain is not just a Kleis learner — it's a general-purpose architecture for building a *community of small expert models* that self-organize.
+
+### The Architecture
+
+1. **Train specialized brains independently** — one per subject area (algebra, topology, physics, music, etc.), each with its own domain-tuned tokenizer. Each brain self-grows its architecture (layers, heads, FFN) to match the complexity of its domain.
+
+2. **Self-selecting routing** — no explicit router needed. Feed the prompt to all brains; each reports its perplexity. Low perplexity = "I understand this." The brain with the lowest score handles generation.
+
+3. **Graceful uncertainty** — if all brains score high perplexity, the system knows it doesn't know. Signal to train a new brain. No hallucination.
+
+4. **Independent updates** — when new information arrives in one domain, retrain only that brain. Others remain stable. No catastrophic forgetting by design.
+
+5. **Kleis as arbitration** — when multiple brains claim knowledge (e.g., algebra and topology both recognize "fundamental group"), they generate competing completions. Kleis formalizes both as structures, Z3 checks consistency, detects subsumption or genuine contradiction.
+
+### The Closed Loop
+
+```
+Train brains independently (knowledge production)
+         ↓
+Brains self-select on prompts (routing via perplexity)
+         ↓
+Multiple brains respond (competing claims)
+         ↓
+Kleis formalizes and verifies (arbitration via Z3)
+         ↓
+Consolidated knowledge feeds back (learning)
+```
+
+Disagreement between brains isn't a bug — it's a signal that there's a deeper connection to formalize. This is how mathematics advances: fields develop independently, then someone discovers they're isomorphic, and a unifying structure emerges.
+
+### Why We Sleep (tongue in cheek)
+
+Turns out nature already shipped this architecture. Two hemispheres (left: symbolic/sequential, right: spatial/holistic) are independent experts with different internal architectures, connected by a 200-million-fiber arbitration bus (corpus callosum).
+
+And the reconciliation pass? That's sleep:
+
+- **Awake**: Independent experts process input, accumulate competing claims
+- **Sleep**: System goes offline for batch verification — replay, check consistency, merge convergent knowledge, flag contradictions
+- **Wake**: "I figured it out overnight" — unified knowledge available
+
+Sleep isn't triggered by darkness. It's triggered by the reconciliation queue hitting capacity. The drowsiness signal is: "experts have diverged beyond threshold, batch consolidation required." Motor atonia (muscle paralysis during REM) is the I/O lockout — you don't let half-merged knowledge drive actuators. Children sleep more because they accumulate more competing claims per day. Sleep deprivation causes hallucination because unreconciled claims leak into output when you skip the verification step.
+
+We accidentally reinvented the biological brain architecture: independent self-growing experts, perplexity-based self-selection, mandatory offline arbitration with I/O lockout until consistency is restored. Nature's cron job for formal verification.
+
+### Kleis as the Native Tongue + HM Unification for Reconciliation
+
+The growing brains don't just get verified by Kleis — they *think* in Kleis. It's simultaneously:
+1. The training corpus (what they learn)
+2. The output language (what they produce)
+3. The reconciliation protocol (how they talk to each other)
+
+No lossy translation. The verification language and the thinking language are the same.
+
+**The naming problem:** Different brains will inevitably produce similar structures named differently and parametrized differently. An algebra brain might call it `Group(T)` with `op`, `inv`, `e`. A topology brain might call it `LoopSpace(X)` with `compose`, `reverse`, `constant`. Same axioms, different vocabulary.
+
+**The solution:** Hindley-Milner unification (already in Kleis) strips the names and compares structural shapes:
+
+```
+Group(T)     :  (T → T → T) × (T → T) × T × (∀x. op(x, e) = x)
+LoopSpace(X) :  (Path(X) → Path(X) → Path(X)) × (Path(X) → Path(X)) × Path(X) × (∀p. compose(p, constant) = p)
+```
+
+HM unifies `T ~ Path(X)`, `op ~ compose`, `inv ~ reverse`, `e ~ constant`. Z3 then checks that the axioms are equivalent under substitution. If it unifies → same theory, merge. If not → genuinely different, keep both.
+
+This mechanizes what mathematicians do by hand and call "recognizing an isomorphism." The naming problem — the hardest problem in distributed knowledge — is solved by the type system. Brains don't need to agree on names. The type system sees through them.
+
+### Kleis as EDIFACT Replacement
+
+EDIFACT (Electronic Data Interchange for Administration, Commerce, and Transport) is the decades-old standard for B2B communication: rigid message formats where both trading partners must conform to pre-negotiated segment structures. Adding a field means updating the entire standard through international committees.
+
+Kleis replaces this with *semantic* interoperability:
+
+- **EDIFACT**: both parties must speak the *same syntax* (segment UNH, field positions 1-9, exact order)
+- **Kleis**: both parties express their domain in their own structures; HM unification proves type-compatibility
+
+Each party keeps their internal representation. A supplier calls it `SKU` with `qty`; a buyer calls it `ProductCode` with `quantities`. The type system unifies them structurally, Z3 verifies the axioms match. No pre-negotiated format, no version committees, no rigid segment positions.
+
+Onboarding a new trading partner doesn't require them to change their internal data model — just expose it as a Kleis structure and let unification prove compatibility. This is the same reconciliation mechanism the growing brains use: different vocabularies for the same semantic content, resolved by the type system.
+
+**Beyond execution — enabling negotiation itself:**
+
+EDIFACT only handles *executing* pre-agreed transactions. Kleis enables the *negotiation*:
+
+1. Both parties submit their structures with their constraints
+2. Divergence kernel localizes exactly where they disagree (not "incompatible" but "you require `delivery_window ≤ 3`, I require `≤ 7`")
+3. One proposes a modification: `delivery_window ≤ 5`
+4. Z3 checks: does this satisfy both parties' remaining hard constraints? Is the combined structure consistent?
+5. If yes — agreement. If no — iterate on the next predicate.
+
+The system can even *suggest* the rational middle ground: "the weakest axiom that satisfies both parties' hard constraints is X." That's constraint solving over the union of both structures — exactly what Z3 does. Disagreement becomes a set of predicates, negotiation becomes constraint relaxation, and agreement is the moment both structures unify under a shared weakening.
+
+The divergence kernel computation (`examples/papers/divergence_kernels_paper.kleis`) is the theoretical foundation for this.
+
+### Repositories
+
+- [kleis-brain-v1](https://github.com/engingithub/kleis-brain-v1) — Character-level, Rust
+- [kleis-brain-v2](https://github.com/engingithub/kleis-brain-v2) — Kleis-aware BPE tokenizer, Rust
+- Python prototype: `examples/mathematics/growing_transformer_brain.py` (branch: `feature/growing-brain-python`)
 
 ---
 
