@@ -41,11 +41,40 @@ while IFS= read -r -d '' file; do
     title=$(sed -n 's/.*<title>\(.*\)<\/title>.*/\1/p' "$file" | head -1)
     short_title="${title% - The Kleis Manual}"
 
-    if [ -z "$short_title" ] || [ "$short_title" = "$title" ]; then
-        desc="The official guide to the Kleis mathematical specification language"
-    else
-        desc="${short_title} — Kleis language guide: formal verification, type inference, and Z3 theorem proving."
-    fi
+    # Per-page descriptions (150-160 chars for SEO)
+    case "$rel" in
+        index.html|introduction.html)
+            desc="The Kleis Manual: learn formal verification, Hindley-Milner type inference, Z3 theorem proving, and universal knowledge production in one language.";;
+        chapters/01-starting-out.html)
+            desc="Get started with Kleis: install the language, write your first expressions, use the REPL, and understand basic types like Scalar, Bool, and String.";;
+        chapters/03-functions.html)
+            desc="Define and compose functions in Kleis with full type inference. Covers lambda expressions, higher-order functions, currying, and polymorphic signatures.";;
+        chapters/06-let-bindings.html)
+            desc="Use let-bindings in Kleis to define local variables, structure computations, and build complex expressions from simpler parts with type safety.";;
+        chapters/08-conditionals.html)
+            desc="Conditional expressions in Kleis: if-then-else with type-checked branches, Boolean logic, comparison operators, and Z3-verified guard conditions.";;
+        chapters/13-applications.html)
+            desc="Real-world Kleis applications: physics verification, business rules, authorization systems, cryptographic protocols, and domain-specific modeling.";;
+        chapters/16-bit-vectors.html)
+            desc="Bit-vector arithmetic in Kleis with Z3 backend: fixed-width integers, bitwise operations, overflow detection, and hardware verification examples.";;
+        chapters/17-strings.html)
+            desc="String operations in Kleis: concatenation, length, substring, regex matching, and Z3-backed verification of string properties and constraints.";;
+        chapters/19-matrices.html)
+            desc="Matrix algebra in Kleis: construction, arithmetic, determinants, eigenvalues, LAPACK integration, and type-safe dimensioned linear algebra.";;
+        chapters/20-example-blocks.html)
+            desc="Example blocks in Kleis: executable assertions, concrete evaluation, Z3 verification, and how to write self-testing mathematical specifications.";;
+        chapters/22-standard-library.html)
+            desc="The Kleis standard library: built-in structures for groups, rings, fields, vector spaces, categories, and differential geometry with axiom verification.";;
+        appendix/operators.html)
+            desc="Complete Kleis operator reference: arithmetic, comparison, logical, set, and custom operators with precedence, associativity, and type signatures.";;
+        *)
+            if [ -z "$short_title" ] || [ "$short_title" = "$title" ]; then
+                desc="The Kleis Manual: learn formal verification, Hindley-Milner type inference, Z3 theorem proving, and universal knowledge production in one language."
+            else
+                lower_title=$(echo "$short_title" | tr '[:upper:]' '[:lower:]')
+                desc="${short_title} — Learn ${lower_title} in Kleis: formal verification with Z3, Hindley-Milner type inference, and universal mathematical specification."
+            fi;;
+    esac
 
     # Inject canonical link after the <meta charset> line
     if ! grep -q 'rel="canonical"' "$file"; then

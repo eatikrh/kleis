@@ -19,7 +19,7 @@
         </script>
         
 
-        <meta name="description" content="The official guide to the Kleis mathematical specification language">
+        <meta name="description" content="The Kleis Manual: learn formal verification, Hindley-Milner type inference, Z3 theorem proving, and universal knowledge production in one language.">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
 
@@ -45,10 +45,10 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-20cb4b1b.js";
+            window.path_to_searchindex_js = "searchindex-1afb5905.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-f618dae5.js"></script>
+        <script src="toc-ad29a6a6.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -8881,10 +8881,10 @@ example "pendulum control design" {
 </tbody>
 </table>
 </div>
-<p>See <a href="#appendix-lapack-functions">LAPACK Functions appendix</a> for complete documentation.</p>
+<p>See <a href="#appendix-numerical-functions-lapack--tensor">LAPACK Functions appendix</a> for complete documentation.</p>
 <h2 id="whats-next-22"><a class="header" href="#whats-next-22">What’s Next</a></h2>
 <p>Explore more examples:</p>
-<p>→ <a href="#appendix-ode-solver">ODE Solver appendix</a> — detailed ode45 documentation<br>→ <a href="#appendix-lapack-functions">LAPACK Functions</a> — numerical linear algebra<br>→ <a href="#appendix-cartan-geometry-and-tensor-computation">Cartan Geometry</a> — differential geometry<br>→ <a href="#interactive-theory-building">Next: Interactive Theory Building</a> — AI-assisted formal theory development</p>
+<p>→ <a href="#appendix-ode-solver">ODE Solver appendix</a> — detailed ode45 documentation<br>→ <a href="#appendix-numerical-functions-lapack--tensor">LAPACK Functions</a> — numerical linear algebra<br>→ <a href="#appendix-cartan-geometry-and-tensor-computation">Cartan Geometry</a> — differential geometry<br>→ <a href="#interactive-theory-building">Next: Interactive Theory Building</a> — AI-assisted formal theory development</p>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="interactive-theory-building"><a class="header" href="#interactive-theory-building">Interactive Theory Building</a></h1>
 <p>Kleis is not just a language for writing mathematics — it is a substrate for
@@ -10867,7 +10867,7 @@ greekLower ::= "α" | "β" | "γ" | "δ" | "ε" | "ζ" | "η" | "θ"
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="appendix-operators"><a class="header" href="#appendix-operators">Appendix: Operators</a></h1>
-<p>This appendix covers all operators in the Kleis language. For built-in functions, see <a href="#appendix-built-in-functions">Built-in Functions</a>. For numerical linear algebra, see <a href="#appendix-lapack-functions">LAPACK Functions</a>.</p>
+<p>This appendix covers all operators in the Kleis language. For built-in functions, see <a href="#appendix-built-in-functions">Built-in Functions</a>. For numerical linear algebra, see <a href="#appendix-numerical-functions-lapack--tensor">LAPACK Functions</a>.</p>
 <h2 id="arithmetic-operators"><a class="header" href="#arithmetic-operators">Arithmetic Operators</a></h2>
 <div class="table-wrapper">
 <table>
@@ -11108,12 +11108,12 @@ Aᵀᵀ         // (Aᵀ)ᵀ = A - transpose twice
 <h2 id="see-also-2"><a class="header" href="#see-also-2">See Also</a></h2>
 <ul>
 <li><a href="#appendix-built-in-functions">Built-in Functions</a> - List, string, matrix operations</li>
-<li><a href="#appendix-lapack-functions">LAPACK Functions</a> - Numerical linear algebra</li>
+<li><a href="#appendix-numerical-functions-lapack--tensor">LAPACK Functions</a> - Numerical linear algebra</li>
 <li><a href="#complex-numbers">Complex Numbers</a> - Complex number operations</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="appendix-built-in-functions"><a class="header" href="#appendix-built-in-functions">Appendix: Built-in Functions</a></h1>
-<p>This appendix covers built-in functions for basic operations. For numerical linear algebra (eigenvalues, SVD, etc.), see <a href="#appendix-lapack-functions">LAPACK Functions</a>.</p>
+<p>This appendix covers built-in functions for basic operations. For numerical linear algebra (eigenvalues, SVD, etc.), see <a href="#appendix-numerical-functions-lapack--tensor">LAPACK Functions</a>.</p>
 <h2 id="output-functions"><a class="header" href="#output-functions">Output Functions</a></h2>
 <p>Functions for displaying values:</p>
 <div class="table-wrapper">
@@ -11327,7 +11327,7 @@ let p = Pair(1, "a") in snd(p)  // → "a"
 </table>
 </div>
 <h2 id="matrix-operations-basic"><a class="header" href="#matrix-operations-basic">Matrix Operations (Basic)</a></h2>
-<p>For advanced operations (eigenvalues, SVD), see <a href="#appendix-lapack-functions">LAPACK Functions</a>.</p>
+<p>For advanced operations (eigenvalues, SVD), see <a href="#appendix-numerical-functions-lapack--tensor">LAPACK Functions</a>.</p>
 <h3 id="matrix-creation"><a class="header" href="#matrix-creation">Matrix Creation</a></h3>
 <div class="table-wrapper">
 <table>
@@ -11467,14 +11467,14 @@ They return the intent and file path set by the current <code>check_code</code>,
 <h2 id="see-also-3"><a class="header" href="#see-also-3">See Also</a></h2>
 <ul>
 <li><a href="#appendix-operators">Operators</a> - Operator reference</li>
-<li><a href="#appendix-lapack-functions">LAPACK Functions</a> - Numerical linear algebra</li>
+<li><a href="#appendix-numerical-functions-lapack--tensor">LAPACK Functions</a> - Numerical linear algebra</li>
 <li><a href="#matrices">Matrices</a> - Matrix chapter</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="appendix-lapack-functions"><a class="header" href="#appendix-lapack-functions">Appendix: LAPACK Functions</a></h1>
-<p>Kleis provides comprehensive numerical linear algebra operations through LAPACK integration. These functions are available when Kleis is compiled with the <code>numerical</code> feature.</p>
+<h1 id="appendix-numerical-functions-lapack--tensor"><a class="header" href="#appendix-numerical-functions-lapack--tensor">Appendix: Numerical Functions (LAPACK &amp; Tensor)</a></h1>
+<p>Kleis provides comprehensive numerical operations through LAPACK integration and an ndarray tensor backend. These functions are available when Kleis is compiled with the <code>numerical</code> feature.</p>
 <blockquote>
-<p><strong>Note:</strong> These operations perform concrete numerical computation. For symbolic matrix operations, see <a href="#appendix-built-in-functions">Built-in Functions</a>.</p>
+<p><strong>Note:</strong> These operations perform concrete numerical computation. For symbolic matrix operations, see <a href="#appendix-built-in-functions">Built-in Functions</a>. For symbolic GR tensor calculus, see the <code>tensors.kleis</code> stdlib.</p>
 </blockquote>
 <h2 id="eigenvalues-and-eigenvectors"><a class="header" href="#eigenvalues-and-eigenvectors">Eigenvalues and Eigenvectors</a></h2>
 <div class="table-wrapper">
@@ -11773,6 +11773,125 @@ K
                     [f   e  h   g]
 </code></pre>
 <hr>
+<h2 id="ndarray-tensor-operations"><a class="header" href="#ndarray-tensor-operations">NDArray Tensor Operations</a></h2>
+<p>Kleis provides dynamic-rank tensor operations for high-performance numerical computation on dense arrays. These enable the <strong>factorized transfer matrix trick</strong> used in statistical mechanics: instead of materializing a 2^N × 2^N matrix, reshape the state vector as an N-index tensor and apply N separate 2×2 contractions.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Description</th><th>Returns</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ndarray_reshape(data, shape)</code></td><td>Reshape flat list into N-dimensional tensor</td><td><code>NDArray(shape, data)</code></td></tr>
+<tr><td><code>ndarray_contract(T, M, axis)</code></td><td>Contract matrix M along one axis of tensor T</td><td><code>NDArray(new_shape, new_data)</code></td></tr>
+<tr><td><code>ndarray_moveaxis(T, from, to)</code></td><td>Move tensor axis from one position to another</td><td><code>NDArray(new_shape, new_data)</code></td></tr>
+<tr><td><code>ndarray_flatten(T)</code></td><td>Flatten tensor back to a flat list</td><td>List of numbers</td></tr>
+</tbody>
+</table>
+</div>
+<p>The <code>NDArray(shape, data)</code> wrapper carries the tensor’s shape alongside its flat data. This is distinct from the symbolic <code>Tensor(upper, lower, dim, T)</code> type used for GR index notation — <code>NDArray</code> is a runtime container for numerical computation.</p>
+<h3 id="reshape-and-flatten"><a class="header" href="#reshape-and-flatten">Reshape and Flatten</a></h3>
+<pre><code class="language-kleis">// Reshape a flat 8-element list into a (2, 2, 2) tensor
+let v = [1, 2, 3, 4, 5, 6, 7, 8] in
+let T = ndarray_reshape(v, [2, 2, 2]) in
+
+// Flatten back to recover the original list
+ndarray_flatten(T)   // → [1, 2, 3, 4, 5, 6, 7, 8]
+</code></pre>
+<h3 id="contract-along-an-axis"><a class="header" href="#contract-along-an-axis">Contract Along an Axis</a></h3>
+<p>The core operation: apply a matrix to one axis of a tensor, leaving all other axes unchanged.</p>
+<pre><code class="language-kleis">// 2×2 matrix
+let A = Matrix(2, 2, [1, 0, 0, 1]) in   // identity
+
+// Reshape [1, 0, 0, 1] as a (2, 2) tensor
+let T = ndarray_reshape([1, 0, 0, 1], [2, 2]) in
+
+// Contract A along axis 0: identity preserves the tensor
+ndarray_flatten(ndarray_contract(T, A, 0))   // → [1, 0, 0, 1]
+</code></pre>
+<h3 id="ising-transfer-matrix-example"><a class="header" href="#ising-transfer-matrix-example">Ising Transfer Matrix Example</a></h3>
+<p>The factorized transfer matrix trick from the 3D Ising model. For a system with N² sites, the inter-layer coupling is applied as N² separate 2×2 contractions:</p>
+<pre><code class="language-kleis">// Inter-layer coupling matrix at inverse temperature β
+// A = [[1+tanh(β), 1-tanh(β)],
+//      [1-tanh(β), 1+tanh(β)]]
+let t = 0.46211715726 in   // tanh(0.5)
+let A = Matrix(2, 2, [1 + t, 1 - t, 1 - t, 1 + t]) in
+
+// State vector (single site: spin-up)
+let v = [1, 0] in
+
+// Step 1: Reshape flat vector to (2,) tensor
+let T = ndarray_reshape(v, [2]) in
+
+// Step 2: Contract with A along axis 0
+let result = ndarray_contract(T, A, 0) in
+
+// Step 3: Flatten back
+ndarray_flatten(result)   // → [1.462, 0.538] approximately
+</code></pre>
+<p>For N=2 (4 sites, dimension 16), you would reshape a 16-vector as a (2,2,2,2) tensor and apply the contraction loop:</p>
+<pre><code class="language-kleis">let v16 = ndarray_reshape(state_vector, [2, 2, 2, 2]) in
+// Apply A along each axis in sequence:
+let step0 = ndarray_contract(v16, A, 0) in
+let step1 = ndarray_contract(step0, A, 1) in
+let step2 = ndarray_contract(step1, A, 2) in
+let step3 = ndarray_contract(step2, A, 3) in
+ndarray_flatten(step3)
+</code></pre>
+<p>This reduces the cost from O(4^N) (dense matrix-vector multiply) to O(N · 2^N).</p>
+<h3 id="move-axis"><a class="header" href="#move-axis">Move Axis</a></h3>
+<p>Reorder tensor dimensions. Moving axis 0 to axis 1 of a (2,2) tensor is equivalent to matrix transposition:</p>
+<pre><code class="language-kleis">let T = ndarray_reshape([1, 2, 3, 4], [2, 2]) in
+ndarray_flatten(ndarray_moveaxis(T, 0, 1))   // → [1, 3, 2, 4] (transposed)
+</code></pre>
+<hr>
+<h2 id="fourier-transforms-dft--fft"><a class="header" href="#fourier-transforms-dft--fft">Fourier Transforms (DFT / FFT)</a></h2>
+<p>Kleis provides Discrete Fourier Transform and Fast Fourier Transform operations for spectral analysis and signal processing. These are essential for decomposing transfer matrices into momentum sectors.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Description</th><th>Returns</th></tr>
+</thead>
+<tbody>
+<tr><td><code>dft(vector)</code></td><td>Discrete Fourier Transform (any size, O(N²))</td><td>List of complex numbers</td></tr>
+<tr><td><code>fft(vector)</code></td><td>Fast Fourier Transform (O(N log N) for power-of-2, falls back to DFT)</td><td>List of complex numbers</td></tr>
+<tr><td><code>idft(spectrum)</code></td><td>Inverse DFT</td><td>List of complex numbers</td></tr>
+<tr><td><code>ifft(spectrum)</code></td><td>Inverse FFT</td><td>List of complex numbers</td></tr>
+</tbody>
+</table>
+</div>
+<p>The forward transforms accept a list of real numbers. The inverse transforms accept a list of complex numbers (using <code>complex(re, im)</code>) or real numbers (treated as real + 0i). Results with negligible imaginary parts (|im| &lt; 10⁻¹⁴) are returned as plain real numbers.</p>
+<h3 id="dft-example"><a class="header" href="#dft-example">DFT Example</a></h3>
+<pre><code class="language-kleis">// DC signal: all ones → [4, 0, 0, 0]
+dft([1, 1, 1, 1])   // → [4, 0, 0, 0]
+
+// Impulse: [1, 0, 0, 0] → flat spectrum [1, 1, 1, 1]
+dft([1, 0, 0, 0])   // → [1, 1, 1, 1]
+
+// Sine wave: [0, 1, 0, -1] → peaks at k=1 and k=3
+dft([0, 1, 0, -1])  // → [0, complex(0, -2), 0, complex(0, 2)]
+</code></pre>
+<h3 id="fft-example"><a class="header" href="#fft-example">FFT Example</a></h3>
+<pre><code class="language-kleis">// FFT is faster for power-of-2 sizes, identical results
+fft([1, 2, 3, 4, 5, 6, 7, 8])
+
+// Non-power-of-2 sizes fall back to DFT automatically
+fft([1, 2, 3])   // → same as dft([1, 2, 3])
+</code></pre>
+<h3 id="roundtrip-fft--ifft"><a class="header" href="#roundtrip-fft--ifft">Roundtrip: FFT → IFFT</a></h3>
+<pre><code class="language-kleis">// Transform and recover the original signal
+let signal = [3, 1, 4, 1] in
+let spectrum = fft(signal) in
+ifft(spectrum)   // → [3, 1, 4, 1] (recovered)
+</code></pre>
+<h3 id="ising-application-momentum-sector-decomposition"><a class="header" href="#ising-application-momentum-sector-decomposition">Ising Application: Momentum Sector Decomposition</a></h3>
+<p>The Fourier decomposition of the transfer matrix into momentum sectors (k_x, k_y) uses the DFT to block-diagonalize the problem:</p>
+<pre><code class="language-kleis">// Eigenvalues of a periodic chain can be decomposed by momentum
+// k = 2π·n/N for n = 0, 1, ..., N-1
+let N = 8 in
+let signal = [1, 0, 0, 0, 0, 0, 0, 0] in   // delta function
+fft(signal)   // → [1, 1, 1, 1, 1, 1, 1, 1] (flat in momentum space)
+</code></pre>
+<hr>
 <h2 id="jupyter-notebook-usage"><a class="header" href="#jupyter-notebook-usage">Jupyter Notebook Usage</a></h2>
 <p>When using Kleis Numeric kernel in Jupyter:</p>
 <pre><code class="language-kleis">// Define a matrix
@@ -11783,6 +11902,10 @@ eigenvalues(A)
 
 // Pretty-print with out()
 out(inv(A))
+
+// Tensor operations
+let T = ndarray_reshape([1, 2, 3, 4], [2, 2])
+ndarray_flatten(ndarray_contract(T, A, 0))
 </code></pre>
 <h2 id="see-also-4"><a class="header" href="#see-also-4">See Also</a></h2>
 <ul>
@@ -12078,7 +12201,7 @@ ode45(dyn, [1], [0, 1], 0.1)
 <hr>
 <h2 id="see-also-5"><a class="header" href="#see-also-5">See Also</a></h2>
 <ul>
-<li><a href="#appendix-lapack-functions">LAPACK Functions</a> - Matrix decompositions, <code>lqr()</code>, <code>dlqr()</code>, <code>eigenvalues()</code></li>
+<li><a href="#appendix-numerical-functions-lapack--tensor">LAPACK Functions</a> - Matrix decompositions, <code>lqr()</code>, <code>dlqr()</code>, <code>eigenvalues()</code></li>
 <li><a href="#jupyter-notebook">Jupyter Notebook</a> - Interactive plotting</li>
 <li><a href="#appendix-built-in-functions">Built-in Functions</a> - <code>list_map</code>, <code>nth</code>, <code>list_fold</code>, etc.</li>
 </ul>
@@ -12311,7 +12434,7 @@ Loaded standard library.
 <ul>
 <li><a href="#appendix-cartan-geometry-and-tensor-computation">Cartan Geometry Appendix</a> — Full Schwarzschild example</li>
 <li><a href="#appendix-ode-solver">ODE Solver Appendix</a> — Control systems with LQR</li>
-<li><a href="#appendix-lapack-functions">LAPACK Functions</a> — Numerical linear algebra</li>
+<li><a href="#appendix-numerical-functions-lapack--tensor">LAPACK Functions</a> — Numerical linear algebra</li>
 <li><a href="#appendix-built-in-functions">Built-in Functions</a> — Complete function reference</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
