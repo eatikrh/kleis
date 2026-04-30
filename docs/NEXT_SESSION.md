@@ -657,6 +657,21 @@ HM unifies `T ~ Path(X)`, `op ~ compose`, `inv ~ reverse`, `e ~ constant`. Z3 th
 
 This mechanizes what mathematicians do by hand and call "recognizing an isomorphism." The naming problem — the hardest problem in distributed knowledge — is solved by the type system. Brains don't need to agree on names. The type system sees through them.
 
+### Kleis as EDIFACT Replacement
+
+EDIFACT (Electronic Data Interchange for Administration, Commerce, and Transport) is the decades-old standard for B2B communication: rigid message formats where both trading partners must conform to pre-negotiated segment structures. Adding a field means updating the entire standard through international committees.
+
+Kleis replaces this with *semantic* interoperability:
+
+- **EDIFACT**: both parties must speak the *same syntax* (segment UNH, field positions 1-9, exact order)
+- **Kleis**: both parties express their domain in their own structures; HM unification proves type-compatibility
+
+Each party keeps their internal representation. A supplier calls it `SKU` with `qty`; a buyer calls it `ProductCode` with `quantities`. The type system unifies them structurally, Z3 verifies the axioms match. No pre-negotiated format, no version committees, no rigid segment positions.
+
+Onboarding a new trading partner doesn't require them to change their internal data model — just expose it as a Kleis structure and let unification prove compatibility. This is the same reconciliation mechanism the growing brains use: different vocabularies for the same semantic content, resolved by the type system.
+
+The divergence kernel computation (`examples/papers/divergence_kernels_paper.kleis`) applies directly: when two parties' contracts *don't* unify, Kleis can localize the exact predicate where they disagree — the minimal point of negotiation.
+
 ### Repositories
 
 - [kleis-brain-v1](https://github.com/engingithub/kleis-brain-v1) — Character-level, Rust
