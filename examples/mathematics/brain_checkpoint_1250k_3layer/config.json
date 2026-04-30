@@ -1,0 +1,36 @@
+{
+  "vocab_size": 359,
+  "d_model": 48,
+  "context_len": 128,
+  "adam_t": 1250206,
+  "n_layers": 3,
+  "layers": [
+    {
+      "max_ffn": 1920,
+      "active_ffn": 234,
+      "n_heads": 34,
+      "total_heads_recruited": 587,
+      "total_ffn_recruited": 3504,
+      "total_heads_pruned": 554,
+      "total_ffn_pruned": 3302
+    },
+    {
+      "max_ffn": 768,
+      "active_ffn": 707,
+      "n_heads": 16,
+      "total_heads_recruited": 15,
+      "total_ffn_recruited": 1856,
+      "total_heads_pruned": 0,
+      "total_ffn_pruned": 1181
+    },
+    {
+      "max_ffn": 896,
+      "active_ffn": 896,
+      "n_heads": 18,
+      "total_heads_recruited": 18,
+      "total_ffn_recruited": 864,
+      "total_heads_pruned": 1,
+      "total_ffn_pruned": 0
+    }
+  ]
+}
