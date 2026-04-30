@@ -670,7 +670,19 @@ Each party keeps their internal representation. A supplier calls it `SKU` with `
 
 Onboarding a new trading partner doesn't require them to change their internal data model — just expose it as a Kleis structure and let unification prove compatibility. This is the same reconciliation mechanism the growing brains use: different vocabularies for the same semantic content, resolved by the type system.
 
-The divergence kernel computation (`examples/papers/divergence_kernels_paper.kleis`) applies directly: when two parties' contracts *don't* unify, Kleis can localize the exact predicate where they disagree — the minimal point of negotiation.
+**Beyond execution — enabling negotiation itself:**
+
+EDIFACT only handles *executing* pre-agreed transactions. Kleis enables the *negotiation*:
+
+1. Both parties submit their structures with their constraints
+2. Divergence kernel localizes exactly where they disagree (not "incompatible" but "you require `delivery_window ≤ 3`, I require `≤ 7`")
+3. One proposes a modification: `delivery_window ≤ 5`
+4. Z3 checks: does this satisfy both parties' remaining hard constraints? Is the combined structure consistent?
+5. If yes — agreement. If no — iterate on the next predicate.
+
+The system can even *suggest* the rational middle ground: "the weakest axiom that satisfies both parties' hard constraints is X." That's constraint solving over the union of both structures — exactly what Z3 does. Disagreement becomes a set of predicates, negotiation becomes constraint relaxation, and agreement is the moment both structures unify under a shared weakening.
+
+The divergence kernel computation (`examples/papers/divergence_kernels_paper.kleis`) is the theoretical foundation for this.
 
 ### Repositories
 
