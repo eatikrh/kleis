@@ -635,6 +635,28 @@ Sleep isn't triggered by darkness. It's triggered by the reconciliation queue hi
 
 We accidentally reinvented the biological brain architecture: independent self-growing experts, perplexity-based self-selection, mandatory offline arbitration with I/O lockout until consistency is restored. Nature's cron job for formal verification.
 
+### Kleis as the Native Tongue + HM Unification for Reconciliation
+
+The growing brains don't just get verified by Kleis — they *think* in Kleis. It's simultaneously:
+1. The training corpus (what they learn)
+2. The output language (what they produce)
+3. The reconciliation protocol (how they talk to each other)
+
+No lossy translation. The verification language and the thinking language are the same.
+
+**The naming problem:** Different brains will inevitably produce similar structures named differently and parametrized differently. An algebra brain might call it `Group(T)` with `op`, `inv`, `e`. A topology brain might call it `LoopSpace(X)` with `compose`, `reverse`, `constant`. Same axioms, different vocabulary.
+
+**The solution:** Hindley-Milner unification (already in Kleis) strips the names and compares structural shapes:
+
+```
+Group(T)     :  (T → T → T) × (T → T) × T × (∀x. op(x, e) = x)
+LoopSpace(X) :  (Path(X) → Path(X) → Path(X)) × (Path(X) → Path(X)) × Path(X) × (∀p. compose(p, constant) = p)
+```
+
+HM unifies `T ~ Path(X)`, `op ~ compose`, `inv ~ reverse`, `e ~ constant`. Z3 then checks that the axioms are equivalent under substitution. If it unifies → same theory, merge. If not → genuinely different, keep both.
+
+This mechanizes what mathematicians do by hand and call "recognizing an isomorphism." The naming problem — the hardest problem in distributed knowledge — is solved by the type system. Brains don't need to agree on names. The type system sees through them.
+
 ### Repositories
 
 - [kleis-brain-v1](https://github.com/engingithub/kleis-brain-v1) — Character-level, Rust
