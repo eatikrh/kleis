@@ -63,6 +63,8 @@ while IFS= read -r -d '' file; do
             desc="Matrix algebra in Kleis: construction, arithmetic, determinants, eigenvalues, LAPACK integration, and type-safe dimensioned linear algebra.";;
         chapters/20-example-blocks.html)
             desc="Example blocks in Kleis: executable assertions, concrete evaluation, Z3 verification, and how to write self-testing mathematical specifications.";;
+        chapters/31-equation-editor.html)
+            desc="Kleis Equation Editor: visual WYSIWYG tool for building math expressions, matrices, tensors, and Egyptian hieroglyphs with live Typst rendering and Z3 verification.";;
         chapters/22-standard-library.html)
             desc="The Kleis standard library: built-in structures for groups, rings, fields, vector spaces, categories, and differential geometry with axiom verification.";;
         appendix/operators.html)
