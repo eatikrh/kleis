@@ -3,7 +3,6 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <link rel="canonical" href="https://kleis.io/docs/manual/book/print">
         <title>The Kleis Manual</title>
         <meta name="robots" content="noindex">
 
@@ -19,7 +18,7 @@
         </script>
         
 
-        <meta name="description" content="The Kleis Manual: learn formal verification, Hindley-Milner type inference, Z3 theorem proving, and universal knowledge production in one language.">
+        <meta name="description" content="The official guide to the Kleis mathematical specification language">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
 
@@ -45,10 +44,10 @@
             const path_to_root = "";
             const default_light_theme = "navy";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1afb5905.js";
+            window.path_to_searchindex_js = "searchindex-0aec5e49.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-ad29a6a6.js"></script>
+        <script src="toc-f94e32a3.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -4207,6 +4206,376 @@ curl -fsSL https://typst.app/install.sh | sh
 <li>Learn Lilaq plotting: <a href="https://typst.app/universe/package/lilaq">Lilaq on Typst Universe</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="equation-editor"><a class="header" href="#equation-editor">Equation Editor</a></h1>
+<p>The Kleis Equation Editor is a visual, browser-based tool for building
+mathematical expressions. Instead of typing LaTeX or Typst syntax by hand, you
+click palette buttons to assemble an expression tree. The editor renders each
+change live through the Typst compiler and can type-check, verify, and export
+the result — all without leaving the browser.</p>
+<h2 id="quick-start-2"><a class="header" href="#quick-start-2">Quick Start</a></h2>
+<h3 id="prerequisites-2"><a class="header" href="#prerequisites-2">Prerequisites</a></h3>
+<ol>
+<li><strong>Kleis</strong> compiled and in PATH (see <a href="#starting-out">Starting Out</a>)</li>
+<li>A modern web browser (Chrome, Firefox, Safari, Edge)</li>
+</ol>
+<h3 id="launch"><a class="header" href="#launch">Launch</a></h3>
+<p>Start the equation editor server from the Kleis project root:</p>
+<pre><code class="language-bash">kleis-server
+</code></pre>
+<p>The server prints:</p>
+<pre><code>📡 Server running at: http://127.0.0.1:3000
+</code></pre>
+<p>Open <a href="http://localhost:3000">http://localhost:3000</a> in your browser. You should
+see the editor with a header bar, a structural canvas, a symbol palette, and a
+gallery of examples at the bottom.</p>
+<blockquote>
+<p><strong>Note:</strong> The server must be started from the repository root so it can find
+the <code>static/</code>, <code>stdlib/</code>, and <code>std_template_lib/</code> directories. You can
+override the host and port with the <code>KLEIS_SERVER_HOST</code> and
+<code>KLEIS_SERVER_PORT</code> environment variables.</p>
+</blockquote>
+<h2 id="editor-modes"><a class="header" href="#editor-modes">Editor Modes</a></h2>
+<p>The header provides two mode buttons:</p>
+<h3 id="text-mode"><a class="header" href="#text-mode">Text Mode</a></h3>
+<p>A plain textarea where you type LaTeX directly. Click <strong>Render</strong> to see the
+MathJax preview on the right. This mode is useful for quick previews of
+existing LaTeX expressions or for pasting formulas from other sources.</p>
+<p>Text mode also provides <strong>Verify</strong> and <strong>Clear</strong> buttons.</p>
+<h3 id="structural-mode"><a class="header" href="#structural-mode">Structural Mode</a></h3>
+<p>The main mode. A large white canvas displays your expression as a live Typst
+rendering (SVG). You build expressions by clicking palette buttons, which
+insert template nodes into an internal AST (Abstract Syntax Tree). The editor
+re-renders after every change.</p>
+<p>Empty positions appear as green interactive overlays — these are <strong>markers</strong>
+(also called slots or placeholders). Click a marker to select it, then click a
+palette button or type a value to fill it. The canvas is scrollable and
+resizable; drag the bottom-right corner to adjust its size.</p>
+<!-- TODO: add screenshot of structural mode with green markers -->
+<h2 id="the-palette"><a class="header" href="#the-palette">The Palette</a></h2>
+<p>The palette sits below the canvas and contains ten tabs. Each tab groups
+related operations.</p>
+<h3 id="basics"><a class="header" href="#basics">Basics</a></h3>
+<p>Arithmetic operators (<code>+</code>, <code>-</code>, <code>×</code>, <code>÷</code>, <code>±</code>, <code>∓</code>, <code>·</code>, <code>=</code>, <code>≠</code>, <code>∞</code>),
+fractions, square and nth roots, powers, subscripts, superscripts, mixed
+indices, binomial coefficients, and factorials. Also includes common functions:
+<code>sin</code>, <code>cos</code>, <code>tan</code>, <code>arcsin</code>, <code>arccos</code>, <code>arctan</code>, <code>ln</code>, <code>log</code>, <code>exp</code>, and
+<code>e^{·}</code>.</p>
+<p>A <strong>Piecewise</strong> button opens a dialog for building piecewise-defined functions
+with 2–10 cases.</p>
+<h3 id="fences"><a class="header" href="#fences">Fences</a></h3>
+<p>Delimiter pairs: parentheses <code>( )</code>, square brackets <code>[ ]</code>, curly braces
+<code>{ }</code>, angle brackets <code>⟨ ⟩</code>, absolute value <code>| |</code>, double-bar norm <code>‖ ‖</code>,
+floor <code>⌊ ⌋</code>, and ceiling <code>⌈ ⌉</code>. Each inserts a template that wraps the
+currently selected sub-expression.</p>
+<h3 id="accents"><a class="header" href="#accents">Accents</a></h3>
+<p>Diacritical marks and decorations: dot, double-dot, hat, bar, tilde,
+overline, underline, vector arrow, and bold.</p>
+<h3 id="calculus"><a class="header" href="#calculus">Calculus</a></h3>
+<p>Definite integrals, sums, products, limits, ordinary derivatives, partial
+derivatives, and gradients. Also includes integral transforms (Fourier,
+inverse Fourier, Laplace, inverse Laplace), convolution, kernel integrals,
+and Green’s function templates.</p>
+<h3 id="linear-algebra-1"><a class="header" href="#linear-algebra-1">Linear Algebra</a></h3>
+<p>Preset 2×2 and 3×3 matrices in bracket, parenthesis, and determinant styles.
+A <strong>Custom Matrix</strong> button opens the Matrix Builder dialog (see below). Also
+provides bold vector, vector arrow, and product operators (matrix multiply,
+dot product, cross product).</p>
+<h3 id="greek"><a class="header" href="#greek">Greek</a></h3>
+<p>Lowercase (α through ω) and uppercase (Γ through Ω) Greek letters.</p>
+<h3 id="logic--sets"><a class="header" href="#logic--sets">Logic &amp; Sets</a></h3>
+<p>Boolean constants, comparison operators (<code>&lt;</code>, <code>&gt;</code>, <code>≤</code>, <code>≥</code>, <code>≈</code>), logical
+connectives (and, or, not, implies, iff), quantifiers (∀, ∃),
+set operators (∈, ∉, ⊂, ⊆, ∪, ∩, ∅), congruence, and a <code>let</code>-binding
+template.</p>
+<h3 id="physics"><a class="header" href="#physics">Physics</a></h3>
+<p>Quantum mechanics notation: ket, bra, inner product, outer product,
+expectation value, and commutator brackets. General relativity tensors:
+metric tensor <code>g</code>, Christoffel symbols <code>Γ</code>, and Riemann curvature tensor <code>R</code>.</p>
+<h3 id="pot"><a class="header" href="#pot">POT</a></h3>
+<p>Projection Operator Theory templates: projection operator, modal integral,
+kernel <code>K</code>, causal bound, residue operator, modal space, and spacetime
+manifold templates.</p>
+<h3 id="egyptian"><a class="header" href="#egyptian">Egyptian</a></h3>
+<p>Egyptian hieroglyphs from the Gardiner Sign List. This tab loads 225 core
+signs dynamically from the server. Features:</p>
+<ul>
+<li><strong>Search</strong> — type a Gardiner code (e.g. <code>A1</code>, <code>D21</code>) to filter</li>
+<li><strong>Category dropdown</strong> — filter by Gardiner category (A: Man and Activities,
+D: Body Parts, G: Birds, M: Plants, etc.)</li>
+<li><strong>Scrollable grid</strong> — each glyph renders as an SVG image; click to insert</li>
+</ul>
+<p>Hieroglyphs are rendered through the same Typst pipeline as mathematical
+symbols — they use <code>#image()</code> to embed SVG files. This means they compose
+freely with all other editor features. You can place hieroglyphs inside
+matrices for traditional quadrat arrangement, or mix them with mathematical
+notation.</p>
+<p><img src="images/equation_editor_egyptian.png" alt="Equation Editor showing Egyptian hieroglyphs in a matrix arrangement"></p>
+<p><em>The Egyptian tab showing the Gardiner sign palette, category filter, and a 2×3 matrix of hieroglyphs in the structural editor. The gallery of mathematical examples appears below.</em></p>
+<h2 id="building-expressions"><a class="header" href="#building-expressions">Building Expressions</a></h2>
+<p>The core workflow in Structural Mode:</p>
+<ol>
+<li><strong>Click a palette button</strong> to insert a template. The template appears in the
+canvas with green overlays marking empty slots.</li>
+<li><strong>Click a green slot</strong> to select it. The selected slot is highlighted.</li>
+<li><strong>Fill the slot</strong>: click another palette button to insert a nested
+expression, or type a value directly (see Inline Editing below).</li>
+<li><strong>Navigate</strong> between slots with arrow keys or Tab.</li>
+<li><strong>Repeat</strong> until the expression is complete.</li>
+<li><strong>Undo/Redo</strong> with the toolbar buttons or keyboard shortcuts.</li>
+</ol>
+<p>Each palette button inserts an AST node. Templates can nest arbitrarily deep:
+a fraction inside a matrix inside a sum inside an integral is built one click
+at a time. The editor re-renders after every insertion.</p>
+<p><strong>Replacing content:</strong> If you insert a template into a slot that already has
+content, the editor shows a confirmation dialog asking whether to replace
+the existing content.</p>
+<h2 id="inline-editing"><a class="header" href="#inline-editing">Inline Editing</a></h2>
+<p>Clicking a marker (green slot) opens an inline text input directly on the
+canvas. This lets you type values, variable names, or symbols without leaving
+the structural view.</p>
+<ul>
+<li><strong>Enter</strong> — commit the value and close the input</li>
+<li><strong>Escape</strong> — cancel and close without changes</li>
+<li><strong>Tab</strong> — commit and move to the next slot</li>
+</ul>
+<p>While the inline input is active, clicking palette buttons appends symbols to
+the input rather than replacing the entire slot.</p>
+<p><strong>Modifier-click:</strong> Hold Shift, Ctrl, or Cmd while clicking a slot to open a
+standard prompt dialog instead of the inline editor.</p>
+<h2 id="keyboard-shortcuts"><a class="header" href="#keyboard-shortcuts">Keyboard Shortcuts</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Shortcut</th><th>Action</th></tr>
+</thead>
+<tbody>
+<tr><td><code>↓</code> or <code>→</code></td><td>Next marker</td></tr>
+<tr><td><code>↑</code> or <code>←</code></td><td>Previous marker</td></tr>
+<tr><td><code>Tab</code></td><td>Next marker</td></tr>
+<tr><td><code>Shift+Tab</code></td><td>Previous marker</td></tr>
+<tr><td><code>Enter</code></td><td>Edit selected marker</td></tr>
+<tr><td><code>Escape</code></td><td>Deselect marker</td></tr>
+<tr><td><code>Cmd+Z</code> / <code>Ctrl+Z</code></td><td>Undo</td></tr>
+<tr><td><code>Cmd+Shift+Z</code> / <code>Ctrl+Shift+Z</code></td><td>Redo</td></tr>
+<tr><td><code>Cmd++</code> / <code>Ctrl++</code></td><td>Zoom in</td></tr>
+<tr><td><code>Cmd+-</code> / <code>Ctrl+-</code></td><td>Zoom out</td></tr>
+<tr><td><code>Cmd+0</code> / <code>Ctrl+0</code></td><td>Reset zoom</td></tr>
+</tbody>
+</table>
+</div>
+<p>Keyboard shortcuts are active when the structural canvas has focus. They are
+disabled while typing in the inline editor or other text inputs.</p>
+<h2 id="matrix-builder"><a class="header" href="#matrix-builder">Matrix Builder</a></h2>
+<p>The <strong>Custom Matrix</strong> button (in the Linear Algebra tab) opens a dialog for
+creating matrices of any size:</p>
+<ol>
+<li><strong>Size selection</strong> — hover over a 6×6 grid to preview dimensions, or type
+exact values (1–10 rows, 1–10 columns) into the numeric fields.</li>
+<li><strong>Delimiter style</strong> — choose one of four delimiter types:</li>
+</ol>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Style</th><th>Description</th><th>Typst Environment</th></tr>
+</thead>
+<tbody>
+<tr><td><code>[ ]</code></td><td>Square brackets</td><td><code>bmatrix</code></td></tr>
+<tr><td><code>( )</code></td><td>Parentheses</td><td><code>pmatrix</code></td></tr>
+<tr><td><code>| |</code></td><td>Vertical bars (determinant)</td><td><code>vmatrix</code></td></tr>
+<tr><td><code>{ }</code></td><td>Curly braces</td><td><code>Bmatrix</code></td></tr>
+</tbody>
+</table>
+</div>
+<ol start="3">
+<li>Click <strong>Create Matrix</strong> to insert. Each cell appears as an editable marker.</li>
+</ol>
+<p>If a marker is currently selected when you open the Matrix Builder, the new
+matrix is inserted into that slot, allowing you to nest matrices inside other
+expressions.</p>
+<h2 id="type-checking"><a class="header" href="#type-checking">Type Checking</a></h2>
+<p>After each render, the editor automatically runs Hindley-Milner type inference
+on your expression. A type indicator panel appears below the toolbar:</p>
+<ul>
+<li><strong>Green border with ✓</strong> — type inference succeeded. Shows the inferred type
+(e.g. <code>Scalar</code>, <code>Matrix(2, 2, Scalar)</code>, <code>Complex</code>).</li>
+<li><strong>Red border with ✗</strong> — type inference found an error (e.g. dimension
+mismatch in matrix multiplication).</li>
+<li><strong>💡 Suggestion</strong> — an orange hint with additional context.</li>
+</ul>
+<p><img src="images/equation_editor_matrices.png" alt="Matrix multiplication with type checking"></p>
+<p><em>The type indicator confirms <code>Matrix(2, 2, Scalar)</code> for a matrix multiplication involving a rotation matrix.</em></p>
+<p>Type checking uses the same Hindley-Milner inference engine as the Kleis
+language itself, with type definitions loaded from the standard library. An
+“Unknown operation” message for new template types (such as hieroglyphs) is
+informational — it does not prevent rendering or export.</p>
+<h2 id="verify-and-sat"><a class="header" href="#verify-and-sat">Verify and Sat</a></h2>
+<p>Two buttons invoke the Z3 SMT solver on your expression:</p>
+<h3 id="verify-"><a class="header" href="#verify-">Verify (✓)</a></h3>
+<p>Tests whether the expression is a <strong>valid</strong> (always-true) proposition. The
+result is one of:</p>
+<ul>
+<li><strong>VALID</strong> — the proposition holds for all values</li>
+<li><strong>INVALID</strong> — Z3 found a counterexample (displayed below the result)</li>
+<li><strong>UNKNOWN</strong> — Z3 could not determine validity within the timeout</li>
+</ul>
+<h3 id="sat-"><a class="header" href="#sat-">Sat (∃?)</a></h3>
+<p>Tests whether the expression is <strong>satisfiable</strong> — whether there exists at
+least one assignment of values that makes it true. The result is:</p>
+<ul>
+<li><strong>SATISFIABLE</strong> — Z3 found a witness (displayed below)</li>
+<li><strong>UNSATISFIABLE</strong> — no assignment exists</li>
+<li><strong>UNKNOWN</strong> — undetermined</li>
+</ul>
+<p>Both buttons require the expression to be fully filled in (no empty markers).
+If markers remain, the result is <code>incomplete</code>.</p>
+<h2 id="exporting"><a class="header" href="#exporting">Exporting</a></h2>
+<h3 id="copy-typst"><a class="header" href="#copy-typst">Copy Typst</a></h3>
+<p>The <strong>Copy Typst</strong> button in the structural toolbar sends the current AST to
+the server, which produces the equivalent Typst source code. The result is
+copied to your clipboard.</p>
+<p>You can paste this directly into a <code>.kleis</code> document. For example, building
+a matrix multiplication visually, then clicking Copy Typst, produces
+something like:</p>
+<pre><code class="language-typst">mat(delim: "[", 1 , 2 , 3 ; 4 , 5 , 6) dot mat(delim: "(", cos(theta) , -sin(theta) ; sin(theta) , cos(theta))
+</code></pre>
+<p>The editor is especially useful for complex expressions — nested matrices,
+tensor notation with mixed indices, piecewise functions — where hand-writing
+Typst syntax is tedious and error-prone. You can also write Typst math
+directly in your <code>.kleis</code> source files if you prefer; the editor and inline
+Typst are complementary approaches.</p>
+<pre><code>Visual Editor → Copy Typst → Paste into thesis.kleis → PDF
+</code></pre>
+<p>See <a href="#creating-documents-with-kleis">Document Generation</a> for the full compilation
+pipeline.</p>
+<h3 id="debug-ast"><a class="header" href="#debug-ast">Debug AST</a></h3>
+<p>The <strong>🐛 Debug AST</strong> button toggles a panel showing the raw JSON AST of your
+expression. This is useful for understanding the editor’s internal
+representation or for debugging templates.</p>
+<p>The debug panel provides:</p>
+<ul>
+<li><strong>Copy</strong> — copies the JSON to clipboard</li>
+<li><strong>Download</strong> — saves the AST as a <code>.json</code> file</li>
+</ul>
+<h2 id="the-gallery"><a class="header" href="#the-gallery">The Gallery</a></h2>
+<p>The bottom of the page shows a gallery of example expressions. Click any card
+to load it into the editor. Gallery examples cover a wide range:</p>
+<ul>
+<li><strong>Linear algebra</strong> — inner products, matrices, vectors, determinants</li>
+<li><strong>Physics</strong> — Einstein field equations, Maxwell tensor, Kaluza-Klein metric,
+Schrödinger equation, Pauli matrices, quantum states</li>
+<li><strong>Calculus</strong> — limits, double/triple integrals, Euler-Lagrange,
+Hamilton-Jacobi</li>
+<li><strong>Analysis</strong> — Riemann zeta (Dirichlet series, Euler product, Mellin
+integral), Gaussian integral</li>
+<li><strong>Set theory and logic</strong> — membership, quantifiers, implications</li>
+<li><strong>Trigonometry</strong> — sin, cos, tan, hyperbolic functions, Euler formula</li>
+<li><strong>Accents</strong> — velocity (dot), acceleration (double-dot), averages (bar)</li>
+<li><strong>Statistics</strong> — variance, covariance</li>
+<li><strong>Number theory</strong> — congruence modulo, Fermat’s little theorem</li>
+<li><strong>Rich matrices</strong> — matrices with fractions, square roots, rotation matrices</li>
+<li><strong>Ellipsis patterns</strong> — horizontal, vertical, diagonal dots in sequences and
+matrices</li>
+<li><strong>Piecewise functions</strong> — absolute value, sign function</li>
+</ul>
+<p>Loading a gallery example replaces the current expression. The gallery is
+populated from the server and loads automatically on page load.</p>
+<h2 id="egyptian-hieroglyphs"><a class="header" href="#egyptian-hieroglyphs">Egyptian Hieroglyphs</a></h2>
+<p>The Egyptian tab demonstrates the editor’s extensibility beyond mathematics.
+225 core signs from the Gardiner Sign List are available, rendered as SVG
+images through Typst’s <code>#image()</code> function.</p>
+<h3 id="browsing-and-inserting"><a class="header" href="#browsing-and-inserting">Browsing and Inserting</a></h3>
+<p>Open the <strong>Egyptian</strong> tab in the palette. The glyphs load from the server
+and appear as a scrollable grid of image buttons. Each button shows the SVG
+rendering and the Gardiner code as a tooltip.</p>
+<p><strong>Search:</strong> Type a code like <code>A1</code> or <code>M17</code> in the search box to filter.</p>
+<p><strong>Category filter:</strong> Use the dropdown to filter by Gardiner category:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Category</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td>A</td><td>Man and his activities</td></tr>
+<tr><td>B</td><td>Woman and her activities</td></tr>
+<tr><td>C</td><td>Anthropomorphic deities</td></tr>
+<tr><td>D</td><td>Parts of the human body</td></tr>
+<tr><td>E</td><td>Mammals</td></tr>
+<tr><td>F</td><td>Parts of mammals</td></tr>
+<tr><td>G</td><td>Birds</td></tr>
+<tr><td>H</td><td>Parts of birds</td></tr>
+<tr><td>I</td><td>Amphibians, reptiles</td></tr>
+<tr><td>K</td><td>Fish and parts of fish</td></tr>
+<tr><td>L</td><td>Invertebrates</td></tr>
+<tr><td>M</td><td>Trees and plants</td></tr>
+<tr><td>N</td><td>Sky, earth, water</td></tr>
+<tr><td>O</td><td>Buildings and parts</td></tr>
+<tr><td>P</td><td>Ships and parts</td></tr>
+<tr><td>Q</td><td>Domestic and funerary furniture</td></tr>
+<tr><td>R</td><td>Temple furniture, sacred emblems</td></tr>
+<tr><td>S</td><td>Crowns, dress, staves</td></tr>
+<tr><td>T</td><td>Warfare, hunting, butchery</td></tr>
+<tr><td>U</td><td>Agriculture, crafts</td></tr>
+<tr><td>V</td><td>Rope, fibre, baskets</td></tr>
+<tr><td>W</td><td>Vessels</td></tr>
+<tr><td>X</td><td>Loaves and cakes</td></tr>
+<tr><td>Y</td><td>Writings, games, music</td></tr>
+<tr><td>Z</td><td>Strokes and geometric figures</td></tr>
+<tr><td>Aa</td><td>Unclassified</td></tr>
+</tbody>
+</table>
+</div>
+<p>Click a glyph button to insert it at the current marker position.</p>
+<h3 id="quadrat-composition"><a class="header" href="#quadrat-composition">Quadrat Composition</a></h3>
+<p>Traditional Egyptian writing arranges signs in rectangular groups (quadrats).
+The editor supports this naturally through matrices:</p>
+<ol>
+<li>Insert a matrix from the <strong>Linear Algebra</strong> tab (e.g. 2×3 with bracket
+delimiters).</li>
+<li>Click each cell marker and insert a hieroglyph from the <strong>Egyptian</strong> tab.</li>
+<li>The result is a quadrat — a grid of hieroglyphs rendered through Typst.</li>
+</ol>
+<p>The Copy Typst output for a hieroglyph matrix looks like:</p>
+<pre><code class="language-typst">mat(delim: "[",
+  #box(image("static/glyphs/egyptian/C4.svg", height: 1.5em)) ,
+  #box(image("static/glyphs/egyptian/A2.svg", height: 1.5em)) ,
+  #box(image("static/glyphs/egyptian/G17.svg", height: 1.5em)) ;
+  #box(image("static/glyphs/egyptian/P5.svg", height: 1.5em)) ,
+  #box(image("static/glyphs/egyptian/Y3.svg", height: 1.5em)) ,
+  #box(image("static/glyphs/egyptian/K1.svg", height: 1.5em)))
+</code></pre>
+<p>This can be pasted into any Kleis document and compiled to PDF.</p>
+<h3 id="technical-details"><a class="header" href="#technical-details">Technical Details</a></h3>
+<p>Each hieroglyph is defined as a zero-argument operation in
+<code>std_template_lib/egyptian.kleist</code>. The template specifies a Typst rendering
+rule that embeds the SVG file:</p>
+<pre><code>@template A1 {
+    pattern: "A1()"
+    typst: "#box(image(\"static/glyphs/egyptian/A1.svg\", height: 1.5em))"
+    category: "egyptian_A_man"
+    glyph: "A1"
+    svg: "static/glyphs/egyptian/A1.svg"
+}
+</code></pre>
+<p>The glyphs are MIT-licensed SVGs from the PharaLex project, stored in
+<code>static/glyphs/egyptian/</code>.</p>
+<h2 id="extending-the-editor"><a class="header" href="#extending-the-editor">Extending the Editor</a></h2>
+<p>New domains can be added to the equation editor without modifying Rust code.
+The extension mechanism uses <code>.kleist</code> template files:</p>
+<ol>
+<li><strong>Create a <code>.kleist</code> file</strong> in <code>std_template_lib/</code> with <code>@template</code> blocks
+defining the operations, their Typst renderings, and metadata (category,
+glyph labels, SVG paths).</li>
+<li><strong>Add assets</strong> (SVG images, fonts) to <code>static/</code>.</li>
+<li><strong>Add a palette tab</strong> in <code>std_template_lib/palette.kleist</code> with a
+<code>@symbol_picker</code> annotation for dynamic loading.</li>
+</ol>
+<p>The Egyptian hieroglyph integration was built entirely this way — no server
+code changes were needed for the glyph rendering itself.</p>
+<h2 id="this-architecture-means-the-same-editor-can-serve-as-a-substrate-for-sheet-music-notation-chemical-formulas-circuit-diagrams-or-any-domain-that-has-visual-symbols-and-compositional-rules"><a class="header" href="#this-architecture-means-the-same-editor-can-serve-as-a-substrate-for-sheet-music-notation-chemical-formulas-circuit-diagrams-or-any-domain-that-has-visual-symbols-and-compositional-rules">This architecture means the same editor can serve as a substrate for sheet
+music notation, chemical formulas, circuit diagrams, or any domain that has
+visual symbols and compositional rules.</a></h2>
+<p>-&gt; <a href="#creating-documents-with-kleis">Previous: Document Generation</a> | <a href="#sheet-music">Next: Sheet Music</a></p>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="sheet-music"><a class="header" href="#sheet-music">Sheet Music</a></h1>
 <p>Kleis can generate publication-quality sheet music using the same pipeline as
 academic papers. A musical score is defined as structured data, compiled to
@@ -4218,8 +4587,8 @@ academic papers. A musical score is defined as structured data, compiled to
 </code></pre>
 <p><img src="images/minuet_in_g.png" alt="Minuet in G Major — two-staff piano score generated by Kleis + LilyPond"></p>
 <p><em>Petzold’s Minuet in G Major rendered from <code>examples/music/minuet_in_g.kleis</code>. Two staves with brace, G major key signature, slurs, dynamics (mp, mf), and fermata — all generated from Kleis data types.</em></p>
-<h2 id="quick-start-2"><a class="header" href="#quick-start-2">Quick Start</a></h2>
-<h3 id="prerequisites-2"><a class="header" href="#prerequisites-2">Prerequisites</a></h3>
+<h2 id="quick-start-3"><a class="header" href="#quick-start-3">Quick Start</a></h2>
+<h3 id="prerequisites-3"><a class="header" href="#prerequisites-3">Prerequisites</a></h3>
 <ol>
 <li><strong>Kleis</strong> compiled and in PATH</li>
 <li><strong>LilyPond</strong> for engraving: <code>brew install lilypond</code></li>
@@ -5187,7 +5556,7 @@ structure Differentiable(F) {
 <li><code>D</code> axioms are like <strong>mathematical theorems</strong> — Z3 uses them to check proofs</li>
 </ul>
 <p>See <code>examples/calculus/derivatives.kleis</code> for more examples of both approaches.</p>
-<h2 id="linear-algebra-1"><a class="header" href="#linear-algebra-1">Linear Algebra</a></h2>
+<h2 id="linear-algebra-2"><a class="header" href="#linear-algebra-2">Linear Algebra</a></h2>
 <pre><code class="language-kleis">structure LinearSystem(n : ℕ) {
     operation solve : Matrix(n, n, ℝ) × Vector(n, ℝ) → Vector(n, ℝ)
     
@@ -13058,7 +13427,7 @@ define run_with_env(code: String, env: Env) : LispVal =
 <p>This appendix explains how to set up and use the VS Code debugger with Kleis.</p>
 <p><img src="images/vscode-debugger.png" alt="VS Code Debugger with Kleis"></p>
 <p><em>VS Code debugging a Kleis file: breakpoint on line 69, Variables panel showing expression AST, Call Stack showing evaluation context, and Debug Console with status messages.</em></p>
-<h2 id="prerequisites-3"><a class="header" href="#prerequisites-3">Prerequisites</a></h2>
+<h2 id="prerequisites-4"><a class="header" href="#prerequisites-4">Prerequisites</a></h2>
 <ol>
 <li><strong>VS Code</strong> installed</li>
 <li><strong>Kleis extension</strong> installed (provides syntax highlighting + debugging)</li>
@@ -13731,6 +14100,22 @@ axiom bianchi : ∀ R λ ρ σ μ ν .
         <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
         <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
 
+        <!-- Livereload script (if served using the cli tool) -->
+        <script>
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsAddress = wsProtocol + "//" + location.host + "/" + "__livereload";
+            const socket = new WebSocket(wsAddress);
+            socket.onmessage = function (event) {
+                if (event.data === "reload") {
+                    socket.close();
+                    location.reload();
+                }
+            };
+
+            window.onbeforeunload = function() {
+                socket.close();
+            }
+        </script>
 
 
         <script>
