@@ -25,27 +25,28 @@ use crate::render_editor::render_editor_node_with_uuids;
 ///
 /// This provides file access, fonts, and library to the Typst compiler.
 /// Based on TestWorld from Typst's test suite.
+/// Supports reading files relative to a root directory (for #image() etc).
 #[derive(Clone)]
 struct MinimalWorld {
     library: LazyHash<Library>,
     font_book: LazyHash<FontBook>,
     fonts: Vec<Font>,
     main_source: Source,
+    root: PathBuf,
 }
 
 impl MinimalWorld {
     fn new(source_text: &str) -> Self {
-        // Load embedded fonts
+        Self::with_root(source_text, std::env::current_dir().unwrap_or_default())
+    }
+
+    fn with_root(source_text: &str, root: PathBuf) -> Self {
         let fonts: Vec<Font> = typst_assets::fonts()
             .flat_map(|data| Font::iter(Bytes::from_static(data)))
             .collect();
 
         let font_book = FontBook::from_fonts(&fonts);
-
-        // Create main source file ID
         let main_id = FileId::new(None, VirtualPath::new("main.typ"));
-
-        // Create main source
         let main_source = Source::new(main_id, source_text.to_string());
 
         Self {
@@ -53,6 +54,7 @@ impl MinimalWorld {
             font_book: LazyHash::new(font_book),
             fonts,
             main_source,
+            root,
         }
     }
 }
@@ -80,10 +82,12 @@ impl World for MinimalWorld {
         }
     }
 
-    fn file(&self, _id: FileId) -> FileResult<Bytes> {
-        Err(FileError::NotFound(PathBuf::from(
-            "file access not supported",
-        )))
+    fn file(&self, id: FileId) -> FileResult<Bytes> {
+        let vpath = id.vpath().as_rootless_path();
+        let full_path = self.root.join(vpath);
+        std::fs::read(&full_path)
+            .map(Bytes::from)
+            .map_err(|_| FileError::NotFound(full_path))
     }
 
     fn font(&self, index: usize) -> Option<Font> {
@@ -91,7 +95,6 @@ impl World for MinimalWorld {
     }
 
     fn today(&self, _offset: Option<i64>) -> Option<Datetime> {
-        // Return a fixed date for reproducibility
         Some(Datetime::from_ymd(2024, 1, 1).unwrap())
     }
 }
@@ -2880,5 +2883,103 @@ mod tests {
         // Should find placeholder marker
         assert_eq!(output.placeholder_positions.len(), 1);
         assert_eq!(output.placeholder_positions[0].id, 0);
+    }
+
+    #[test]
+    fn test_hieroglyph_quadrat_composition() {
+        let svg_a1 = "static/glyphs/egyptian/A1.svg";
+        let svg_d21 = "static/glyphs/egyptian/D21.svg";
+        if !std::path::Path::new(svg_a1).exists() || !std::path::Path::new(svg_d21).exists() {
+            eprintln!("Skipping: test SVGs not found (run from project root)");
+            return;
+        }
+
+        let markup = format!(
+            "#grid(columns: 2, gutter: 2pt, \
+             box(image(\"{}\", height: 1.2em)), \
+             box(image(\"{}\", height: 1.2em)))",
+            svg_a1, svg_d21
+        );
+        let typst_doc = format!(
+            "#set page(width: auto, height: auto, margin: 0pt)\n\
+             #set text(size: 24pt)\n\
+             #box($ {} $)\n",
+            markup
+        );
+
+        let world = MinimalWorld::new(&typst_doc);
+        let result = typst::compile(&world);
+
+        match result.output {
+            Ok(doc) => {
+                assert!(!doc.pages.is_empty());
+                let svg = typst_svg::svg(&doc.pages[0]);
+                assert!(svg.contains("<svg"));
+                eprintln!("Quadrat composition: SUCCESS");
+                eprintln!("SVG length: {} bytes", svg.len());
+            }
+            Err(errors) => {
+                let msgs: Vec<String> = errors.iter().map(|e| format!("{:?}", e)).collect();
+                eprintln!("Quadrat composition FAILED: {}", msgs.join("; "));
+                eprintln!("Trying without math mode...");
+
+                let typst_doc2 = format!(
+                    "#set page(width: auto, height: auto, margin: 0pt)\n\
+                     #set text(size: 24pt)\n\
+                     {}\n",
+                    markup
+                );
+                let world2 = MinimalWorld::new(&typst_doc2);
+                let result2 = typst::compile(&world2);
+                match result2.output {
+                    Ok(doc2) => {
+                        let svg2 = typst_svg::svg(&doc2.pages[0]);
+                        assert!(svg2.contains("<svg"));
+                        eprintln!("Quadrat (content mode): SUCCESS, {} bytes", svg2.len());
+                    }
+                    Err(e2) => {
+                        let msgs2: Vec<String> = e2.iter().map(|e| format!("{:?}", e)).collect();
+                        panic!("Both modes failed: {}", msgs2.join("; "));
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_hieroglyph_image_embedding() {
+        let svg_path = "static/glyphs/egyptian/A1.svg";
+        let full_path = std::path::Path::new(svg_path);
+        if !full_path.exists() {
+            eprintln!("Skipping: {} not found (run from project root)", svg_path);
+            return;
+        }
+
+        let markup = format!("#image(\"{}\", height: 1.5em)", svg_path);
+        let typst_doc = format!(
+            r#"#set page(width: auto, height: auto, margin: 0pt)
+#set text(size: 24pt)
+#box($ {} $)
+"#,
+            markup
+        );
+
+        let world = MinimalWorld::new(&typst_doc);
+        let result = typst::compile(&world);
+
+        match result.output {
+            Ok(doc) => {
+                assert!(!doc.pages.is_empty(), "Should produce at least one page");
+                let page = &doc.pages[0];
+                let svg = typst_svg::svg(page);
+                assert!(svg.contains("<svg"), "Output should be SVG");
+                eprintln!("Hieroglyph image embedding: SUCCESS");
+                eprintln!("SVG length: {} bytes", svg.len());
+            }
+            Err(errors) => {
+                let msgs: Vec<String> = errors.iter().map(|e| format!("{:?}", e)).collect();
+                panic!("Typst compilation failed: {}", msgs.join("; "));
+            }
+        }
     }
 }

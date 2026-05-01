@@ -175,6 +175,14 @@ struct OperationInfo {
 }
 
 #[derive(Debug, Serialize)]
+struct TemplateInfo {
+    name: String,
+    category: Option<String>,
+    glyph: Option<String>,
+    svg: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
 struct GalleryResponse {
     examples: Vec<GalleryExample>,
 }
@@ -336,6 +344,7 @@ async fn main() {
         .route("/api/verify", post(verify_handler))
         .route("/api/check_sat", post(check_sat_handler))
         .route("/api/operations", get(operations_handler))
+        .route("/api/templates", get(templates_handler))
         .route("/api/gallery", get(gallery_handler))
         .route("/health", get(health_handler))
         .nest_service("/static", ServeDir::new("static"))
@@ -790,6 +799,29 @@ async fn operations_handler() -> impl IntoResponse {
     (StatusCode::OK, Json(operations))
 }
 
+async fn templates_handler() -> impl IntoResponse {
+    let dir = std::path::Path::new("std_template_lib");
+    let templates = if dir.exists() {
+        match kleis::kleist_parser::load_kleist_directory(dir) {
+            Ok(file) => file
+                .templates
+                .iter()
+                .filter(|t| t.svg.is_some() || t.category.is_some())
+                .map(|t| TemplateInfo {
+                    name: t.name.clone(),
+                    category: t.category.clone(),
+                    glyph: t.glyph.clone(),
+                    svg: t.svg.clone(),
+                })
+                .collect(),
+            Err(_) => Vec::new(),
+        }
+    } else {
+        Vec::new()
+    };
+    (StatusCode::OK, Json(templates))
+}
+
 // Handler for gallery examples
 async fn gallery_handler() -> impl IntoResponse {
     let samples = kleis::render::collect_samples_for_gallery();
@@ -1129,11 +1161,7 @@ fn is_formatting_operation(node: &kleis::editor_ast::EditorNode) -> Option<Strin
                 "vec" => Some("Display: vector notation".to_string()),
                 "dot" => Some("Display: time derivative (dot)".to_string()),
                 "ddot" => Some("Display: second time derivative (double dot)".to_string()),
-                _ => {
-                    // Check nested operations (e.g., equals with formatting inside)
-                    // Only return formatting type if the ROOT is formatting
-                    None
-                }
+                _ => None,
             }
         }
         _ => None,
