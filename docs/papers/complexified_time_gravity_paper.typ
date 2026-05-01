@@ -1,0 +1,534 @@
+#import "@preview/lilaq:0.5.0" as lq
+#set page(
+  paper: "us-letter",
+  margin: (top: 1in, bottom: 1in, left: 1in, right: 1in),
+  numbering: "1",
+  header: align(right)[_Preprint_],
+)
+#set text(
+  font: "New Computer Modern",
+  size: 11pt,
+  lang: "en",
+)
+#set par(
+  justify: true,
+  leading: 0.65em,
+  first-line-indent: 1em,
+)
+
+// No indent after headings
+#show heading: it => {
+  it
+  par(text(size: 0pt, ""))
+}
+#set heading(numbering: "1.1")
+
+// Section headings (level 1)
+#show heading.where(level: 1): it => {
+  v(1em)
+  text(size: 12pt, weight: "bold")[#counter(heading).display() #it.body]
+  v(0.5em)
+}
+
+// Subsection headings (level 2)
+#show heading.where(level: 2): it => {
+  v(0.8em)
+  text(size: 11pt, weight: "bold")[#counter(heading).display() #it.body]
+  v(0.4em)
+}
+
+// Subsubsection headings (level 3)
+#show heading.where(level: 3): it => {
+  v(0.6em)
+  text(size: 10pt, weight: "bold", style: "italic")[#counter(heading).display() #it.body]
+  v(0.3em)
+}
+#set figure(placement: auto)
+#show figure.caption: it => {
+  text(size: 9pt)[#it]
+}
+#show link: it => text(fill: blue.darken(20%))[#underline[#it]]
+
+
+#align(center)[
+  #text(size: 17pt, weight: "bold")[Complexified Time, Negative Kinetic Energy, and Gravitational Mass Reduction in Superconductors]
+  
+  #v(1em)
+  
+  Engin Atik#super[1]
+  
+  #v(0.5em)
+  
+  #super[1]Kleis Research, https://kleis.io
+]
+
+#v(1em)
+
+#align(center)[
+  #rect(width: 85%, stroke: none)[
+    #align(left)[
+      #text(weight: "bold")[Abstract]
+      #v(0.3em)
+      #text(size: 10pt)[We show that if the time coordinate is complex rather than real, superconductors below their critical temperature would exhibit a small reduction in gravitational mass. Complex time admits imaginary velocities, which produce negative kinetic energy; this enters $T_(mu nu)$ with the opposite sign, reducing gravitational coupling. Tunneling rates provide operational access to imaginary time, and a superconductor --- a macroscopic coherent array of Josephson junctions --- constitutes collective imaginary-time propagation. The predicted mass reduction scales as $(Delta / m_e c^2)^2$: approximately $10^(-16)$ for YBCO, up to 3% for color superconductivity in neutron star cores. We derive the explicit stress-energy contribution $T^(0 0)_I = -1\/2 rho_s v_I^2$ from the complexified metric, where $v_I$ is identified as the instanton velocity --- the saddle point of the Euclidean path integral --- rather than a current parametrization. The mass correction $Delta m prop I_c^2$ (Josephson critical current squared); a relativistic pair-creation cutoff prevents negative total mass. Five independent falsifiable predictions are enumerated, including a Fraunhofer-squared diffraction pattern in gravitational mass versus applied magnetic field. Within Projection Operator Theory (POT), complexification adds a tunneling-rate channel to the observable projection, causing imaginary-time effects to migrate from the unobservable kernel to the observable sector at $T_c$. The mass reduction is formulation-independent across all four GR formulations (Cartan, Palatini, spin-2, teleparallel) and linearized --- testable without resolving the nonlinear evidentiary gap. Finally, we identify the "extra dimension" of the POT flat rotation curves derivation as imaginary time $t_I$: the Euclidean subspace ${t_I, x, y, z}$ produces the logarithmic kernel for flat rotation curves, while the Lorentzian subspace ${t_R, x, y, z}$ produces the Newtonian $1\/r$ kernel for mass reduction --- orthogonal projection channels of the same theory on $CC times RR^3$. All results are supported by 77 Z3-verified examples across five companion Kleis theory files.]
+    ]
+  ]
+]
+
+#text(size: 9pt)[*Keywords:* complex spacetime, superconductivity, gravitational mass, Josephson effect, imaginary time, projection operator theory]
+
+#v(1em)
+
+
+= Introduction
+
+The relationship between quantum coherence and gravity has been a subject of speculation since Podkletnov's 1992 claim of anomalous weight reduction above a rotating superconductor. While these specific claims remain unconfirmed, they have motivated several theoretical investigations into whether superconductors can interact with gravitational fields in non-trivial ways. Modanese developed models based on local modification of vacuum energy density; Li and Torr proposed gravitoelectric effects from aligned Cooper pairs; and the gravito-Maxwell formalism has been extended to include London-type equations for gravitational fields.
+
+These approaches share a common limitation: they introduce complex mechanisms (vacuum zero-modes, gravitoelectric fields, gravitomagnetic expulsion) without a simple kinematic explanation for why a superconductor should behave differently from a normal metal in a gravitational field.
+
+We propose a more direct route. The argument has five links, each independently verifiable:
+
+1. Complexifying the time coordinate from $RR$ to $CC$ makes imaginary velocities geometric rather than pathological.
+2. Imaginary velocity $v = i a$ gives negative kinetic energy: $K = 1/2 m (i a)^2 = -1/2 m a^2 < 0$.
+3. In general relativity, all energy contributes to the stress-energy tensor $T_(mu nu)$. Negative kinetic energy contributes with the opposite sign, producing a repulsive gravitational effect.
+4. We never measure time directly --- we infer it from the dynamics of physical systems. Clocks are oscillators that measure real time. We propose that tunneling rates can be reinterpreted as measurements of propagation in the imaginary-time direction, giving operational access to $t_I$.
+5. A superconductor is a macroscopic coherent array of Josephson junctions. Each junction is a tunneling device. Below $T_c$, Cooper pairs tunnel coherently across barriers, constituting collective propagation in imaginary time.
+
+The conclusion follows: a superconductor below $T_c$ should have reduced gravitational mass compared to the same material in its normal state. The effect should appear sharply at the phase transition, scale with the superconducting gap energy $Delta$, and be independent of rotation or applied magnetic fields.
+
+In this paper we develop the full theory, perform dimensional analysis (verified by the Z3 SMT solver via the Kleis formal verification system), compute numerical estimates for laboratory and astrophysical systems, enumerate five independent falsifiable predictions, and connect the framework to the abstract K-Q kernel structure of Projection Operator Theory.
+
+= Complexified Spacetime
+
+Standard physics takes spacetime to be $RR^(1,3)$ with metric signature $(-,+,+,+)$. All velocities are real, and kinetic energy $K = 1/2 m v^2 >= 0$. There is no room for imaginary velocities in this framework; they would require the time coordinate to take complex values.
+
+We consider the minimal extension: replace the real time axis with a complex one, giving spacetime the structure $CC times RR^3$. Writing $t = t_R + i t_I$, the line element becomes
+
+$ d s^2 = -c^2 (d t_R + i d t_I)^2 + d x^2 + d y^2 + d z^2 $
+
+Expanding:
+
+$ d s^2 = -c^2 d t_R^2 + c^2 d t_I^2 - 2 i c^2 d t_R d t_I + d x^2 + d y^2 + d z^2 $
+
+The real part of the metric is:
+
+$ "Re"(d s^2) = -c^2 d t_R^2 + c^2 d t_I^2 + d x^2 + d y^2 + d z^2 $
+
+The $d t_I^2$ term has the opposite sign to $d t_R^2$. Motion along the imaginary-time direction contributes to the interval with a Euclidean signature, exactly as in Wick rotation. The imaginary cross-term $-2 i c^2 d t_R d t_I$ requires a Hermitian metric, connecting this framework to Einstein's own Hermitian gravity program and to the more recent work of Mantz and Banks on Hermitian gravity in complex manifolds.
+
+The key distinction from standard Wick rotation is interpretive: we do not treat $t_I$ as a mathematical convenience. Tunneling measurements provide access to a projection channel $Q_I$ sensitive to modes of ontological evolution that are annihilated by real-time probes (Section 9). In this sense, $t_I$ is not a literal spacetime coordinate but a projection-dependent slice of modal flow that becomes observable through tunneling.
+
+$ d s^2 = -c^2 d t_R^2 + c^2 d t_I^2 + d x^2 + d y^2 + d z^2 - 2 i c^2 d t_R d t_I $ <eq:metric>
+
+= Imaginary Velocity and Negative Kinetic Energy
+
+A particle moving with velocity $v = i a$ (where $a in RR$) has kinetic energy
+
+$ K = 1/2 m v^2 = 1/2 m (i a)^2 = -1/2 m a^2 < 0 $
+
+In $RR^(1,3)$, this is forbidden: velocities are derivatives of real coordinates with respect to real time. In $CC times RR^3$, it is geometric: the velocity $v_I = d x / d t_I$ along the imaginary-time axis is formally imaginary when expressed in terms of real-time units.
+
+In general relativity, all forms of energy-momentum contribute to the stress-energy tensor $T_(mu nu)$, which sources the gravitational field through Einstein's equation $G_(mu nu) = 8 pi G T_(mu nu)$. Positive kinetic energy contributes attractive gravity; negative kinetic energy contributes repulsive gravity. This is not exotic: dark energy, modeled as a cosmological constant with $w = -1$, is precisely a negative-pressure contribution to $T_(mu nu)$ that drives accelerated expansion.
+
+The question is whether any physical system actually realizes negative kinetic energy through imaginary-time propagation. We argue that tunneling provides exactly this.
+
+$ K_("imag") = 1/2 m (i a)^2 = -1/2 m a^2 < 0 $ <eq:neg_ke>
+
+= Operational Definition of Time
+
+We never observe time directly. All time measurements are inferences from the dynamics of physical systems:
+
+- A cesium clock counts 9,192,631,770 oscillations per second.
+- A pendulum completes periodic swings.
+- A quartz crystal vibrates at its resonant frequency.
+
+These are all simple harmonic oscillators (SHOs). The solution $x(t_R) = A cos(omega t_R)$ is periodic in real time. We define one second as a fixed number of such periods.
+
+Now consider the same SHO in imaginary time: $x(t_I) = A cosh(omega t_I)$ or $x(t_I) = A e^(-kappa t_I)$. The motion is no longer periodic; it is exponential. This is not hypothetical --- it is the standard description of quantum tunneling. A particle encountering a potential barrier has a wavefunction $psi tilde.op e^(-kappa x)$ that decays exponentially through the classically forbidden region. In the WKB approximation, this is equivalent to propagation in imaginary time.
+
+Tunneling rates are routinely measured in the laboratory. The Josephson effect, scanning tunneling microscopy, and alpha decay all provide precise measurements of exponential decay constants. Conventionally, these are understood as quantum mechanical transmission coefficients --- no reference to imaginary time is made.
+
+We propose a reinterpretation: if time is complex, then tunneling measurements are operational probes of the imaginary-time direction $t_I$, just as clock oscillations are operational probes of the real-time direction $t_R$. Under this interpretation, the two channels are:
+
+$ "Real time:" quad x(t_R) = A cos(omega t_R) quad "(periodic, via SHO)" $
+$ "Imaginary time:" quad psi(t_I) tilde.op e^(-kappa t_I) quad "(exponential, via tunneling)" $
+
+This reinterpretation is the central conceptual step in the argument. It is not standard physics. Its content is that tunneling does not merely resemble propagation in imaginary time (as in the WKB approximation); it *is* propagation in imaginary time, and the exponential decay constant $kappa$ is a measurable observable of $t_I$.
+
+The falsifiable content of this paper is therefore not that Wick rotation is conventionally interpreted incorrectly, but that treating tunneling rates as operational measurements of $t_I$ produces observable gravitational consequences --- specifically, a stress-energy contribution $T^(0 0)_I = -1/2 rho_s v_I^2$ that is absent from any theory in which imaginary time is merely a calculational device.
+
+The entire paper rests on one postulate:
+
+*Postulate.* There exists a measurable time component $t_I$ such that tunneling rates define a projection $Q_I$, and all kinematic contributions along $t_I$ enter $T_(mu nu)$ with the signature induced by the complexified metric $d s^2 = -c^2 d t_R^2 + c^2 d t_I^2 + d bold(x)^2$.
+
+This postulate is not claimed to be uniquely implied by existing theory; it is proposed as the minimal extension that makes tunneling rates gravitationally active. Everything that follows --- the negative kinetic energy, the mass reduction, the five predictions, the Fraunhofer-squared pattern --- is a derived consequence. Rejecting the paper requires rejecting this postulate; accepting it requires accepting the predictions.
+
+= The Superconductor as a Macroscopic Imaginary-Time System
+
+A Josephson junction consists of two superconductors separated by a thin insulating barrier. Cooper pairs tunnel coherently across this barrier, producing the DC Josephson current $I = I_c sin(phi)$, where $phi$ is the phase difference across the junction and $I_c$ is the critical current.
+
+Each tunneling event is propagation in imaginary time. A single junction produces a microscopic imaginary-time effect. The key observation is that a bulk superconductor below $T_c$ is not a single junction --- it is a macroscopic coherent condensate in which all Cooper pairs participate in collective tunneling. The BCS ground state is a coherent superposition of occupied and unoccupied pair states, with the gap parameter $Delta$ characterizing the energy scale of the pairing.
+
+Above $T_c$, Cooper pairs break apart. Tunneling becomes incoherent, and the imaginary-time contributions of individual electrons wash out (average to zero over the disordered system). Below $T_c$, the condensate forms: tunneling becomes coherent and macroscopic. The imaginary-time kinetic energy no longer cancels.
+
+This gives the gravitational prediction: below $T_c$, the coherent imaginary-time kinetic energy of the condensate contributes negatively to $T_(mu nu)$, reducing the gravitational mass of the superconductor. The effect should:
+
+1. Appear sharply at $T_c$ (phase transition).
+2. Scale with the condensate fraction.
+3. Scale with the gap energy $Delta$.
+4. Be independent of rotation (contra Podkletnov).
+5. Be independent of applied magnetic field (gravitational, not electromagnetic).
+
+= Stress-Energy Derivation and Dimensional Analysis
+
+We derive the gravitational mass correction directly from the stress-energy tensor on complexified spacetime. In standard GR with real time, the energy density for a non-relativistic fluid is $T^(0 0) = rho c^2 + 1/2 rho v^2$. With complexified time, a Cooper pair can have both real velocity $v_R$ (ordinary motion) and imaginary velocity $v_I$ (tunneling). The kinetic term acquires a contribution from $(i v_I)^2 = -v_I^2$:
+
+$ T^(0 0) = rho c^2 + 1/2 rho v_R^2 - 1/2 rho_s v_I^2 $
+
+The third term is the imaginary-time kinetic energy density. It is negative, and it sources gravity through the Einstein field equations like any other contribution to $T_(mu nu)$. The gravitational mass correction is:
+
+$ Delta m = T^(0 0)_I dot V / c^2 = -1/2 m_s v_I^2 / c^2 $
+
+where $m_s = rho_s V$ is the total superfluid mass.
+
+*Field-theoretic standing of $v_I$.* The imaginary velocity $v_I$ is not introduced by analogy; it is derived from the Euclidean path integral. The tunneling amplitude between states $|a angle.r$ and $|b angle.r$ is
+$ angle.l b | e^(-H tau / planck.reduce) | a angle.r = integral cal(D) phi exp(-S_E [phi] / planck.reduce) $
+where $S_E = integral d tau [1/2 m (d phi / d tau)^2 + V(phi)]$ is the Euclidean action. The integral is dominated by the saddle point --- the *instanton* $phi_("inst") (tau)$ --- which is the classical solution of the Euclidean equations of motion $m d^2 phi / d tau^2 = d V / d phi$ (Newton's equation in the inverted potential). The instanton velocity
+$ v_I = d phi_("inst") / d tau $
+is not a parametrization; it is the extremum of the action functional, with the same physical standing as any classical velocity. Equivalently, the WKB imaginary momentum $planck.reduce kappa = m v_I$ gives $v_I = sqrt(2(V - E) / m)$ --- the standard tunneling formula, now identified as the instanton's speed in Euclidean time.
+
+The Wick rotation from Euclidean to Minkowski signature transforms the kinetic term: $1/2 m (d phi / d tau)^2 arrow.r 1/2 m (d phi / d(i t))^2 = -1/2 m (d phi / d t)^2$. The positive Euclidean kinetic energy becomes negative Minkowski kinetic energy. This sign flip is not an assumption --- it is the defining property of Wick rotation.
+
+For the BCS condensate, all Cooper pairs share the same macroscopic wavefunction $Psi = sqrt(n_s) e^(i phi)$ and therefore the same instanton profile. Above $T_c$, phases randomize and instanton contributions cancel (random walk, scaling as $sqrt(N)$). Below $T_c$, phases lock and instanton contributions add coherently (scaling as $N$). The coherent enhancement factor is $sqrt(N_("pairs")) tilde.op 10^13$ for typical superconductors.
+
+Three independent routes converge on $v_I$: (i) as the instanton velocity $d phi_("inst") / d tau$ (saddle point of $S_E$), (ii) as the WKB imaginary momentum $planck.reduce kappa / m$ (standard tunneling), and (iii) as the pair flux velocity $I_c / (2 e n_s A)$ (conserved current). All three have dimensions of velocity (verified in the companion theory file `theories/complexified_time_instanton.kleis`, 9 Z3-verified examples). The path integral route establishes $v_I$ as an extremum --- a derived quantity, not a definition. The entire chain from Euclidean path integral to Fraunhofer-squared prediction contains exactly one non-standard step: the Postulate of Section 4. Everything else --- instanton dominance, Wick rotation, BCS coherence, linearized GR --- is textbook physics.
+
+To connect $v_I$ to measurable parameters, we use route (iii): the conserved pair flux. A Cooper pair (mass $m_("pair") = 2 m_e$, charge $q = 2 e$) tunneling through a junction of area $A$ carries current $I = q n_s v_I A$, where $n_s$ is the Cooper pair number density and $v_I$ is the effective imaginary-time transport velocity. At the critical current:
+
+$ v_I = I_c / (2 e n_s A) $
+
+The superfluid mass density is $rho_s = n_s m_("pair") = 2 m_e n_s$. Substituting into $Delta m = -1/2 rho_s v_I^2 V / c^2$:
+
+$ Delta m = -1/2 (2 m_e n_s) dot I_c^2 / (4 e^2 n_s^2 A^2) dot V / c^2 = -(m_e V I_c^2) / (4 e^2 n_s A^2 c^2) $
+
+The factor $m_e$ (not $2 m_e$) arises from $1/2 times m_("pair") = 1/2 times 2 m_e = m_e$. The structural result is $Delta m prop I_c^2$: the mass correction is proportional to the square of the critical current.
+
+Using the Ambegaokar-Baratoff relation $I_c = pi Delta / (2 e R_n)$, this can equivalently be written as $Delta m prop Delta^2$ (quadratic gap scaling). For a *single junction*, $A$ is the junction area. For a *bulk superconductor* (no physical junctions), we use the gap form directly: the bulk mass shift scales as $N(0) Delta^2 / c^2$, where $N(0)$ is the density of states at the Fermi level. The junction formula applies to the Fraunhofer prediction (Prediction 4); the gap formula applies to the bulk predictions (Predictions 1--3, 5). All forms have been verified to have dimensions of mass in the extended SI system $[L, M, T, A]$.
+
+*Does the Sine-Gordon field sector cancel this?* The Josephson junction phase $phi$ obeys the Sine-Gordon equation, whose $T^(0 0)$ contains charging, magnetic, and Josephson potential energy. In complexified time, $partial_(t_I) phi$ would contribute a positive gradient energy $+1/2 alpha (partial_(t_I) phi)^2$ to the field sector --- opposite in sign to the particle sector. However, in the DC Josephson regime (the experimentally relevant case), the phase is *static*: $partial_(t_I) phi = 0$. Cooper pairs tunnel through a frozen phase landscape. The field correction vanishes exactly, and only the particle correction survives. In the AC regime, the Josephson coupling energy per junction is $E_J = planck.reduce I_c / (2 e) tilde.op 10^(-22)$ J, while the Cooper pair rest mass energy per unit volume is $rho_s c^2 tilde.op 10^(14)$ J/m³. Their ratio is $tilde.op 10^(-18)$, making the field correction negligible even when nonzero.
+
+All results are formally verified in `theories/complexified_time_stress_energy.kleis` (15 Z3-verified examples, 0 failures). The instanton derivation of $v_I$ is verified in `theories/complexified_time_instanton.kleis` (9 examples). The dimensional analysis of the bulk formula is separately verified in `theories/complexified_time_dimensions.kleis` (12 examples).
+
+Numerical estimates for a 100 g, 10 cm³ sample:
+
+$ Delta m = -(m_e V I_c^2) / (4 e^2 n_s A^2 c^2) prop I_c^2 prop Delta^2 $ <eq:mass>
+
+#figure(
+  table(
+  columns: 5,
+  [System],   [Gap $Delta$],   [Carrier $m c^2$],   [$Delta m \/ m$],   [Detectability],
+  [Aluminum (BCS)],  [0.17 meV],  [0.5 MeV],  [$tilde.op 10^(-20)$],  [Undetectable],
+  [YBCO (high-$T_c$)],  [20 meV],  [0.5 MeV],  [$tilde.op 10^(-16)$],  [Edge of atom interferometry],
+  [Color SC (quark matter)],  [50 MeV],  [300 MeV],  [$tilde.op 3%$],  [Neutron star structure],
+),
+  caption: [Predicted gravitational mass reduction for three superconducting systems]
+) <tab:estimates>
+
+= Relativistic Self-Limiting Bound
+
+The imaginary velocity through a tunneling barrier is $v_I = sqrt(2(V - E) / m)$. For $|v_I|$ to reach $c sqrt(2)$ (the threshold where $|Delta m| = m$ and gravitational mass would vanish), the barrier must exceed the rest mass energy: $V - E > m c^2$. At this scale, the non-relativistic tunneling picture breaks down: barriers exceeding $2 m c^2$ trigger Klein tunneling and particle-antiparticle pair creation rather than ordinary tunneling.
+
+This provides a natural cutoff:
+
+$ |v_I| < c quad arrow.r.double quad |"KE"_("imag")| < m c^2 quad arrow.r.double quad |Delta m| < m quad arrow.r.double quad m_("grav") > 0 $
+
+The theory self-limits. Gravitational mass is reduced but never reaches zero or becomes negative. This is not anti-gravity; it is a perturbative gravitational mass correction. The magnitude is bounded by the ratio $(Delta / m c^2)^2$, which is $tilde.op 10^(-16)$ for the best laboratory superconductors.
+
+The bound also means the theory cannot explain Podkletnov's claimed 2% weight reduction: for YBCO, the maximum possible effect is fifteen orders of magnitude smaller. If Podkletnov's claims are correct, they require a different mechanism.
+
+= Falsifiable Predictions
+
+The theory makes five independent, testable predictions:
+
+*Prediction 1* (Mass shift at $T_c$): A superconductor cooled through its critical temperature should exhibit a reduction in gravitational mass. For bulk samples, $Delta m \/ m tilde.op -(Delta \/ m_e c^2)^2$; for Josephson junction geometries, $Delta m = -m_e V I_c^2 \/ (4 e^2 n_s A^2 c^2)$. A control sample of non-superconducting material at the same temperature should show no change.
+
+*Prediction 2* (Order parameter tracking): For a Type I superconductor (first-order transition), $Delta m$ should be discontinuous at $T_c$. For Type II (second-order), $Delta m$ should have a continuous onset following the BCS gap function. The shape of $Delta m(T)$ near $T_c$ is constrained by the order of the phase transition.
+
+*Prediction 3* (Quadratic gap scaling): $Delta m$ scales as $Delta^2$. For two superconductors measured under identical conditions, the ratio of their mass shifts should equal the square of the ratio of their gaps: $Delta m_1 / Delta m_2 = (Delta_1 / Delta_2)^2$. For YBCO vs. aluminum, this ratio is approximately 13,800.
+
+*Prediction 4* (Josephson current correlation): Since $Delta = 2 e R_n I_c / pi$, the mass shift scales as $Delta m prop I_c^2$. The critical current $I_c$ is tunable via applied magnetic field through the Fraunhofer relation $I_c(H) = I_c(0) |sin(pi Phi / Phi_0) / (pi Phi / Phi_0)|$. Therefore $Delta m(H)$ should trace a Fraunhofer-squared diffraction pattern. No other theory of gravity predicts this functional form.
+
+*Prediction 5* (Neutron star structure): If color superconductivity exists in neutron star cores with gaps $Delta tilde.op 50$ MeV, the gravitational mass reduction approaches 3%. This would shift the Tolman-Oppenheimer-Volkoff maximum mass, alter tidal deformability (Love numbers), and affect gravitational wave signatures from neutron star mergers. These effects are potentially detectable with current and next-generation gravitational wave observatories.
+
+Any one of these predictions failing would falsify the theory.
+
+= Connection to Projection Operator Theory
+
+The complexified time framework is not merely compatible with Projection Operator Theory (POT) --- it is a natural instance of the K-Q structure. The compact formulation is:
+
+*POT Formulation.* Let $K$ produce dynamics on the ontological layer with flow parameter $tau$. The observable map is $Q = (Q_R, Q_I)$, where $Q_R$ selects oscillatory (real-time) modes and $Q_I$ selects evanescent (tunneling) modes. Elements of $K^(-1)(ker(Q_R))$ are normally unobservable but migrate to $K^(-1)(im(Q))$ at coherence-induced admissibility boundaries, yielding additional contributions to $T_(mu nu)$.
+
+This formulation resolves the most common misreading of the paper. We are *not* claiming that spacetime has an extra time dimension. We are claiming that *observation has an incomplete projection* --- and that superconductors expose the gap. What we called $t_I$ is not a spacetime coordinate; it is a mode of ontological evolution in $tau$ that is annihilated by real-time probes ($Q_R$) but visible to tunneling probes ($Q_I$). Physical time $t$ is not fundamental in POT --- it is the ordering induced by $Q$. The "imaginary-time direction" is a projection-dependent slice of modal flow, not a literal axis of spacetime.
+
+This is the same structural pattern that appears across physics:
+
+#table(
+  columns: (1fr, 1fr, 1fr, 1fr),
+  [*Domain*], [*Hidden variable*], [*Projection*], [*Observable shadow*],
+  [EM gauge theory], [$A_mu$], [Gauge invariance], [Phase shifts],
+  [Quantum mechanics], [Wavefunction phase], [Measurement ($|psi|^2$)], [Probabilities],
+  [This theory], [$t_I$ dynamics], [$K arrow.r RR^(1,3)$], [Tunneling rate],
+)
+
+In each case, a degree of freedom in the ontological layer does not survive projection, but leaves measurable traces through specific channels. The question is never whether the hidden variable "exists" --- it is whether the observable shadow is nontrivial.
+
+In standard ($RR^(1,3)$) physics, the projection map $Q_R$ uses real-time probes only: clocks, oscillators, interferometers. These are all SHO-based. When time is complexified, a second projection channel opens: $Q_I$, based on tunneling-rate measurements. The total projection becomes $Q = (Q_R, Q_I)$.
+
+This has three structural consequences:
+
+*Migration.* In $RR^(1,3)$ with only real-time probes, the imaginary-time kinetic energy is in $ker(Q_R)$: it exists in the formalism but projects to zero observable. When $Q$ is extended to include $Q_I$, this contribution migrates from $ker(Q)$ to $im(Q)$. This is structurally identical to the axial anomaly in QFT, where the axial current divergence migrates from $ker(Q)$ at tree level to $im(Q)$ at one loop.
+
+*Fiber splitting.* The fiber over gravitational mass $m$ in real-time physics is essentially a point: $Q_R^(-1)(m) = {"KE"_("real") = m c^2}$. With complex time, the fiber splits: $Q^(-1)(m, tau) = {("KE"_R, "KE"_I) : "KE"_R + "KE"_I = m c^2, "tunneling rate" = tau}$. Two systems with the same gravitational mass can have different internal compositions of real and imaginary kinetic energy.
+
+*Admissibility boundary.* The superconducting phase transition is an admissibility boundary for $Q_I$. Above $T_c$, tunneling is incoherent: individual tunneling events contribute random imaginary-time phases that average to zero, and $Q_I$ maps the disordered system to a trivial projection. Below $T_c$, the condensate forms: tunneling becomes phase-locked across the entire sample, and $Q_I$ becomes nontrivial. The superconductor is, in POT language, a *projection-defect amplifier* --- a system in which coherence prevents the normal statistical cancellation of gap-space contributions, forcing them into the observable sector. The transition from trivial to nontrivial projection at $T_c$ is the hallmark of an admissibility boundary in the K-Q framework.
+
+= Projection Fibers and the Three-Space Decomposition
+
+The fiber structure deserves separate treatment because it carries the falsifiability content of the theory.
+
+In the K-Q framework, the three-space decomposition of the theory input space (TheorySpec) via the composed map $Q compose K$ is:
+
+$ "TheorySpec" = ker(K) plus.circle [K^(-1)(ker(Q)) backslash ker(K)] plus.circle K^(-1)(im(Q)) $
+
+The first summand ($ker(K)$) contains inputs that produce no gravitational field. The third summand ($K^(-1)(im(Q))$) contains inputs that reach observables. The middle summand is the gap: gravitational effects that are produced by $K$ but erased by $Q$ --- formally present but observationally silent.
+
+When time is real and $Q = Q_R$, the imaginary-time kinetic energy lives in the gap. $K_("grav")$ generates it (the Green's function on $CC times RR^3$ produces it naturally), but $Q_R$ cannot detect it (no SHO-based measurement sees tunneling dynamics). The gap is wide.
+
+When time is complexified and $Q = (Q_R, Q_I)$, elements migrate from the gap to $K^(-1)(im(Q))$. The gap shrinks. The imaginary-time contribution to $T_(mu nu)$ exits the unobservable sector and enters the image of the projection. This is the structural content of the gravitational mass prediction: the effect was always there in the formalism; what changes at $T_c$ is that $Q_I$ switches from trivial to nontrivial, making it observable.
+
+The fiber over gravitational mass $m_("grav")$ provides the sharpest experimental signature. For ordinary matter:
+
+$ Q^(-1)(m_("grav")) = {"KE"_("real") = m_("grav") c^2, quad "KE"_("imag") approx 0} $
+
+The fiber is a point. For a superconductor below $T_c$:
+
+$ Q^(-1)(m_("grav")) = {("KE"_R, "KE"_I) : "KE"_R + "KE"_I = m_("grav") c^2, quad "KE"_I < 0} $
+
+The fiber is one-dimensional --- a line parameterized by the split between real and imaginary kinetic energy. Different superconductors with the same gravitational mass can have different $("KE"_R, "KE"_I)$ decompositions. Adding the tunneling measurement $Q_I$ (Josephson current) resolves this degeneracy: the fiber over $(m_("grav"), I_c)$ narrows back to a point.
+
+This fiber splitting has three testable consequences:
+
+1. *Inequivalence of gravitational and inertial mass.* In real-time physics, $m_("grav") = m_("inertial")$ (equivalence principle). With complex time, $m_("grav") = m_("inertial") + Delta m$ where $Delta m < 0$. The Eotvos ratio $eta = 2(m_("grav") - m_("inertial")) / (m_("grav") + m_("inertial"))$ should be nonzero for a superconductor below $T_c$ and zero above.
+
+2. *Two-parameter characterization.* A superconductor's gravitational state is not determined by mass alone; it requires the pair $(m_("grav"), I_c)$. Experiments that measure only mass leave a one-parameter degeneracy. The Fraunhofer-squared prediction (Prediction 4) exploits this: sweeping $I_c$ via magnetic field traces out the fiber.
+
+3. *Phase-transition sharpness.* Because the admissibility boundary is a phase transition (not a crossover), the fiber splitting is discontinuous (Type I) or has a discontinuous derivative (Type II). Observing a gradual, featureless mass change through $T_c$ would falsify the theory even if the magnitude were correct.
+
+= Distinction from Condensation Energy
+
+A natural objection is that any system which releases binding energy upon formation already weighs less by $E_("bind") \/ c^2$. A superconductor releases condensation energy $E_("cond") = 1\/2 N(0) Delta^2$ at $T_c$, where $N(0)$ is the electronic density of states at the Fermi level. This standard mass loss is ordinary mass-energy equivalence, requires no new physics, and has nothing to do with imaginary time.
+
+The effect derived in Section 6 is distinct. Its $T_(mu nu)$ origin is different: the term $T^(0 0)_I = -1\/2 rho_s v_I^2$ is a kinetic energy from complexified spacetime, not a potential energy release. The BCS Hamiltonian is written entirely in real time --- it contains no imaginary-time kinetic energy term. The imaginary-time contribution is absent from the standard energy budget.
+
+The experimental discriminator is definitive. At fixed temperature $T << T_c$, the condensation energy $E_("cond")$ is constant as a function of applied magnetic field $H$ (the gap $Delta$ does not depend on $H$ for $H << H_(c 2)$). The imaginary-time mass correction, by contrast, scales as $I_c(H)^2$ and has *zeros* at integer flux quanta ($Phi = n Phi_0$), tracing a Fraunhofer-squared envelope. These are orthogonal signatures: a signal with Fraunhofer-squared zeros in $H$ cannot come from condensation energy; a signal constant in $H$ cannot come from imaginary-time kinetic energy.
+
+= Formulation Independence and the Evidentiary Gap
+
+In a companion paper on the GR projection kernel, we showed that General Relativity admits four physically equivalent formulations --- Cartan, Palatini, self-coupled spin-2, and teleparallel (TEGR) --- and that every formulation of full GR contains a non-admissible step in the $K$--$Q$ pipeline. How does complexifying the time coordinate interact with this structure?
+
+*Admissibility is unchanged.* In the Cartan formulation, the self-coupling $omega and omega$ breaks linearity of $K$ regardless of whether $omega$ is real or complex. In TEGR, the torsion $T = d e$ remains linear in the tetrad regardless of whether $e$ has complex components. The torsion scalar $T = S dot T dot T$ remains quadratic. Complexification does not cure non-admissibility. We verify this for all five formulations (including the linearized free spin-2 theory) in the companion Kleis theory file (`theories/complexified_time_gr_formulations.kleis`), with 22 Z3-verified examples.
+
+*Where the imaginary-time effect enters.* Although the mass reduction is the same in every formulation, it enters the $K$--$Q$ pipeline at different points:
+
+#table(
+  columns: (1fr, 1fr, 1fr, 1fr),
+  [*Formulation*], [*$K$ admissible?*], [*$Q$ admissible?*], [*Imaginary-time enters via*],
+  [Cartan], [No ($omega and omega$)], [Yes], [$K$ (complex curvature)],
+  [Spin-2 free], [Yes], [Yes], [Background ($CC times RR^3$)],
+  [Spin-2 full], [No (self-coupling)], [Yes], [$K$ (complex self-coupling)],
+  [TEGR], [Yes ($T = d e$)], [No ($T$ scalar)], [$Q$ (complex torsion scalar)],
+  [Palatini], [No ($Gamma and Gamma$)], [Yes], [$K$ (complex curvature)],
+)
+
+The entry point varies across formulations while the mass reduction is constant. By the formulation fiber criterion established in the GR paper, the entry point is a *fiber artifact* and the mass reduction is *physical*.
+
+*TEGR is the critical case.* In TEGR, the production kernel $K$ (torsion $T = d e$) is admissible. The imaginary-time effect enters entirely through $Q$: when the tetrad has complex components, the torsion is complex, and the torsion scalar $T = S_(a)^(mu nu) T^a_(mu nu)$ acquires an imaginary part from the cross terms. The imaginary part of the torsion scalar encodes the gravitational mass reduction. In TEGR, the mass reduction is a *projection* phenomenon, not a production phenomenon --- the effect appears when $Q$ extracts a scalar from complex torsion, not when $K$ generates torsion from the tetrad.
+
+This is the mirror image of the energy localizability result from the GR paper: energy is localizable in TEGR (because $K$ is admissible) but not in Cartan (because $K$ is non-admissible). The imaginary-time entry point is localizable in $Q$ for TEGR but in $K$ for Cartan. Both are fiber artifacts --- properties of the formulation, not of gravity.
+
+*The linearized sector.* The most important observation is that the mass reduction is a linearized effect. It enters the stress-energy tensor $T_(mu nu)$ as a source term and couples to gravity through the linearized Einstein equations. No $omega and omega$ self-coupling is needed. The effect lives entirely in the admissible sector of GR.
+
+The GR paper identified an evidentiary gap: the three cleanest gravitational confirmations (binary pulsar decay, frame-dragging, gravitational waves) are all predictions of linearized GR, while the only evidence for the nonlinear $omega and omega$ sector is the LIGO merger waveform. The mass reduction prediction sits alongside the confirmed effects, not in the evidentiary gap:
+
+#table(
+  columns: (1fr, 1fr, 1fr),
+  [*Prediction*], [*Sector*], [*Requires $omega and omega$?*],
+  [Binary pulsar decay], [Linearized (admissible)], [No],
+  [Frame-dragging], [Linearized (admissible)], [No],
+  [Gravitational waves], [Linearized (admissible)], [No],
+  [*Mass reduction $Delta m$*], [*Linearized (admissible)*], [*No*],
+  [Merger waveform shape], [Nonlinear (non-admissible)], [Yes],
+)
+
+Linearized GR on $CC times RR^3$ differs from linearized GR on $RR^(1,3)$ by exactly one term: the imaginary-time kinetic energy contribution to $T_(mu nu)$. Everything else --- gravitational waves, frame-dragging, the Isaacson stress-energy tensor --- is unchanged. The prediction is testable without resolving any open questions about the nonlinear sector of GR.
+
+In the free spin-2 formulation, this is especially transparent. The background becomes flat $CC times RR^3$ (Hermitian flat metric). The perturbation $h_(mu nu)$ propagates on this complex background. Both $K$ and $Q$ are admissible. The Isaacson stress-energy tensor acquires imaginary-time terms. The mass reduction follows from a fully admissible theory --- the simplest possible gravitational framework that can produce it.
+
+= The Extra Dimension Is Imaginary Time
+
+In a companion paper on flat galactic rotation curves, we showed that the POT production kernel $K_("grav")$ is the logarithmic Green's function $K(r) prop ln(r)$, arising from projecting the $RR^4$ Laplacian Green's function $G_4(x) = 1 \/ (4 pi^2 |x|^2)$ from $RR^4$ to $RR^3$ through modal coherence. This logarithmic kernel produces flat rotation curves ($v^2 = lambda$, independent of $r$) and the baryonic Tully-Fisher relation ($M_b prop v^4$) from 14 axioms, all Z3-verified. The physical identity of the "extra dimension" being projected out was left open.
+
+Complexified time identifies it. The metric on $CC times RR^3$ is:
+
+$ d s^2 = -c^2 d t_R^2 + c^2 d t_I^2 + d x^2 + d y^2 + d z^2 - 2 i c^2 d t_R d t_I $
+
+For static gravity ($partial \/ partial t_R = 0$), the relevant subspace is ${t_I, x, y, z}$ with signature $(+, +, +, +)$. This is Euclidean $RR^4$. Its Laplacian Green's function is $G_4 = 1 \/ (4 pi^2 |x|^2)$ --- exactly the starting point of the rotation curves paper. The "extra dimension" being projected out is the imaginary time direction $t_I$.
+
+This identification creates two orthogonal projection channels. In the $K$--$Q$ language of POT:
+
+- *$Q_R$ channel* (integrate out $t_I$ from Euclidean ${t_I, x, y, z}$): the production kernel maps the $RR^4$ Green's function through modal coherence to the logarithmic kernel $K(r) prop ln(r)$. This gives flat rotation curves. Measurement: orbital velocities, clocks, SHO-based probes.
+
+- *$Q_I$ channel* (integrate out $t_R$ from Lorentzian ${t_R, x, y, z}$): the static limit of the Lorentzian Green's function gives the standard $1\/r$ Newtonian kernel. This is where the imaginary-time kinetic energy correction enters $T_(mu nu)$. Measurement: tunneling rates, Josephson current.
+
+The $ln(r)$ and $1\/r$ kernels are not competing theories --- they are orthogonal projections of the same 5D Green's function on $CC times RR^3$, through subspaces of different metric signature. The Euclidean signature of ${t_I, x, y, z}$ produces the logarithmic coherence that sustains flat rotation curves. The Lorentzian signature of ${t_R, x, y, z}$ produces the standard Newtonian coupling through which the mass reduction acts.
+
+*Channel orthogonality.* In the admissible (linearized) sector, the two channels are orthogonal: $Q_R$ does not see tunneling sources, and $Q_I$ does not see orbital dynamics. A galaxy has no coherent tunneling ($Q_I$ is trivial), so its rotation curve is unchanged. A laboratory superconductor has negligible self-gravity ($Q_R$ contributes no rotation curve), so the mass reduction is a pure $Q_I$ effect. In the non-admissible sector, the $omega and omega$ self-coupling could produce cross-terms between the channels, but the mixing is bounded by $(Delta \/ m c^2)^2 times (v \/ c)^2 tilde.op 10^(-22)$ for any laboratory system.
+
+The neutron star core is the unique system where both channels are simultaneously significant: $Q_R$ determines the mass profile (TOV equation), while $Q_I$ provides a $tilde.op 3%$ mass reduction from color superconductivity. This makes neutron star observables (tidal deformability, maximum mass) the natural testing ground for the two-channel structure.
+
+All structural results are verified in the companion theory file (`theories/complexified_time_rotation_curves.kleis`, 19 Z3-verified examples).
+
+= Related Work
+
+Several research threads bear on the present proposal.
+
+*Complex spacetime.* Einstein pursued Hermitian extensions of general relativity in the 1940s-50s. Mantz and Banks developed Hermitian gravity on complex manifolds, finding that GR emerges when imaginary coordinates vanish, with modified causality structures and cosmological bounces when they do not. Moffat constructed Chern-Simons type actions on four-complex-dimensional manifolds. Our work differs in providing an operational definition of the imaginary-time direction through tunneling measurements.
+
+*Two-time physics.* Bars' 2T-physics framework uses two real time dimensions and shows that one-time physics emerges as holographic shadows. Notably, Bars predicts that the gravitational constant may change during phase transitions, a structural analog of our prediction. However, his two times are both real, not complex, and the framework has not been connected to condensed matter systems.
+
+*Superconductor gravity.* Modanese developed models where superconductors locally modify vacuum energy density, affecting graviton propagation. Li and Torr (1991--1993) published a series of papers in Physical Review D and B proposing that coherent alignment of lattice ion spins in high-$T_c$ superconductors could generate macroscopic gravitomagnetic fields. Their predicted magnitudes were later shown by Harris to be too large by many orders of magnitude due to an error in the gravitomagnetic coupling calculation. Li founded AC Gravity LLC in 1999 and received Department of Defense funding, but no results were published. Despite the magnitude error, Li and Torr posed the right question: whether macroscopic quantum coherence in superconductors can couple non-trivially to gravity. The gravito-Maxwell/London equation approach finds gravitomagnetic field expulsion from superconductors, but the predicted effects are negligibly small and require an applied magnetic field.
+
+*Negative kinetic energy.* Gross et al. showed that theories with negative kinetic energy (ghosts) exhibit spontaneous lockdown rather than runaway if weakly coupled. In four-derivative gravity, ghost runaway rates are cosmologically slow. This provides theoretical support for the stability of negative-KE configurations.
+
+*Wick rotation and quantum gravity.* Hawking's no-boundary proposal uses imaginary time cosmologically. Sorkin developed complex lapse functions for gravitational tunneling calculations. Our approach differs in identifying a laboratory projection channel ($Q_I$, via tunneling rates in condensed-matter systems) through which imaginary-time contributions to $T_(mu nu)$ become observable, rather than treating $t_I$ as a cosmological or calculational device.
+
+= Discussion
+
+The predicted effect for laboratory superconductors is extremely small: $Delta m / m tilde.op 10^(-16)$ for YBCO. Current precision balance technology resolves $tilde.op 10^(-9)$ relative mass changes. The gap of seven orders of magnitude means that direct weighing experiments are not feasible with present technology. However, atom interferometry and torsion balance experiments approach the $10^(-15)$ level, placing the YBCO prediction within reach of next-generation experiments.
+
+The most promising near-term test may be Prediction 4: the Fraunhofer-squared pattern. Rather than measuring an absolute mass change, this prediction concerns the functional form of $Delta m(H)$ as a function of applied magnetic field. Differential measurements (comparing mass at different field values) can achieve much better sensitivity than absolute measurements, potentially bringing the experiment within reach.
+
+The astrophysical prediction (Prediction 5) is independently testable through gravitational wave observations. If color superconductivity produces a 3% mass reduction in neutron star cores, this would manifest as a systematic shift in tidal deformability measurements from binary neutron star mergers. The LIGO-Virgo-KAGRA collaboration already constrains tidal deformability at the 10% level; improvements to the 1% level could test this prediction.
+
+We emphasize that this theory does not predict anti-gravity, gravitational shielding, or propulsionless flight. The relativistic self-limiting bound ensures that gravitational mass remains positive. The effect is a perturbative correction, not a qualitative change. Claims of percent-level weight reduction in laboratory superconductors (such as Podkletnov's) are incompatible with this framework by fifteen orders of magnitude.
+
+= Conclusion
+
+We have presented a theory connecting complexified time, imaginary velocities, negative kinetic energy, and gravitational mass reduction in superconductors. The chain of reasoning is: (1) complex time admits imaginary velocities; (2) the Euclidean path integral identifies $v_I$ as the instanton velocity --- the saddle point of $S_E$ --- with the Wick rotation providing the sign flip from positive Euclidean to negative Minkowski kinetic energy: $T^(0 0)_I = -1\/2 rho_s v_I^2$; (3) this negative KE enters $T_(mu nu)$ and reduces gravitational mass; (4) tunneling is operationally imaginary-time propagation; (5) superconductors are macroscopic coherent tunneling systems with $v_I = I_c \/ (2 e n_s A)$.
+
+The derived mass correction $Delta m = -m_e V I_c^2 \/ (4 e^2 n_s A^2 c^2)$ has dimensions of mass with no free parameters. The relativistic pair-creation cutoff self-limits the effect, preventing negative total mass. Five independent falsifiable predictions constrain distinct aspects of the theory: mass shift magnitude, phase-transition shape, quadratic gap scaling, Fraunhofer-squared field dependence, and neutron star structure.
+
+Within the Projection Operator Theory framework, the superconducting phase transition acts as an admissibility boundary: imaginary-time gravitational effects migrate from the unobservable kernel to the observable sector when the condensate forms. This provides a structural explanation for why the effect appears at $T_c$ and scales with the order parameter.
+
+A further structural result connects complexified time to dark matter phenomenology: the "extra dimension" of the POT flat rotation curves framework is identified as imaginary time $t_I$. The logarithmic kernel $K(r) prop ln(r)$ that produces flat rotation curves arises from projecting the Euclidean subspace ${t_I, x, y, z}$ of complexified spacetime, while the Newtonian $1\/r$ kernel arises from the Lorentzian subspace ${t_R, x, y, z}$. These are orthogonal projection channels of the same 5D theory on $CC times RR^3$, explaining why dark matter phenomenology and gravitational mass reduction --- both consequences of complexified time --- operate in different measurement channels and at different scales.
+
+The theory is unconventional but falsifiable. The most distinctive prediction --- a Fraunhofer-squared diffraction pattern in gravitational mass --- provides a unique experimental signature that no other gravitational theory predicts. We encourage experimental investigation.
+
+#heading(numbering: none)[Acknowledgments]
+The stress-energy derivation, instanton identification of $v_I$, dimensional analysis, K-Q fiber structure, GR formulation independence, and rotation curve channel orthogonality in this paper were formally verified using the Kleis formal verification system with Z3 SMT solver backend (77 verified examples across five companion theory files, 0 failures).
+
+#heading(numbering: none)[References]
+#set text(size: 9pt)
+#par(hanging-indent: 1.5em)[\[podkletnov1992\] Podkletnov, E., & Nieminen, R. (1992). A possibility of gravitational force shielding by bulk YBa2Cu3O7-x superconductor. Physica C, 203, 441-444.]
+
+#par(hanging-indent: 1.5em)[\[modanese2004\] Modanese, G. (2004). Theoretical analysis of a reported weak-gravitational-shielding effect. Europhysics Letters, 35, 413-418.]
+
+#par(hanging-indent: 1.5em)[\[mantz2008\] Mantz, C. L. M., & Banks, T. (2008). Hermitian Gravity and Cosmology. arXiv:0804.0213.]
+
+#par(hanging-indent: 1.5em)[\[bars2008\] Bars, I. (2008). Gravity in 2T-Physics. Physical Review D, 77, 125027. arXiv:0804.1585.]
+
+#par(hanging-indent: 1.5em)[\[gross2020\] Gross, C., Strumia, A., & Teresi, D. (2021). Is negative kinetic energy metastable? Physical Review D, 103, 115025. arXiv:2007.05541.]
+
+#par(hanging-indent: 1.5em)[\[einstein1945\] Einstein, A. (1945). A generalization of the relativistic theory of gravitation. Annals of Mathematics, 46, 578-584.]
+
+#par(hanging-indent: 1.5em)[\[moffat2005\] Moffat, J. W. (2005). Hermitian Geometry and Complex Space-Time. Communications in Mathematical Physics, 261, 505-514.]
+
+#par(hanging-indent: 1.5em)[\[tajmar2022\] Tajmar, M., et al. (2022). Superconductors and Gravity. Symmetry, 14(3), 554.]
+
+#par(hanging-indent: 1.5em)[\[hawking1983\] Hartle, J. B., & Hawking, S. W. (1983). Wave function of the Universe. Physical Review D, 28, 2960.]
+
+#par(hanging-indent: 1.5em)[\[ambegaokar1963\] Ambegaokar, V., & Baratoff, A. (1963). Tunneling Between Superconductors. Physical Review Letters, 10, 486.]
+
+#par(hanging-indent: 1.5em)[\[litorr1991\] Li, N., & Torr, D. G. (1991). Effects of a gravitomagnetic field on pure superconductors. Physical Review D, 43, 457.]
+
+#par(hanging-indent: 1.5em)[\[litorr1992\] Li, N., & Torr, D. G. (1992). Gravitational effects on the magnetic attenuation of superconductors. Physical Review B, 46, 5489.]
+
+#par(hanging-indent: 1.5em)[\[harris1999\] Harris, E. G. (1999). Comments on 'Gravitoelectric-Electric Coupling via Superconductivity' by Douglas G. Torr and Ning Li. Foundations of Physics Letters, 12, 201.]
+
+#par(hanging-indent: 1.5em)[\[coleman1977\] Coleman, S. (1977). Fate of the false vacuum: Semiclassical theory. Physical Review D, 15, 2929.]
+
+#par(hanging-indent: 1.5em)[\[rajaraman1982\] Rajaraman, R. (1982). Solitons and Instantons. North-Holland.]
+
+#par(hanging-indent: 1.5em)[\[atik2025gr\] Atik, E. (2025). Reading General Relativity Through the Projection Kernel: Non-Admissibility, Formulation Fibers, and the Evidentiary Gap. Kleis Research. https://kleis.io/docs/papers/pot_gr_projection_kernel_paper.pdf]
+
+#par(hanging-indent: 1.5em)[\[atik2025rotation\] Atik, E. (2025). Flat Galactic Rotation Curves as a Theorem of Projected Ontology: Machine Verified Derivations Without Dark Matter. Kleis Research. https://kleis.io/docs/papers/pot_flat_rotation_curves.pdf]
+
+#pagebreak()
+// Reset heading counter for appendices
+#counter(heading).update(0)
+#set heading(numbering: "A.1")
+
+#align(center)[
+  #text(size: 14pt, weight: "bold")[Appendix]
+]
+#v(1em)
+= Z3-Verified Companion Theory Files
+
+Five companion Kleis theory files provide Z3-verified formal foundations for this paper. All 77 examples pass (0 failures).
+
+*File 1: `theories/complexified_time_stress_energy.kleis`* (15 examples). Explicit $T_(mu nu)$ derivation: derives $T^(0 0)_I = -1\/2 rho_s v_I^2$ from the complexified metric, connects imaginary velocity to Josephson current ($v_I = I_c \/ (2 e n_s A)$), shows $Delta m = m_e V I_c^2 \/ (4 e^2 n_s A^2 c^2)$ with dimension mass, verifies gauge invariance of all observables ($I_c$, $Phi_0$, $Phi \/ Phi_0$), and demonstrates that the Sine-Gordon field sector correction vanishes in the DC Josephson regime (static phase, $partial_(t_I) phi = 0$) and is negligible ($tilde.op 10^(-18)$ of matter sector) in the AC regime.
+
+*File 2: `theories/complexified_time_instanton.kleis`* (9 examples). Instanton derivation of $v_I$: establishes $v_I$ as the saddle point of the Euclidean path integral (not a current parametrization), verifies the Wick rotation sign flip from $+1\/2 m v_I^2$ (Euclidean) to $-1\/2 m v_I^2$ (Minkowski), derives BCS coherent enhancement ($sqrt(N_("pairs")) tilde.op 10^13$), confirms dimensional consistency of all intermediate quantities ($S_E$, $v_I$, $E_J$, $T^(0 0)$), and traces the complete 9-step chain from Euclidean path integral to Fraunhofer-squared prediction with a single non-standard input (the Postulate).
+
+*File 3: `theories/complexified_time_dimensions.kleis`* (12 examples). Dimensional analysis in extended SI $[L, M, T, A]$:
+
+*Extended SI basis:* $[L, M, T, A]$ (length, mass, time, current).
+
+*Named dimensions:*
+
+- Energy $= [L^2, M, T^(-2), A^0]$
+- Charge $= [L^0, M^0, T, A]$
+- Resistance $= [L^2, M, T^(-3), A^(-2)]$
+- Density of states $= [L^(-2), M^(-1), T^2, A^0]$
+
+*Verified results:*
+
+1. Gap: $dim(e dot R_n dot I_c) = $ Energy
+2. Condensation energy: $dim(N(0) dot Delta^2) = $ Energy
+3. Mass prediction: $dim(E_("cond") / c^2) = $ Mass (kg)
+4. Full expansion: $dim(N(0) dot e^2 dot R_n^2 dot I_c^2 dot c^(-2)) = $ Mass (kg)
+5. Josephson frequency: $dim(e V / h) = $ Frequency (Hz)
+6. Imaginary velocity: $dim(sqrt(E / m)) = $ Velocity
+7. Self-limiting bound: $dim(Delta m / m) = $ Dimensionless, value $< 1$
+8. Fraunhofer correlation: $dim(Delta m_1 / Delta m_2) = dim(I_(c 1)^2 / I_(c 2)^2) = $ Dimensionless
+
+*File 4: `theories/complexified_time_gr_formulations.kleis`* (22 examples). Formulation independence: verifies that admissibility status is unchanged by complexification for all five GR formulations (Cartan, Palatini, spin-2 free/full, TEGR), that the imaginary-time entry point varies across formulations (fiber artifact), that the mass reduction is constant (physical), and that the effect is linearized (admissible sector).
+
+*File 5: `theories/complexified_time_rotation_curves.kleis`* (19 examples). Rotation curve channel structure: identifies the static Euclidean subspace ${t_I, x, y, z}$ as the source of the logarithmic kernel, establishes two orthogonal projection channels ($Q_R arrow.r ln(r)$, $Q_I arrow.r 1\/r$), verifies channel orthogonality in the admissible sector, classifies sources (galaxy, superconductor, neutron star) by active channels, and proves that galaxy rotation curves are unchanged by complex time.
+
+= POT Kernel Identification
+
+Within the K-Q framework of Projection Operator Theory, we identify:
+
+*Production kernel:* $K_("grav")$ is the logarithmic Green's function on $CC times RR^3$ (extending the standard $RR^(1,3)$ gravitational kernel to complex spacetime).
+
+*Projection maps:*
+- $Q_R$: real-time observable extraction (SHO-based measurements).
+- $Q_I$: imaginary-time observable extraction (tunneling-rate measurements).
+- $Q = (Q_R, Q_I)$: combined projection.
+
+*Three-space decomposition of TheorySpec via $Q compose K$:*
+1. $ker(K_("grav"))$: theory inputs that produce no gravitational field (unchanged).
+2. $K_("grav")^(-1)(ker(Q)) backslash ker(K_("grav"))$: the gap --- imaginary-time gravitational effects that are produced by $K$ but erased by $Q_R$. This is where the gravitational mass correction lived before tunneling probes were included.
+3. $K_("grav")^(-1)(im(Q))$: what reaches observables.
+
+*Migration at the admissibility boundary:* Below $T_c$, coherent tunneling makes $Q_I$ nontrivial. Elements migrate from the gap (item 2) to the observable sector (item 3). This is the gravitational analog of the axial anomaly: an effect that is invisible at one resolution level (real-time probes only) becomes observable at the next (real + imaginary-time probes).
