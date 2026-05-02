@@ -1,0 +1,950 @@
+// =============================================================================
+// Middle Egyptian Grammar — Formal Linguistics via Kleis
+// =============================================================================
+//
+// Formalizes the grammar of Middle Egyptian (c. 2000-1300 BCE) as Kleis
+// structures with axioms, enabling analysis and verification of real
+// hieroglyphic texts against grammatical rules.
+//
+// This theory is text-independent: import it alongside any encoded
+// Middle Egyptian corpus to verify morphosyntactic properties.
+//
+// Source: James P. Allen, "Middle Egyptian: An Introduction to the
+// Language and Culture of Hieroglyphs," 3rd ed. (Cambridge, 2014).
+//
+// See: ADR-034 (Egyptian Hieroglyph Editor)
+// =============================================================================
+
+import "stdlib/prelude.kleis"
+
+// =============================================================================
+// Core Data Types
+// =============================================================================
+
+data Gender = Masculine | Feminine
+
+data Number = Singular | Plural | Dual
+
+data Definiteness = Defined | Undefined
+
+data SignFunction = Ideogram | Phonogram | Determinative
+
+data SignShape = Tall | Flat | Small
+
+data SignType = Uniliteral | Biliteral | Triliteral
+
+data PronounKind = Suffix | Dependent | Independent
+
+data AdjectiveKind = Primary | Secondary | Nisbe
+
+data SentenceType = AdjectivalSent | NominalAB | NominalApw | NominalApwB
+
+data GenitiveType = DirectGen | IndirectGen
+
+data PrepSemanticRole = Locative | Temporal | Stative | Material
+                      | Ablative | Essive | Instrumental
+                      | Directional | Purposive | Causal
+
+// =============================================================================
+// Structure 1: Hieroglyphic Writing System
+// =============================================================================
+//
+// Axioms 1-12: Sign functions, phonetic complements, determinatives,
+// quadrat grouping, and reading direction. Based on Lessons 1-3.
+
+structure HieroglyphicWriting {
+
+    // -- Sign function operations --
+    operation sign_function : Sign → SignFunction
+    operation sign_shape : Sign → SignShape
+    operation sign_type : Sign → SignType
+    operation sound : Sign → Consonants
+    operation second_consonant : Sign → Consonant
+
+    // Axiom 1: Sign polymorphism
+    // The same sign can serve as ideogram, phonogram, or determinative.
+    // Function is determined by position and context.
+    axiom sign_polymorphism :
+        ∀ s : Sign . sign_function(s) = Ideogram
+                   ∨ sign_function(s) = Phonogram
+                   ∨ sign_function(s) = Determinative
+
+    // Axiom 2: Determinative position
+    // Determinatives are always word-final and silent.
+    axiom determinative_word_final :
+        ∀ s : Sign . ∀ w : Word .
+            sign_function(s) = Determinative ∧ member(s, w)
+            → is_final(s, w)
+
+    // Axiom 3: Phonetic complement rule
+    // A uniliteral following a biliteral that matches the second
+    // consonant is a complement, not an additional letter.
+    axiom phonetic_complement :
+        ∀ u : Sign . ∀ b : Sign .
+            sign_type(u) = Uniliteral ∧ sign_type(b) = Biliteral
+            ∧ follows(u, b) ∧ equals(sound(u), second_consonant(b))
+            → sign_function(u) = Phonogram ∧ is_complement(u, b)
+
+    // Axiom 4: Ideogram marker
+    // A sign with a stroke and no phonetic complement is an ideogram.
+    axiom ideogram_marker :
+        ∀ s : Sign .
+            has_stroke(s) ∧ ¬has_complement(s)
+            → sign_function(s) = Ideogram
+
+    // Axiom 5: Reading direction
+    // Signs face toward the beginning of the text.
+    axiom reading_direction :
+        ∀ s : Sign . ∀ t : Text .
+            member(s, t) → faces_toward_beginning(s, t)
+
+    // Axiom 6: Quadrat grouping — tall signs stand alone
+    axiom tall_signs_standalone :
+        ∀ s : Sign .
+            sign_shape(s) = Tall → standalone_quadrat(s)
+
+    // Axiom 7: No spaces or punctuation
+    // Direction and grouping are the only organizing methods.
+    axiom no_word_boundaries :
+        ∀ t : Text . ¬has_spaces(t) ∧ ¬has_punctuation(t)
+
+    // Axiom 8: Complement disambiguates polymorphic signs
+    // For signs with multiple biliteral values, the complement
+    // selects the intended reading.
+    axiom complement_disambiguates :
+        ∀ s : Sign . ∀ c : Sign .
+            is_complement(c, s) → unique_reading(s, sound(c))
+
+    // Axiom 9: Triliteral semantic binding
+    // Triliteral signs are mostly limited to one word family.
+    axiom triliteral_semantic_bound :
+        ∀ s : Sign .
+            sign_type(s) = Triliteral → bound_to_word_family(s)
+
+    // Axiom 10: Spelling is not fixed
+    // Multiple valid decompositions exist for the same word.
+    axiom spelling_variants :
+        ∀ w : Word . ∃ s1 : Spelling . ∃ s2 : Spelling .
+            valid_spelling(s1, w) ∧ valid_spelling(s2, w)
+
+    // Axiom 11: Consonants only
+    // Hieroglyphs write only consonants; vowels are not represented.
+    axiom consonants_only :
+        ∀ s : Sign .
+            sign_function(s) = Phonogram → represents_consonants(s)
+
+    // Axiom 12: Sign tucking
+    // Visual arrangement can deviate from reading order for aesthetics.
+    axiom sign_tucking :
+        ∀ s1 : Sign . ∀ s2 : Sign .
+            tucked_into(s1, s2) → visual_order(s1, s2) ≠ reading_order(s1, s2)
+}
+
+// =============================================================================
+// Structure 2: Middle Egyptian Nominal Grammar
+// =============================================================================
+//
+// Axioms 13-100: Nouns, pronouns, demonstratives, adjectives, and
+// non-verbal sentences. Based on Lessons 4-7.
+//
+// This is the core of the non-verbal grammar — everything needed to
+// parse and verify sentences without verbs.
+
+structure MiddleEgyptianNominalGrammar {
+
+    // -- Morphological operations --
+    operation gender : Noun → Gender
+    operation number : Noun → Number
+    operation definiteness : Noun → Definiteness
+    operation root : Noun → Consonants
+
+    // -- Pronoun operations --
+    operation pronoun_kind : Pronoun → PronounKind
+    operation pronoun_person : Pronoun → Person
+    operation pronoun_gender : Pronoun → Gender
+    operation pronoun_number : Pronoun → Number
+
+    // -- Adjective operations --
+    operation adjective_kind : Adjective → AdjectiveKind
+    operation adjective_gender : Adjective → Gender
+    operation adjective_number : Adjective → Number
+
+    // =========================================================================
+    // Noun Morphology (Axioms 13-30)
+    // =========================================================================
+
+    // Axiom 13: Gender binary
+    axiom gender_binary :
+        ∀ n : Noun . gender(n) = Masculine ∨ gender(n) = Feminine
+
+    // Axiom 14: Feminine -t ending
+    axiom feminine_t_ending :
+        ∀ n : Noun .
+            gender(n) = Feminine → ends_with(root(n), t)
+
+    // Axiom 15: Root-t disambiguation
+    // A final root consonant -t is not the feminine ending.
+    axiom root_t_disambiguation :
+        ∀ n : Noun .
+            root_ends_t(n) ∧ gender(n) = Masculine
+            → ¬is_feminine_ending(final_t(n))
+
+    // Axiom 16: Place names are feminine
+    axiom place_names_feminine :
+        ∀ n : Noun .
+            is_place_name(n) → gender(n) = Feminine
+
+    // Axiom 17: Masculine plural -w
+    axiom masculine_plural :
+        ∀ n : Noun .
+            gender(n) = Masculine ∧ number(n) = Plural
+            → has_ending(n, w)
+
+    // Axiom 18: Feminine plural -wt
+    axiom feminine_plural :
+        ∀ n : Noun .
+            gender(n) = Feminine ∧ number(n) = Plural
+            → has_ending(n, wt)
+
+    // Axiom 19: Masculine dual -wj
+    axiom masculine_dual :
+        ∀ n : Noun .
+            gender(n) = Masculine ∧ number(n) = Dual
+            → has_ending(n, wj)
+
+    // Axiom 20: Feminine dual -tj
+    axiom feminine_dual :
+        ∀ n : Noun .
+            gender(n) = Feminine ∧ number(n) = Dual
+            → has_ending(n, tj)
+
+    // Axiom 21: Plural strokes may be false plurals
+    axiom false_plurals :
+        ∀ n : Noun .
+            has_plural_strokes(n) → number(n) = Plural ∨ is_false_plural(n)
+
+    // Axiom 22: Surface ≠ grammar
+    axiom surface_grammar_mismatch :
+        ∀ n : Noun .
+            written_form(n) ≠ morphological_form(n) → has_weak_consonant(n)
+
+    // Axiom 23: No articles
+    // Definiteness is context-dependent, not morphologically marked.
+    axiom no_articles :
+        ∀ n : Noun .
+            ¬has_article(n)
+            ∧ (definiteness(n) = Defined ∨ definiteness(n) = Undefined)
+
+    // Axiom 24: Proper names are always defined
+    axiom proper_names_defined :
+        ∀ n : Noun .
+            is_proper_name(n) → definiteness(n) = Defined
+
+    // Axiom 25: Conjunction by juxtaposition
+    // No word for "and" — two nouns side by side = conjunction.
+    axiom conjunction_by_juxtaposition :
+        ∀ n1 : Noun . ∀ n2 : Noun .
+            adjacent(n1, n2) ∧ ¬is_apposition(n1, n2) ∧ ¬is_genitive(n1, n2)
+            → is_conjoined(n1, n2)
+
+    // Axiom 26: Direct genitive — tight binding
+    // Possessor immediately follows possessed; nothing can intervene.
+    axiom direct_genitive_integrity :
+        ∀ n1 : Noun . ∀ n2 : Noun .
+            is_genitive(n1, n2) ∧ genitive_type(n1, n2) = DirectGen
+            → immediately_follows(n2, n1) ∧ ¬intervenes_between(n1, n2)
+
+    // Axiom 27: Indirect genitive — with n(j)
+    // Uses the nisbe n(j) "belonging to" between possessed and possessor.
+    axiom indirect_genitive :
+        ∀ n1 : Noun . ∀ n2 : Noun .
+            is_genitive(n1, n2) ∧ genitive_type(n1, n2) = IndirectGen
+            → linked_by_nj(n1, n2)
+
+    // Axiom 28: Honorific transposition
+    // Divine/royal nouns written first regardless of reading order.
+    axiom honorific_transposition :
+        ∀ n1 : Noun . ∀ n2 : Noun .
+            is_genitive(n1, n2) ∧ is_divine_or_royal(n2)
+            → written_before(n2, n1) ∧ read_after(n2, n1)
+
+    // Axiom 29: No verb "have"
+    // Possession is expressed through genitive constructions only.
+    axiom no_have_verb :
+        ∀ owner : Noun . ∀ thing : Noun .
+            possesses(owner, thing)
+            → is_genitive(owner, thing)
+               ∨ nfr_hr_construction(owner, thing)
+
+    // Axiom 30: Apposition = title + name
+    axiom apposition_title_name :
+        ∀ n1 : Noun . ∀ n2 : Noun .
+            is_apposition(n1, n2)
+            → same_referent(n1, n2)
+               ∧ (is_title(n1) ∧ is_proper_name(n2)
+                  ∨ is_general(n1) ∧ is_specific(n2))
+
+    // =========================================================================
+    // Pronouns (Axioms 31-42)
+    // =========================================================================
+
+    // Axiom 31: Suffix pronoun paradigm
+    // 8 forms encoding person, gender, and number.
+    axiom suffix_paradigm :
+        ∀ p : Pronoun .
+            pronoun_kind(p) = Suffix
+            → distinct_form(p, pronoun_person(p), pronoun_gender(p), pronoun_number(p))
+
+    // Axiom 32: Suffix position — always word-final
+    axiom suffix_word_final :
+        ∀ p : Pronoun . ∀ w : Word .
+            pronoun_kind(p) = Suffix ∧ attached_to(p, w)
+            → is_final_element(p, w)
+
+    // Axiom 33: 1s suffix optional writing
+    axiom first_singular_optional :
+        ∀ p : Pronoun .
+            pronoun_kind(p) = Suffix ∧ pronoun_person(p) = First
+            ∧ pronoun_number(p) = Singular
+            → may_be_omitted_in_writing(p)
+
+    // Axiom 34: 1s speaker ideogram
+    axiom first_singular_ideogram :
+        ∀ p : Pronoun .
+            pronoun_kind(p) = Suffix ∧ pronoun_person(p) = First
+            ∧ pronoun_number(p) = Singular
+            → may_be_written_as_speaker_ideogram(p)
+
+    // Axiom 35: Pronoun sound changes
+    axiom pronoun_sound_changes :
+        ∀ p : Pronoun .
+            pronoun_kind(p) = Suffix
+            → (spelling_variant(p, k, t) ∨ spelling_variant(p, tjn, tn))
+
+    // Axiom 36: Dependent pronoun position
+    // Cannot start a sentence — must follow another word.
+    axiom dependent_not_initial :
+        ∀ p : Pronoun . ∀ s : Sentence .
+            pronoun_kind(p) = Dependent ∧ member(p, s)
+            → ¬is_first_word(p, s)
+
+    // Axiom 37: Neutral 3n pronoun
+    // st is gender/number neutral for non-personal referents.
+    axiom neutral_third_pronoun :
+        ∀ p : Pronoun .
+            is_st(p)
+            → ¬gender_specific(p) ∧ used_for_things(p)
+
+    // Axiom 38: Independent pronoun compositionality
+    // 2nd/3rd person = nt + suffix; 1st person = jn + suffix.
+    axiom independent_compositional :
+        ∀ p : Pronoun .
+            pronoun_kind(p) = Independent
+            → composed_of_prefix_and_suffix(p)
+
+    // Axiom 39: Pronoun kind determines syntax
+    axiom pronoun_syntax :
+        ∀ p : Pronoun .
+            (pronoun_kind(p) = Suffix → possessive_or_verbal(p))
+            ∧ (pronoun_kind(p) = Dependent → object_function(p))
+            ∧ (pronoun_kind(p) = Independent → subject_or_predicate(p))
+
+    // Axiom 40: Possessive suffix follows all endings
+    axiom possessive_after_endings :
+        ∀ p : Pronoun . ∀ n : Noun .
+            pronoun_kind(p) = Suffix ∧ possessive(p, n)
+            → follows_number_ending(p, n) ∧ follows_determinative(p, n)
+
+    // Axiom 41: Suffix gender independent of noun gender
+    axiom suffix_gender_independent :
+        ∀ p : Pronoun . ∀ n : Noun .
+            pronoun_kind(p) = Suffix ∧ possessive(p, n)
+            → pronoun_gender(p) = gender_of_possessor(p)
+
+    // Axiom 42: 1s determinative ambiguity
+    axiom first_singular_ambiguity :
+        ∀ s : Sign . ∀ w : Word .
+            is_man_sign(s) ∧ is_final(s, w)
+            → sign_function(s) = Determinative
+               ∨ is_suffix_pronoun(s)
+               ∨ (sign_function(s) = Determinative ∧ is_suffix_pronoun(s))
+
+    // =========================================================================
+    // Demonstratives (Axioms 43-52)
+    // =========================================================================
+
+    // Axiom 43: Demonstrative gender agreement
+    // p- masculine, t- feminine, n- neutral.
+    axiom demonstrative_gender :
+        ∀ d : Demonstrative . ∀ n : Noun .
+            modifies(d, n)
+            → (gender(n) = Masculine → prefix(d) = p)
+               ∧ (gender(n) = Feminine → prefix(d) = t)
+
+    // Axiom 44: Four demonstrative series
+    axiom demonstrative_series :
+        ∀ d : Demonstrative .
+            series(d) = Near ∨ series(d) = Far
+            ∨ series(d) = Archaic ∨ series(d) = Colloquial
+
+    // Axiom 45: Standalone demonstrative prefers neutral
+    axiom standalone_neutral :
+        ∀ d : Demonstrative .
+            ¬modifies_noun(d) → prefers_neutral_form(d)
+
+    // Axiom 46: Demonstrative position
+    axiom demonstrative_position :
+        ∀ d : Demonstrative . ∀ n : Noun .
+            modifies(d, n) ∧ (series(d) = Near)
+            → follows(d, n)
+
+    // Axiom 47: Direct genitive integrity (restated for demonstratives)
+    axiom genitive_integrity_demo :
+        ∀ d : Demonstrative . ∀ n1 : Noun . ∀ n2 : Noun .
+            modifies(d, n1) ∧ is_genitive(n1, n2) ∧ genitive_type(n1, n2) = DirectGen
+            → follows(d, n2)
+
+    // Axiom 48: Demonstrative-article ambiguity
+    axiom demonstrative_article_ambiguity :
+        ∀ d : Demonstrative .
+            series(d) = Colloquial
+            → can_be_article(d) ∨ can_be_demonstrative(d)
+
+    // Axiom 49: New possessive agreement
+    // pay/tay/nay agrees with noun gender, not possessor gender.
+    axiom new_possessive_agreement :
+        ∀ d : Demonstrative . ∀ n : Noun .
+            is_new_possessive(d) ∧ modifies(d, n)
+            → agrees_with_noun_gender(d, n)
+
+    // Axiom 50: Interrogatives uninflected
+    axiom interrogatives_uninflected :
+        ∀ q : Interrogative .
+            ¬has_gender_marking(q) ∧ ¬has_number_marking(q)
+
+    // Axiom 51: Interrogative position
+    axiom interrogative_position :
+        ∀ q : Interrogative . ∀ s : Sentence .
+            (is_ptr(q) → is_first_word(q, s))
+            ∧ (is_mj_interrog(q) → ¬is_first_word(q, s))
+
+    // Axiom 52: Animate/inanimate interrogative distinction
+    axiom animate_inanimate_interrog :
+        ∀ q : Interrogative .
+            (is_jkh(q) → used_for_things(q) ∧ ¬used_for_people(q))
+            ∧ (is_ptr(q) → used_for_things(q) ∧ used_for_people(q))
+
+    // =========================================================================
+    // Adjectives (Axioms 53-69)
+    // =========================================================================
+
+    // Axiom 53: Adjective agreement
+    axiom adjective_agreement :
+        ∀ a : Adjective . ∀ n : Noun .
+            modifies(a, n) ∧ adjective_kind(a) ≠ Primary
+            → adjective_gender(a) = gender(n)
+               ∧ adjective_number(a) = number(n)
+
+    // Axiom 54: Adjective position — always follows noun
+    axiom adjective_follows_noun :
+        ∀ a : Adjective . ∀ n : Noun .
+            modifies(a, n) ∧ ¬is_apparent_adjective(a)
+            → follows(a, n)
+
+    // Axiom 55: Position disambiguates nb
+    axiom nb_disambiguation :
+        ∀ w : Word . ∀ n : Noun .
+            is_nb(w) ∧ follows(w, n) → is_adjective(w)
+
+    // Axiom 56: Nisbe feminine replaces -j with -t
+    axiom nisbe_feminine :
+        ∀ a : Adjective .
+            adjective_kind(a) = Nisbe ∧ adjective_gender(a) = Feminine
+            → replaces_j_with_t(a)
+
+    // Axiom 57: Feminine plural = feminine singular for adjectives
+    axiom feminine_plural_adjective :
+        ∀ a : Adjective .
+            adjective_gender(a) = Feminine ∧ adjective_number(a) = Plural
+            → form(a) = feminine_singular_form(a)
+
+    // Axiom 58: nb precedes other adjectives
+    axiom nb_first :
+        ∀ a1 : Adjective . ∀ a2 : Adjective . ∀ n : Noun .
+            is_nb(a1) ∧ modifies(a1, n) ∧ modifies(a2, n) ∧ ¬is_nb(a2)
+            → precedes(a1, a2)
+
+    // Axiom 59: Demonstrative before adjectives
+    axiom demonstrative_before_adjectives :
+        ∀ d : Demonstrative . ∀ a : Adjective . ∀ n : Noun .
+            modifies(d, n) ∧ modifies(a, n)
+            → precedes(d, a)
+
+    // Axiom 60: Suffix before adjectives
+    axiom suffix_before_adjectives :
+        ∀ p : Pronoun . ∀ a : Adjective . ∀ n : Noun .
+            pronoun_kind(p) = Suffix ∧ possessive(p, n) ∧ modifies(a, n)
+            → precedes(p, a)
+
+    // Axiom 61: Genitive + adjective
+    axiom genitive_plus_adjective :
+        ∀ a : Adjective . ∀ n1 : Noun . ∀ n2 : Noun .
+            modifies(a, n1) ∧ is_genitive(n1, n2) ∧ genitive_type(n1, n2) = DirectGen
+            → follows(a, n2) ∧ agrees_in_gender(a, n1)
+
+    // Axiom 62: Adjectives are nouns (except nb)
+    axiom adjectives_are_nouns :
+        ∀ a : Adjective .
+            adjective_kind(a) ≠ Primary → can_function_as_noun(a)
+
+    // Axiom 63: nb standalone = noun "lord"
+    axiom nb_standalone_noun :
+        ∀ w : Word .
+            is_nb(w) ∧ ¬follows_noun(w)
+            → is_noun(w) ∧ means_lord(w)
+
+    // Axiom 64: nfr hr construction
+    axiom nfr_hr :
+        ∀ a : Adjective . ∀ n : Noun .
+            nfr_hr_construction(a, n)
+            → genitive_type(a, n) = DirectGen ∧ describes_characteristic(a, n)
+
+    // Axiom 65: Apparent adjectives precede noun
+    axiom apparent_adjectives_precede :
+        ∀ a : Adjective . ∀ n : Noun .
+            is_apparent_adjective(a) ∧ modifies(a, n)
+            → precedes(a, n)
+
+    // Axiom 66: No comparative/superlative morphology
+    axiom no_comparative_form :
+        ∀ a : Adjective .
+            ¬has_comparative_form(a) ∧ ¬has_superlative_form(a)
+
+    // Axiom 67: Comparative via preposition r
+    axiom comparative_with_r :
+        ∀ a : Adjective . ∀ n : Noun .
+            is_comparative(a, n)
+            → linked_by_r(a, n)
+
+    // Axiom 68: Superlative via genitive
+    axiom superlative_with_genitive :
+        ∀ a : Adjective . ∀ n : Noun .
+            is_superlative(a, n)
+            → is_genitive(a, n)
+
+    // Axiom 69: Prepositional adjective phrases
+    axiom prepositional_adjective_phrases :
+        ∀ pp : PrepPhrase . ∀ n : Noun .
+            is_adj_phrase(pp) ∧ modifies(pp, n)
+            → means_entire(pp)
+
+    // =========================================================================
+    // Non-verbal Sentences (Axioms 70-100)
+    // =========================================================================
+
+    // Axiom 70: No copula — no verb "be"
+    axiom no_copula :
+        ∀ s : Sentence .
+            sentence_type(s) = AdjectivalSent ∨ sentence_type(s) = NominalAB
+            ∨ sentence_type(s) = NominalApw ∨ sentence_type(s) = NominalApwB
+            → ¬has_copula(s)
+
+    // Axiom 71: Predicate-subject order in adjectival sentences
+    axiom predicate_first :
+        ∀ s : Sentence .
+            sentence_type(s) = AdjectivalSent
+            → precedes(predicate(s), subject(s))
+
+    // Axiom 72: Predicate adjective is uninflected (always masc. sg.)
+    axiom predicate_uninflected :
+        ∀ s : Sentence . ∀ a : Adjective .
+            sentence_type(s) = AdjectivalSent ∧ predicate(s) = a
+            → adjective_gender(a) = Masculine ∧ adjective_number(a) = Singular
+
+    // Axiom 73: Position determines adjective function
+    // Before noun = predicate; after noun = modifier.
+    axiom position_determines_function :
+        ∀ a : Adjective . ∀ n : Noun .
+            precedes(a, n) → is_predicate(a)
+
+    // Axiom 74: Exclamatory -wj
+    axiom exclamatory_dual :
+        ∀ a : Adjective .
+            has_ending(a, wj) ∧ is_predicate(a)
+            → is_exclamatory(a)
+
+    // Axiom 75: Only secondary adjectives as predicates
+    axiom secondary_predicates_only :
+        ∀ a : Adjective .
+            is_predicate(a) → adjective_kind(a) = Secondary ∨ adjective_kind(a) = Nisbe
+
+    // Axiom 76: Dependent pronoun as subject — 2nd/3rd person only
+    axiom dependent_subject_restriction :
+        ∀ p : Pronoun . ∀ s : Sentence .
+            pronoun_kind(p) = Dependent ∧ is_subject(p, s)
+            ∧ sentence_type(s) = AdjectivalSent
+            → pronoun_person(p) ≠ First
+
+    // Axiom 77: Nominal A B — independent pronoun first, or demo second
+    axiom nominal_ab_pattern :
+        ∀ s : Sentence .
+            sentence_type(s) = NominalAB
+            → has_pronoun_element(s) ∨ has_demonstrative_b(s)
+
+    // Axiom 78: Pronoun-noun apposition agreement
+    axiom pronoun_noun_apposition :
+        ∀ p : Pronoun . ∀ n : Noun . ∀ s : Sentence .
+            is_subject(p, s) ∧ is_apposition(p, n)
+            → pronoun_gender(p) = gender(n) ∧ pronoun_number(p) = number(n)
+
+    // Axiom 79: Balanced sentences — same noun in A and B
+    axiom balanced_sentences :
+        ∀ s : Sentence .
+            sentence_type(s) = NominalAB
+            ∧ same_noun_type(element_a(s), element_b(s))
+            → is_equation(s)
+
+    // Axiom 80: Adherence with dependent pronoun
+    axiom adherence_dependent :
+        ∀ s : Sentence . ∀ p : Pronoun .
+            is_adherence(s) ∧ pronoun_kind(p) = Dependent ∧ member(p, s)
+            → means_a_belongs_to_b(s)
+
+    // Axiom 81: Adherence with independent pronoun
+    axiom adherence_independent :
+        ∀ s : Sentence . ∀ p : Pronoun .
+            is_adherence(s) ∧ pronoun_kind(p) = Independent ∧ member(p, s)
+            → means_b_belongs_to_a(s)
+
+    // Axiom 82: pw is gender/number neutral
+    axiom pw_neutral :
+        ∀ s : Sentence .
+            sentence_type(s) = NominalApw
+            → ¬gender_specific(pw_element(s))
+
+    // Axiom 83: pw position — as close to beginning as possible
+    axiom pw_position :
+        ∀ s : Sentence .
+            sentence_type(s) = NominalApw
+            → pw_as_early_as_possible(s)
+
+    // Axiom 84: pw respects direct genitive integrity
+    axiom pw_respects_genitive :
+        ∀ s : Sentence . ∀ n1 : Noun . ∀ n2 : Noun .
+            sentence_type(s) = NominalApw
+            ∧ is_genitive(n1, n2) ∧ genitive_type(n1, n2) = DirectGen
+            → ¬pw_between(s, n1, n2)
+
+    // Axiom 85: A pw B — "B is A" when both are nouns
+    axiom a_pw_b_semantics :
+        ∀ s : Sentence .
+            sentence_type(s) = NominalApwB
+            → element_a(s) = predicate(s) ∧ element_b(s) = subject(s)
+
+    // Axiom 86: Two complementary nominal patterns
+    axiom two_nominal_patterns :
+        ∀ s : Sentence .
+            is_nominal(s) ∧ has_pronoun_element(s)
+            → sentence_type(s) = NominalAB
+
+    // Axiom 87: A is usually the predicate
+    axiom a_is_predicate :
+        ∀ s : Sentence .
+            is_nominal(s)
+            → element_a(s) = predicate(s)
+
+    // Axiom 88: 3rd person subject uses pw
+    axiom third_person_uses_pw :
+        ∀ s : Sentence . ∀ p : Pronoun .
+            is_nominal(s) ∧ is_subject(p, s)
+            ∧ pronoun_person(p) = Third ∧ pronoun_kind(p) = Independent
+            → sentence_type(s) = NominalApw
+
+    // Axiom 89: 1st/2nd person ambiguity
+    axiom first_second_ambiguous :
+        ∀ s : Sentence . ∀ p : Pronoun .
+            is_nominal(s) ∧ pronoun_kind(p) = Independent
+            ∧ (pronoun_person(p) = First ∨ pronoun_person(p) = Second)
+            → ambiguous_subject_predicate(p, s)
+
+    // Axiom 90: ptr always sentence-initial
+    axiom ptr_initial :
+        ∀ q : Interrogative . ∀ s : Sentence .
+            is_ptr(q) ∧ member(q, s)
+            → is_first_word(q, s)
+
+    // Axiom 91: jn mj fusion
+    axiom jn_mj_fusion :
+        ∀ s : Sentence .
+            has_jn_mj(s) → interrogative_who(s)
+
+    // Axiom 92: Interrogative-first preference
+    axiom interrogative_first :
+        ∀ q : Interrogative . ∀ s : Sentence .
+            member(q, s) ∧ ¬has_independent_subject(s)
+            → prefers_initial_position(q, s)
+
+    // Axiom 93: 1st person uses nominal instead of adjectival
+    axiom first_person_avoids_adjectival :
+        ∀ s : Sentence . ∀ p : Pronoun .
+            pronoun_person(p) = First ∧ pronoun_number(p) = Singular
+            ∧ is_subject(p, s) ∧ has_adjectival_predicate(s)
+            → sentence_type(s) = NominalAB
+
+    // Axiom 94: Nominal vs adjectival distinction
+    axiom nominal_vs_adjectival :
+        ∀ a : Adjective .
+            used_with_pw(a) → functions_as_noun(a)
+
+    // Axiom 95: No inherent tense
+    axiom no_inherent_tense :
+        ∀ s : Sentence .
+            ¬has_copula(s) → ¬has_inherent_tense(s)
+
+    // Axiom 96: Gnomic mode
+    axiom gnomic_mode :
+        ∀ s : Sentence .
+            ¬has_inherent_tense(s) ∧ is_universal_truth(s)
+            → is_gnomic(s)
+
+    // Axiom 97: Contextual tense
+    axiom contextual_tense :
+        ∀ s : Sentence .
+            ¬has_inherent_tense(s) ∧ ¬is_gnomic(s)
+            → tense_from_context(s)
+
+    // Axiom 98: Phrase/sentence ambiguity
+    axiom phrase_sentence_ambiguity :
+        ∀ w1 : Word . ∀ w2 : Word .
+            adjacent(w1, w2)
+            → can_be_phrase(w1, w2) ∨ can_be_sentence(w1, w2)
+
+    // Axiom 99: Prosodic disambiguation
+    axiom prosodic_disambiguation :
+        ∀ s : Sentence .
+            ambiguous_subject_predicate_in(s)
+            → disambiguated_by_stress(s)
+
+    // Axiom 100: Sign tucking (graphemic)
+    axiom sign_tucking_feminine :
+        ∀ s1 : Sign . ∀ s2 : Sign .
+            is_t_sign(s1) ∧ is_bird_sign(s2) ∧ tucked_into(s1, s2)
+            → is_feminine_ending(s1)
+}
+
+// =============================================================================
+// Structure 3: Middle Egyptian Prepositions
+// =============================================================================
+//
+// Axioms 101-125: The preposition system, compound formation,
+// prepositional nisbes, adverbs. Based on Lesson 8.
+
+structure MiddleEgyptianPrepositions {
+
+    // -- Preposition operations --
+    operation prep_form : Preposition → PrepForm
+    operation prep_semantic_role : Preposition → PrepSemanticRole
+    operation prep_object : Preposition → NounPhrase
+
+    // Axiom 101: Three preposition forms
+    axiom three_prep_forms :
+        ∀ p : Preposition .
+            has_noun_form(p) ∧ has_pronoun_form(p) ∧ has_adverbial_form(p)
+
+    // Axiom 102: m polysemy — 7+ semantic roles
+    axiom m_polysemy :
+        ∀ p : Preposition .
+            is_m(p) → (prep_semantic_role(p) = Locative
+                       ∨ prep_semantic_role(p) = Temporal
+                       ∨ prep_semantic_role(p) = Stative
+                       ∨ prep_semantic_role(p) = Material
+                       ∨ prep_semantic_role(p) = Ablative
+                       ∨ prep_semantic_role(p) = Essive
+                       ∨ prep_semantic_role(p) = Instrumental)
+
+    // Axiom 103: n = goal-of-person, r = goal-of-place
+    axiom n_vs_r_goals :
+        ∀ prep : Preposition . ∀ goal : NounPhrase .
+            is_motion_goal(prep, goal) ∧ is_animate(goal) → is_n(prep)
+
+    axiom r_for_places :
+        ∀ prep : Preposition . ∀ goal : NounPhrase .
+            is_motion_goal(prep, goal) ∧ is_place(goal) → is_r(prep)
+
+    // Axiom 104: hna = accompaniment, m = instrument
+    axiom with_split :
+        ∀ p : Preposition . ∀ n : NounPhrase .
+            means_with(p, n) ∧ is_accompaniment(p, n) → is_hna(p)
+
+    axiom instrumental_m :
+        ∀ p : Preposition . ∀ n : NounPhrase .
+            means_with(p, n) ∧ is_instrumental(p, n) → is_m(p)
+
+    // Axiom 105: Social register — n for equals, hr for superiors
+    axiom social_register :
+        ∀ p : Preposition . ∀ n : NounPhrase .
+            is_addressee(n) ∧ is_superior(n) → is_khr(p)
+
+    axiom equals_use_n :
+        ∀ p : Preposition . ∀ n : NounPhrase .
+            is_addressee(n) ∧ ¬is_superior(n) → is_n(p)
+
+    // Axiom 106: Suffix pronouns attach to prepositions
+    axiom suffix_on_prepositions :
+        ∀ p : Preposition . ∀ pron : Pronoun .
+            pronoun_kind(pron) = Suffix ∧ is_object(pron, p)
+            → attached_directly(pron, p)
+
+    // Axiom 107: jn and mj cannot take suffix pronouns
+    axiom jn_mj_no_suffix :
+        ∀ p : Preposition . ∀ pron : Pronoun .
+            (is_jn(p) ∨ is_mj(p)) ∧ pronoun_kind(pron) = Suffix
+            → ¬is_object(pron, p)
+
+    // Axiom 108: mj workaround with mjtw/mjty "likeness"
+    axiom mj_pronoun_workaround :
+        ∀ p : Preposition . ∀ pron : Pronoun .
+            is_mj(p) ∧ requires_pronoun_object(p)
+            → uses_mjtw_instead(p, pron)
+
+    // Axiom 109: Compound preposition formation — compositional meaning
+    axiom compound_prep_compositional :
+        ∀ cp : CompoundPreposition .
+            meaning(cp) = compose(meaning(component1(cp)), meaning(component2(cp)))
+
+    // Axiom 110: Subjectless adjectival + n
+    axiom subjectless_adjectival_n :
+        ∀ s : Sentence . ∀ a : Adjective . ∀ p : Preposition .
+            sentence_type(s) = AdjectivalSent ∧ ¬has_subject(s) ∧ is_n(p)
+            → dummy_subject_construction(s)
+
+    // Axiom 111: Prepositional nisbe derivation — preposition + -j/-t
+    axiom prep_nisbe_derivation :
+        ∀ p : Preposition .
+            has_nisbe_form(p)
+            ∧ nisbe_form(p) = add_j_or_t(p)
+
+    // Axiom 112: Nisbe agreement with nisbe, not governed noun
+    axiom nisbe_agreement_rule :
+        ∀ a : Adjective . ∀ nisbe : Adjective . ∀ n : Noun .
+            adjective_kind(nisbe) = Nisbe ∧ governs(nisbe, n) ∧ modifies(a, nisbe)
+            → agrees_with(a, nisbe) ∧ ¬agrees_with(a, n)
+
+    // Axiom 113: Suffix placement on nisbes determines meaning
+    axiom nisbe_suffix_placement :
+        ∀ nisbe : Adjective . ∀ pron : Pronoun . ∀ n : Noun .
+            adjective_kind(nisbe) = Nisbe ∧ governs(nisbe, n)
+            → (suffix_on(pron, n) → meaning_type_a(nisbe, pron))
+               ∧ (suffix_on(pron, nisbe) → meaning_type_b(nisbe, pron))
+
+    // Axiom 114: hrj possession — "under" → "having"
+    axiom hrj_possession :
+        ∀ nisbe : Adjective . ∀ n : Noun .
+            is_hrj(nisbe) ∧ governs(nisbe, n)
+            → can_mean_possession(nisbe, n)
+
+    // Axiom 115: Reverse nisbes — nfr hr with prepositional nisbes
+    axiom reverse_nisbes :
+        ∀ nisbe : Adjective . ∀ n : Noun . ∀ head : Noun .
+            adjective_kind(nisbe) = Nisbe ∧ governs(nisbe, n) ∧ modifies(nisbe, head)
+            → (normal_reading(head, nisbe, n) ∨ reverse_reading(head, nisbe, n))
+
+    // Axiom 116: jmj-r lexicalization — "overseer"
+    axiom jmj_r_overseer :
+        ∀ t : Title .
+            is_jmj_r(t) → is_reverse_nisbe(t) ∧ means_overseer(t)
+
+    // Axiom 117: Prepositions cannot directly modify nouns
+    axiom prep_modifier_constraint :
+        ∀ p : Preposition . ∀ n : Noun .
+            modifies(p, n) → must_use_nisbe_form(p)
+
+    // Axiom 118: Only three primary adverbs
+    axiom three_primary_adverbs :
+        ∀ a : Adverb .
+            is_primary(a) → (is_aA(a) ∨ is_rj(a) ∨ is_grw(a))
+
+    // Axiom 119: Compositional interrogative adverbs
+    axiom compositional_interrog_adverbs :
+        ∀ q : InterrogativeAdverb .
+            (means_how(q) → composed_of(q, mj, mj))
+            ∧ (means_why(q) → composed_of(q, hr, mj))
+
+    // Axiom 120: Adverb from adjective — three derivation patterns
+    axiom adverb_from_adjective :
+        ∀ a : Adjective .
+            can_derive_adverb(a)
+            → (zero_derivation(a) ∨ add_w(a) ∨ add_t(a))
+
+    // Axiom 121: Temporal nouns as adverbs
+    axiom temporal_nouns_as_adverbs :
+        ∀ n : Noun .
+            is_temporal(n) → can_function_as_adverb(n)
+
+    // Axiom 122: Prepositional adverb formation
+    axiom prep_adverb_formation :
+        ∀ p : Preposition .
+            used_adverbially(p) → (drop_object(p) ∧ add_adverbial_ending(p))
+
+    // Axiom 123: Adverb position rule
+    axiom adverb_position :
+        ∀ adv : Adverb . ∀ p : Preposition . ∀ a : Adjective .
+            (modifies(adv, p) → precedes(adv, p))
+            ∧ (modifies(adv, a) → follows(adv, a))
+
+    // Axiom 124: No comparative/superlative adverb form
+    axiom no_comparative_adverb :
+        ∀ adv : Adverb .
+            ¬has_comparative_form(adv) ∧ ¬has_superlative_form(adv)
+
+    // Axiom 125: Phrasal cohesion constraint
+    axiom phrasal_cohesion :
+        ∀ phr : PrepPhrase . ∀ a : Adjective .
+            is_cohesive(phr) ∧ modifies(a, head_of(phr))
+            → follows(a, phr)
+}
+
+// =============================================================================
+// Self-Tests
+// =============================================================================
+
+example "gender binary" {
+    out("Every noun is masculine or feminine — no neuter")
+    out("Feminine nouns end in -t: nfrt (beautiful-FEM)")
+    out("Place names are always feminine: jwnw (Heliopolis)")
+}
+
+example "no copula" {
+    out("jnk hqA = 'I am the ruler' — no verb 'be'")
+    out("nfr sw = 'He is good' — predicate first, subject second")
+    out("Predicate adjective always masculine singular regardless of subject")
+}
+
+example "three pronoun paradigms" {
+    out("Suffix: pr.f = 'his house' (possessive, word-final)")
+    out("Dependent: nfr sw = 'he is good' (cannot start sentence)")
+    out("Independent: jnk = 'I' (freestanding, compositional: jn + k)")
+}
+
+example "nominal sentence patterns" {
+    out("A B (pronoun): jnk hqA = 'I am the ruler'")
+    out("A pw (3rd person subject): hqA pw = 'He is the ruler'")
+    out("A pw B (both nouns): sA.j pw = 'He is my son'")
+    out("3rd person forces pw; 1st/2nd ambiguous without pw")
+}
+
+example "preposition system" {
+    out("17 primary prepositions, each with up to 3 forms")
+    out("m has 7+ meanings: in, from, as, with, by, during, of")
+    out("n = goal-of-person; r = goal-of-place")
+    out("hna = accompaniment; m = instrumental ('with' split)")
+    out("Only 3 primary adverbs: aA, rj, grw")
+}
+
+example "disambiguation principles" {
+    out("Position determines function: adj before noun = predicate")
+    out("nb after noun = 'every'; nb alone = 'lord'")
+    out("Phrase/sentence ambiguity: nfr hr = 'good of face' or 'Face is good'")
+    out("Prosodic stress disambiguates: jnk HqA vs jnk HqA (Coptic evidence)")
+    out("Non-verbal sentences have no tense — context assigns it")
+}

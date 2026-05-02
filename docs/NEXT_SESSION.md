@@ -6,6 +6,58 @@
 
 ## Active Research
 
+### Middle Egyptian Grammar — WRITE THE KLEIS THEORY
+
+**Status:** Reading phase complete through Lesson 8 (page ~140 of 600).
+Ready to pivot from reading to writing the Kleis theory.
+
+**What we did:**
+- Read James P. Allen's "Middle Egyptian" Lessons 1-8 page by page
+- Extracted **125 formalizable axioms** covering:
+  - Writing system (signs, phonograms, determinatives, quadrats) — axioms 1-12
+  - Nouns (gender, number, genitives, honorific transposition) — axioms 13-30
+  - Pronouns (suffix, dependent, independent paradigms) — axioms 31-45
+  - Demonstratives (4 series, agreement, evolution to articles) — axioms 46-55
+  - Adjectives (primary, secondary, nisbe, agreement, position) — axioms 56-69
+  - Non-verbal sentences (adjectival, nominal, A pw, A pw B) — axioms 70-100
+  - Prepositions (17 primary, compounds, nisbes, reverse nisbes) — axioms 101-125
+- All notes in `docs/notes/middle_egyptian_axiomatization.md`
+
+**Where we left off:** End of Lesson 8, Exercise 8 (32 sentences from Sinuhe).
+The remaining ~460 pages cover the verbal system (Phase 2, future work).
+
+**What to do next — Phase 1: Write the Kleis Theory**
+
+Follow the Moonlight Sonata pattern (4-layer architecture):
+
+1. **Theory layer** — `stdlib/theories/middle_egyptian_grammar.kleis`
+   - `HieroglyphicSpelling` structure (axioms 1-12)
+   - `MiddleEgyptianNominalGrammar` structure (axioms 13-98)
+   - `MiddleEgyptianPrepositions` structure (axioms 99-125)
+
+2. **Data layer** — `examples/linguistics/sinuhe_text.kleis`
+   - Encode sentences from Exercises 1-8 as test data
+   - Tale of Sinuhe as primary specimen (like Moonlight Sonata)
+
+3. **Analysis layer** — `examples/linguistics/sinuhe_analysis.kleis`
+   - Apply grammar axioms to parse/verify real sentences
+   - Disambiguation via Z3 Sat queries
+   - Type inference as translation
+
+4. **Paper layer** — `examples/linguistics/middle_egyptian_paper.kleis`
+   - Research paper following the Moonlight Sonata format
+
+**Key references:**
+- `stdlib/theories/tonal_harmony.kleis` — model for theory structure
+- `examples/music/moonlight_analysis.kleis` — model for analysis
+- `docs/adr/ADR-034-Egyptian-Hieroglyph-Editor.md` — architectural decisions
+
+**Key linguistic insight:** Middle Egyptian most resembles Classical Arabic
+typologically (copulaless sentences, suffix pronouns, nisbe adjectives,
+genitive constructions). The axioms capture Afroasiatic structural patterns.
+
+---
+
 ### Kernel Factorization Reconciliation — IMPORTANT FUTURE WORK
 
 There are **two different kernel decomposition architectures** in the POT papers that need to be reconciled:

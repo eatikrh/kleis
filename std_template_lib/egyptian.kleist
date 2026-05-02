@@ -1,0 +1,2113 @@
+// ============================================================================
+// Egyptian Hieroglyphs - Gardiner Sign List (Core Set)
+// ============================================================================
+// Part of Kleis Standard Template Library
+// File: std_template_lib/egyptian.kleist
+// Source: PharaLex (MIT License) - https://github.com/cursedcoder/pharalex
+//
+// Each hieroglyph is a zero-argument template that renders as an inline SVG
+// image via Typst. Gardiner codes are used as template names.
+
+// ============ A: MAN ============
+
+@template A1 {
+    pattern: "A1()"
+    typst: "#box(image(\"static/glyphs/egyptian/A1.svg\", height: 1.5em))"
+    unicode: "A1"
+    category: "egyptian_A_man"
+    glyph: "A1"
+    svg: "static/glyphs/egyptian/A1.svg"
+}
+
+@template A2 {
+    pattern: "A2()"
+    typst: "#box(image(\"static/glyphs/egyptian/A2.svg\", height: 1.5em))"
+    unicode: "A2"
+    category: "egyptian_A_man"
+    glyph: "A2"
+    svg: "static/glyphs/egyptian/A2.svg"
+}
+
+@template A3 {
+    pattern: "A3()"
+    typst: "#box(image(\"static/glyphs/egyptian/A3.svg\", height: 1.5em))"
+    unicode: "A3"
+    category: "egyptian_A_man"
+    glyph: "A3"
+    svg: "static/glyphs/egyptian/A3.svg"
+}
+
+@template A4 {
+    pattern: "A4()"
+    typst: "#box(image(\"static/glyphs/egyptian/A4.svg\", height: 1.5em))"
+    unicode: "A4"
+    category: "egyptian_A_man"
+    glyph: "A4"
+    svg: "static/glyphs/egyptian/A4.svg"
+}
+
+@template A5 {
+    pattern: "A5()"
+    typst: "#box(image(\"static/glyphs/egyptian/A5.svg\", height: 1.5em))"
+    unicode: "A5"
+    category: "egyptian_A_man"
+    glyph: "A5"
+    svg: "static/glyphs/egyptian/A5.svg"
+}
+
+@template A6 {
+    pattern: "A6()"
+    typst: "#box(image(\"static/glyphs/egyptian/A6.svg\", height: 1.5em))"
+    unicode: "A6"
+    category: "egyptian_A_man"
+    glyph: "A6"
+    svg: "static/glyphs/egyptian/A6.svg"
+}
+
+@template A7 {
+    pattern: "A7()"
+    typst: "#box(image(\"static/glyphs/egyptian/A7.svg\", height: 1.5em))"
+    unicode: "A7"
+    category: "egyptian_A_man"
+    glyph: "A7"
+    svg: "static/glyphs/egyptian/A7.svg"
+}
+
+@template A8 {
+    pattern: "A8()"
+    typst: "#box(image(\"static/glyphs/egyptian/A8.svg\", height: 1.5em))"
+    unicode: "A8"
+    category: "egyptian_A_man"
+    glyph: "A8"
+    svg: "static/glyphs/egyptian/A8.svg"
+}
+
+@template A9 {
+    pattern: "A9()"
+    typst: "#box(image(\"static/glyphs/egyptian/A9.svg\", height: 1.5em))"
+    unicode: "A9"
+    category: "egyptian_A_man"
+    glyph: "A9"
+    svg: "static/glyphs/egyptian/A9.svg"
+}
+
+@template A10 {
+    pattern: "A10()"
+    typst: "#box(image(\"static/glyphs/egyptian/A10.svg\", height: 1.5em))"
+    unicode: "A10"
+    category: "egyptian_A_man"
+    glyph: "A10"
+    svg: "static/glyphs/egyptian/A10.svg"
+}
+
+@template A11 {
+    pattern: "A11()"
+    typst: "#box(image(\"static/glyphs/egyptian/A11.svg\", height: 1.5em))"
+    unicode: "A11"
+    category: "egyptian_A_man"
+    glyph: "A11"
+    svg: "static/glyphs/egyptian/A11.svg"
+}
+
+@template A12 {
+    pattern: "A12()"
+    typst: "#box(image(\"static/glyphs/egyptian/A12.svg\", height: 1.5em))"
+    unicode: "A12"
+    category: "egyptian_A_man"
+    glyph: "A12"
+    svg: "static/glyphs/egyptian/A12.svg"
+}
+
+@template A13 {
+    pattern: "A13()"
+    typst: "#box(image(\"static/glyphs/egyptian/A13.svg\", height: 1.5em))"
+    unicode: "A13"
+    category: "egyptian_A_man"
+    glyph: "A13"
+    svg: "static/glyphs/egyptian/A13.svg"
+}
+
+@template A14 {
+    pattern: "A14()"
+    typst: "#box(image(\"static/glyphs/egyptian/A14.svg\", height: 1.5em))"
+    unicode: "A14"
+    category: "egyptian_A_man"
+    glyph: "A14"
+    svg: "static/glyphs/egyptian/A14.svg"
+}
+
+@template A15 {
+    pattern: "A15()"
+    typst: "#box(image(\"static/glyphs/egyptian/A15.svg\", height: 1.5em))"
+    unicode: "A15"
+    category: "egyptian_A_man"
+    glyph: "A15"
+    svg: "static/glyphs/egyptian/A15.svg"
+}
+
+@template A17 {
+    pattern: "A17()"
+    typst: "#box(image(\"static/glyphs/egyptian/A17.svg\", height: 1.5em))"
+    unicode: "A17"
+    category: "egyptian_A_man"
+    glyph: "A17"
+    svg: "static/glyphs/egyptian/A17.svg"
+}
+
+@template A21 {
+    pattern: "A21()"
+    typst: "#box(image(\"static/glyphs/egyptian/A21.svg\", height: 1.5em))"
+    unicode: "A21"
+    category: "egyptian_A_man"
+    glyph: "A21"
+    svg: "static/glyphs/egyptian/A21.svg"
+}
+
+@template A24 {
+    pattern: "A24()"
+    typst: "#box(image(\"static/glyphs/egyptian/A24.svg\", height: 1.5em))"
+    unicode: "A24"
+    category: "egyptian_A_man"
+    glyph: "A24"
+    svg: "static/glyphs/egyptian/A24.svg"
+}
+
+@template A25 {
+    pattern: "A25()"
+    typst: "#box(image(\"static/glyphs/egyptian/A25.svg\", height: 1.5em))"
+    unicode: "A25"
+    category: "egyptian_A_man"
+    glyph: "A25"
+    svg: "static/glyphs/egyptian/A25.svg"
+}
+
+@template A26 {
+    pattern: "A26()"
+    typst: "#box(image(\"static/glyphs/egyptian/A26.svg\", height: 1.5em))"
+    unicode: "A26"
+    category: "egyptian_A_man"
+    glyph: "A26"
+    svg: "static/glyphs/egyptian/A26.svg"
+}
+
+@template A28 {
+    pattern: "A28()"
+    typst: "#box(image(\"static/glyphs/egyptian/A28.svg\", height: 1.5em))"
+    unicode: "A28"
+    category: "egyptian_A_man"
+    glyph: "A28"
+    svg: "static/glyphs/egyptian/A28.svg"
+}
+
+@template A40 {
+    pattern: "A40()"
+    typst: "#box(image(\"static/glyphs/egyptian/A40.svg\", height: 1.5em))"
+    unicode: "A40"
+    category: "egyptian_A_man"
+    glyph: "A40"
+    svg: "static/glyphs/egyptian/A40.svg"
+}
+
+@template A50 {
+    pattern: "A50()"
+    typst: "#box(image(\"static/glyphs/egyptian/A50.svg\", height: 1.5em))"
+    unicode: "A50"
+    category: "egyptian_A_man"
+    glyph: "A50"
+    svg: "static/glyphs/egyptian/A50.svg"
+}
+
+// ============ Aa: UNCLASSIFIED ============
+
+@template Aa1 {
+    pattern: "Aa1()"
+    typst: "#box(image(\"static/glyphs/egyptian/Aa1.svg\", height: 1.5em))"
+    unicode: "Aa1"
+    category: "egyptian_Aa_unclassified"
+    glyph: "Aa1"
+    svg: "static/glyphs/egyptian/Aa1.svg"
+}
+
+@template Aa2 {
+    pattern: "Aa2()"
+    typst: "#box(image(\"static/glyphs/egyptian/Aa2.svg\", height: 1.5em))"
+    unicode: "Aa2"
+    category: "egyptian_Aa_unclassified"
+    glyph: "Aa2"
+    svg: "static/glyphs/egyptian/Aa2.svg"
+}
+
+@template Aa5 {
+    pattern: "Aa5()"
+    typst: "#box(image(\"static/glyphs/egyptian/Aa5.svg\", height: 1.5em))"
+    unicode: "Aa5"
+    category: "egyptian_Aa_unclassified"
+    glyph: "Aa5"
+    svg: "static/glyphs/egyptian/Aa5.svg"
+}
+
+@template Aa11 {
+    pattern: "Aa11()"
+    typst: "#box(image(\"static/glyphs/egyptian/Aa11.svg\", height: 1.5em))"
+    unicode: "Aa11"
+    category: "egyptian_Aa_unclassified"
+    glyph: "Aa11"
+    svg: "static/glyphs/egyptian/Aa11.svg"
+}
+
+@template Aa13 {
+    pattern: "Aa13()"
+    typst: "#box(image(\"static/glyphs/egyptian/Aa13.svg\", height: 1.5em))"
+    unicode: "Aa13"
+    category: "egyptian_Aa_unclassified"
+    glyph: "Aa13"
+    svg: "static/glyphs/egyptian/Aa13.svg"
+}
+
+@template Aa15 {
+    pattern: "Aa15()"
+    typst: "#box(image(\"static/glyphs/egyptian/Aa15.svg\", height: 1.5em))"
+    unicode: "Aa15"
+    category: "egyptian_Aa_unclassified"
+    glyph: "Aa15"
+    svg: "static/glyphs/egyptian/Aa15.svg"
+}
+
+@template Aa27 {
+    pattern: "Aa27()"
+    typst: "#box(image(\"static/glyphs/egyptian/Aa27.svg\", height: 1.5em))"
+    unicode: "Aa27"
+    category: "egyptian_Aa_unclassified"
+    glyph: "Aa27"
+    svg: "static/glyphs/egyptian/Aa27.svg"
+}
+
+@template Aa28 {
+    pattern: "Aa28()"
+    typst: "#box(image(\"static/glyphs/egyptian/Aa28.svg\", height: 1.5em))"
+    unicode: "Aa28"
+    category: "egyptian_Aa_unclassified"
+    glyph: "Aa28"
+    svg: "static/glyphs/egyptian/Aa28.svg"
+}
+
+// ============ B: WOMAN ============
+
+@template B1 {
+    pattern: "B1()"
+    typst: "#box(image(\"static/glyphs/egyptian/B1.svg\", height: 1.5em))"
+    unicode: "B1"
+    category: "egyptian_B_woman"
+    glyph: "B1"
+    svg: "static/glyphs/egyptian/B1.svg"
+}
+
+@template B3 {
+    pattern: "B3()"
+    typst: "#box(image(\"static/glyphs/egyptian/B3.svg\", height: 1.5em))"
+    unicode: "B3"
+    category: "egyptian_B_woman"
+    glyph: "B3"
+    svg: "static/glyphs/egyptian/B3.svg"
+}
+
+@template B4 {
+    pattern: "B4()"
+    typst: "#box(image(\"static/glyphs/egyptian/B4.svg\", height: 1.5em))"
+    unicode: "B4"
+    category: "egyptian_B_woman"
+    glyph: "B4"
+    svg: "static/glyphs/egyptian/B4.svg"
+}
+
+@template B7 {
+    pattern: "B7()"
+    typst: "#box(image(\"static/glyphs/egyptian/B7.svg\", height: 1.5em))"
+    unicode: "B7"
+    category: "egyptian_B_woman"
+    glyph: "B7"
+    svg: "static/glyphs/egyptian/B7.svg"
+}
+
+// ============ C: DEITY ============
+
+@template C1 {
+    pattern: "C1()"
+    typst: "#box(image(\"static/glyphs/egyptian/C1.svg\", height: 1.5em))"
+    unicode: "C1"
+    category: "egyptian_C_deity"
+    glyph: "C1"
+    svg: "static/glyphs/egyptian/C1.svg"
+}
+
+@template C2 {
+    pattern: "C2()"
+    typst: "#box(image(\"static/glyphs/egyptian/C2.svg\", height: 1.5em))"
+    unicode: "C2"
+    category: "egyptian_C_deity"
+    glyph: "C2"
+    svg: "static/glyphs/egyptian/C2.svg"
+}
+
+@template C3 {
+    pattern: "C3()"
+    typst: "#box(image(\"static/glyphs/egyptian/C3.svg\", height: 1.5em))"
+    unicode: "C3"
+    category: "egyptian_C_deity"
+    glyph: "C3"
+    svg: "static/glyphs/egyptian/C3.svg"
+}
+
+@template C4 {
+    pattern: "C4()"
+    typst: "#box(image(\"static/glyphs/egyptian/C4.svg\", height: 1.5em))"
+    unicode: "C4"
+    category: "egyptian_C_deity"
+    glyph: "C4"
+    svg: "static/glyphs/egyptian/C4.svg"
+}
+
+@template C5 {
+    pattern: "C5()"
+    typst: "#box(image(\"static/glyphs/egyptian/C5.svg\", height: 1.5em))"
+    unicode: "C5"
+    category: "egyptian_C_deity"
+    glyph: "C5"
+    svg: "static/glyphs/egyptian/C5.svg"
+}
+
+@template C6 {
+    pattern: "C6()"
+    typst: "#box(image(\"static/glyphs/egyptian/C6.svg\", height: 1.5em))"
+    unicode: "C6"
+    category: "egyptian_C_deity"
+    glyph: "C6"
+    svg: "static/glyphs/egyptian/C6.svg"
+}
+
+@template C7 {
+    pattern: "C7()"
+    typst: "#box(image(\"static/glyphs/egyptian/C7.svg\", height: 1.5em))"
+    unicode: "C7"
+    category: "egyptian_C_deity"
+    glyph: "C7"
+    svg: "static/glyphs/egyptian/C7.svg"
+}
+
+@template C10 {
+    pattern: "C10()"
+    typst: "#box(image(\"static/glyphs/egyptian/C10.svg\", height: 1.5em))"
+    unicode: "C10"
+    category: "egyptian_C_deity"
+    glyph: "C10"
+    svg: "static/glyphs/egyptian/C10.svg"
+}
+
+@template C11 {
+    pattern: "C11()"
+    typst: "#box(image(\"static/glyphs/egyptian/C11.svg\", height: 1.5em))"
+    unicode: "C11"
+    category: "egyptian_C_deity"
+    glyph: "C11"
+    svg: "static/glyphs/egyptian/C11.svg"
+}
+
+@template C12 {
+    pattern: "C12()"
+    typst: "#box(image(\"static/glyphs/egyptian/C12.svg\", height: 1.5em))"
+    unicode: "C12"
+    category: "egyptian_C_deity"
+    glyph: "C12"
+    svg: "static/glyphs/egyptian/C12.svg"
+}
+
+// ============ D: BODY ============
+
+@template D1 {
+    pattern: "D1()"
+    typst: "#box(image(\"static/glyphs/egyptian/D1.svg\", height: 1.5em))"
+    unicode: "D1"
+    category: "egyptian_D_body"
+    glyph: "D1"
+    svg: "static/glyphs/egyptian/D1.svg"
+}
+
+@template D2 {
+    pattern: "D2()"
+    typst: "#box(image(\"static/glyphs/egyptian/D2.svg\", height: 1.5em))"
+    unicode: "D2"
+    category: "egyptian_D_body"
+    glyph: "D2"
+    svg: "static/glyphs/egyptian/D2.svg"
+}
+
+@template D4 {
+    pattern: "D4()"
+    typst: "#box(image(\"static/glyphs/egyptian/D4.svg\", height: 1.5em))"
+    unicode: "D4"
+    category: "egyptian_D_body"
+    glyph: "D4"
+    svg: "static/glyphs/egyptian/D4.svg"
+}
+
+@template D6 {
+    pattern: "D6()"
+    typst: "#box(image(\"static/glyphs/egyptian/D6.svg\", height: 1.5em))"
+    unicode: "D6"
+    category: "egyptian_D_body"
+    glyph: "D6"
+    svg: "static/glyphs/egyptian/D6.svg"
+}
+
+@template D10 {
+    pattern: "D10()"
+    typst: "#box(image(\"static/glyphs/egyptian/D10.svg\", height: 1.5em))"
+    unicode: "D10"
+    category: "egyptian_D_body"
+    glyph: "D10"
+    svg: "static/glyphs/egyptian/D10.svg"
+}
+
+@template D19 {
+    pattern: "D19()"
+    typst: "#box(image(\"static/glyphs/egyptian/D19.svg\", height: 1.5em))"
+    unicode: "D19"
+    category: "egyptian_D_body"
+    glyph: "D19"
+    svg: "static/glyphs/egyptian/D19.svg"
+}
+
+@template D21 {
+    pattern: "D21()"
+    typst: "#box(image(\"static/glyphs/egyptian/D21.svg\", height: 1.5em))"
+    unicode: "D21"
+    category: "egyptian_D_body"
+    glyph: "D21"
+    svg: "static/glyphs/egyptian/D21.svg"
+}
+
+@template D28 {
+    pattern: "D28()"
+    typst: "#box(image(\"static/glyphs/egyptian/D28.svg\", height: 1.5em))"
+    unicode: "D28"
+    category: "egyptian_D_body"
+    glyph: "D28"
+    svg: "static/glyphs/egyptian/D28.svg"
+}
+
+@template D35 {
+    pattern: "D35()"
+    typst: "#box(image(\"static/glyphs/egyptian/D35.svg\", height: 1.5em))"
+    unicode: "D35"
+    category: "egyptian_D_body"
+    glyph: "D35"
+    svg: "static/glyphs/egyptian/D35.svg"
+}
+
+@template D36 {
+    pattern: "D36()"
+    typst: "#box(image(\"static/glyphs/egyptian/D36.svg\", height: 1.5em))"
+    unicode: "D36"
+    category: "egyptian_D_body"
+    glyph: "D36"
+    svg: "static/glyphs/egyptian/D36.svg"
+}
+
+@template D37 {
+    pattern: "D37()"
+    typst: "#box(image(\"static/glyphs/egyptian/D37.svg\", height: 1.5em))"
+    unicode: "D37"
+    category: "egyptian_D_body"
+    glyph: "D37"
+    svg: "static/glyphs/egyptian/D37.svg"
+}
+
+@template D40 {
+    pattern: "D40()"
+    typst: "#box(image(\"static/glyphs/egyptian/D40.svg\", height: 1.5em))"
+    unicode: "D40"
+    category: "egyptian_D_body"
+    glyph: "D40"
+    svg: "static/glyphs/egyptian/D40.svg"
+}
+
+@template D46 {
+    pattern: "D46()"
+    typst: "#box(image(\"static/glyphs/egyptian/D46.svg\", height: 1.5em))"
+    unicode: "D46"
+    category: "egyptian_D_body"
+    glyph: "D46"
+    svg: "static/glyphs/egyptian/D46.svg"
+}
+
+@template D50 {
+    pattern: "D50()"
+    typst: "#box(image(\"static/glyphs/egyptian/D50.svg\", height: 1.5em))"
+    unicode: "D50"
+    category: "egyptian_D_body"
+    glyph: "D50"
+    svg: "static/glyphs/egyptian/D50.svg"
+}
+
+@template D54 {
+    pattern: "D54()"
+    typst: "#box(image(\"static/glyphs/egyptian/D54.svg\", height: 1.5em))"
+    unicode: "D54"
+    category: "egyptian_D_body"
+    glyph: "D54"
+    svg: "static/glyphs/egyptian/D54.svg"
+}
+
+@template D58 {
+    pattern: "D58()"
+    typst: "#box(image(\"static/glyphs/egyptian/D58.svg\", height: 1.5em))"
+    unicode: "D58"
+    category: "egyptian_D_body"
+    glyph: "D58"
+    svg: "static/glyphs/egyptian/D58.svg"
+}
+
+// ============ E: MAMMAL ============
+
+@template E1 {
+    pattern: "E1()"
+    typst: "#box(image(\"static/glyphs/egyptian/E1.svg\", height: 1.5em))"
+    unicode: "E1"
+    category: "egyptian_E_mammal"
+    glyph: "E1"
+    svg: "static/glyphs/egyptian/E1.svg"
+}
+
+@template E9 {
+    pattern: "E9()"
+    typst: "#box(image(\"static/glyphs/egyptian/E9.svg\", height: 1.5em))"
+    unicode: "E9"
+    category: "egyptian_E_mammal"
+    glyph: "E9"
+    svg: "static/glyphs/egyptian/E9.svg"
+}
+
+@template E10 {
+    pattern: "E10()"
+    typst: "#box(image(\"static/glyphs/egyptian/E10.svg\", height: 1.5em))"
+    unicode: "E10"
+    category: "egyptian_E_mammal"
+    glyph: "E10"
+    svg: "static/glyphs/egyptian/E10.svg"
+}
+
+@template E17 {
+    pattern: "E17()"
+    typst: "#box(image(\"static/glyphs/egyptian/E17.svg\", height: 1.5em))"
+    unicode: "E17"
+    category: "egyptian_E_mammal"
+    glyph: "E17"
+    svg: "static/glyphs/egyptian/E17.svg"
+}
+
+@template E23 {
+    pattern: "E23()"
+    typst: "#box(image(\"static/glyphs/egyptian/E23.svg\", height: 1.5em))"
+    unicode: "E23"
+    category: "egyptian_E_mammal"
+    glyph: "E23"
+    svg: "static/glyphs/egyptian/E23.svg"
+}
+
+@template E34 {
+    pattern: "E34()"
+    typst: "#box(image(\"static/glyphs/egyptian/E34.svg\", height: 1.5em))"
+    unicode: "E34"
+    category: "egyptian_E_mammal"
+    glyph: "E34"
+    svg: "static/glyphs/egyptian/E34.svg"
+}
+
+// ============ F: BODY_PART ============
+
+@template F1 {
+    pattern: "F1()"
+    typst: "#box(image(\"static/glyphs/egyptian/F1.svg\", height: 1.5em))"
+    unicode: "F1"
+    category: "egyptian_F_body_part"
+    glyph: "F1"
+    svg: "static/glyphs/egyptian/F1.svg"
+}
+
+@template F4 {
+    pattern: "F4()"
+    typst: "#box(image(\"static/glyphs/egyptian/F4.svg\", height: 1.5em))"
+    unicode: "F4"
+    category: "egyptian_F_body_part"
+    glyph: "F4"
+    svg: "static/glyphs/egyptian/F4.svg"
+}
+
+@template F12 {
+    pattern: "F12()"
+    typst: "#box(image(\"static/glyphs/egyptian/F12.svg\", height: 1.5em))"
+    unicode: "F12"
+    category: "egyptian_F_body_part"
+    glyph: "F12"
+    svg: "static/glyphs/egyptian/F12.svg"
+}
+
+@template F13 {
+    pattern: "F13()"
+    typst: "#box(image(\"static/glyphs/egyptian/F13.svg\", height: 1.5em))"
+    unicode: "F13"
+    category: "egyptian_F_body_part"
+    glyph: "F13"
+    svg: "static/glyphs/egyptian/F13.svg"
+}
+
+@template F20 {
+    pattern: "F20()"
+    typst: "#box(image(\"static/glyphs/egyptian/F20.svg\", height: 1.5em))"
+    unicode: "F20"
+    category: "egyptian_F_body_part"
+    glyph: "F20"
+    svg: "static/glyphs/egyptian/F20.svg"
+}
+
+@template F21 {
+    pattern: "F21()"
+    typst: "#box(image(\"static/glyphs/egyptian/F21.svg\", height: 1.5em))"
+    unicode: "F21"
+    category: "egyptian_F_body_part"
+    glyph: "F21"
+    svg: "static/glyphs/egyptian/F21.svg"
+}
+
+@template F22 {
+    pattern: "F22()"
+    typst: "#box(image(\"static/glyphs/egyptian/F22.svg\", height: 1.5em))"
+    unicode: "F22"
+    category: "egyptian_F_body_part"
+    glyph: "F22"
+    svg: "static/glyphs/egyptian/F22.svg"
+}
+
+@template F26 {
+    pattern: "F26()"
+    typst: "#box(image(\"static/glyphs/egyptian/F26.svg\", height: 1.5em))"
+    unicode: "F26"
+    category: "egyptian_F_body_part"
+    glyph: "F26"
+    svg: "static/glyphs/egyptian/F26.svg"
+}
+
+@template F31 {
+    pattern: "F31()"
+    typst: "#box(image(\"static/glyphs/egyptian/F31.svg\", height: 1.5em))"
+    unicode: "F31"
+    category: "egyptian_F_body_part"
+    glyph: "F31"
+    svg: "static/glyphs/egyptian/F31.svg"
+}
+
+@template F32 {
+    pattern: "F32()"
+    typst: "#box(image(\"static/glyphs/egyptian/F32.svg\", height: 1.5em))"
+    unicode: "F32"
+    category: "egyptian_F_body_part"
+    glyph: "F32"
+    svg: "static/glyphs/egyptian/F32.svg"
+}
+
+@template F34 {
+    pattern: "F34()"
+    typst: "#box(image(\"static/glyphs/egyptian/F34.svg\", height: 1.5em))"
+    unicode: "F34"
+    category: "egyptian_F_body_part"
+    glyph: "F34"
+    svg: "static/glyphs/egyptian/F34.svg"
+}
+
+@template F35 {
+    pattern: "F35()"
+    typst: "#box(image(\"static/glyphs/egyptian/F35.svg\", height: 1.5em))"
+    unicode: "F35"
+    category: "egyptian_F_body_part"
+    glyph: "F35"
+    svg: "static/glyphs/egyptian/F35.svg"
+}
+
+// ============ G: BIRD ============
+
+@template G1 {
+    pattern: "G1()"
+    typst: "#box(image(\"static/glyphs/egyptian/G1.svg\", height: 1.5em))"
+    unicode: "G1"
+    category: "egyptian_G_bird"
+    glyph: "G1"
+    svg: "static/glyphs/egyptian/G1.svg"
+}
+
+@template G4 {
+    pattern: "G4()"
+    typst: "#box(image(\"static/glyphs/egyptian/G4.svg\", height: 1.5em))"
+    unicode: "G4"
+    category: "egyptian_G_bird"
+    glyph: "G4"
+    svg: "static/glyphs/egyptian/G4.svg"
+}
+
+@template G5 {
+    pattern: "G5()"
+    typst: "#box(image(\"static/glyphs/egyptian/G5.svg\", height: 1.5em))"
+    unicode: "G5"
+    category: "egyptian_G_bird"
+    glyph: "G5"
+    svg: "static/glyphs/egyptian/G5.svg"
+}
+
+@template G7 {
+    pattern: "G7()"
+    typst: "#box(image(\"static/glyphs/egyptian/G7.svg\", height: 1.5em))"
+    unicode: "G7"
+    category: "egyptian_G_bird"
+    glyph: "G7"
+    svg: "static/glyphs/egyptian/G7.svg"
+}
+
+@template G14 {
+    pattern: "G14()"
+    typst: "#box(image(\"static/glyphs/egyptian/G14.svg\", height: 1.5em))"
+    unicode: "G14"
+    category: "egyptian_G_bird"
+    glyph: "G14"
+    svg: "static/glyphs/egyptian/G14.svg"
+}
+
+@template G17 {
+    pattern: "G17()"
+    typst: "#box(image(\"static/glyphs/egyptian/G17.svg\", height: 1.5em))"
+    unicode: "G17"
+    category: "egyptian_G_bird"
+    glyph: "G17"
+    svg: "static/glyphs/egyptian/G17.svg"
+}
+
+@template G21 {
+    pattern: "G21()"
+    typst: "#box(image(\"static/glyphs/egyptian/G21.svg\", height: 1.5em))"
+    unicode: "G21"
+    category: "egyptian_G_bird"
+    glyph: "G21"
+    svg: "static/glyphs/egyptian/G21.svg"
+}
+
+@template G25 {
+    pattern: "G25()"
+    typst: "#box(image(\"static/glyphs/egyptian/G25.svg\", height: 1.5em))"
+    unicode: "G25"
+    category: "egyptian_G_bird"
+    glyph: "G25"
+    svg: "static/glyphs/egyptian/G25.svg"
+}
+
+@template G26 {
+    pattern: "G26()"
+    typst: "#box(image(\"static/glyphs/egyptian/G26.svg\", height: 1.5em))"
+    unicode: "G26"
+    category: "egyptian_G_bird"
+    glyph: "G26"
+    svg: "static/glyphs/egyptian/G26.svg"
+}
+
+@template G29 {
+    pattern: "G29()"
+    typst: "#box(image(\"static/glyphs/egyptian/G29.svg\", height: 1.5em))"
+    unicode: "G29"
+    category: "egyptian_G_bird"
+    glyph: "G29"
+    svg: "static/glyphs/egyptian/G29.svg"
+}
+
+@template G36 {
+    pattern: "G36()"
+    typst: "#box(image(\"static/glyphs/egyptian/G36.svg\", height: 1.5em))"
+    unicode: "G36"
+    category: "egyptian_G_bird"
+    glyph: "G36"
+    svg: "static/glyphs/egyptian/G36.svg"
+}
+
+@template G37 {
+    pattern: "G37()"
+    typst: "#box(image(\"static/glyphs/egyptian/G37.svg\", height: 1.5em))"
+    unicode: "G37"
+    category: "egyptian_G_bird"
+    glyph: "G37"
+    svg: "static/glyphs/egyptian/G37.svg"
+}
+
+@template G38 {
+    pattern: "G38()"
+    typst: "#box(image(\"static/glyphs/egyptian/G38.svg\", height: 1.5em))"
+    unicode: "G38"
+    category: "egyptian_G_bird"
+    glyph: "G38"
+    svg: "static/glyphs/egyptian/G38.svg"
+}
+
+@template G39 {
+    pattern: "G39()"
+    typst: "#box(image(\"static/glyphs/egyptian/G39.svg\", height: 1.5em))"
+    unicode: "G39"
+    category: "egyptian_G_bird"
+    glyph: "G39"
+    svg: "static/glyphs/egyptian/G39.svg"
+}
+
+@template G40 {
+    pattern: "G40()"
+    typst: "#box(image(\"static/glyphs/egyptian/G40.svg\", height: 1.5em))"
+    unicode: "G40"
+    category: "egyptian_G_bird"
+    glyph: "G40"
+    svg: "static/glyphs/egyptian/G40.svg"
+}
+
+@template G43 {
+    pattern: "G43()"
+    typst: "#box(image(\"static/glyphs/egyptian/G43.svg\", height: 1.5em))"
+    unicode: "G43"
+    category: "egyptian_G_bird"
+    glyph: "G43"
+    svg: "static/glyphs/egyptian/G43.svg"
+}
+
+@template G47 {
+    pattern: "G47()"
+    typst: "#box(image(\"static/glyphs/egyptian/G47.svg\", height: 1.5em))"
+    unicode: "G47"
+    category: "egyptian_G_bird"
+    glyph: "G47"
+    svg: "static/glyphs/egyptian/G47.svg"
+}
+
+// ============ H: BIRD_PART ============
+
+@template H6 {
+    pattern: "H6()"
+    typst: "#box(image(\"static/glyphs/egyptian/H6.svg\", height: 1.5em))"
+    unicode: "H6"
+    category: "egyptian_H_bird_part"
+    glyph: "H6"
+    svg: "static/glyphs/egyptian/H6.svg"
+}
+
+@template H8 {
+    pattern: "H8()"
+    typst: "#box(image(\"static/glyphs/egyptian/H8.svg\", height: 1.5em))"
+    unicode: "H8"
+    category: "egyptian_H_bird_part"
+    glyph: "H8"
+    svg: "static/glyphs/egyptian/H8.svg"
+}
+
+// ============ I: REPTILE ============
+
+@template I5 {
+    pattern: "I5()"
+    typst: "#box(image(\"static/glyphs/egyptian/I5.svg\", height: 1.5em))"
+    unicode: "I5"
+    category: "egyptian_I_reptile"
+    glyph: "I5"
+    svg: "static/glyphs/egyptian/I5.svg"
+}
+
+@template I6 {
+    pattern: "I6()"
+    typst: "#box(image(\"static/glyphs/egyptian/I6.svg\", height: 1.5em))"
+    unicode: "I6"
+    category: "egyptian_I_reptile"
+    glyph: "I6"
+    svg: "static/glyphs/egyptian/I6.svg"
+}
+
+@template I9 {
+    pattern: "I9()"
+    typst: "#box(image(\"static/glyphs/egyptian/I9.svg\", height: 1.5em))"
+    unicode: "I9"
+    category: "egyptian_I_reptile"
+    glyph: "I9"
+    svg: "static/glyphs/egyptian/I9.svg"
+}
+
+@template I10 {
+    pattern: "I10()"
+    typst: "#box(image(\"static/glyphs/egyptian/I10.svg\", height: 1.5em))"
+    unicode: "I10"
+    category: "egyptian_I_reptile"
+    glyph: "I10"
+    svg: "static/glyphs/egyptian/I10.svg"
+}
+
+// ============ K: FISH ============
+
+@template K1 {
+    pattern: "K1()"
+    typst: "#box(image(\"static/glyphs/egyptian/K1.svg\", height: 1.5em))"
+    unicode: "K1"
+    category: "egyptian_K_fish"
+    glyph: "K1"
+    svg: "static/glyphs/egyptian/K1.svg"
+}
+
+@template K3 {
+    pattern: "K3()"
+    typst: "#box(image(\"static/glyphs/egyptian/K3.svg\", height: 1.5em))"
+    unicode: "K3"
+    category: "egyptian_K_fish"
+    glyph: "K3"
+    svg: "static/glyphs/egyptian/K3.svg"
+}
+
+// ============ L: INSECT ============
+
+@template L1 {
+    pattern: "L1()"
+    typst: "#box(image(\"static/glyphs/egyptian/L1.svg\", height: 1.5em))"
+    unicode: "L1"
+    category: "egyptian_L_insect"
+    glyph: "L1"
+    svg: "static/glyphs/egyptian/L1.svg"
+}
+
+@template L2 {
+    pattern: "L2()"
+    typst: "#box(image(\"static/glyphs/egyptian/L2.svg\", height: 1.5em))"
+    unicode: "L2"
+    category: "egyptian_L_insect"
+    glyph: "L2"
+    svg: "static/glyphs/egyptian/L2.svg"
+}
+
+// ============ M: PLANT ============
+
+@template M1 {
+    pattern: "M1()"
+    typst: "#box(image(\"static/glyphs/egyptian/M1.svg\", height: 1.5em))"
+    unicode: "M1"
+    category: "egyptian_M_plant"
+    glyph: "M1"
+    svg: "static/glyphs/egyptian/M1.svg"
+}
+
+@template M2 {
+    pattern: "M2()"
+    typst: "#box(image(\"static/glyphs/egyptian/M2.svg\", height: 1.5em))"
+    unicode: "M2"
+    category: "egyptian_M_plant"
+    glyph: "M2"
+    svg: "static/glyphs/egyptian/M2.svg"
+}
+
+@template M3 {
+    pattern: "M3()"
+    typst: "#box(image(\"static/glyphs/egyptian/M3.svg\", height: 1.5em))"
+    unicode: "M3"
+    category: "egyptian_M_plant"
+    glyph: "M3"
+    svg: "static/glyphs/egyptian/M3.svg"
+}
+
+@template M4 {
+    pattern: "M4()"
+    typst: "#box(image(\"static/glyphs/egyptian/M4.svg\", height: 1.5em))"
+    unicode: "M4"
+    category: "egyptian_M_plant"
+    glyph: "M4"
+    svg: "static/glyphs/egyptian/M4.svg"
+}
+
+@template M8 {
+    pattern: "M8()"
+    typst: "#box(image(\"static/glyphs/egyptian/M8.svg\", height: 1.5em))"
+    unicode: "M8"
+    category: "egyptian_M_plant"
+    glyph: "M8"
+    svg: "static/glyphs/egyptian/M8.svg"
+}
+
+@template M12 {
+    pattern: "M12()"
+    typst: "#box(image(\"static/glyphs/egyptian/M12.svg\", height: 1.5em))"
+    unicode: "M12"
+    category: "egyptian_M_plant"
+    glyph: "M12"
+    svg: "static/glyphs/egyptian/M12.svg"
+}
+
+@template M16 {
+    pattern: "M16()"
+    typst: "#box(image(\"static/glyphs/egyptian/M16.svg\", height: 1.5em))"
+    unicode: "M16"
+    category: "egyptian_M_plant"
+    glyph: "M16"
+    svg: "static/glyphs/egyptian/M16.svg"
+}
+
+@template M17 {
+    pattern: "M17()"
+    typst: "#box(image(\"static/glyphs/egyptian/M17.svg\", height: 1.5em))"
+    unicode: "M17"
+    category: "egyptian_M_plant"
+    glyph: "M17"
+    svg: "static/glyphs/egyptian/M17.svg"
+}
+
+@template M18 {
+    pattern: "M18()"
+    typst: "#box(image(\"static/glyphs/egyptian/M18.svg\", height: 1.5em))"
+    unicode: "M18"
+    category: "egyptian_M_plant"
+    glyph: "M18"
+    svg: "static/glyphs/egyptian/M18.svg"
+}
+
+@template M23 {
+    pattern: "M23()"
+    typst: "#box(image(\"static/glyphs/egyptian/M23.svg\", height: 1.5em))"
+    unicode: "M23"
+    category: "egyptian_M_plant"
+    glyph: "M23"
+    svg: "static/glyphs/egyptian/M23.svg"
+}
+
+@template M40 {
+    pattern: "M40()"
+    typst: "#box(image(\"static/glyphs/egyptian/M40.svg\", height: 1.5em))"
+    unicode: "M40"
+    category: "egyptian_M_plant"
+    glyph: "M40"
+    svg: "static/glyphs/egyptian/M40.svg"
+}
+
+@template M44 {
+    pattern: "M44()"
+    typst: "#box(image(\"static/glyphs/egyptian/M44.svg\", height: 1.5em))"
+    unicode: "M44"
+    category: "egyptian_M_plant"
+    glyph: "M44"
+    svg: "static/glyphs/egyptian/M44.svg"
+}
+
+// ============ N: SKY_EARTH_WATER ============
+
+@template N1 {
+    pattern: "N1()"
+    typst: "#box(image(\"static/glyphs/egyptian/N1.svg\", height: 1.5em))"
+    unicode: "N1"
+    category: "egyptian_N_sky_earth_water"
+    glyph: "N1"
+    svg: "static/glyphs/egyptian/N1.svg"
+}
+
+@template N5 {
+    pattern: "N5()"
+    typst: "#box(image(\"static/glyphs/egyptian/N5.svg\", height: 1.5em))"
+    unicode: "N5"
+    category: "egyptian_N_sky_earth_water"
+    glyph: "N5"
+    svg: "static/glyphs/egyptian/N5.svg"
+}
+
+@template N14 {
+    pattern: "N14()"
+    typst: "#box(image(\"static/glyphs/egyptian/N14.svg\", height: 1.5em))"
+    unicode: "N14"
+    category: "egyptian_N_sky_earth_water"
+    glyph: "N14"
+    svg: "static/glyphs/egyptian/N14.svg"
+}
+
+@template N16 {
+    pattern: "N16()"
+    typst: "#box(image(\"static/glyphs/egyptian/N16.svg\", height: 1.5em))"
+    unicode: "N16"
+    category: "egyptian_N_sky_earth_water"
+    glyph: "N16"
+    svg: "static/glyphs/egyptian/N16.svg"
+}
+
+@template N17 {
+    pattern: "N17()"
+    typst: "#box(image(\"static/glyphs/egyptian/N17.svg\", height: 1.5em))"
+    unicode: "N17"
+    category: "egyptian_N_sky_earth_water"
+    glyph: "N17"
+    svg: "static/glyphs/egyptian/N17.svg"
+}
+
+@template N18 {
+    pattern: "N18()"
+    typst: "#box(image(\"static/glyphs/egyptian/N18.svg\", height: 1.5em))"
+    unicode: "N18"
+    category: "egyptian_N_sky_earth_water"
+    glyph: "N18"
+    svg: "static/glyphs/egyptian/N18.svg"
+}
+
+@template N24 {
+    pattern: "N24()"
+    typst: "#box(image(\"static/glyphs/egyptian/N24.svg\", height: 1.5em))"
+    unicode: "N24"
+    category: "egyptian_N_sky_earth_water"
+    glyph: "N24"
+    svg: "static/glyphs/egyptian/N24.svg"
+}
+
+@template N25 {
+    pattern: "N25()"
+    typst: "#box(image(\"static/glyphs/egyptian/N25.svg\", height: 1.5em))"
+    unicode: "N25"
+    category: "egyptian_N_sky_earth_water"
+    glyph: "N25"
+    svg: "static/glyphs/egyptian/N25.svg"
+}
+
+@template N26 {
+    pattern: "N26()"
+    typst: "#box(image(\"static/glyphs/egyptian/N26.svg\", height: 1.5em))"
+    unicode: "N26"
+    category: "egyptian_N_sky_earth_water"
+    glyph: "N26"
+    svg: "static/glyphs/egyptian/N26.svg"
+}
+
+@template N28 {
+    pattern: "N28()"
+    typst: "#box(image(\"static/glyphs/egyptian/N28.svg\", height: 1.5em))"
+    unicode: "N28"
+    category: "egyptian_N_sky_earth_water"
+    glyph: "N28"
+    svg: "static/glyphs/egyptian/N28.svg"
+}
+
+@template N29 {
+    pattern: "N29()"
+    typst: "#box(image(\"static/glyphs/egyptian/N29.svg\", height: 1.5em))"
+    unicode: "N29"
+    category: "egyptian_N_sky_earth_water"
+    glyph: "N29"
+    svg: "static/glyphs/egyptian/N29.svg"
+}
+
+@template N31 {
+    pattern: "N31()"
+    typst: "#box(image(\"static/glyphs/egyptian/N31.svg\", height: 1.5em))"
+    unicode: "N31"
+    category: "egyptian_N_sky_earth_water"
+    glyph: "N31"
+    svg: "static/glyphs/egyptian/N31.svg"
+}
+
+@template N35 {
+    pattern: "N35()"
+    typst: "#box(image(\"static/glyphs/egyptian/N35.svg\", height: 1.5em))"
+    unicode: "N35"
+    category: "egyptian_N_sky_earth_water"
+    glyph: "N35"
+    svg: "static/glyphs/egyptian/N35.svg"
+}
+
+@template N36 {
+    pattern: "N36()"
+    typst: "#box(image(\"static/glyphs/egyptian/N36.svg\", height: 1.5em))"
+    unicode: "N36"
+    category: "egyptian_N_sky_earth_water"
+    glyph: "N36"
+    svg: "static/glyphs/egyptian/N36.svg"
+}
+
+@template N37 {
+    pattern: "N37()"
+    typst: "#box(image(\"static/glyphs/egyptian/N37.svg\", height: 1.5em))"
+    unicode: "N37"
+    category: "egyptian_N_sky_earth_water"
+    glyph: "N37"
+    svg: "static/glyphs/egyptian/N37.svg"
+}
+
+@template N41 {
+    pattern: "N41()"
+    typst: "#box(image(\"static/glyphs/egyptian/N41.svg\", height: 1.5em))"
+    unicode: "N41"
+    category: "egyptian_N_sky_earth_water"
+    glyph: "N41"
+    svg: "static/glyphs/egyptian/N41.svg"
+}
+
+// ============ O: BUILDING ============
+
+@template O1 {
+    pattern: "O1()"
+    typst: "#box(image(\"static/glyphs/egyptian/O1.svg\", height: 1.5em))"
+    unicode: "O1"
+    category: "egyptian_O_building"
+    glyph: "O1"
+    svg: "static/glyphs/egyptian/O1.svg"
+}
+
+@template O4 {
+    pattern: "O4()"
+    typst: "#box(image(\"static/glyphs/egyptian/O4.svg\", height: 1.5em))"
+    unicode: "O4"
+    category: "egyptian_O_building"
+    glyph: "O4"
+    svg: "static/glyphs/egyptian/O4.svg"
+}
+
+@template O6 {
+    pattern: "O6()"
+    typst: "#box(image(\"static/glyphs/egyptian/O6.svg\", height: 1.5em))"
+    unicode: "O6"
+    category: "egyptian_O_building"
+    glyph: "O6"
+    svg: "static/glyphs/egyptian/O6.svg"
+}
+
+@template O28 {
+    pattern: "O28()"
+    typst: "#box(image(\"static/glyphs/egyptian/O28.svg\", height: 1.5em))"
+    unicode: "O28"
+    category: "egyptian_O_building"
+    glyph: "O28"
+    svg: "static/glyphs/egyptian/O28.svg"
+}
+
+@template O29 {
+    pattern: "O29()"
+    typst: "#box(image(\"static/glyphs/egyptian/O29.svg\", height: 1.5em))"
+    unicode: "O29"
+    category: "egyptian_O_building"
+    glyph: "O29"
+    svg: "static/glyphs/egyptian/O29.svg"
+}
+
+@template O31 {
+    pattern: "O31()"
+    typst: "#box(image(\"static/glyphs/egyptian/O31.svg\", height: 1.5em))"
+    unicode: "O31"
+    category: "egyptian_O_building"
+    glyph: "O31"
+    svg: "static/glyphs/egyptian/O31.svg"
+}
+
+@template O34 {
+    pattern: "O34()"
+    typst: "#box(image(\"static/glyphs/egyptian/O34.svg\", height: 1.5em))"
+    unicode: "O34"
+    category: "egyptian_O_building"
+    glyph: "O34"
+    svg: "static/glyphs/egyptian/O34.svg"
+}
+
+@template O49 {
+    pattern: "O49()"
+    typst: "#box(image(\"static/glyphs/egyptian/O49.svg\", height: 1.5em))"
+    unicode: "O49"
+    category: "egyptian_O_building"
+    glyph: "O49"
+    svg: "static/glyphs/egyptian/O49.svg"
+}
+
+@template O50 {
+    pattern: "O50()"
+    typst: "#box(image(\"static/glyphs/egyptian/O50.svg\", height: 1.5em))"
+    unicode: "O50"
+    category: "egyptian_O_building"
+    glyph: "O50"
+    svg: "static/glyphs/egyptian/O50.svg"
+}
+
+// ============ P: BOAT ============
+
+@template P1 {
+    pattern: "P1()"
+    typst: "#box(image(\"static/glyphs/egyptian/P1.svg\", height: 1.5em))"
+    unicode: "P1"
+    category: "egyptian_P_boat"
+    glyph: "P1"
+    svg: "static/glyphs/egyptian/P1.svg"
+}
+
+@template P5 {
+    pattern: "P5()"
+    typst: "#box(image(\"static/glyphs/egyptian/P5.svg\", height: 1.5em))"
+    unicode: "P5"
+    category: "egyptian_P_boat"
+    glyph: "P5"
+    svg: "static/glyphs/egyptian/P5.svg"
+}
+
+@template P8 {
+    pattern: "P8()"
+    typst: "#box(image(\"static/glyphs/egyptian/P8.svg\", height: 1.5em))"
+    unicode: "P8"
+    category: "egyptian_P_boat"
+    glyph: "P8"
+    svg: "static/glyphs/egyptian/P8.svg"
+}
+
+// ============ Q: FURNITURE ============
+
+@template Q1 {
+    pattern: "Q1()"
+    typst: "#box(image(\"static/glyphs/egyptian/Q1.svg\", height: 1.5em))"
+    unicode: "Q1"
+    category: "egyptian_Q_furniture"
+    glyph: "Q1"
+    svg: "static/glyphs/egyptian/Q1.svg"
+}
+
+@template Q2 {
+    pattern: "Q2()"
+    typst: "#box(image(\"static/glyphs/egyptian/Q2.svg\", height: 1.5em))"
+    unicode: "Q2"
+    category: "egyptian_Q_furniture"
+    glyph: "Q2"
+    svg: "static/glyphs/egyptian/Q2.svg"
+}
+
+@template Q3 {
+    pattern: "Q3()"
+    typst: "#box(image(\"static/glyphs/egyptian/Q3.svg\", height: 1.5em))"
+    unicode: "Q3"
+    category: "egyptian_Q_furniture"
+    glyph: "Q3"
+    svg: "static/glyphs/egyptian/Q3.svg"
+}
+
+@template Q7 {
+    pattern: "Q7()"
+    typst: "#box(image(\"static/glyphs/egyptian/Q7.svg\", height: 1.5em))"
+    unicode: "Q7"
+    category: "egyptian_Q_furniture"
+    glyph: "Q7"
+    svg: "static/glyphs/egyptian/Q7.svg"
+}
+
+// ============ R: TEMPLE ============
+
+@template R4 {
+    pattern: "R4()"
+    typst: "#box(image(\"static/glyphs/egyptian/R4.svg\", height: 1.5em))"
+    unicode: "R4"
+    category: "egyptian_R_temple"
+    glyph: "R4"
+    svg: "static/glyphs/egyptian/R4.svg"
+}
+
+@template R7 {
+    pattern: "R7()"
+    typst: "#box(image(\"static/glyphs/egyptian/R7.svg\", height: 1.5em))"
+    unicode: "R7"
+    category: "egyptian_R_temple"
+    glyph: "R7"
+    svg: "static/glyphs/egyptian/R7.svg"
+}
+
+@template R8 {
+    pattern: "R8()"
+    typst: "#box(image(\"static/glyphs/egyptian/R8.svg\", height: 1.5em))"
+    unicode: "R8"
+    category: "egyptian_R_temple"
+    glyph: "R8"
+    svg: "static/glyphs/egyptian/R8.svg"
+}
+
+@template R11 {
+    pattern: "R11()"
+    typst: "#box(image(\"static/glyphs/egyptian/R11.svg\", height: 1.5em))"
+    unicode: "R11"
+    category: "egyptian_R_temple"
+    glyph: "R11"
+    svg: "static/glyphs/egyptian/R11.svg"
+}
+
+// ============ S: CROWN ============
+
+@template S1 {
+    pattern: "S1()"
+    typst: "#box(image(\"static/glyphs/egyptian/S1.svg\", height: 1.5em))"
+    unicode: "S1"
+    category: "egyptian_S_crown"
+    glyph: "S1"
+    svg: "static/glyphs/egyptian/S1.svg"
+}
+
+@template S3 {
+    pattern: "S3()"
+    typst: "#box(image(\"static/glyphs/egyptian/S3.svg\", height: 1.5em))"
+    unicode: "S3"
+    category: "egyptian_S_crown"
+    glyph: "S3"
+    svg: "static/glyphs/egyptian/S3.svg"
+}
+
+@template S12 {
+    pattern: "S12()"
+    typst: "#box(image(\"static/glyphs/egyptian/S12.svg\", height: 1.5em))"
+    unicode: "S12"
+    category: "egyptian_S_crown"
+    glyph: "S12"
+    svg: "static/glyphs/egyptian/S12.svg"
+}
+
+@template S21 {
+    pattern: "S21()"
+    typst: "#box(image(\"static/glyphs/egyptian/S21.svg\", height: 1.5em))"
+    unicode: "S21"
+    category: "egyptian_S_crown"
+    glyph: "S21"
+    svg: "static/glyphs/egyptian/S21.svg"
+}
+
+@template S26 {
+    pattern: "S26()"
+    typst: "#box(image(\"static/glyphs/egyptian/S26.svg\", height: 1.5em))"
+    unicode: "S26"
+    category: "egyptian_S_crown"
+    glyph: "S26"
+    svg: "static/glyphs/egyptian/S26.svg"
+}
+
+@template S29 {
+    pattern: "S29()"
+    typst: "#box(image(\"static/glyphs/egyptian/S29.svg\", height: 1.5em))"
+    unicode: "S29"
+    category: "egyptian_S_crown"
+    glyph: "S29"
+    svg: "static/glyphs/egyptian/S29.svg"
+}
+
+@template S34 {
+    pattern: "S34()"
+    typst: "#box(image(\"static/glyphs/egyptian/S34.svg\", height: 1.5em))"
+    unicode: "S34"
+    category: "egyptian_S_crown"
+    glyph: "S34"
+    svg: "static/glyphs/egyptian/S34.svg"
+}
+
+@template S38 {
+    pattern: "S38()"
+    typst: "#box(image(\"static/glyphs/egyptian/S38.svg\", height: 1.5em))"
+    unicode: "S38"
+    category: "egyptian_S_crown"
+    glyph: "S38"
+    svg: "static/glyphs/egyptian/S38.svg"
+}
+
+@template S40 {
+    pattern: "S40()"
+    typst: "#box(image(\"static/glyphs/egyptian/S40.svg\", height: 1.5em))"
+    unicode: "S40"
+    category: "egyptian_S_crown"
+    glyph: "S40"
+    svg: "static/glyphs/egyptian/S40.svg"
+}
+
+@template S42 {
+    pattern: "S42()"
+    typst: "#box(image(\"static/glyphs/egyptian/S42.svg\", height: 1.5em))"
+    unicode: "S42"
+    category: "egyptian_S_crown"
+    glyph: "S42"
+    svg: "static/glyphs/egyptian/S42.svg"
+}
+
+@template S43 {
+    pattern: "S43()"
+    typst: "#box(image(\"static/glyphs/egyptian/S43.svg\", height: 1.5em))"
+    unicode: "S43"
+    category: "egyptian_S_crown"
+    glyph: "S43"
+    svg: "static/glyphs/egyptian/S43.svg"
+}
+
+// ============ T: WARFARE ============
+
+@template T3 {
+    pattern: "T3()"
+    typst: "#box(image(\"static/glyphs/egyptian/T3.svg\", height: 1.5em))"
+    unicode: "T3"
+    category: "egyptian_T_warfare"
+    glyph: "T3"
+    svg: "static/glyphs/egyptian/T3.svg"
+}
+
+@template T7 {
+    pattern: "T7()"
+    typst: "#box(image(\"static/glyphs/egyptian/T7.svg\", height: 1.5em))"
+    unicode: "T7"
+    category: "egyptian_T_warfare"
+    glyph: "T7"
+    svg: "static/glyphs/egyptian/T7.svg"
+}
+
+@template T14 {
+    pattern: "T14()"
+    typst: "#box(image(\"static/glyphs/egyptian/T14.svg\", height: 1.5em))"
+    unicode: "T14"
+    category: "egyptian_T_warfare"
+    glyph: "T14"
+    svg: "static/glyphs/egyptian/T14.svg"
+}
+
+@template T21 {
+    pattern: "T21()"
+    typst: "#box(image(\"static/glyphs/egyptian/T21.svg\", height: 1.5em))"
+    unicode: "T21"
+    category: "egyptian_T_warfare"
+    glyph: "T21"
+    svg: "static/glyphs/egyptian/T21.svg"
+}
+
+@template T22 {
+    pattern: "T22()"
+    typst: "#box(image(\"static/glyphs/egyptian/T22.svg\", height: 1.5em))"
+    unicode: "T22"
+    category: "egyptian_T_warfare"
+    glyph: "T22"
+    svg: "static/glyphs/egyptian/T22.svg"
+}
+
+@template T28 {
+    pattern: "T28()"
+    typst: "#box(image(\"static/glyphs/egyptian/T28.svg\", height: 1.5em))"
+    unicode: "T28"
+    category: "egyptian_T_warfare"
+    glyph: "T28"
+    svg: "static/glyphs/egyptian/T28.svg"
+}
+
+@template T30 {
+    pattern: "T30()"
+    typst: "#box(image(\"static/glyphs/egyptian/T30.svg\", height: 1.5em))"
+    unicode: "T30"
+    category: "egyptian_T_warfare"
+    glyph: "T30"
+    svg: "static/glyphs/egyptian/T30.svg"
+}
+
+// ============ U: AGRICULTURE ============
+
+@template U1 {
+    pattern: "U1()"
+    typst: "#box(image(\"static/glyphs/egyptian/U1.svg\", height: 1.5em))"
+    unicode: "U1"
+    category: "egyptian_U_agriculture"
+    glyph: "U1"
+    svg: "static/glyphs/egyptian/U1.svg"
+}
+
+@template U6 {
+    pattern: "U6()"
+    typst: "#box(image(\"static/glyphs/egyptian/U6.svg\", height: 1.5em))"
+    unicode: "U6"
+    category: "egyptian_U_agriculture"
+    glyph: "U6"
+    svg: "static/glyphs/egyptian/U6.svg"
+}
+
+@template U7 {
+    pattern: "U7()"
+    typst: "#box(image(\"static/glyphs/egyptian/U7.svg\", height: 1.5em))"
+    unicode: "U7"
+    category: "egyptian_U_agriculture"
+    glyph: "U7"
+    svg: "static/glyphs/egyptian/U7.svg"
+}
+
+@template U15 {
+    pattern: "U15()"
+    typst: "#box(image(\"static/glyphs/egyptian/U15.svg\", height: 1.5em))"
+    unicode: "U15"
+    category: "egyptian_U_agriculture"
+    glyph: "U15"
+    svg: "static/glyphs/egyptian/U15.svg"
+}
+
+@template U23 {
+    pattern: "U23()"
+    typst: "#box(image(\"static/glyphs/egyptian/U23.svg\", height: 1.5em))"
+    unicode: "U23"
+    category: "egyptian_U_agriculture"
+    glyph: "U23"
+    svg: "static/glyphs/egyptian/U23.svg"
+}
+
+@template U28 {
+    pattern: "U28()"
+    typst: "#box(image(\"static/glyphs/egyptian/U28.svg\", height: 1.5em))"
+    unicode: "U28"
+    category: "egyptian_U_agriculture"
+    glyph: "U28"
+    svg: "static/glyphs/egyptian/U28.svg"
+}
+
+@template U33 {
+    pattern: "U33()"
+    typst: "#box(image(\"static/glyphs/egyptian/U33.svg\", height: 1.5em))"
+    unicode: "U33"
+    category: "egyptian_U_agriculture"
+    glyph: "U33"
+    svg: "static/glyphs/egyptian/U33.svg"
+}
+
+// ============ V: ROPE ============
+
+@template V1 {
+    pattern: "V1()"
+    typst: "#box(image(\"static/glyphs/egyptian/V1.svg\", height: 1.5em))"
+    unicode: "V1"
+    category: "egyptian_V_rope"
+    glyph: "V1"
+    svg: "static/glyphs/egyptian/V1.svg"
+}
+
+@template V4 {
+    pattern: "V4()"
+    typst: "#box(image(\"static/glyphs/egyptian/V4.svg\", height: 1.5em))"
+    unicode: "V4"
+    category: "egyptian_V_rope"
+    glyph: "V4"
+    svg: "static/glyphs/egyptian/V4.svg"
+}
+
+@template V6 {
+    pattern: "V6()"
+    typst: "#box(image(\"static/glyphs/egyptian/V6.svg\", height: 1.5em))"
+    unicode: "V6"
+    category: "egyptian_V_rope"
+    glyph: "V6"
+    svg: "static/glyphs/egyptian/V6.svg"
+}
+
+@template V7 {
+    pattern: "V7()"
+    typst: "#box(image(\"static/glyphs/egyptian/V7.svg\", height: 1.5em))"
+    unicode: "V7"
+    category: "egyptian_V_rope"
+    glyph: "V7"
+    svg: "static/glyphs/egyptian/V7.svg"
+}
+
+@template V10 {
+    pattern: "V10()"
+    typst: "#box(image(\"static/glyphs/egyptian/V10.svg\", height: 1.5em))"
+    unicode: "V10"
+    category: "egyptian_V_rope"
+    glyph: "V10"
+    svg: "static/glyphs/egyptian/V10.svg"
+}
+
+@template V13 {
+    pattern: "V13()"
+    typst: "#box(image(\"static/glyphs/egyptian/V13.svg\", height: 1.5em))"
+    unicode: "V13"
+    category: "egyptian_V_rope"
+    glyph: "V13"
+    svg: "static/glyphs/egyptian/V13.svg"
+}
+
+@template V15 {
+    pattern: "V15()"
+    typst: "#box(image(\"static/glyphs/egyptian/V15.svg\", height: 1.5em))"
+    unicode: "V15"
+    category: "egyptian_V_rope"
+    glyph: "V15"
+    svg: "static/glyphs/egyptian/V15.svg"
+}
+
+@template V16 {
+    pattern: "V16()"
+    typst: "#box(image(\"static/glyphs/egyptian/V16.svg\", height: 1.5em))"
+    unicode: "V16"
+    category: "egyptian_V_rope"
+    glyph: "V16"
+    svg: "static/glyphs/egyptian/V16.svg"
+}
+
+@template V20 {
+    pattern: "V20()"
+    typst: "#box(image(\"static/glyphs/egyptian/V20.svg\", height: 1.5em))"
+    unicode: "V20"
+    category: "egyptian_V_rope"
+    glyph: "V20"
+    svg: "static/glyphs/egyptian/V20.svg"
+}
+
+@template V22 {
+    pattern: "V22()"
+    typst: "#box(image(\"static/glyphs/egyptian/V22.svg\", height: 1.5em))"
+    unicode: "V22"
+    category: "egyptian_V_rope"
+    glyph: "V22"
+    svg: "static/glyphs/egyptian/V22.svg"
+}
+
+@template V24 {
+    pattern: "V24()"
+    typst: "#box(image(\"static/glyphs/egyptian/V24.svg\", height: 1.5em))"
+    unicode: "V24"
+    category: "egyptian_V_rope"
+    glyph: "V24"
+    svg: "static/glyphs/egyptian/V24.svg"
+}
+
+@template V25 {
+    pattern: "V25()"
+    typst: "#box(image(\"static/glyphs/egyptian/V25.svg\", height: 1.5em))"
+    unicode: "V25"
+    category: "egyptian_V_rope"
+    glyph: "V25"
+    svg: "static/glyphs/egyptian/V25.svg"
+}
+
+@template V26 {
+    pattern: "V26()"
+    typst: "#box(image(\"static/glyphs/egyptian/V26.svg\", height: 1.5em))"
+    unicode: "V26"
+    category: "egyptian_V_rope"
+    glyph: "V26"
+    svg: "static/glyphs/egyptian/V26.svg"
+}
+
+@template V28 {
+    pattern: "V28()"
+    typst: "#box(image(\"static/glyphs/egyptian/V28.svg\", height: 1.5em))"
+    unicode: "V28"
+    category: "egyptian_V_rope"
+    glyph: "V28"
+    svg: "static/glyphs/egyptian/V28.svg"
+}
+
+@template V29 {
+    pattern: "V29()"
+    typst: "#box(image(\"static/glyphs/egyptian/V29.svg\", height: 1.5em))"
+    unicode: "V29"
+    category: "egyptian_V_rope"
+    glyph: "V29"
+    svg: "static/glyphs/egyptian/V29.svg"
+}
+
+@template V30 {
+    pattern: "V30()"
+    typst: "#box(image(\"static/glyphs/egyptian/V30.svg\", height: 1.5em))"
+    unicode: "V30"
+    category: "egyptian_V_rope"
+    glyph: "V30"
+    svg: "static/glyphs/egyptian/V30.svg"
+}
+
+@template V31 {
+    pattern: "V31()"
+    typst: "#box(image(\"static/glyphs/egyptian/V31.svg\", height: 1.5em))"
+    unicode: "V31"
+    category: "egyptian_V_rope"
+    glyph: "V31"
+    svg: "static/glyphs/egyptian/V31.svg"
+}
+
+// ============ W: VESSEL ============
+
+@template W1 {
+    pattern: "W1()"
+    typst: "#box(image(\"static/glyphs/egyptian/W1.svg\", height: 1.5em))"
+    unicode: "W1"
+    category: "egyptian_W_vessel"
+    glyph: "W1"
+    svg: "static/glyphs/egyptian/W1.svg"
+}
+
+@template W3 {
+    pattern: "W3()"
+    typst: "#box(image(\"static/glyphs/egyptian/W3.svg\", height: 1.5em))"
+    unicode: "W3"
+    category: "egyptian_W_vessel"
+    glyph: "W3"
+    svg: "static/glyphs/egyptian/W3.svg"
+}
+
+@template W9 {
+    pattern: "W9()"
+    typst: "#box(image(\"static/glyphs/egyptian/W9.svg\", height: 1.5em))"
+    unicode: "W9"
+    category: "egyptian_W_vessel"
+    glyph: "W9"
+    svg: "static/glyphs/egyptian/W9.svg"
+}
+
+@template W10 {
+    pattern: "W10()"
+    typst: "#box(image(\"static/glyphs/egyptian/W10.svg\", height: 1.5em))"
+    unicode: "W10"
+    category: "egyptian_W_vessel"
+    glyph: "W10"
+    svg: "static/glyphs/egyptian/W10.svg"
+}
+
+@template W11 {
+    pattern: "W11()"
+    typst: "#box(image(\"static/glyphs/egyptian/W11.svg\", height: 1.5em))"
+    unicode: "W11"
+    category: "egyptian_W_vessel"
+    glyph: "W11"
+    svg: "static/glyphs/egyptian/W11.svg"
+}
+
+@template W14 {
+    pattern: "W14()"
+    typst: "#box(image(\"static/glyphs/egyptian/W14.svg\", height: 1.5em))"
+    unicode: "W14"
+    category: "egyptian_W_vessel"
+    glyph: "W14"
+    svg: "static/glyphs/egyptian/W14.svg"
+}
+
+@template W17 {
+    pattern: "W17()"
+    typst: "#box(image(\"static/glyphs/egyptian/W17.svg\", height: 1.5em))"
+    unicode: "W17"
+    category: "egyptian_W_vessel"
+    glyph: "W17"
+    svg: "static/glyphs/egyptian/W17.svg"
+}
+
+@template W19 {
+    pattern: "W19()"
+    typst: "#box(image(\"static/glyphs/egyptian/W19.svg\", height: 1.5em))"
+    unicode: "W19"
+    category: "egyptian_W_vessel"
+    glyph: "W19"
+    svg: "static/glyphs/egyptian/W19.svg"
+}
+
+@template W24 {
+    pattern: "W24()"
+    typst: "#box(image(\"static/glyphs/egyptian/W24.svg\", height: 1.5em))"
+    unicode: "W24"
+    category: "egyptian_W_vessel"
+    glyph: "W24"
+    svg: "static/glyphs/egyptian/W24.svg"
+}
+
+@template W25 {
+    pattern: "W25()"
+    typst: "#box(image(\"static/glyphs/egyptian/W25.svg\", height: 1.5em))"
+    unicode: "W25"
+    category: "egyptian_W_vessel"
+    glyph: "W25"
+    svg: "static/glyphs/egyptian/W25.svg"
+}
+
+// ============ X: BREAD ============
+
+@template X1 {
+    pattern: "X1()"
+    typst: "#box(image(\"static/glyphs/egyptian/X1.svg\", height: 1.5em))"
+    unicode: "X1"
+    category: "egyptian_X_bread"
+    glyph: "X1"
+    svg: "static/glyphs/egyptian/X1.svg"
+}
+
+@template X2 {
+    pattern: "X2()"
+    typst: "#box(image(\"static/glyphs/egyptian/X2.svg\", height: 1.5em))"
+    unicode: "X2"
+    category: "egyptian_X_bread"
+    glyph: "X2"
+    svg: "static/glyphs/egyptian/X2.svg"
+}
+
+@template X3 {
+    pattern: "X3()"
+    typst: "#box(image(\"static/glyphs/egyptian/X3.svg\", height: 1.5em))"
+    unicode: "X3"
+    category: "egyptian_X_bread"
+    glyph: "X3"
+    svg: "static/glyphs/egyptian/X3.svg"
+}
+
+@template X4 {
+    pattern: "X4()"
+    typst: "#box(image(\"static/glyphs/egyptian/X4.svg\", height: 1.5em))"
+    unicode: "X4"
+    category: "egyptian_X_bread"
+    glyph: "X4"
+    svg: "static/glyphs/egyptian/X4.svg"
+}
+
+@template X5 {
+    pattern: "X5()"
+    typst: "#box(image(\"static/glyphs/egyptian/X5.svg\", height: 1.5em))"
+    unicode: "X5"
+    category: "egyptian_X_bread"
+    glyph: "X5"
+    svg: "static/glyphs/egyptian/X5.svg"
+}
+
+@template X6 {
+    pattern: "X6()"
+    typst: "#box(image(\"static/glyphs/egyptian/X6.svg\", height: 1.5em))"
+    unicode: "X6"
+    category: "egyptian_X_bread"
+    glyph: "X6"
+    svg: "static/glyphs/egyptian/X6.svg"
+}
+
+@template X8 {
+    pattern: "X8()"
+    typst: "#box(image(\"static/glyphs/egyptian/X8.svg\", height: 1.5em))"
+    unicode: "X8"
+    category: "egyptian_X_bread"
+    glyph: "X8"
+    svg: "static/glyphs/egyptian/X8.svg"
+}
+
+// ============ Y: WRITING ============
+
+@template Y1 {
+    pattern: "Y1()"
+    typst: "#box(image(\"static/glyphs/egyptian/Y1.svg\", height: 1.5em))"
+    unicode: "Y1"
+    category: "egyptian_Y_writing"
+    glyph: "Y1"
+    svg: "static/glyphs/egyptian/Y1.svg"
+}
+
+@template Y3 {
+    pattern: "Y3()"
+    typst: "#box(image(\"static/glyphs/egyptian/Y3.svg\", height: 1.5em))"
+    unicode: "Y3"
+    category: "egyptian_Y_writing"
+    glyph: "Y3"
+    svg: "static/glyphs/egyptian/Y3.svg"
+}
+
+@template Y5 {
+    pattern: "Y5()"
+    typst: "#box(image(\"static/glyphs/egyptian/Y5.svg\", height: 1.5em))"
+    unicode: "Y5"
+    category: "egyptian_Y_writing"
+    glyph: "Y5"
+    svg: "static/glyphs/egyptian/Y5.svg"
+}
+
+// ============ Z: STROKE ============
+
+@template Z1 {
+    pattern: "Z1()"
+    typst: "#box(image(\"static/glyphs/egyptian/Z1.svg\", height: 1.5em))"
+    unicode: "Z1"
+    category: "egyptian_Z_stroke"
+    glyph: "Z1"
+    svg: "static/glyphs/egyptian/Z1.svg"
+}
+
+@template Z2 {
+    pattern: "Z2()"
+    typst: "#box(image(\"static/glyphs/egyptian/Z2.svg\", height: 1.5em))"
+    unicode: "Z2"
+    category: "egyptian_Z_stroke"
+    glyph: "Z2"
+    svg: "static/glyphs/egyptian/Z2.svg"
+}
+
+@template Z3 {
+    pattern: "Z3()"
+    typst: "#box(image(\"static/glyphs/egyptian/Z3.svg\", height: 1.5em))"
+    unicode: "Z3"
+    category: "egyptian_Z_stroke"
+    glyph: "Z3"
+    svg: "static/glyphs/egyptian/Z3.svg"
+}
+
+@template Z4 {
+    pattern: "Z4()"
+    typst: "#box(image(\"static/glyphs/egyptian/Z4.svg\", height: 1.5em))"
+    unicode: "Z4"
+    category: "egyptian_Z_stroke"
+    glyph: "Z4"
+    svg: "static/glyphs/egyptian/Z4.svg"
+}
+
+@template Z5 {
+    pattern: "Z5()"
+    typst: "#box(image(\"static/glyphs/egyptian/Z5.svg\", height: 1.5em))"
+    unicode: "Z5"
+    category: "egyptian_Z_stroke"
+    glyph: "Z5"
+    svg: "static/glyphs/egyptian/Z5.svg"
+}
+
+@template Z6 {
+    pattern: "Z6()"
+    typst: "#box(image(\"static/glyphs/egyptian/Z6.svg\", height: 1.5em))"
+    unicode: "Z6"
+    category: "egyptian_Z_stroke"
+    glyph: "Z6"
+    svg: "static/glyphs/egyptian/Z6.svg"
+}
+
+@template Z7 {
+    pattern: "Z7()"
+    typst: "#box(image(\"static/glyphs/egyptian/Z7.svg\", height: 1.5em))"
+    unicode: "Z7"
+    category: "egyptian_Z_stroke"
+    glyph: "Z7"
+    svg: "static/glyphs/egyptian/Z7.svg"
+}
+
+@template Z9 {
+    pattern: "Z9()"
+    typst: "#box(image(\"static/glyphs/egyptian/Z9.svg\", height: 1.5em))"
+    unicode: "Z9"
+    category: "egyptian_Z_stroke"
+    glyph: "Z9"
+    svg: "static/glyphs/egyptian/Z9.svg"
+}
+
+@template Z11 {
+    pattern: "Z11()"
+    typst: "#box(image(\"static/glyphs/egyptian/Z11.svg\", height: 1.5em))"
+    unicode: "Z11"
+    category: "egyptian_Z_stroke"
+    glyph: "Z11"
+    svg: "static/glyphs/egyptian/Z11.svg"
+}
+
+// ============ QUADRAT COMPOSITION ============
+
+@template quadrat_h {
+    pattern: "quadrat_h(left, right)"
+    typst: "#grid(columns: 2, gutter: 1pt, {left}, {right})"
+    unicode: "{left}{right}"
+    category: "egyptian_composition"
+    glyph: "H-pair"
+}
+
+@template quadrat_v {
+    pattern: "quadrat_v(top, bottom)"
+    typst: "#stack(dir: ttb, spacing: 1pt, {top}, {bottom})"
+    unicode: "{top}/{bottom}"
+    category: "egyptian_composition"
+    glyph: "V-pair"
+}
+
+@template quadrat_2x2 {
+    pattern: "quadrat_2x2(tl, tr, bl, br)"
+    typst: "#grid(columns: 2, gutter: 1pt, {tl}, {tr}, {bl}, {br})"
+    unicode: "{tl}{tr}/{bl}{br}"
+    category: "egyptian_composition"
+    glyph: "2x2"
+}
+
