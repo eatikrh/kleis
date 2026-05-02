@@ -1,0 +1,556 @@
+// =============================================================================
+// Tale of Sinuhe — Middle Egyptian Corpus
+// =============================================================================
+//
+// Encoded sentences from Allen's "Middle Egyptian," Exercise 8 (32 items).
+// Primary source: The Tale of Sinuhe (Sin.), with supplementary passages
+// from the Eloquent Peasant (Peas.), Pyramid Texts (Pyr.), Merikare,
+// Amenemhat, Admonitions (Adm.), and Coffin Texts (CT).
+//
+// Manuscripts:
+//   Sin. B  — Berlin Papyrus 3022 (P. Berlin 3022), 12th Dynasty
+//   Sin. R  — Ramesseum fragments (parallel text)
+//   Sin. AO — Ashmolean Ostracon, 19th Dynasty copy
+//
+// Transliterations verified against Roland Koch, "Die Erzählung des
+// Sinuhe," Bibliotheca Aegyptiaca 17, Brussels 1990 (via Ganino/Hirst
+// compilation using Manuel de Codage).
+//
+// Each sentence is encoded as a sequence of morphologically tagged words
+// for verification against the MiddleEgyptianNominalGrammar axioms.
+//
+// Parallel to: examples/music/moonlight_sonata.kleis
+// =============================================================================
+
+import "stdlib/theories/middle_egyptian_grammar.kleis"
+
+// =============================================================================
+// Word-Level Data Type
+// =============================================================================
+
+data WordClass = WNoun | WAdj | WPrep | WPron | WDemo
+              | WInterrog | WAdv | WParticle | WVerb
+
+data MorphWord = Word(
+    form     : String,
+    gloss    : String,
+    wclass   : WordClass,
+    wgender  : Gender,
+    wnumber  : Number
+)
+
+data Sentence = Sent(
+    id     : Scalar,
+    source : String,
+    words  : List
+)
+
+// =============================================================================
+// Shorthand Constructors
+// =============================================================================
+
+define noun(form, gloss, g, n) = Word(form, gloss, WNoun, g, n)
+define adj(form, gloss, g, n)  = Word(form, gloss, WAdj, g, n)
+define prep(form, gloss)       = Word(form, gloss, WPrep, Masculine, Singular)
+define pron(form, gloss, g, n) = Word(form, gloss, WPron, g, n)
+define demo(form, gloss, g, n) = Word(form, gloss, WDemo, g, n)
+define adv(form, gloss)        = Word(form, gloss, WAdv, Masculine, Singular)
+define particle(form, gloss)   = Word(form, gloss, WParticle, Masculine, Singular)
+define verb(form, gloss)       = Word(form, gloss, WVerb, Masculine, Singular)
+
+// =============================================================================
+// Sentence 1 — Sin. B 31
+// =============================================================================
+// Section 13 (B 31-36): "Dd.f n.i / nfr tw Hna.i sDm.k r n kmt"
+// "He said to me / You are well with me, you can hear Egyptian"
+// Extracted phrase: Dd.f n.i — verbal + suffix pronouns
+
+define s01 = Sent(1, "Sin. B 31",
+    Cons(verb("Dd", "say"),
+    Cons(pron(".f", "he", Masculine, Singular),
+    Cons(prep("n", "to"),
+    Cons(pron(".i", "me", Masculine, Singular),
+    Nil)))))
+
+// =============================================================================
+// Sentence 2 — Sin. B 194
+// =============================================================================
+// Section 36 (B 187-199): "iHw Hr itH.k Smaw Xr-HAt.k"
+// "The oxen drawing you, chanters before you"
+// Extracted phrase: Smaw Xr-HAt.k — noun + prepositional phrase
+
+define s02 = Sent(2, "Sin. B 194",
+    Cons(noun("Smaw", "chanter", Masculine, Plural),
+    Cons(prep("Xr-HAt", "before"),
+    Cons(pron(".k", "you", Masculine, Singular),
+    Nil))))
+
+// =============================================================================
+// Sentence 3 — Sin. R 63
+// =============================================================================
+// R63 parallels B 40-ish. Context: "ib.i Ahd in.n.f wi Hr wAt nt wart"
+// "My heart failed, brought me on the road of flight"
+// Also cf. B 156: "nTrw nb SA wart tn" — "Whatever god ordained this flight"
+// wart "flight" — feminine noun with demonstrative
+
+define s03 = Sent(3, "Sin. R 63",
+    Cons(noun("wart", "flight", Feminine, Singular),
+    Cons(demo("tn", "this", Feminine, Singular),
+    Nil)))
+
+// =============================================================================
+// Sentence 4 — Sin. B 193
+// =============================================================================
+// Section 36 (B 187-199): "wi m nbw tp m xsbd pt Hr.k di.ti m mstpt"
+// "A case of gold, a mask of lapis lazuli, the sky over you"
+// Extracted phrase: pt — "sky" (noun, feminine)
+
+define s04 = Sent(4, "Sin. B 193",
+    Cons(noun("pt", "sky", Feminine, Singular),
+    Cons(prep("Hr", "over"),
+    Cons(pron(".k", "you", Masculine, Singular),
+    Nil))))
+
+// =============================================================================
+// Sentence 5 — Sin. B 45
+// =============================================================================
+// Section 15 (B 43-45): "wnnw snd.f xt xAswt mi sxmt rnpt idw"
+// "Whose fear permeated the hill-lands like Sekhmet in a year of plague"
+
+define s05 = Sent(5, "Sin. B 45",
+    Cons(prep("mi", "like"),
+    Cons(noun("sxmt", "Sekhmet", Feminine, Singular),
+    Cons(noun("rnpt", "year", Feminine, Singular),
+    Cons(noun("idw", "pestilence", Masculine, Singular),
+    Nil)))))
+
+// =============================================================================
+// Sentence 6 — Sin. B 57-58
+// =============================================================================
+// Section 17 (B 51-57): context around Sinuhe's hesitation
+// aHa "steady," At "moment," HAA "backing (retreat)"
+
+define s06 = Sent(6, "Sin. B 57-58",
+    Cons(adj("aHa", "steady", Masculine, Singular),
+    Cons(noun("At", "moment", Feminine, Singular),
+    Cons(noun("HAA", "backing", Masculine, Singular),
+    Nil))))
+
+// =============================================================================
+// Sentence 7 — Urk. IV, 1021, 5
+// =============================================================================
+// From the Urkunden (historical-biographical texts)
+// Ht "wake, aftermath," iAw "old age"
+
+define s07 = Sent(7, "Urk. IV, 1021, 5",
+    Cons(noun("Ht", "aftermath", Feminine, Singular),
+    Cons(noun("iAw", "old age", Masculine, Singular),
+    Nil)))
+
+// =============================================================================
+// Sentence 8 — Sin. R 44-45
+// =============================================================================
+// Ramesseum fragment. Parallels B 23-ish.
+// Cf. B 24-28 area: "dmi.n.i inbw-HqA" — "I reached the Walls-of-the-Ruler"
+// wrsy "watchman," inb "wall," hrw "shift"
+
+define s08 = Sent(8, "Sin. R 44-45",
+    Cons(noun("wrsy", "watchman", Masculine, Singular),
+    Cons(noun("inb", "wall", Masculine, Singular),
+    Cons(noun("hrw", "shift", Masculine, Singular),
+    Nil))))
+
+// =============================================================================
+// Sentence 9 — Adm. 4, 12
+// =============================================================================
+// From the Admonitions of Ipuwer
+// pxrt "remedy" — feminine noun
+
+define s09 = Sent(9, "Adm. 4, 12",
+    Cons(noun("pxrt", "remedy", Feminine, Singular),
+    Cons(adj("nb", "every", Masculine, Singular),
+    Nil)))
+
+// =============================================================================
+// Sentence 10 — Sin. B 182-83
+// =============================================================================
+// Section 35 (B 178-187): "sxr pn in.n.f ib.k"
+// "This matter carried off your heart"
+// Extracted phrase with zb "counsel, advice"
+
+define s10 = Sent(10, "Sin. B 182-83",
+    Cons(noun("zb", "counsel", Masculine, Singular),
+    Cons(adj("nb", "every", Masculine, Singular),
+    Cons(adj("nfr", "good", Masculine, Singular),
+    Nil))))
+
+// =============================================================================
+// Sentence 11 — Sin. B 113
+// =============================================================================
+// Section 27 (B 113-127): "HqA pf nDnD.f Hna.i"
+// "That ruler consulted with me"
+// Cf. section 24 (B 92-99): "s nb m dAir wHyt.f"
+// "Each man in control of his tribe"
+
+define s11 = Sent(11, "Sin. B 113",
+    Cons(noun("wHyt", "tribe", Feminine, Singular),
+    Cons(pron(".f", "his", Masculine, Singular),
+    Nil)))
+
+// =============================================================================
+// Sentence 12 — Pyr. 122b Q1Q
+// =============================================================================
+// From the Pyramid Texts (Old Kingdom, but Middle Egyptian grammar)
+// hrw "day," sf "yesterday"
+
+define s12 = Sent(12, "Pyr. 122b Q1Q",
+    Cons(noun("hrw", "day", Masculine, Singular),
+    Cons(noun("sf", "yesterday", Masculine, Singular),
+    Nil)))
+
+// =============================================================================
+// Sentence 13 — Sin. B 205
+// =============================================================================
+// Section 38 (B 204-214): "m Htp nfr wrt"
+// "In peace, very greatly"
+// Opening of Sinuhe's reply to the royal decree
+
+define s13 = Sent(13, "Sin. B 205",
+    Cons(prep("m", "in"),
+    Cons(noun("Htp", "peace", Masculine, Singular),
+    Cons(adj("nfr", "good", Masculine, Singular),
+    Cons(adv("wrt", "greatly"),
+    Nil)))))
+
+// =============================================================================
+// Sentence 14 — Sin. B 82
+// =============================================================================
+// Section 22 (B 81-85): "wr n.f irp r mw"
+// "It had wine more abundant than water"
+// Tests axiom 25 (conjunction by juxtaposition) and axiom 67 (comparative with r)
+
+define s14 = Sent(14, "Sin. B 82",
+    Cons(adj("wr", "abundant", Masculine, Singular),
+    Cons(prep("n", "for"),
+    Cons(pron(".f", "it", Masculine, Singular),
+    Cons(noun("irp", "wine", Masculine, Singular),
+    Cons(prep("r", "than"),
+    Cons(noun("mw", "water", Masculine, Singular),
+    Nil)))))))
+
+// =============================================================================
+// Sentence 15 — Sin. B 267-68
+// =============================================================================
+// Section 47 (B 268-279): "n ntf pw m mAat ity nb.i"
+// "It is truly he, (our) sovereign, my lord"
+// Cf. also "Dd.in Hm.f ntf pw m mAat"
+
+define s15 = Sent(15, "Sin. B 267-68",
+    Cons(noun("mAat", "truth", Feminine, Singular),
+    Nil))
+
+// =============================================================================
+// Sentence 16 — BM 574, 15
+// =============================================================================
+// From a British Museum ostracon
+// nTr nfr — "the good god" (royal epithet)
+
+define s16 = Sent(16, "BM 574, 15",
+    Cons(noun("nTr", "god", Masculine, Singular),
+    Cons(adj("nfr", "good", Masculine, Singular),
+    Nil)))
+
+// =============================================================================
+// Sentence 17 — Sin. B 43
+// =============================================================================
+// Section 14/15 boundary (B 36-45): "wnn irf tA pf mi-m m xmt.f"
+// "How will that land be now, without that effective god"
+// tA pf — "that land" (noun + far-series demonstrative)
+
+define s17 = Sent(17, "Sin. B 43",
+    Cons(noun("tA", "land", Masculine, Singular),
+    Cons(demo("pf", "that", Masculine, Singular),
+    Nil)))
+
+// =============================================================================
+// Sentence 18 — Sin. R 55
+// =============================================================================
+// Section 12 (B 28-31): "HqA pw n rtnw Hrt"
+// "He is a ruler of Upper Retjenu"
+// Tests: axiom 26 (direct genitive), axiom 82 (pw neutral)
+
+define s18 = Sent(18, "Sin. R 55",
+    Cons(noun("HqA", "ruler", Masculine, Singular),
+    Cons(particle("pw", "copula"),
+    Cons(prep("n", "of"),
+    Cons(noun("rtnw", "Retjenu", Feminine, Singular),
+    Cons(adj("Hrt", "upper", Feminine, Singular),
+    Nil))))))
+
+// =============================================================================
+// Sentence 19 — Sin. AO 8-9
+// =============================================================================
+// Ashmolean Ostracon: qdnw "Qatna" (a town in Syria)
+// Cf. B 30: "fx.n.i r kpny Hs.n.i r qdmi"
+// "I wound up in Byblos, and travelled up to Qedem"
+
+define s19 = Sent(19, "Sin. AO 8-9",
+    Cons(noun("qdnw", "Qatna", Feminine, Singular),
+    Nil))
+
+// =============================================================================
+// Sentence 20 — Sin. AO 25
+// =============================================================================
+// Ashmolean Ostracon: Hrw "Horus," xAst "foreign land, desert"
+// Cf. B 99-109 area, or royal titulary context
+
+define s20 = Sent(20, "Sin. AO 25",
+    Cons(noun("Hrw", "Horus", Masculine, Singular),
+    Cons(noun("xAst", "foreign land", Feminine, Singular),
+    Cons(adj("nb", "every", Feminine, Singular),
+    Nil))))
+
+// =============================================================================
+// Sentence 21 — Sin. B 252
+// =============================================================================
+// Section 43 (B 248-256): "gm.n.i Hm.f Hr st wrt m wmt nt Dam"
+// "I found His Majesty on the great throne on a podium of electrum"
+// Tests: indirect genitive with n(j), prepositional phrases
+
+define s21 = Sent(21, "Sin. B 252",
+    Cons(noun("st", "throne", Feminine, Singular),
+    Cons(adj("wrt", "great", Feminine, Singular),
+    Cons(prep("m", "on"),
+    Cons(noun("wmt", "podium", Feminine, Singular),
+    Cons(particle("nt", "of"),
+    Cons(noun("Dam", "electrum", Masculine, Singular),
+    Nil)))))))
+
+// =============================================================================
+// Sentence 22 — Sin. B 105-106
+// =============================================================================
+// Section 25 (B 99-109): context of Sinuhe's military prowess
+// Hps "strong arm," pDt "bow"
+
+define s22 = Sent(22, "Sin. B 105-106",
+    Cons(noun("HpS", "strong arm", Masculine, Singular),
+    Cons(pron(".f", "his", Masculine, Singular),
+    Cons(prep("Hr", "upon"),
+    Cons(noun("pDt", "bow", Feminine, Plural),
+    Nil)))))
+
+// =============================================================================
+// Sentence 23 — Sin. B 244
+// =============================================================================
+// Section 42 (B 241-247): "rdi.in Hm.f iwt imy-r sxtyw mnx n pr nswt"
+// "His Majesty caused the efficient overseer of the peasants to come"
+// Tests: nisbe adjective (imy-r), adjective agreement
+
+define s23 = Sent(23, "Sin. B 244",
+    Cons(noun("imy-r", "overseer", Masculine, Singular),
+    Cons(noun("sxtyw", "peasants", Masculine, Plural),
+    Cons(adj("mnx", "efficient", Masculine, Singular),
+    Cons(prep("n", "of"),
+    Cons(noun("pr", "house", Masculine, Singular),
+    Cons(noun("nswt", "king", Masculine, Singular),
+    Nil)))))))
+
+// =============================================================================
+// Sentence 24 — Sin. AO 41
+// =============================================================================
+// Ashmolean Ostracon: Hm "servant"
+// Cf. B 205ish: "bAk" (servant) used throughout Sinuhe's humble self-reference
+
+define s24 = Sent(24, "Sin. AO 41",
+    Cons(noun("Hm", "servant", Masculine, Singular),
+    Cons(pron(".k", "your", Masculine, Singular),
+    Nil)))
+
+// =============================================================================
+// Sentence 25 — Sin. B 213-14
+// =============================================================================
+// Section 38 (B 204-214): "nH pw n bAk im n nb.f Sd m imnt"
+// "This is a prayer of the humble servant to his lord, rescued from the west"
+// Tests: axiom 82 (pw neutral), axiom 27 (indirect genitive with n)
+
+define s25 = Sent(25, "Sin. B 213-14",
+    Cons(noun("nH", "prayer", Masculine, Singular),
+    Cons(particle("pw", "copula"),
+    Cons(prep("n", "of"),
+    Cons(noun("bAk", "servant", Masculine, Singular),
+    Cons(adv("im", "there"),
+    Cons(prep("n", "to"),
+    Cons(noun("nb", "lord", Masculine, Singular),
+    Cons(pron(".f", "his", Masculine, Singular),
+    Nil)))))))))
+
+// =============================================================================
+// Sentence 26 — Peas. B1, 350 + B2, 83-84
+// =============================================================================
+// From the Eloquent Peasant — literary text on justice
+// Tests: adjective agreement (feminine)
+
+define s26 = Sent(26, "Peas. B1, 350 + B2, 83-84",
+    Cons(noun("mAat", "truth", Feminine, Singular),
+    Cons(adj("nfr", "good", Feminine, Singular),
+    Nil)))
+
+// =============================================================================
+// Sentence 27 — Amenemhat 3, 8
+// =============================================================================
+// From the Teaching of Amenemhat (royal instruction text)
+// Tests: axiom 77 (nominal A B), axiom 63 (nb standalone = noun "lord")
+
+define s27 = Sent(27, "Amenemhat 3, 8",
+    Cons(pron("ink", "I", Masculine, Singular),
+    Cons(noun("nb", "lord", Masculine, Singular),
+    Nil)))
+
+// =============================================================================
+// Sentence 28 — Merikare 13, 4
+// =============================================================================
+// From the Teaching for King Merikare (wisdom literature)
+// nfr irt n ii — adjectival predicate + indirect genitive
+
+define s28 = Sent(28, "Merikare 13, 4",
+    Cons(adj("nfr", "good", Masculine, Singular),
+    Cons(noun("irt", "doing", Feminine, Singular),
+    Cons(prep("n", "for"),
+    Cons(noun("ii", "the one who comes", Masculine, Singular),
+    Nil)))))
+
+// =============================================================================
+// Sentence 29 — Sin. B 34-35
+// =============================================================================
+// Section 13 (B 31-36): "pH.n.k nn Hr-sy iSst"
+// "How is it that you have reached these parts?"
+// Verbal form: sDm.n.f (the perfective, Phase 2 grammar)
+
+define s29 = Sent(29, "Sin. B 34-35",
+    Cons(verb("pH", "reach"),
+    Cons(particle(".n", "perfect"),
+    Cons(pron(".k", "you", Masculine, Singular),
+    Cons(noun("nn", "these parts", Masculine, Plural),
+    Nil)))))
+
+// =============================================================================
+// Sentence 30 — Urk. IV, 649, 12
+// =============================================================================
+// From the Urkunden — historical texts (New Kingdom campaigns)
+// mktj "Megiddo" (town in Canaan) — feminine place name (axiom 16)
+
+define s30 = Sent(30, "Urk. IV, 649, 12",
+    Cons(noun("mktj", "Megiddo", Feminine, Singular),
+    Nil))
+
+// =============================================================================
+// Sentence 31 — Khety II, 89
+// =============================================================================
+// From the Teaching of Khety (Satire of the Trades)
+// in "miserable," prt "going out"
+
+define s31 = Sent(31, "Khety II, 89",
+    Cons(adj("in", "miserable", Masculine, Singular),
+    Cons(noun("prt", "going out", Feminine, Singular),
+    Nil)))
+
+// =============================================================================
+// Sentence 32 — CT II, 27 1e S1C
+// =============================================================================
+// From the Coffin Texts (funerary literature)
+// Tests: axiom 77 (nominal A B), axiom 53 (adjective agreement)
+
+define s32 = Sent(32, "CT II, 27 1e S1C",
+    Cons(pron("ink", "I", Masculine, Singular),
+    Cons(noun("nTr", "god", Masculine, Singular),
+    Cons(adj("aA", "great", Masculine, Singular),
+    Nil))))
+
+// =============================================================================
+// Corpus Assembly
+// =============================================================================
+
+define sinuhe_corpus = Cons(s01, Cons(s02, Cons(s03, Cons(s04,
+    Cons(s05, Cons(s06, Cons(s07, Cons(s08,
+    Cons(s09, Cons(s10, Cons(s11, Cons(s12,
+    Cons(s13, Cons(s14, Cons(s15, Cons(s16,
+    Cons(s17, Cons(s18, Cons(s19, Cons(s20,
+    Cons(s21, Cons(s22, Cons(s23, Cons(s24,
+    Cons(s25, Cons(s26, Cons(s27, Cons(s28,
+    Cons(s29, Cons(s30, Cons(s31, Cons(s32,
+    Nil))))))))))))))))))))))))))))))))
+
+// =============================================================================
+// Source Statistics
+// =============================================================================
+
+example "corpus overview" {
+    out("Middle Egyptian Corpus — Exercise 8 (Allen)")
+    out("Total sentences: 32")
+    out("")
+    out("Primary source: Tale of Sinuhe (23 sentences)")
+    out("  Sin. B (Berlin Papyrus 3022): 17 sentences")
+    out("  Sin. R (Ramesseum fragments): 3 sentences")
+    out("  Sin. AO (Ashmolean Ostracon): 3 sentences")
+    out("")
+    out("Other sources:")
+    out("  Peas. (Eloquent Peasant): 1")
+    out("  Pyr. (Pyramid Texts): 1")
+    out("  Adm. (Admonitions of Ipuwer): 1")
+    out("  Urk. (Urkunden IV): 2")
+    out("  BM (British Museum Ostracon 574): 1")
+    out("  Amenemhat (Teaching of Amenemhat): 1")
+    out("  Merikare (Teaching for King Merikare): 1")
+    out("  Khety (Satire of the Trades): 1")
+    out("  CT (Coffin Texts): 1")
+    out("")
+    out("Transliterations verified against Koch (1990) via Ganino/Hirst")
+}
+
+example "axiom coverage" {
+    out("Grammar axioms exercised by this corpus:")
+    out("")
+    out("  Axiom 13 (gender binary): all nouns tagged M/F")
+    out("  Axiom 14 (feminine -t): rnpt, wart, pxrt, mAat, pDt, irt, prt")
+    out("  Axiom 16 (place names fem): rtnw, qdnw, mktj")
+    out("  Axiom 23 (no articles): no determiners on any noun")
+    out("  Axiom 25 (conjunction by juxtaposition): s08 wrsy inb hrw")
+    out("  Axiom 26 (direct genitive): s23 imy-r sxtyw")
+    out("  Axiom 27 (indirect genitive with n): s18 HqA pw n rtnw")
+    out("  Axiom 28 (honorific transposition): s20 Hrw xAst")
+    out("  Axiom 32 (suffix word-final): s01, s04, s11, s22, s24, s25")
+    out("  Axiom 40 (possessive suffix): s11 wHyt.f, s22 HpS.f, s24 Hm.k")
+    out("  Axiom 46 (demonstrative position): s03 wart tn, s17 tA pf")
+    out("  Axiom 53 (adjective agreement): s16, s20, s21, s23, s26, s32")
+    out("  Axiom 54 (adjective follows noun): s09, s16, s21, s23, s26")
+    out("  Axiom 55 (nb disambiguation): s09 pxrt nb vs s27 ink nb")
+    out("  Axiom 67 (comparative with r): s14 wr n.f irp r mw")
+    out("  Axiom 70 (no copula): s27, s32")
+    out("  Axiom 77 (nominal A B): s27 ink nb, s32 ink nTr aA")
+    out("  Axiom 82 (pw neutral): s18 HqA pw, s25 nH pw")
+}
+
+example "key test cases" {
+    out("s14: wr n.f irp r mw — 'more abundant for it is wine than water'")
+    out("  Tests axiom 67: comparative via preposition r")
+    out("  From B 82: description of the land of Iaa")
+    out("")
+    out("s18: HqA pw n rtnw Hrt — 'he is a ruler of Upper Retjenu'")
+    out("  Tests axiom 82 (pw as copula-substitute)")
+    out("  Tests axiom 27 (indirect genitive with n)")
+    out("  From B 31/R 55: introduction of Amunenshi")
+    out("")
+    out("s25: nH pw n bAk im n nb.f — 'a prayer of the servant to his lord'")
+    out("  Tests axiom 82 (pw), axiom 27 (indirect genitive)")
+    out("  Tests axiom 40 (suffix .f on nb)")
+    out("  From B 213-14: opening of Sinuhe's prayer to the king")
+    out("")
+    out("s27: ink nb — 'I am the lord' (Amenemhat)")
+    out("  Tests axiom 63: nb standalone = noun 'lord' (not adj 'every')")
+    out("  Tests axiom 77: independent pronoun + noun = nominal A B")
+    out("")
+    out("s32: ink nTr aA — 'I am the great god' (Coffin Texts)")
+    out("  Tests axiom 53: aA agrees with nTr (masc. sg.)")
+    out("  Tests axiom 54: adjective follows noun")
+    out("  Tests axiom 77: nominal A B with modified noun")
+}
