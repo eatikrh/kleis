@@ -444,7 +444,7 @@ This is structurally opposite to what a large language model does with a languag
 
 The LLM can produce plausible translations of texts it has never seen, but it cannot *explain* why a reading is correct or prove that no other reading is consistent. The type system can --- provably correct relative to the axiom set. The grammar axioms are not learned from data; they are derived from the structure of the language itself. Every type inference step corresponds to a grammatical rule, and the chain of inference is the *proof* that the translation is correct.
 
-Moreover, the template system already constrains what can be expressed. The Equation Editor for hieroglyphs uses Gardiner sign templates that enforce valid sign combinations at the visual level --- ungrammatical quadrat compositions are not constructible. This is the linguistic analogue of a strongly typed programming language: the type system prevents ill-formed expressions before they can be evaluated.")
+Moreover, the template system is designed to constrain what can be expressed. As the Equation Editor's template library for hieroglyphs matures, Gardiner sign templates will enforce valid sign combinations at the visual level --- making ungrammatical quadrat compositions unconstructible. This is the linguistic analogue of a strongly typed programming language: the type system prevents ill-formed expressions before they can be evaluated.")
 
 // =============================================================================
 // Section 7: Solver Trace — End-to-End Disambiguation
