@@ -93,9 +93,7 @@ fn load_imports_recursive(
 }
 
 /// Load stdlib files into a StructureRegistry for Z3 verification.
-fn load_stdlib_registry(
-    extra_imports: &[String],
-) -> kleis::structure_registry::StructureRegistry {
+fn load_stdlib_registry(extra_imports: &[String]) -> kleis::structure_registry::StructureRegistry {
     use kleis::evaluator::Evaluator;
     use kleis::kleis_parser::parse_kleis_program_with_file;
     use kleis::structure_registry::StructureRegistry;
@@ -187,6 +185,8 @@ struct TemplateInfo {
     category: Option<String>,
     glyph: Option<String>,
     svg: Option<String>,
+    #[serde(skip_serializing_if = "std::collections::HashMap::is_empty")]
+    metadata: std::collections::HashMap<String, String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -840,6 +840,7 @@ async fn templates_handler() -> impl IntoResponse {
                     category: t.category.clone(),
                     glyph: t.glyph.clone(),
                     svg: t.svg.clone(),
+                    metadata: t.metadata.clone(),
                 })
                 .collect(),
             Err(_) => Vec::new(),
@@ -866,7 +867,10 @@ struct PaletteTab {
 #[serde(tag = "type")]
 enum PaletteTabItem {
     #[serde(rename = "group")]
-    Group { name: String, items: Vec<PaletteEntry> },
+    Group {
+        name: String,
+        items: Vec<PaletteEntry>,
+    },
     #[serde(rename = "separator")]
     Separator,
     #[serde(rename = "template")]
@@ -938,35 +942,34 @@ fn build_ast_from_pattern(pattern: &str) -> serde_json::Value {
 async fn palette_handler() -> impl IntoResponse {
     let dir = std::path::Path::new("std_template_lib");
     if !dir.exists() {
-        return (
-            StatusCode::OK,
-            Json(PaletteResponse { tabs: vec![] }),
-        );
+        return (StatusCode::OK, Json(PaletteResponse { tabs: vec![] }));
     }
 
     let kleist_file = match kleis::kleist_parser::load_kleist_directory(dir) {
         Ok(f) => f,
         Err(_) => {
-            return (
-                StatusCode::OK,
-                Json(PaletteResponse { tabs: vec![] }),
-            );
+            return (StatusCode::OK, Json(PaletteResponse { tabs: vec![] }));
         }
     };
 
     // Build lookup maps from templates and tools
     let template_map: std::collections::HashMap<String, &kleis::kleist_parser::TemplateDefinition> =
-        kleist_file.templates.iter().map(|t| (t.name.clone(), t)).collect();
+        kleist_file
+            .templates
+            .iter()
+            .map(|t| (t.name.clone(), t))
+            .collect();
     let tool_map: std::collections::HashMap<String, &kleis::kleist_parser::ToolDefinition> =
-        kleist_file.tools.iter().map(|t| (t.name.clone(), t)).collect();
+        kleist_file
+            .tools
+            .iter()
+            .map(|t| (t.name.clone(), t))
+            .collect();
 
     let palette = match kleist_file.palette {
         Some(p) => p,
         None => {
-            return (
-                StatusCode::OK,
-                Json(PaletteResponse { tabs: vec![] }),
-            );
+            return (StatusCode::OK, Json(PaletteResponse { tabs: vec![] }));
         }
     };
 
@@ -980,7 +983,8 @@ async fn palette_handler() -> impl IntoResponse {
                 .map(|item| match item {
                     kleis::kleist_parser::TabItem::Separator => PaletteTabItem::Separator,
                     kleis::kleist_parser::TabItem::Template(tref) => {
-                        let entry = make_palette_entry(&tref.name, tref.shortcut.as_deref(), &template_map);
+                        let entry =
+                            make_palette_entry(&tref.name, tref.shortcut.as_deref(), &template_map);
                         PaletteTabItem::Template(entry)
                     }
                     kleis::kleist_parser::TabItem::Tool(tref) => {
@@ -998,7 +1002,11 @@ async fn palette_handler() -> impl IntoResponse {
                             .iter()
                             .filter_map(|gi| match gi {
                                 kleis::kleist_parser::GroupItem::Template(tref) => {
-                                    Some(make_palette_entry(&tref.name, tref.shortcut.as_deref(), &template_map))
+                                    Some(make_palette_entry(
+                                        &tref.name,
+                                        tref.shortcut.as_deref(),
+                                        &template_map,
+                                    ))
                                 }
                                 kleis::kleist_parser::GroupItem::Tool(_) => None,
                             })
@@ -1036,9 +1044,9 @@ fn make_palette_entry(
         name: name.to_string(),
         glyph: template.and_then(|t| t.glyph.clone()),
         svg: template.and_then(|t| t.svg.clone()),
-        shortcut: shortcut.map(|s| s.to_string()).or_else(|| {
-            template.and_then(|t| t.shortcut.clone())
-        }),
+        shortcut: shortcut
+            .map(|s| s.to_string())
+            .or_else(|| template.and_then(|t| t.shortcut.clone())),
         ast,
         metadata: template.map(|t| t.metadata.clone()).unwrap_or_default(),
     }

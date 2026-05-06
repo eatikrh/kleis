@@ -7,2107 +7,2875 @@
 //
 // Each hieroglyph is a zero-argument template that renders as an inline SVG
 // image via Typst. Gardiner codes are used as template names.
+//
+// Metadata fields:
+//   sign_shape: "Tall" | "Flat" | "Small" — quadrat slot eligibility (Axiom 6)
+//   sign_type:  "Uni" | "Bi" | "Tri" | "Det" — linguistic classification
+//   sound:      phonetic value (omitted for determinatives)
 
 // ============ A: MAN ============
 
 @template A1 {
     pattern: "A1()"
-    typst: "#box(image(\"static/glyphs/egyptian/A1.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A1.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A1"
     category: "egyptian_A_man"
     glyph: "A1"
+    mode: "content"
     svg: "static/glyphs/egyptian/A1.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template A2 {
     pattern: "A2()"
-    typst: "#box(image(\"static/glyphs/egyptian/A2.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A2.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A2"
     category: "egyptian_A_man"
     glyph: "A2"
+    mode: "content"
     svg: "static/glyphs/egyptian/A2.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template A3 {
     pattern: "A3()"
-    typst: "#box(image(\"static/glyphs/egyptian/A3.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A3.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A3"
     category: "egyptian_A_man"
     glyph: "A3"
+    mode: "content"
     svg: "static/glyphs/egyptian/A3.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template A4 {
     pattern: "A4()"
-    typst: "#box(image(\"static/glyphs/egyptian/A4.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A4.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A4"
     category: "egyptian_A_man"
     glyph: "A4"
+    mode: "content"
     svg: "static/glyphs/egyptian/A4.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template A5 {
     pattern: "A5()"
-    typst: "#box(image(\"static/glyphs/egyptian/A5.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A5.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A5"
     category: "egyptian_A_man"
     glyph: "A5"
+    mode: "content"
     svg: "static/glyphs/egyptian/A5.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template A6 {
     pattern: "A6()"
-    typst: "#box(image(\"static/glyphs/egyptian/A6.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A6.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A6"
     category: "egyptian_A_man"
     glyph: "A6"
+    mode: "content"
     svg: "static/glyphs/egyptian/A6.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template A7 {
     pattern: "A7()"
-    typst: "#box(image(\"static/glyphs/egyptian/A7.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A7.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A7"
     category: "egyptian_A_man"
     glyph: "A7"
+    mode: "content"
     svg: "static/glyphs/egyptian/A7.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template A8 {
     pattern: "A8()"
-    typst: "#box(image(\"static/glyphs/egyptian/A8.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A8.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A8"
     category: "egyptian_A_man"
     glyph: "A8"
+    mode: "content"
     svg: "static/glyphs/egyptian/A8.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template A9 {
     pattern: "A9()"
-    typst: "#box(image(\"static/glyphs/egyptian/A9.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A9.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A9"
     category: "egyptian_A_man"
     glyph: "A9"
+    mode: "content"
     svg: "static/glyphs/egyptian/A9.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template A10 {
     pattern: "A10()"
-    typst: "#box(image(\"static/glyphs/egyptian/A10.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A10.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A10"
     category: "egyptian_A_man"
     glyph: "A10"
+    mode: "content"
     svg: "static/glyphs/egyptian/A10.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template A11 {
     pattern: "A11()"
-    typst: "#box(image(\"static/glyphs/egyptian/A11.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A11.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A11"
     category: "egyptian_A_man"
     glyph: "A11"
+    mode: "content"
     svg: "static/glyphs/egyptian/A11.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template A12 {
     pattern: "A12()"
-    typst: "#box(image(\"static/glyphs/egyptian/A12.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A12.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A12"
     category: "egyptian_A_man"
     glyph: "A12"
+    mode: "content"
     svg: "static/glyphs/egyptian/A12.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template A13 {
     pattern: "A13()"
-    typst: "#box(image(\"static/glyphs/egyptian/A13.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A13.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A13"
     category: "egyptian_A_man"
     glyph: "A13"
+    mode: "content"
     svg: "static/glyphs/egyptian/A13.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template A14 {
     pattern: "A14()"
-    typst: "#box(image(\"static/glyphs/egyptian/A14.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A14.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A14"
     category: "egyptian_A_man"
     glyph: "A14"
+    mode: "content"
     svg: "static/glyphs/egyptian/A14.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template A15 {
     pattern: "A15()"
-    typst: "#box(image(\"static/glyphs/egyptian/A15.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A15.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A15"
     category: "egyptian_A_man"
     glyph: "A15"
+    mode: "content"
     svg: "static/glyphs/egyptian/A15.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template A17 {
     pattern: "A17()"
-    typst: "#box(image(\"static/glyphs/egyptian/A17.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A17.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A17"
     category: "egyptian_A_man"
     glyph: "A17"
+    mode: "content"
     svg: "static/glyphs/egyptian/A17.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template A21 {
     pattern: "A21()"
-    typst: "#box(image(\"static/glyphs/egyptian/A21.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A21.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A21"
     category: "egyptian_A_man"
     glyph: "A21"
+    mode: "content"
     svg: "static/glyphs/egyptian/A21.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template A24 {
     pattern: "A24()"
-    typst: "#box(image(\"static/glyphs/egyptian/A24.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A24.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A24"
     category: "egyptian_A_man"
     glyph: "A24"
+    mode: "content"
     svg: "static/glyphs/egyptian/A24.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template A25 {
     pattern: "A25()"
-    typst: "#box(image(\"static/glyphs/egyptian/A25.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A25.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A25"
     category: "egyptian_A_man"
     glyph: "A25"
+    mode: "content"
     svg: "static/glyphs/egyptian/A25.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template A26 {
     pattern: "A26()"
-    typst: "#box(image(\"static/glyphs/egyptian/A26.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A26.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A26"
     category: "egyptian_A_man"
     glyph: "A26"
+    mode: "content"
     svg: "static/glyphs/egyptian/A26.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template A28 {
     pattern: "A28()"
-    typst: "#box(image(\"static/glyphs/egyptian/A28.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A28.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A28"
     category: "egyptian_A_man"
     glyph: "A28"
+    mode: "content"
     svg: "static/glyphs/egyptian/A28.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template A40 {
     pattern: "A40()"
-    typst: "#box(image(\"static/glyphs/egyptian/A40.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A40.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A40"
     category: "egyptian_A_man"
     glyph: "A40"
+    mode: "content"
     svg: "static/glyphs/egyptian/A40.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template A50 {
     pattern: "A50()"
-    typst: "#box(image(\"static/glyphs/egyptian/A50.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/A50.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "A50"
     category: "egyptian_A_man"
     glyph: "A50"
+    mode: "content"
     svg: "static/glyphs/egyptian/A50.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 // ============ Aa: UNCLASSIFIED ============
 
 @template Aa1 {
     pattern: "Aa1()"
-    typst: "#box(image(\"static/glyphs/egyptian/Aa1.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Aa1.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Aa1"
     category: "egyptian_Aa_unclassified"
     glyph: "Aa1"
+    mode: "content"
     svg: "static/glyphs/egyptian/Aa1.svg"
+    sign_shape: "Small"
+    sign_type: "Uni"
+    sound: "x"
 }
 
 @template Aa2 {
     pattern: "Aa2()"
-    typst: "#box(image(\"static/glyphs/egyptian/Aa2.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Aa2.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Aa2"
     category: "egyptian_Aa_unclassified"
     glyph: "Aa2"
+    mode: "content"
     svg: "static/glyphs/egyptian/Aa2.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template Aa5 {
     pattern: "Aa5()"
-    typst: "#box(image(\"static/glyphs/egyptian/Aa5.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Aa5.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Aa5"
     category: "egyptian_Aa_unclassified"
     glyph: "Aa5"
+    mode: "content"
     svg: "static/glyphs/egyptian/Aa5.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template Aa11 {
     pattern: "Aa11()"
-    typst: "#box(image(\"static/glyphs/egyptian/Aa11.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Aa11.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Aa11"
     category: "egyptian_Aa_unclassified"
     glyph: "Aa11"
+    mode: "content"
     svg: "static/glyphs/egyptian/Aa11.svg"
+    sign_shape: "Flat"
+    sign_type: "Bi"
+    sound: "mAa"
 }
 
 @template Aa13 {
     pattern: "Aa13()"
-    typst: "#box(image(\"static/glyphs/egyptian/Aa13.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Aa13.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Aa13"
     category: "egyptian_Aa_unclassified"
     glyph: "Aa13"
+    mode: "content"
     svg: "static/glyphs/egyptian/Aa13.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template Aa15 {
     pattern: "Aa15()"
-    typst: "#box(image(\"static/glyphs/egyptian/Aa15.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Aa15.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Aa15"
     category: "egyptian_Aa_unclassified"
     glyph: "Aa15"
+    mode: "content"
     svg: "static/glyphs/egyptian/Aa15.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template Aa27 {
     pattern: "Aa27()"
-    typst: "#box(image(\"static/glyphs/egyptian/Aa27.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Aa27.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Aa27"
     category: "egyptian_Aa_unclassified"
     glyph: "Aa27"
+    mode: "content"
     svg: "static/glyphs/egyptian/Aa27.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template Aa28 {
     pattern: "Aa28()"
-    typst: "#box(image(\"static/glyphs/egyptian/Aa28.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Aa28.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Aa28"
     category: "egyptian_Aa_unclassified"
     glyph: "Aa28"
+    mode: "content"
     svg: "static/glyphs/egyptian/Aa28.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 // ============ B: WOMAN ============
 
 @template B1 {
     pattern: "B1()"
-    typst: "#box(image(\"static/glyphs/egyptian/B1.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/B1.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "B1"
     category: "egyptian_B_woman"
     glyph: "B1"
+    mode: "content"
     svg: "static/glyphs/egyptian/B1.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template B3 {
     pattern: "B3()"
-    typst: "#box(image(\"static/glyphs/egyptian/B3.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/B3.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "B3"
     category: "egyptian_B_woman"
     glyph: "B3"
+    mode: "content"
     svg: "static/glyphs/egyptian/B3.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template B4 {
     pattern: "B4()"
-    typst: "#box(image(\"static/glyphs/egyptian/B4.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/B4.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "B4"
     category: "egyptian_B_woman"
     glyph: "B4"
+    mode: "content"
     svg: "static/glyphs/egyptian/B4.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template B7 {
     pattern: "B7()"
-    typst: "#box(image(\"static/glyphs/egyptian/B7.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/B7.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "B7"
     category: "egyptian_B_woman"
     glyph: "B7"
+    mode: "content"
     svg: "static/glyphs/egyptian/B7.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 // ============ C: DEITY ============
 
 @template C1 {
     pattern: "C1()"
-    typst: "#box(image(\"static/glyphs/egyptian/C1.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/C1.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "C1"
     category: "egyptian_C_deity"
     glyph: "C1"
+    mode: "content"
     svg: "static/glyphs/egyptian/C1.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template C2 {
     pattern: "C2()"
-    typst: "#box(image(\"static/glyphs/egyptian/C2.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/C2.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "C2"
     category: "egyptian_C_deity"
     glyph: "C2"
+    mode: "content"
     svg: "static/glyphs/egyptian/C2.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template C3 {
     pattern: "C3()"
-    typst: "#box(image(\"static/glyphs/egyptian/C3.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/C3.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "C3"
     category: "egyptian_C_deity"
     glyph: "C3"
+    mode: "content"
     svg: "static/glyphs/egyptian/C3.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template C4 {
     pattern: "C4()"
-    typst: "#box(image(\"static/glyphs/egyptian/C4.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/C4.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "C4"
     category: "egyptian_C_deity"
     glyph: "C4"
+    mode: "content"
     svg: "static/glyphs/egyptian/C4.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template C5 {
     pattern: "C5()"
-    typst: "#box(image(\"static/glyphs/egyptian/C5.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/C5.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "C5"
     category: "egyptian_C_deity"
     glyph: "C5"
+    mode: "content"
     svg: "static/glyphs/egyptian/C5.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template C6 {
     pattern: "C6()"
-    typst: "#box(image(\"static/glyphs/egyptian/C6.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/C6.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "C6"
     category: "egyptian_C_deity"
     glyph: "C6"
+    mode: "content"
     svg: "static/glyphs/egyptian/C6.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template C7 {
     pattern: "C7()"
-    typst: "#box(image(\"static/glyphs/egyptian/C7.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/C7.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "C7"
     category: "egyptian_C_deity"
     glyph: "C7"
+    mode: "content"
     svg: "static/glyphs/egyptian/C7.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template C10 {
     pattern: "C10()"
-    typst: "#box(image(\"static/glyphs/egyptian/C10.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/C10.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "C10"
     category: "egyptian_C_deity"
     glyph: "C10"
+    mode: "content"
     svg: "static/glyphs/egyptian/C10.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template C11 {
     pattern: "C11()"
-    typst: "#box(image(\"static/glyphs/egyptian/C11.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/C11.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "C11"
     category: "egyptian_C_deity"
     glyph: "C11"
+    mode: "content"
     svg: "static/glyphs/egyptian/C11.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template C12 {
     pattern: "C12()"
-    typst: "#box(image(\"static/glyphs/egyptian/C12.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/C12.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "C12"
     category: "egyptian_C_deity"
     glyph: "C12"
+    mode: "content"
     svg: "static/glyphs/egyptian/C12.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 // ============ D: BODY ============
 
 @template D1 {
     pattern: "D1()"
-    typst: "#box(image(\"static/glyphs/egyptian/D1.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/D1.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "D1"
     category: "egyptian_D_body"
     glyph: "D1"
+    mode: "content"
     svg: "static/glyphs/egyptian/D1.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template D2 {
     pattern: "D2()"
-    typst: "#box(image(\"static/glyphs/egyptian/D2.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/D2.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "D2"
     category: "egyptian_D_body"
     glyph: "D2"
+    mode: "content"
     svg: "static/glyphs/egyptian/D2.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template D4 {
     pattern: "D4()"
-    typst: "#box(image(\"static/glyphs/egyptian/D4.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/D4.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "D4"
     category: "egyptian_D_body"
     glyph: "D4"
+    mode: "content"
     svg: "static/glyphs/egyptian/D4.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "ir"
 }
 
 @template D6 {
     pattern: "D6()"
-    typst: "#box(image(\"static/glyphs/egyptian/D6.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/D6.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "D6"
     category: "egyptian_D_body"
     glyph: "D6"
+    mode: "content"
     svg: "static/glyphs/egyptian/D6.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template D10 {
     pattern: "D10()"
-    typst: "#box(image(\"static/glyphs/egyptian/D10.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/D10.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "D10"
     category: "egyptian_D_body"
     glyph: "D10"
+    mode: "content"
     svg: "static/glyphs/egyptian/D10.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "wDAt"
 }
 
 @template D19 {
     pattern: "D19()"
-    typst: "#box(image(\"static/glyphs/egyptian/D19.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/D19.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "D19"
     category: "egyptian_D_body"
     glyph: "D19"
+    mode: "content"
     svg: "static/glyphs/egyptian/D19.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template D21 {
     pattern: "D21()"
-    typst: "#box(image(\"static/glyphs/egyptian/D21.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/D21.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "D21"
     category: "egyptian_D_body"
     glyph: "D21"
+    mode: "content"
     svg: "static/glyphs/egyptian/D21.svg"
+    sign_shape: "Small"
+    sign_type: "Uni"
+    sound: "r"
 }
 
 @template D28 {
     pattern: "D28()"
-    typst: "#box(image(\"static/glyphs/egyptian/D28.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/D28.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "D28"
     category: "egyptian_D_body"
     glyph: "D28"
+    mode: "content"
     svg: "static/glyphs/egyptian/D28.svg"
+    sign_shape: "Tall"
+    sign_type: "Bi"
+    sound: "kA"
 }
 
 @template D35 {
     pattern: "D35()"
-    typst: "#box(image(\"static/glyphs/egyptian/D35.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/D35.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "D35"
     category: "egyptian_D_body"
     glyph: "D35"
+    mode: "content"
     svg: "static/glyphs/egyptian/D35.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template D36 {
     pattern: "D36()"
-    typst: "#box(image(\"static/glyphs/egyptian/D36.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/D36.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "D36"
     category: "egyptian_D_body"
     glyph: "D36"
+    mode: "content"
     svg: "static/glyphs/egyptian/D36.svg"
+    sign_shape: "Flat"
+    sign_type: "Uni"
+    sound: "a"
 }
 
 @template D37 {
     pattern: "D37()"
-    typst: "#box(image(\"static/glyphs/egyptian/D37.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/D37.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "D37"
     category: "egyptian_D_body"
     glyph: "D37"
+    mode: "content"
     svg: "static/glyphs/egyptian/D37.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template D40 {
     pattern: "D40()"
-    typst: "#box(image(\"static/glyphs/egyptian/D40.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/D40.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "D40"
     category: "egyptian_D_body"
     glyph: "D40"
+    mode: "content"
     svg: "static/glyphs/egyptian/D40.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template D46 {
     pattern: "D46()"
-    typst: "#box(image(\"static/glyphs/egyptian/D46.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/D46.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "D46"
     category: "egyptian_D_body"
     glyph: "D46"
+    mode: "content"
     svg: "static/glyphs/egyptian/D46.svg"
+    sign_shape: "Small"
+    sign_type: "Uni"
+    sound: "d"
 }
 
 @template D50 {
     pattern: "D50()"
-    typst: "#box(image(\"static/glyphs/egyptian/D50.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/D50.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "D50"
     category: "egyptian_D_body"
     glyph: "D50"
+    mode: "content"
     svg: "static/glyphs/egyptian/D50.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template D54 {
     pattern: "D54()"
-    typst: "#box(image(\"static/glyphs/egyptian/D54.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/D54.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "D54"
     category: "egyptian_D_body"
     glyph: "D54"
+    mode: "content"
     svg: "static/glyphs/egyptian/D54.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template D58 {
     pattern: "D58()"
-    typst: "#box(image(\"static/glyphs/egyptian/D58.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/D58.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "D58"
     category: "egyptian_D_body"
     glyph: "D58"
+    mode: "content"
     svg: "static/glyphs/egyptian/D58.svg"
+    sign_shape: "Tall"
+    sign_type: "Uni"
+    sound: "b"
 }
 
 // ============ E: MAMMAL ============
 
 @template E1 {
     pattern: "E1()"
-    typst: "#box(image(\"static/glyphs/egyptian/E1.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/E1.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "E1"
     category: "egyptian_E_mammal"
     glyph: "E1"
+    mode: "content"
     svg: "static/glyphs/egyptian/E1.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template E9 {
     pattern: "E9()"
-    typst: "#box(image(\"static/glyphs/egyptian/E9.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/E9.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "E9"
     category: "egyptian_E_mammal"
     glyph: "E9"
+    mode: "content"
     svg: "static/glyphs/egyptian/E9.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template E10 {
     pattern: "E10()"
-    typst: "#box(image(\"static/glyphs/egyptian/E10.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/E10.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "E10"
     category: "egyptian_E_mammal"
     glyph: "E10"
+    mode: "content"
     svg: "static/glyphs/egyptian/E10.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template E17 {
     pattern: "E17()"
-    typst: "#box(image(\"static/glyphs/egyptian/E17.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/E17.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "E17"
     category: "egyptian_E_mammal"
     glyph: "E17"
+    mode: "content"
     svg: "static/glyphs/egyptian/E17.svg"
+    sign_shape: "Flat"
+    sign_type: "Bi"
+    sound: "sAb"
 }
 
 @template E23 {
     pattern: "E23()"
-    typst: "#box(image(\"static/glyphs/egyptian/E23.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/E23.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "E23"
     category: "egyptian_E_mammal"
     glyph: "E23"
+    mode: "content"
     svg: "static/glyphs/egyptian/E23.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template E34 {
     pattern: "E34()"
-    typst: "#box(image(\"static/glyphs/egyptian/E34.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/E34.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "E34"
     category: "egyptian_E_mammal"
     glyph: "E34"
+    mode: "content"
     svg: "static/glyphs/egyptian/E34.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "wn"
 }
 
 // ============ F: BODY_PART ============
 
 @template F1 {
     pattern: "F1()"
-    typst: "#box(image(\"static/glyphs/egyptian/F1.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/F1.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "F1"
     category: "egyptian_F_body_part"
     glyph: "F1"
+    mode: "content"
     svg: "static/glyphs/egyptian/F1.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template F4 {
     pattern: "F4()"
-    typst: "#box(image(\"static/glyphs/egyptian/F4.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/F4.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "F4"
     category: "egyptian_F_body_part"
     glyph: "F4"
+    mode: "content"
     svg: "static/glyphs/egyptian/F4.svg"
+    sign_shape: "Flat"
+    sign_type: "Bi"
+    sound: "HAt"
 }
 
 @template F12 {
     pattern: "F12()"
-    typst: "#box(image(\"static/glyphs/egyptian/F12.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/F12.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "F12"
     category: "egyptian_F_body_part"
     glyph: "F12"
+    mode: "content"
     svg: "static/glyphs/egyptian/F12.svg"
+    sign_shape: "Flat"
+    sign_type: "Bi"
+    sound: "wsr"
 }
 
 @template F13 {
     pattern: "F13()"
-    typst: "#box(image(\"static/glyphs/egyptian/F13.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/F13.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "F13"
     category: "egyptian_F_body_part"
     glyph: "F13"
+    mode: "content"
     svg: "static/glyphs/egyptian/F13.svg"
+    sign_shape: "Flat"
+    sign_type: "Bi"
+    sound: "wp"
 }
 
 @template F20 {
     pattern: "F20()"
-    typst: "#box(image(\"static/glyphs/egyptian/F20.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/F20.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "F20"
     category: "egyptian_F_body_part"
     glyph: "F20"
+    mode: "content"
     svg: "static/glyphs/egyptian/F20.svg"
+    sign_shape: "Flat"
+    sign_type: "Bi"
+    sound: "ns"
 }
 
 @template F21 {
     pattern: "F21()"
-    typst: "#box(image(\"static/glyphs/egyptian/F21.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/F21.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "F21"
     category: "egyptian_F_body_part"
     glyph: "F21"
+    mode: "content"
     svg: "static/glyphs/egyptian/F21.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template F22 {
     pattern: "F22()"
-    typst: "#box(image(\"static/glyphs/egyptian/F22.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/F22.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "F22"
     category: "egyptian_F_body_part"
     glyph: "F22"
+    mode: "content"
     svg: "static/glyphs/egyptian/F22.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template F26 {
     pattern: "F26()"
-    typst: "#box(image(\"static/glyphs/egyptian/F26.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/F26.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "F26"
     category: "egyptian_F_body_part"
     glyph: "F26"
+    mode: "content"
     svg: "static/glyphs/egyptian/F26.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template F31 {
     pattern: "F31()"
-    typst: "#box(image(\"static/glyphs/egyptian/F31.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/F31.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "F31"
     category: "egyptian_F_body_part"
     glyph: "F31"
+    mode: "content"
     svg: "static/glyphs/egyptian/F31.svg"
+    sign_shape: "Flat"
+    sign_type: "Bi"
+    sound: "ms"
 }
 
 @template F32 {
     pattern: "F32()"
-    typst: "#box(image(\"static/glyphs/egyptian/F32.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/F32.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "F32"
     category: "egyptian_F_body_part"
     glyph: "F32"
+    mode: "content"
     svg: "static/glyphs/egyptian/F32.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template F34 {
     pattern: "F34()"
-    typst: "#box(image(\"static/glyphs/egyptian/F34.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/F34.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "F34"
     category: "egyptian_F_body_part"
     glyph: "F34"
+    mode: "content"
     svg: "static/glyphs/egyptian/F34.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "ib"
 }
 
 @template F35 {
     pattern: "F35()"
-    typst: "#box(image(\"static/glyphs/egyptian/F35.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/F35.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "F35"
     category: "egyptian_F_body_part"
     glyph: "F35"
+    mode: "content"
     svg: "static/glyphs/egyptian/F35.svg"
+    sign_shape: "Tall"
+    sign_type: "Tri"
+    sound: "nfr"
 }
 
 // ============ G: BIRD ============
 
 @template G1 {
     pattern: "G1()"
-    typst: "#box(image(\"static/glyphs/egyptian/G1.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/G1.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "G1"
     category: "egyptian_G_bird"
     glyph: "G1"
+    mode: "content"
     svg: "static/glyphs/egyptian/G1.svg"
+    sign_shape: "Tall"
+    sign_type: "Uni"
+    sound: "A"
 }
 
 @template G4 {
     pattern: "G4()"
-    typst: "#box(image(\"static/glyphs/egyptian/G4.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/G4.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "G4"
     category: "egyptian_G_bird"
     glyph: "G4"
+    mode: "content"
     svg: "static/glyphs/egyptian/G4.svg"
+    sign_shape: "Flat"
+    sign_type: "Bi"
+    sound: "tyw"
 }
 
 @template G5 {
     pattern: "G5()"
-    typst: "#box(image(\"static/glyphs/egyptian/G5.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/G5.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "G5"
     category: "egyptian_G_bird"
     glyph: "G5"
+    mode: "content"
     svg: "static/glyphs/egyptian/G5.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template G7 {
     pattern: "G7()"
-    typst: "#box(image(\"static/glyphs/egyptian/G7.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/G7.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "G7"
     category: "egyptian_G_bird"
     glyph: "G7"
+    mode: "content"
     svg: "static/glyphs/egyptian/G7.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template G14 {
     pattern: "G14()"
-    typst: "#box(image(\"static/glyphs/egyptian/G14.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/G14.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "G14"
     category: "egyptian_G_bird"
     glyph: "G14"
+    mode: "content"
     svg: "static/glyphs/egyptian/G14.svg"
+    sign_shape: "Flat"
+    sign_type: "Bi"
+    sound: "mwt"
 }
 
 @template G17 {
     pattern: "G17()"
-    typst: "#box(image(\"static/glyphs/egyptian/G17.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/G17.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "G17"
     category: "egyptian_G_bird"
     glyph: "G17"
+    mode: "content"
     svg: "static/glyphs/egyptian/G17.svg"
+    sign_shape: "Small"
+    sign_type: "Uni"
+    sound: "m"
 }
 
 @template G21 {
     pattern: "G21()"
-    typst: "#box(image(\"static/glyphs/egyptian/G21.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/G21.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "G21"
     category: "egyptian_G_bird"
     glyph: "G21"
+    mode: "content"
     svg: "static/glyphs/egyptian/G21.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "nH"
 }
 
 @template G25 {
     pattern: "G25()"
-    typst: "#box(image(\"static/glyphs/egyptian/G25.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/G25.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "G25"
     category: "egyptian_G_bird"
     glyph: "G25"
+    mode: "content"
     svg: "static/glyphs/egyptian/G25.svg"
+    sign_shape: "Tall"
+    sign_type: "Bi"
+    sound: "Ax"
 }
 
 @template G26 {
     pattern: "G26()"
-    typst: "#box(image(\"static/glyphs/egyptian/G26.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/G26.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "G26"
     category: "egyptian_G_bird"
     glyph: "G26"
+    mode: "content"
     svg: "static/glyphs/egyptian/G26.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template G29 {
     pattern: "G29()"
-    typst: "#box(image(\"static/glyphs/egyptian/G29.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/G29.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "G29"
     category: "egyptian_G_bird"
     glyph: "G29"
+    mode: "content"
     svg: "static/glyphs/egyptian/G29.svg"
+    sign_shape: "Tall"
+    sign_type: "Bi"
+    sound: "bA"
 }
 
 @template G36 {
     pattern: "G36()"
-    typst: "#box(image(\"static/glyphs/egyptian/G36.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/G36.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "G36"
     category: "egyptian_G_bird"
     glyph: "G36"
+    mode: "content"
     svg: "static/glyphs/egyptian/G36.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "wr"
 }
 
 @template G37 {
     pattern: "G37()"
-    typst: "#box(image(\"static/glyphs/egyptian/G37.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/G37.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "G37"
     category: "egyptian_G_bird"
     glyph: "G37"
+    mode: "content"
     svg: "static/glyphs/egyptian/G37.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template G38 {
     pattern: "G38()"
-    typst: "#box(image(\"static/glyphs/egyptian/G38.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/G38.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "G38"
     category: "egyptian_G_bird"
     glyph: "G38"
+    mode: "content"
     svg: "static/glyphs/egyptian/G38.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template G39 {
     pattern: "G39()"
-    typst: "#box(image(\"static/glyphs/egyptian/G39.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/G39.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "G39"
     category: "egyptian_G_bird"
     glyph: "G39"
+    mode: "content"
     svg: "static/glyphs/egyptian/G39.svg"
+    sign_shape: "Flat"
+    sign_type: "Bi"
+    sound: "sA"
 }
 
 @template G40 {
     pattern: "G40()"
-    typst: "#box(image(\"static/glyphs/egyptian/G40.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/G40.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "G40"
     category: "egyptian_G_bird"
     glyph: "G40"
+    mode: "content"
     svg: "static/glyphs/egyptian/G40.svg"
+    sign_shape: "Flat"
+    sign_type: "Bi"
+    sound: "pA"
 }
 
 @template G43 {
     pattern: "G43()"
-    typst: "#box(image(\"static/glyphs/egyptian/G43.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/G43.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "G43"
     category: "egyptian_G_bird"
     glyph: "G43"
+    mode: "content"
     svg: "static/glyphs/egyptian/G43.svg"
+    sign_shape: "Small"
+    sign_type: "Uni"
+    sound: "w"
 }
 
 @template G47 {
     pattern: "G47()"
-    typst: "#box(image(\"static/glyphs/egyptian/G47.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/G47.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "G47"
     category: "egyptian_G_bird"
     glyph: "G47"
+    mode: "content"
     svg: "static/glyphs/egyptian/G47.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 // ============ H: BIRD_PART ============
 
 @template H6 {
     pattern: "H6()"
-    typst: "#box(image(\"static/glyphs/egyptian/H6.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/H6.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "H6"
     category: "egyptian_H_bird_part"
     glyph: "H6"
+    mode: "content"
     svg: "static/glyphs/egyptian/H6.svg"
+    sign_shape: "Tall"
+    sign_type: "Bi"
+    sound: "Sw"
 }
 
 @template H8 {
     pattern: "H8()"
-    typst: "#box(image(\"static/glyphs/egyptian/H8.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/H8.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "H8"
     category: "egyptian_H_bird_part"
     glyph: "H8"
+    mode: "content"
     svg: "static/glyphs/egyptian/H8.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 // ============ I: REPTILE ============
 
 @template I5 {
     pattern: "I5()"
-    typst: "#box(image(\"static/glyphs/egyptian/I5.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/I5.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "I5"
     category: "egyptian_I_reptile"
     glyph: "I5"
+    mode: "content"
     svg: "static/glyphs/egyptian/I5.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template I6 {
     pattern: "I6()"
-    typst: "#box(image(\"static/glyphs/egyptian/I6.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/I6.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "I6"
     category: "egyptian_I_reptile"
     glyph: "I6"
+    mode: "content"
     svg: "static/glyphs/egyptian/I6.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template I9 {
     pattern: "I9()"
-    typst: "#box(image(\"static/glyphs/egyptian/I9.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/I9.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "I9"
     category: "egyptian_I_reptile"
     glyph: "I9"
+    mode: "content"
     svg: "static/glyphs/egyptian/I9.svg"
+    sign_shape: "Flat"
+    sign_type: "Uni"
+    sound: "f"
 }
 
 @template I10 {
     pattern: "I10()"
-    typst: "#box(image(\"static/glyphs/egyptian/I10.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/I10.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "I10"
     category: "egyptian_I_reptile"
     glyph: "I10"
+    mode: "content"
     svg: "static/glyphs/egyptian/I10.svg"
+    sign_shape: "Flat"
+    sign_type: "Uni"
+    sound: "D"
 }
 
 // ============ K: FISH ============
 
 @template K1 {
     pattern: "K1()"
-    typst: "#box(image(\"static/glyphs/egyptian/K1.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/K1.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "K1"
     category: "egyptian_K_fish"
     glyph: "K1"
+    mode: "content"
     svg: "static/glyphs/egyptian/K1.svg"
+    sign_shape: "Flat"
+    sign_type: "Bi"
+    sound: "in"
 }
 
 @template K3 {
     pattern: "K3()"
-    typst: "#box(image(\"static/glyphs/egyptian/K3.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/K3.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "K3"
     category: "egyptian_K_fish"
     glyph: "K3"
+    mode: "content"
     svg: "static/glyphs/egyptian/K3.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 // ============ L: INSECT ============
 
 @template L1 {
     pattern: "L1()"
-    typst: "#box(image(\"static/glyphs/egyptian/L1.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/L1.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "L1"
     category: "egyptian_L_insect"
     glyph: "L1"
+    mode: "content"
     svg: "static/glyphs/egyptian/L1.svg"
+    sign_shape: "Small"
+    sign_type: "Tri"
+    sound: "xpr"
 }
 
 @template L2 {
     pattern: "L2()"
-    typst: "#box(image(\"static/glyphs/egyptian/L2.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/L2.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "L2"
     category: "egyptian_L_insect"
     glyph: "L2"
+    mode: "content"
     svg: "static/glyphs/egyptian/L2.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "bit"
 }
 
 // ============ M: PLANT ============
 
 @template M1 {
     pattern: "M1()"
-    typst: "#box(image(\"static/glyphs/egyptian/M1.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/M1.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "M1"
     category: "egyptian_M_plant"
     glyph: "M1"
+    mode: "content"
     svg: "static/glyphs/egyptian/M1.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template M2 {
     pattern: "M2()"
-    typst: "#box(image(\"static/glyphs/egyptian/M2.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/M2.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "M2"
     category: "egyptian_M_plant"
     glyph: "M2"
+    mode: "content"
     svg: "static/glyphs/egyptian/M2.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template M3 {
     pattern: "M3()"
-    typst: "#box(image(\"static/glyphs/egyptian/M3.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/M3.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "M3"
     category: "egyptian_M_plant"
     glyph: "M3"
+    mode: "content"
     svg: "static/glyphs/egyptian/M3.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template M4 {
     pattern: "M4()"
-    typst: "#box(image(\"static/glyphs/egyptian/M4.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/M4.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "M4"
     category: "egyptian_M_plant"
     glyph: "M4"
+    mode: "content"
     svg: "static/glyphs/egyptian/M4.svg"
+    sign_shape: "Tall"
+    sign_type: "Bi"
+    sound: "rnp"
 }
 
 @template M8 {
     pattern: "M8()"
-    typst: "#box(image(\"static/glyphs/egyptian/M8.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/M8.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "M8"
     category: "egyptian_M_plant"
     glyph: "M8"
+    mode: "content"
     svg: "static/glyphs/egyptian/M8.svg"
+    sign_shape: "Flat"
+    sign_type: "Bi"
+    sound: "SA"
 }
 
 @template M12 {
     pattern: "M12()"
-    typst: "#box(image(\"static/glyphs/egyptian/M12.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/M12.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "M12"
     category: "egyptian_M_plant"
     glyph: "M12"
+    mode: "content"
     svg: "static/glyphs/egyptian/M12.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template M16 {
     pattern: "M16()"
-    typst: "#box(image(\"static/glyphs/egyptian/M16.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/M16.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "M16"
     category: "egyptian_M_plant"
     glyph: "M16"
+    mode: "content"
     svg: "static/glyphs/egyptian/M16.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template M17 {
     pattern: "M17()"
-    typst: "#box(image(\"static/glyphs/egyptian/M17.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/M17.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "M17"
     category: "egyptian_M_plant"
     glyph: "M17"
+    mode: "content"
     svg: "static/glyphs/egyptian/M17.svg"
+    sign_shape: "Tall"
+    sign_type: "Uni"
+    sound: "i"
 }
 
 @template M18 {
     pattern: "M18()"
-    typst: "#box(image(\"static/glyphs/egyptian/M18.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/M18.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "M18"
     category: "egyptian_M_plant"
     glyph: "M18"
+    mode: "content"
     svg: "static/glyphs/egyptian/M18.svg"
+    sign_shape: "Tall"
+    sign_type: "Uni"
+    sound: "y"
 }
 
 @template M23 {
     pattern: "M23()"
-    typst: "#box(image(\"static/glyphs/egyptian/M23.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/M23.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "M23"
     category: "egyptian_M_plant"
     glyph: "M23"
+    mode: "content"
     svg: "static/glyphs/egyptian/M23.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "sw"
 }
 
 @template M40 {
     pattern: "M40()"
-    typst: "#box(image(\"static/glyphs/egyptian/M40.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/M40.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "M40"
     category: "egyptian_M_plant"
     glyph: "M40"
+    mode: "content"
     svg: "static/glyphs/egyptian/M40.svg"
+    sign_shape: "Tall"
+    sign_type: "Bi"
+    sound: "is"
 }
 
 @template M44 {
     pattern: "M44()"
-    typst: "#box(image(\"static/glyphs/egyptian/M44.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/M44.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "M44"
     category: "egyptian_M_plant"
     glyph: "M44"
+    mode: "content"
     svg: "static/glyphs/egyptian/M44.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 // ============ N: SKY_EARTH_WATER ============
 
 @template N1 {
     pattern: "N1()"
-    typst: "#box(image(\"static/glyphs/egyptian/N1.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/N1.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "N1"
     category: "egyptian_N_sky_earth_water"
     glyph: "N1"
+    mode: "content"
     svg: "static/glyphs/egyptian/N1.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template N5 {
     pattern: "N5()"
-    typst: "#box(image(\"static/glyphs/egyptian/N5.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/N5.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "N5"
     category: "egyptian_N_sky_earth_water"
     glyph: "N5"
+    mode: "content"
     svg: "static/glyphs/egyptian/N5.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template N14 {
     pattern: "N14()"
-    typst: "#box(image(\"static/glyphs/egyptian/N14.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/N14.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "N14"
     category: "egyptian_N_sky_earth_water"
     glyph: "N14"
+    mode: "content"
     svg: "static/glyphs/egyptian/N14.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "sbA"
 }
 
 @template N16 {
     pattern: "N16()"
-    typst: "#box(image(\"static/glyphs/egyptian/N16.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/N16.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "N16"
     category: "egyptian_N_sky_earth_water"
     glyph: "N16"
+    mode: "content"
     svg: "static/glyphs/egyptian/N16.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template N17 {
     pattern: "N17()"
-    typst: "#box(image(\"static/glyphs/egyptian/N17.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/N17.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "N17"
     category: "egyptian_N_sky_earth_water"
     glyph: "N17"
+    mode: "content"
     svg: "static/glyphs/egyptian/N17.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template N18 {
     pattern: "N18()"
-    typst: "#box(image(\"static/glyphs/egyptian/N18.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/N18.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "N18"
     category: "egyptian_N_sky_earth_water"
     glyph: "N18"
+    mode: "content"
     svg: "static/glyphs/egyptian/N18.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template N24 {
     pattern: "N24()"
-    typst: "#box(image(\"static/glyphs/egyptian/N24.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/N24.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "N24"
     category: "egyptian_N_sky_earth_water"
     glyph: "N24"
+    mode: "content"
     svg: "static/glyphs/egyptian/N24.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template N25 {
     pattern: "N25()"
-    typst: "#box(image(\"static/glyphs/egyptian/N25.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/N25.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "N25"
     category: "egyptian_N_sky_earth_water"
     glyph: "N25"
+    mode: "content"
     svg: "static/glyphs/egyptian/N25.svg"
+    sign_shape: "Small"
+    sign_type: "Tri"
+    sound: "xAst"
 }
 
 @template N26 {
     pattern: "N26()"
-    typst: "#box(image(\"static/glyphs/egyptian/N26.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/N26.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "N26"
     category: "egyptian_N_sky_earth_water"
     glyph: "N26"
+    mode: "content"
     svg: "static/glyphs/egyptian/N26.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template N28 {
     pattern: "N28()"
-    typst: "#box(image(\"static/glyphs/egyptian/N28.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/N28.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "N28"
     category: "egyptian_N_sky_earth_water"
     glyph: "N28"
+    mode: "content"
     svg: "static/glyphs/egyptian/N28.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "xa"
 }
 
 @template N29 {
     pattern: "N29()"
-    typst: "#box(image(\"static/glyphs/egyptian/N29.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/N29.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "N29"
     category: "egyptian_N_sky_earth_water"
     glyph: "N29"
+    mode: "content"
     svg: "static/glyphs/egyptian/N29.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "qd"
 }
 
 @template N31 {
     pattern: "N31()"
-    typst: "#box(image(\"static/glyphs/egyptian/N31.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/N31.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "N31"
     category: "egyptian_N_sky_earth_water"
     glyph: "N31"
+    mode: "content"
     svg: "static/glyphs/egyptian/N31.svg"
+    sign_shape: "Flat"
+    sign_type: "Bi"
+    sound: "wAt"
 }
 
 @template N35 {
     pattern: "N35()"
-    typst: "#box(image(\"static/glyphs/egyptian/N35.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/N35.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "N35"
     category: "egyptian_N_sky_earth_water"
     glyph: "N35"
+    mode: "content"
     svg: "static/glyphs/egyptian/N35.svg"
+    sign_shape: "Flat"
+    sign_type: "Uni"
+    sound: "n"
 }
 
 @template N36 {
     pattern: "N36()"
-    typst: "#box(image(\"static/glyphs/egyptian/N36.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/N36.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "N36"
     category: "egyptian_N_sky_earth_water"
     glyph: "N36"
+    mode: "content"
     svg: "static/glyphs/egyptian/N36.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template N37 {
     pattern: "N37()"
-    typst: "#box(image(\"static/glyphs/egyptian/N37.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/N37.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "N37"
     category: "egyptian_N_sky_earth_water"
     glyph: "N37"
+    mode: "content"
     svg: "static/glyphs/egyptian/N37.svg"
+    sign_shape: "Flat"
+    sign_type: "Uni"
+    sound: "S"
 }
 
 @template N41 {
     pattern: "N41()"
-    typst: "#box(image(\"static/glyphs/egyptian/N41.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/N41.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "N41"
     category: "egyptian_N_sky_earth_water"
     glyph: "N41"
+    mode: "content"
     svg: "static/glyphs/egyptian/N41.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "Hm"
 }
 
 // ============ O: BUILDING ============
 
 @template O1 {
     pattern: "O1()"
-    typst: "#box(image(\"static/glyphs/egyptian/O1.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/O1.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "O1"
     category: "egyptian_O_building"
     glyph: "O1"
+    mode: "content"
     svg: "static/glyphs/egyptian/O1.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "pr"
 }
 
 @template O4 {
     pattern: "O4()"
-    typst: "#box(image(\"static/glyphs/egyptian/O4.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/O4.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "O4"
     category: "egyptian_O_building"
     glyph: "O4"
+    mode: "content"
     svg: "static/glyphs/egyptian/O4.svg"
+    sign_shape: "Small"
+    sign_type: "Uni"
+    sound: "h"
 }
 
 @template O6 {
     pattern: "O6()"
-    typst: "#box(image(\"static/glyphs/egyptian/O6.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/O6.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "O6"
     category: "egyptian_O_building"
     glyph: "O6"
+    mode: "content"
     svg: "static/glyphs/egyptian/O6.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "Hwt"
 }
 
 @template O28 {
     pattern: "O28()"
-    typst: "#box(image(\"static/glyphs/egyptian/O28.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/O28.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "O28"
     category: "egyptian_O_building"
     glyph: "O28"
+    mode: "content"
     svg: "static/glyphs/egyptian/O28.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template O29 {
     pattern: "O29()"
-    typst: "#box(image(\"static/glyphs/egyptian/O29.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/O29.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "O29"
     category: "egyptian_O_building"
     glyph: "O29"
+    mode: "content"
     svg: "static/glyphs/egyptian/O29.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template O31 {
     pattern: "O31()"
-    typst: "#box(image(\"static/glyphs/egyptian/O31.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/O31.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "O31"
     category: "egyptian_O_building"
     glyph: "O31"
+    mode: "content"
     svg: "static/glyphs/egyptian/O31.svg"
+    sign_shape: "Tall"
+    sign_type: "Bi"
+    sound: "aA"
 }
 
 @template O34 {
     pattern: "O34()"
-    typst: "#box(image(\"static/glyphs/egyptian/O34.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/O34.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "O34"
     category: "egyptian_O_building"
     glyph: "O34"
+    mode: "content"
     svg: "static/glyphs/egyptian/O34.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template O49 {
     pattern: "O49()"
-    typst: "#box(image(\"static/glyphs/egyptian/O49.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/O49.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "O49"
     category: "egyptian_O_building"
     glyph: "O49"
+    mode: "content"
     svg: "static/glyphs/egyptian/O49.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template O50 {
     pattern: "O50()"
-    typst: "#box(image(\"static/glyphs/egyptian/O50.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/O50.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "O50"
     category: "egyptian_O_building"
     glyph: "O50"
+    mode: "content"
     svg: "static/glyphs/egyptian/O50.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 // ============ P: BOAT ============
 
 @template P1 {
     pattern: "P1()"
-    typst: "#box(image(\"static/glyphs/egyptian/P1.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/P1.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "P1"
     category: "egyptian_P_boat"
     glyph: "P1"
+    mode: "content"
     svg: "static/glyphs/egyptian/P1.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template P5 {
     pattern: "P5()"
-    typst: "#box(image(\"static/glyphs/egyptian/P5.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/P5.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "P5"
     category: "egyptian_P_boat"
     glyph: "P5"
+    mode: "content"
     svg: "static/glyphs/egyptian/P5.svg"
+    sign_shape: "Tall"
+    sign_type: "Bi"
+    sound: "nfw"
 }
 
 @template P8 {
     pattern: "P8()"
-    typst: "#box(image(\"static/glyphs/egyptian/P8.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/P8.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "P8"
     category: "egyptian_P_boat"
     glyph: "P8"
+    mode: "content"
     svg: "static/glyphs/egyptian/P8.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 // ============ Q: FURNITURE ============
 
 @template Q1 {
     pattern: "Q1()"
-    typst: "#box(image(\"static/glyphs/egyptian/Q1.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Q1.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Q1"
     category: "egyptian_Q_furniture"
     glyph: "Q1"
+    mode: "content"
     svg: "static/glyphs/egyptian/Q1.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "st"
 }
 
 @template Q2 {
     pattern: "Q2()"
-    typst: "#box(image(\"static/glyphs/egyptian/Q2.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Q2.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Q2"
     category: "egyptian_Q_furniture"
     glyph: "Q2"
+    mode: "content"
     svg: "static/glyphs/egyptian/Q2.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "ws"
 }
 
 @template Q3 {
     pattern: "Q3()"
-    typst: "#box(image(\"static/glyphs/egyptian/Q3.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Q3.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Q3"
     category: "egyptian_Q_furniture"
     glyph: "Q3"
+    mode: "content"
     svg: "static/glyphs/egyptian/Q3.svg"
+    sign_shape: "Small"
+    sign_type: "Uni"
+    sound: "p"
 }
 
 @template Q7 {
     pattern: "Q7()"
-    typst: "#box(image(\"static/glyphs/egyptian/Q7.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Q7.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Q7"
     category: "egyptian_Q_furniture"
     glyph: "Q7"
+    mode: "content"
     svg: "static/glyphs/egyptian/Q7.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 // ============ R: TEMPLE ============
 
 @template R4 {
     pattern: "R4()"
-    typst: "#box(image(\"static/glyphs/egyptian/R4.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/R4.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "R4"
     category: "egyptian_R_temple"
     glyph: "R4"
+    mode: "content"
     svg: "static/glyphs/egyptian/R4.svg"
+    sign_shape: "Flat"
+    sign_type: "Tri"
+    sound: "Htp"
 }
 
 @template R7 {
     pattern: "R7()"
-    typst: "#box(image(\"static/glyphs/egyptian/R7.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/R7.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "R7"
     category: "egyptian_R_temple"
     glyph: "R7"
+    mode: "content"
     svg: "static/glyphs/egyptian/R7.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template R8 {
     pattern: "R8()"
-    typst: "#box(image(\"static/glyphs/egyptian/R8.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/R8.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "R8"
     category: "egyptian_R_temple"
     glyph: "R8"
+    mode: "content"
     svg: "static/glyphs/egyptian/R8.svg"
+    sign_shape: "Tall"
+    sign_type: "Tri"
+    sound: "nTr"
 }
 
 @template R11 {
     pattern: "R11()"
-    typst: "#box(image(\"static/glyphs/egyptian/R11.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/R11.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "R11"
     category: "egyptian_R_temple"
     glyph: "R11"
+    mode: "content"
     svg: "static/glyphs/egyptian/R11.svg"
+    sign_shape: "Tall"
+    sign_type: "Bi"
+    sound: "Dd"
 }
 
 // ============ S: CROWN ============
 
 @template S1 {
     pattern: "S1()"
-    typst: "#box(image(\"static/glyphs/egyptian/S1.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/S1.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "S1"
     category: "egyptian_S_crown"
     glyph: "S1"
+    mode: "content"
     svg: "static/glyphs/egyptian/S1.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template S3 {
     pattern: "S3()"
-    typst: "#box(image(\"static/glyphs/egyptian/S3.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/S3.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "S3"
     category: "egyptian_S_crown"
     glyph: "S3"
+    mode: "content"
     svg: "static/glyphs/egyptian/S3.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template S12 {
     pattern: "S12()"
-    typst: "#box(image(\"static/glyphs/egyptian/S12.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/S12.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "S12"
     category: "egyptian_S_crown"
     glyph: "S12"
+    mode: "content"
     svg: "static/glyphs/egyptian/S12.svg"
+    sign_shape: "Flat"
+    sign_type: "Bi"
+    sound: "nbw"
 }
 
 @template S21 {
     pattern: "S21()"
-    typst: "#box(image(\"static/glyphs/egyptian/S21.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/S21.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "S21"
     category: "egyptian_S_crown"
     glyph: "S21"
+    mode: "content"
     svg: "static/glyphs/egyptian/S21.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template S26 {
     pattern: "S26()"
-    typst: "#box(image(\"static/glyphs/egyptian/S26.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/S26.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "S26"
     category: "egyptian_S_crown"
     glyph: "S26"
+    mode: "content"
     svg: "static/glyphs/egyptian/S26.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template S29 {
     pattern: "S29()"
-    typst: "#box(image(\"static/glyphs/egyptian/S29.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/S29.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "S29"
     category: "egyptian_S_crown"
     glyph: "S29"
+    mode: "content"
     svg: "static/glyphs/egyptian/S29.svg"
+    sign_shape: "Small"
+    sign_type: "Uni"
+    sound: "s"
 }
 
 @template S34 {
     pattern: "S34()"
-    typst: "#box(image(\"static/glyphs/egyptian/S34.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/S34.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "S34"
     category: "egyptian_S_crown"
     glyph: "S34"
+    mode: "content"
     svg: "static/glyphs/egyptian/S34.svg"
+    sign_shape: "Tall"
+    sign_type: "Tri"
+    sound: "anx"
 }
 
 @template S38 {
     pattern: "S38()"
-    typst: "#box(image(\"static/glyphs/egyptian/S38.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/S38.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "S38"
     category: "egyptian_S_crown"
     glyph: "S38"
+    mode: "content"
     svg: "static/glyphs/egyptian/S38.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template S40 {
     pattern: "S40()"
-    typst: "#box(image(\"static/glyphs/egyptian/S40.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/S40.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "S40"
     category: "egyptian_S_crown"
     glyph: "S40"
+    mode: "content"
     svg: "static/glyphs/egyptian/S40.svg"
+    sign_shape: "Tall"
+    sign_type: "Bi"
+    sound: "wAs"
 }
 
 @template S42 {
     pattern: "S42()"
-    typst: "#box(image(\"static/glyphs/egyptian/S42.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/S42.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "S42"
     category: "egyptian_S_crown"
     glyph: "S42"
+    mode: "content"
     svg: "static/glyphs/egyptian/S42.svg"
+    sign_shape: "Tall"
+    sign_type: "Bi"
+    sound: "abA"
 }
 
 @template S43 {
     pattern: "S43()"
-    typst: "#box(image(\"static/glyphs/egyptian/S43.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/S43.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "S43"
     category: "egyptian_S_crown"
     glyph: "S43"
+    mode: "content"
     svg: "static/glyphs/egyptian/S43.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 // ============ T: WARFARE ============
 
 @template T3 {
     pattern: "T3()"
-    typst: "#box(image(\"static/glyphs/egyptian/T3.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/T3.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "T3"
     category: "egyptian_T_warfare"
     glyph: "T3"
+    mode: "content"
     svg: "static/glyphs/egyptian/T3.svg"
+    sign_shape: "Tall"
+    sign_type: "Bi"
+    sound: "HD"
 }
 
 @template T7 {
     pattern: "T7()"
-    typst: "#box(image(\"static/glyphs/egyptian/T7.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/T7.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "T7"
     category: "egyptian_T_warfare"
     glyph: "T7"
+    mode: "content"
     svg: "static/glyphs/egyptian/T7.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template T14 {
     pattern: "T14()"
-    typst: "#box(image(\"static/glyphs/egyptian/T14.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/T14.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "T14"
     category: "egyptian_T_warfare"
     glyph: "T14"
+    mode: "content"
     svg: "static/glyphs/egyptian/T14.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template T21 {
     pattern: "T21()"
-    typst: "#box(image(\"static/glyphs/egyptian/T21.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/T21.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "T21"
     category: "egyptian_T_warfare"
     glyph: "T21"
+    mode: "content"
     svg: "static/glyphs/egyptian/T21.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template T22 {
     pattern: "T22()"
-    typst: "#box(image(\"static/glyphs/egyptian/T22.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/T22.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "T22"
     category: "egyptian_T_warfare"
     glyph: "T22"
+    mode: "content"
     svg: "static/glyphs/egyptian/T22.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "sn"
 }
 
 @template T28 {
     pattern: "T28()"
-    typst: "#box(image(\"static/glyphs/egyptian/T28.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/T28.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "T28"
     category: "egyptian_T_warfare"
     glyph: "T28"
+    mode: "content"
     svg: "static/glyphs/egyptian/T28.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template T30 {
     pattern: "T30()"
-    typst: "#box(image(\"static/glyphs/egyptian/T30.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/T30.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "T30"
     category: "egyptian_T_warfare"
     glyph: "T30"
+    mode: "content"
     svg: "static/glyphs/egyptian/T30.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 // ============ U: AGRICULTURE ============
 
 @template U1 {
     pattern: "U1()"
-    typst: "#box(image(\"static/glyphs/egyptian/U1.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/U1.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "U1"
     category: "egyptian_U_agriculture"
     glyph: "U1"
+    mode: "content"
     svg: "static/glyphs/egyptian/U1.svg"
+    sign_shape: "Tall"
+    sign_type: "Bi"
+    sound: "mA"
 }
 
 @template U6 {
     pattern: "U6()"
-    typst: "#box(image(\"static/glyphs/egyptian/U6.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/U6.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "U6"
     category: "egyptian_U_agriculture"
     glyph: "U6"
+    mode: "content"
     svg: "static/glyphs/egyptian/U6.svg"
+    sign_shape: "Tall"
+    sign_type: "Bi"
+    sound: "mr"
 }
 
 @template U7 {
     pattern: "U7()"
-    typst: "#box(image(\"static/glyphs/egyptian/U7.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/U7.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "U7"
     category: "egyptian_U_agriculture"
     glyph: "U7"
+    mode: "content"
     svg: "static/glyphs/egyptian/U7.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template U15 {
     pattern: "U15()"
-    typst: "#box(image(\"static/glyphs/egyptian/U15.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/U15.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "U15"
     category: "egyptian_U_agriculture"
     glyph: "U15"
+    mode: "content"
     svg: "static/glyphs/egyptian/U15.svg"
+    sign_shape: "Flat"
+    sign_type: "Bi"
+    sound: "tm"
 }
 
 @template U23 {
     pattern: "U23()"
-    typst: "#box(image(\"static/glyphs/egyptian/U23.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/U23.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "U23"
     category: "egyptian_U_agriculture"
     glyph: "U23"
+    mode: "content"
     svg: "static/glyphs/egyptian/U23.svg"
+    sign_shape: "Tall"
+    sign_type: "Bi"
+    sound: "Ab"
 }
 
 @template U28 {
     pattern: "U28()"
-    typst: "#box(image(\"static/glyphs/egyptian/U28.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/U28.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "U28"
     category: "egyptian_U_agriculture"
     glyph: "U28"
+    mode: "content"
     svg: "static/glyphs/egyptian/U28.svg"
+    sign_shape: "Tall"
+    sign_type: "Bi"
+    sound: "DA"
 }
 
 @template U33 {
     pattern: "U33()"
-    typst: "#box(image(\"static/glyphs/egyptian/U33.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/U33.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "U33"
     category: "egyptian_U_agriculture"
     glyph: "U33"
+    mode: "content"
     svg: "static/glyphs/egyptian/U33.svg"
+    sign_shape: "Tall"
+    sign_type: "Bi"
+    sound: "ti"
 }
 
 // ============ V: ROPE ============
 
 @template V1 {
     pattern: "V1()"
-    typst: "#box(image(\"static/glyphs/egyptian/V1.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/V1.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "V1"
     category: "egyptian_V_rope"
     glyph: "V1"
+    mode: "content"
     svg: "static/glyphs/egyptian/V1.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template V4 {
     pattern: "V4()"
-    typst: "#box(image(\"static/glyphs/egyptian/V4.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/V4.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "V4"
     category: "egyptian_V_rope"
     glyph: "V4"
+    mode: "content"
     svg: "static/glyphs/egyptian/V4.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "wA"
 }
 
 @template V6 {
     pattern: "V6()"
-    typst: "#box(image(\"static/glyphs/egyptian/V6.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/V6.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "V6"
     category: "egyptian_V_rope"
     glyph: "V6"
+    mode: "content"
     svg: "static/glyphs/egyptian/V6.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "Ss"
 }
 
 @template V7 {
     pattern: "V7()"
-    typst: "#box(image(\"static/glyphs/egyptian/V7.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/V7.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "V7"
     category: "egyptian_V_rope"
     glyph: "V7"
+    mode: "content"
     svg: "static/glyphs/egyptian/V7.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "Sn"
 }
 
 @template V10 {
     pattern: "V10()"
-    typst: "#box(image(\"static/glyphs/egyptian/V10.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/V10.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "V10"
     category: "egyptian_V_rope"
     glyph: "V10"
+    mode: "content"
     svg: "static/glyphs/egyptian/V10.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template V13 {
     pattern: "V13()"
-    typst: "#box(image(\"static/glyphs/egyptian/V13.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/V13.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "V13"
     category: "egyptian_V_rope"
     glyph: "V13"
+    mode: "content"
     svg: "static/glyphs/egyptian/V13.svg"
+    sign_shape: "Small"
+    sign_type: "Uni"
+    sound: "T"
 }
 
 @template V15 {
     pattern: "V15()"
-    typst: "#box(image(\"static/glyphs/egyptian/V15.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/V15.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "V15"
     category: "egyptian_V_rope"
     glyph: "V15"
+    mode: "content"
     svg: "static/glyphs/egyptian/V15.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template V16 {
     pattern: "V16()"
-    typst: "#box(image(\"static/glyphs/egyptian/V16.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/V16.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "V16"
     category: "egyptian_V_rope"
     glyph: "V16"
+    mode: "content"
     svg: "static/glyphs/egyptian/V16.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "sA"
 }
 
 @template V20 {
     pattern: "V20()"
-    typst: "#box(image(\"static/glyphs/egyptian/V20.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/V20.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "V20"
     category: "egyptian_V_rope"
     glyph: "V20"
+    mode: "content"
     svg: "static/glyphs/egyptian/V20.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template V22 {
     pattern: "V22()"
-    typst: "#box(image(\"static/glyphs/egyptian/V22.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/V22.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "V22"
     category: "egyptian_V_rope"
     glyph: "V22"
+    mode: "content"
     svg: "static/glyphs/egyptian/V22.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "mH"
 }
 
 @template V24 {
     pattern: "V24()"
-    typst: "#box(image(\"static/glyphs/egyptian/V24.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/V24.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "V24"
     category: "egyptian_V_rope"
     glyph: "V24"
+    mode: "content"
     svg: "static/glyphs/egyptian/V24.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "wD"
 }
 
 @template V25 {
     pattern: "V25()"
-    typst: "#box(image(\"static/glyphs/egyptian/V25.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/V25.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "V25"
     category: "egyptian_V_rope"
     glyph: "V25"
+    mode: "content"
     svg: "static/glyphs/egyptian/V25.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template V26 {
     pattern: "V26()"
-    typst: "#box(image(\"static/glyphs/egyptian/V26.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/V26.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "V26"
     category: "egyptian_V_rope"
     glyph: "V26"
+    mode: "content"
     svg: "static/glyphs/egyptian/V26.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template V28 {
     pattern: "V28()"
-    typst: "#box(image(\"static/glyphs/egyptian/V28.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/V28.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "V28"
     category: "egyptian_V_rope"
     glyph: "V28"
+    mode: "content"
     svg: "static/glyphs/egyptian/V28.svg"
+    sign_shape: "Small"
+    sign_type: "Uni"
+    sound: "H"
 }
 
 @template V29 {
     pattern: "V29()"
-    typst: "#box(image(\"static/glyphs/egyptian/V29.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/V29.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "V29"
     category: "egyptian_V_rope"
     glyph: "V29"
+    mode: "content"
     svg: "static/glyphs/egyptian/V29.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "wAH"
 }
 
 @template V30 {
     pattern: "V30()"
-    typst: "#box(image(\"static/glyphs/egyptian/V30.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/V30.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "V30"
     category: "egyptian_V_rope"
     glyph: "V30"
+    mode: "content"
     svg: "static/glyphs/egyptian/V30.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "nb"
 }
 
 @template V31 {
     pattern: "V31()"
-    typst: "#box(image(\"static/glyphs/egyptian/V31.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/V31.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "V31"
     category: "egyptian_V_rope"
     glyph: "V31"
+    mode: "content"
     svg: "static/glyphs/egyptian/V31.svg"
+    sign_shape: "Small"
+    sign_type: "Uni"
+    sound: "k"
 }
 
 // ============ W: VESSEL ============
 
 @template W1 {
     pattern: "W1()"
-    typst: "#box(image(\"static/glyphs/egyptian/W1.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/W1.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "W1"
     category: "egyptian_W_vessel"
     glyph: "W1"
+    mode: "content"
     svg: "static/glyphs/egyptian/W1.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template W3 {
     pattern: "W3()"
-    typst: "#box(image(\"static/glyphs/egyptian/W3.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/W3.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "W3"
     category: "egyptian_W_vessel"
     glyph: "W3"
+    mode: "content"
     svg: "static/glyphs/egyptian/W3.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "Hb"
 }
 
 @template W9 {
     pattern: "W9()"
-    typst: "#box(image(\"static/glyphs/egyptian/W9.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/W9.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "W9"
     category: "egyptian_W_vessel"
     glyph: "W9"
+    mode: "content"
     svg: "static/glyphs/egyptian/W9.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "xnm"
 }
 
 @template W10 {
     pattern: "W10()"
-    typst: "#box(image(\"static/glyphs/egyptian/W10.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/W10.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "W10"
     category: "egyptian_W_vessel"
     glyph: "W10"
+    mode: "content"
     svg: "static/glyphs/egyptian/W10.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "wsxt"
 }
 
 @template W11 {
     pattern: "W11()"
-    typst: "#box(image(\"static/glyphs/egyptian/W11.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/W11.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "W11"
     category: "egyptian_W_vessel"
     glyph: "W11"
+    mode: "content"
     svg: "static/glyphs/egyptian/W11.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template W14 {
     pattern: "W14()"
-    typst: "#box(image(\"static/glyphs/egyptian/W14.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/W14.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "W14"
     category: "egyptian_W_vessel"
     glyph: "W14"
+    mode: "content"
     svg: "static/glyphs/egyptian/W14.svg"
+    sign_shape: "Tall"
+    sign_type: "Bi"
+    sound: "Hs"
 }
 
 @template W17 {
     pattern: "W17()"
-    typst: "#box(image(\"static/glyphs/egyptian/W17.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/W17.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "W17"
     category: "egyptian_W_vessel"
     glyph: "W17"
+    mode: "content"
     svg: "static/glyphs/egyptian/W17.svg"
+    sign_shape: "Tall"
+    sign_type: "Det"
 }
 
 @template W19 {
     pattern: "W19()"
-    typst: "#box(image(\"static/glyphs/egyptian/W19.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/W19.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "W19"
     category: "egyptian_W_vessel"
     glyph: "W19"
+    mode: "content"
     svg: "static/glyphs/egyptian/W19.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "mi"
 }
 
 @template W24 {
     pattern: "W24()"
-    typst: "#box(image(\"static/glyphs/egyptian/W24.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/W24.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "W24"
     category: "egyptian_W_vessel"
     glyph: "W24"
+    mode: "content"
     svg: "static/glyphs/egyptian/W24.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "nw"
 }
 
 @template W25 {
     pattern: "W25()"
-    typst: "#box(image(\"static/glyphs/egyptian/W25.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/W25.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "W25"
     category: "egyptian_W_vessel"
     glyph: "W25"
+    mode: "content"
     svg: "static/glyphs/egyptian/W25.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 // ============ X: BREAD ============
 
 @template X1 {
     pattern: "X1()"
-    typst: "#box(image(\"static/glyphs/egyptian/X1.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/X1.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "X1"
     category: "egyptian_X_bread"
     glyph: "X1"
+    mode: "content"
     svg: "static/glyphs/egyptian/X1.svg"
+    sign_shape: "Small"
+    sign_type: "Uni"
+    sound: "t"
 }
 
 @template X2 {
     pattern: "X2()"
-    typst: "#box(image(\"static/glyphs/egyptian/X2.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/X2.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "X2"
     category: "egyptian_X_bread"
     glyph: "X2"
+    mode: "content"
     svg: "static/glyphs/egyptian/X2.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template X3 {
     pattern: "X3()"
-    typst: "#box(image(\"static/glyphs/egyptian/X3.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/X3.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "X3"
     category: "egyptian_X_bread"
     glyph: "X3"
+    mode: "content"
     svg: "static/glyphs/egyptian/X3.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template X4 {
     pattern: "X4()"
-    typst: "#box(image(\"static/glyphs/egyptian/X4.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/X4.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "X4"
     category: "egyptian_X_bread"
     glyph: "X4"
+    mode: "content"
     svg: "static/glyphs/egyptian/X4.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template X5 {
     pattern: "X5()"
-    typst: "#box(image(\"static/glyphs/egyptian/X5.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/X5.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "X5"
     category: "egyptian_X_bread"
     glyph: "X5"
+    mode: "content"
     svg: "static/glyphs/egyptian/X5.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template X6 {
     pattern: "X6()"
-    typst: "#box(image(\"static/glyphs/egyptian/X6.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/X6.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "X6"
     category: "egyptian_X_bread"
     glyph: "X6"
+    mode: "content"
     svg: "static/glyphs/egyptian/X6.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template X8 {
     pattern: "X8()"
-    typst: "#box(image(\"static/glyphs/egyptian/X8.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/X8.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "X8"
     category: "egyptian_X_bread"
     glyph: "X8"
+    mode: "content"
     svg: "static/glyphs/egyptian/X8.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 // ============ Y: WRITING ============
 
 @template Y1 {
     pattern: "Y1()"
-    typst: "#box(image(\"static/glyphs/egyptian/Y1.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Y1.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Y1"
     category: "egyptian_Y_writing"
     glyph: "Y1"
+    mode: "content"
     svg: "static/glyphs/egyptian/Y1.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template Y3 {
     pattern: "Y3()"
-    typst: "#box(image(\"static/glyphs/egyptian/Y3.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Y3.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Y3"
     category: "egyptian_Y_writing"
     glyph: "Y3"
+    mode: "content"
     svg: "static/glyphs/egyptian/Y3.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template Y5 {
     pattern: "Y5()"
-    typst: "#box(image(\"static/glyphs/egyptian/Y5.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Y5.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Y5"
     category: "egyptian_Y_writing"
     glyph: "Y5"
+    mode: "content"
     svg: "static/glyphs/egyptian/Y5.svg"
+    sign_shape: "Small"
+    sign_type: "Bi"
+    sound: "mn"
 }
 
 // ============ Z: STROKE ============
 
 @template Z1 {
     pattern: "Z1()"
-    typst: "#box(image(\"static/glyphs/egyptian/Z1.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Z1.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Z1"
     category: "egyptian_Z_stroke"
     glyph: "Z1"
+    mode: "content"
     svg: "static/glyphs/egyptian/Z1.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template Z2 {
     pattern: "Z2()"
-    typst: "#box(image(\"static/glyphs/egyptian/Z2.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Z2.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Z2"
     category: "egyptian_Z_stroke"
     glyph: "Z2"
+    mode: "content"
     svg: "static/glyphs/egyptian/Z2.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template Z3 {
     pattern: "Z3()"
-    typst: "#box(image(\"static/glyphs/egyptian/Z3.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Z3.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Z3"
     category: "egyptian_Z_stroke"
     glyph: "Z3"
+    mode: "content"
     svg: "static/glyphs/egyptian/Z3.svg"
+    sign_shape: "Flat"
+    sign_type: "Det"
 }
 
 @template Z4 {
     pattern: "Z4()"
-    typst: "#box(image(\"static/glyphs/egyptian/Z4.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Z4.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Z4"
     category: "egyptian_Z_stroke"
     glyph: "Z4"
+    mode: "content"
     svg: "static/glyphs/egyptian/Z4.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template Z5 {
     pattern: "Z5()"
-    typst: "#box(image(\"static/glyphs/egyptian/Z5.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Z5.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Z5"
     category: "egyptian_Z_stroke"
     glyph: "Z5"
+    mode: "content"
     svg: "static/glyphs/egyptian/Z5.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template Z6 {
     pattern: "Z6()"
-    typst: "#box(image(\"static/glyphs/egyptian/Z6.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Z6.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Z6"
     category: "egyptian_Z_stroke"
     glyph: "Z6"
+    mode: "content"
     svg: "static/glyphs/egyptian/Z6.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template Z7 {
     pattern: "Z7()"
-    typst: "#box(image(\"static/glyphs/egyptian/Z7.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Z7.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Z7"
     category: "egyptian_Z_stroke"
     glyph: "Z7"
+    mode: "content"
     svg: "static/glyphs/egyptian/Z7.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template Z9 {
     pattern: "Z9()"
-    typst: "#box(image(\"static/glyphs/egyptian/Z9.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Z9.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Z9"
     category: "egyptian_Z_stroke"
     glyph: "Z9"
+    mode: "content"
     svg: "static/glyphs/egyptian/Z9.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 @template Z11 {
     pattern: "Z11()"
-    typst: "#box(image(\"static/glyphs/egyptian/Z11.svg\", height: 1.5em))"
+    typst: "#box(image(\"static/glyphs/egyptian/Z11.svg\", width: 1em, height: 1em, fit: \"contain\"))"
     unicode: "Z11"
     category: "egyptian_Z_stroke"
     glyph: "Z11"
+    mode: "content"
     svg: "static/glyphs/egyptian/Z11.svg"
+    sign_shape: "Small"
+    sign_type: "Det"
 }
 
 // ============ QUADRAT COMPOSITION ============
+// Siblings have the same width and height.
+// No hardcoded dimensions — Typst math engine controls sizing.
 
 @template quadrat_h {
     pattern: "quadrat_h(left, right)"
-    typst: "#grid(columns: 2, gutter: 1pt, {left}, {right})"
+    typst: "#grid(columns: (1.2em, 1.2em), gutter: 0.1em, align(center + horizon, [{left}]), align(center + horizon, [{right}]))"
     unicode: "{left}{right}"
     category: "egyptian_composition"
     glyph: "H-pair"
+    mode: "content"
 }
 
 @template quadrat_v {
-    pattern: "quadrat_v(top, bottom)"
-    typst: "#stack(dir: ttb, spacing: 1pt, {top}, {bottom})"
-    unicode: "{top}/{bottom}"
+    pattern: "quadrat_v(left, right)"
+    typst: "#grid(rows: (1.2em, 1.2em), gutter: 0.1em, align(center + horizon, [{left}]), align(center + horizon, [{right}]))"
+    unicode: "{left}/{right}"
     category: "egyptian_composition"
     glyph: "V-pair"
-}
-
-@template quadrat_2x2 {
-    pattern: "quadrat_2x2(tl, tr, bl, br)"
-    typst: "#grid(columns: 2, gutter: 1pt, {tl}, {tr}, {bl}, {br})"
-    unicode: "{tl}{tr}/{bl}{br}"
-    category: "egyptian_composition"
-    glyph: "2x2"
+    mode: "content"
 }
 
