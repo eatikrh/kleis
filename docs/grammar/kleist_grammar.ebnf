@@ -4,7 +4,11 @@
 
 kleist_file = { block } ;
 
-block = template_block | tool_block | palette_block | comment ;
+block = template_block | tool_block | palette_block | import_block | comment ;
+
+(* ============ IMPORT BLOCKS ============ *)
+
+import_block = "@import" , string_literal ;
 
 (* ============ TEMPLATE BLOCKS ============ *)
 
@@ -15,7 +19,8 @@ template_body = { template_field } ;
 template_field = field_name , ":" , field_value ;
 
 field_name = "pattern" | "unicode" | "latex" | "html" | "typst" | "kleis" 
-           | "category" | "shortcut" | "svg" | "glyph" ;
+           | "category" | "shortcut" | "svg" | "glyph"
+           | identifier ;  (* unknown fields collected as metadata *)
 
 field_value = string_literal ;
 
