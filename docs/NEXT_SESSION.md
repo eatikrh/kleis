@@ -491,18 +491,47 @@ to avoid Z3 explosion. `MiddleEgyptianNominalGrammar` and
 
 #### Five engine fixes (one-time, domain-agnostic)
 
-1. **Parser metadata** — Add `metadata: HashMap<String, String>` to
-   `TemplateDefinition`, change parser catch-all to collect unknown pairs
-2. **Zero-arg slots** — Make zero-arg Operations produce ArgumentSlots in
-   `collect_editor_slots_recursive`
-3. **Mode-aware UUID wrapping** — `uuid_wrap` helper reads generic `mode`
-   property from template metadata (default: math). No template-specific refs.
-4. **Data-driven palettes** — `GET /api/palette` endpoint + client
-   `buildPaletteFromAPI()` replacing ~547 lines of hardcoded HTML/JS
-5. **Theory imports from templates** — `.kleist` files declare `@import` for
-   their `.kleis` theories. Server loads imported theories into
-   `StructureRegistry` and `TypeChecker` when loading templates. Enables
-   Verify/Sat buttons for new domains without hardcoding theory file lists.
+1. **Parser metadata** — DONE. Added `metadata: HashMap<String, String>` to
+   `TemplateDefinition`, parser catch-all collects unknown `key: "value"` pairs.
+2. **Zero-arg slots** — DONE. Zero-arg Operations produce ArgumentSlots in
+   `collect_editor_slots_recursive`.
+3. **Mode-aware UUID wrapping** — DONE. `uuid_wrap` helper reads `mode`
+   from template metadata. Egyptian templates use `mode: "content"` to skip
+   `$...$` math-mode wrapping in Typst output.
+4. **Data-driven palettes:**
+   - **4a: `/api/palette` endpoint** — DONE. Serves palette structure with
+     ASTs and metadata from `.kleist` files.
+   - **4b: Client-side `buildPaletteFromAPI()`** — DEFERRED. Currently the
+     Egyptian palette uses domain-specific JavaScript (~300 lines:
+     `showEgyptianPalette`, `filterEgyptianGlyphs`, `insertEgyptianGlyph`,
+     `validateQuadratPlacement`). This violates the "no JS for new domains"
+     goal. Needs replacement with a generic palette builder that reads from
+     `/api/palette` and constructs tabs, groups, filters, and buttons from
+     data. Any domain would get its palette automatically.
+5. **Theory imports from templates** — DONE. `.kleist` files declare
+   `@import` for `.kleis` theories. Server loads imported theories into
+   `StructureRegistry`.
+
+#### Known issue: `apply_template_substitutions` hardcoded aliases
+
+`render_editor.rs` function `apply_template_substitutions` (line ~2109) uses
+a hardcoded list of placeholder name aliases (`{left}`, `{right}`, `{body}`,
+`{exponent}`, etc.). Template authors MUST use names from this list, or the
+placeholders render as literal text. For example, `{top}` and `{bottom}` are
+NOT recognized — the quadrat_v template had to use `{left}` and `{right}`
+instead.
+
+**Fix needed:** Parse argument names from the template `pattern` field (e.g.,
+`quadrat_v(top, bottom)` → positional map `{top}→arg[0]`, `{bottom}→arg[1]`)
+and apply those substitutions BEFORE the hardcoded aliases. This is a one-time
+Rust change that enables template authors to use any argument names they want.
+
+#### Template testing results (manually verified)
+
+- Math rendering: matrix, piecewise, fraction, integral — no regressions
+- Egyptian quadrat_v and quadrat_h: glyphs render with uniform 1em sizing
+- Interactive overlays: working for both math and Egyptian templates
+- All 2440 tests pass
 
 #### Additional finding: EditorRenderContext needs metadata map
 
