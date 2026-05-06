@@ -491,18 +491,47 @@ to avoid Z3 explosion. `MiddleEgyptianNominalGrammar` and
 
 #### Five engine fixes (one-time, domain-agnostic)
 
-1. **Parser metadata** — Add `metadata: HashMap<String, String>` to
-   `TemplateDefinition`, change parser catch-all to collect unknown pairs
-2. **Zero-arg slots** — Make zero-arg Operations produce ArgumentSlots in
-   `collect_editor_slots_recursive`
-3. **Mode-aware UUID wrapping** — `uuid_wrap` helper reads generic `mode`
-   property from template metadata (default: math). No template-specific refs.
-4. **Data-driven palettes** — `GET /api/palette` endpoint + client
-   `buildPaletteFromAPI()` replacing ~547 lines of hardcoded HTML/JS
-5. **Theory imports from templates** — `.kleist` files declare `@import` for
-   their `.kleis` theories. Server loads imported theories into
-   `StructureRegistry` and `TypeChecker` when loading templates. Enables
-   Verify/Sat buttons for new domains without hardcoding theory file lists.
+1. **Parser metadata** — DONE. Added `metadata: HashMap<String, String>` to
+   `TemplateDefinition`, parser catch-all collects unknown `key: "value"` pairs.
+2. **Zero-arg slots** — DONE. Zero-arg Operations produce ArgumentSlots in
+   `collect_editor_slots_recursive`.
+3. **Mode-aware UUID wrapping** — DONE. `uuid_wrap` helper reads `mode`
+   from template metadata. Egyptian templates use `mode: "content"` to skip
+   `$...$` math-mode wrapping in Typst output.
+4. **Data-driven palettes:**
+   - **4a: `/api/palette` endpoint** — DONE. Serves palette structure with
+     ASTs and metadata from `.kleist` files.
+   - **4b: Client-side `buildPaletteFromAPI()`** — DEFERRED. Currently the
+     Egyptian palette uses domain-specific JavaScript (~300 lines:
+     `showEgyptianPalette`, `filterEgyptianGlyphs`, `insertEgyptianGlyph`,
+     `validateQuadratPlacement`). This violates the "no JS for new domains"
+     goal. Needs replacement with a generic palette builder that reads from
+     `/api/palette` and constructs tabs, groups, filters, and buttons from
+     data. Any domain would get its palette automatically.
+5. **Theory imports from templates** — DONE. `.kleist` files declare
+   `@import` for `.kleis` theories. Server loads imported theories into
+   `StructureRegistry`.
+
+#### Known issue: `apply_template_substitutions` hardcoded aliases
+
+`render_editor.rs` function `apply_template_substitutions` (line ~2109) uses
+a hardcoded list of placeholder name aliases (`{left}`, `{right}`, `{body}`,
+`{exponent}`, etc.). Template authors MUST use names from this list, or the
+placeholders render as literal text. For example, `{top}` and `{bottom}` are
+NOT recognized — the quadrat_v template had to use `{left}` and `{right}`
+instead.
+
+**Fix needed:** Parse argument names from the template `pattern` field (e.g.,
+`quadrat_v(top, bottom)` → positional map `{top}→arg[0]`, `{bottom}→arg[1]`)
+and apply those substitutions BEFORE the hardcoded aliases. This is a one-time
+Rust change that enables template authors to use any argument names they want.
+
+#### Template testing results (manually verified)
+
+- Math rendering: matrix, piecewise, fraction, integral — no regressions
+- Egyptian quadrat_v and quadrat_h: glyphs render with uniform 1em sizing
+- Interactive overlays: working for both math and Egyptian templates
+- All 2440 tests pass
 
 #### Additional finding: EditorRenderContext needs metadata map
 
@@ -511,6 +540,53 @@ template strings (unicode, latex, html, typst, kleis). It discards all other
 template fields. For `uuid_wrap` to read `mode` from template metadata,
 `EditorRenderContext` needs a new `metadata: HashMap<String, HashMap<String,
 String>>` map keyed by template name.
+
+#### CRITICAL FINDING: Editor AST ≠ Kleis AST for non-math domains
+
+The Editor AST and Kleis AST are two DIFFERENT representations:
+- **Editor AST** (`EditorNode`): visual composition — how things are laid out
+  - Operations: `quadrat_h`, `egyptian_glyph_A1`, `plus`, `frac`
+- **Kleis AST** (`Expression`): semantic operations — what things mean
+  - Operations: `gender`, `modifies`, `matrix_add`, `transpose`
+
+For **math**, this gap is bridged by HARDCODED logic in `type_inference.rs`
+(lines 1637-1640). Operations `plus`, `minus`, `times`, `divide` are matched
+by name and checked inline. They never go through `StructureRegistry`.
+
+For **Egyptian**, there is NO bridge:
+- Editor operations are **visual** (`quadrat_h` = side-by-side layout)
+- Kleis structure operations are **grammatical** (`gender : Noun → Gender`)
+- `editor_node_to_expression` maps names 1:1 — `quadrat_h` stays `quadrat_h`
+- `analyze_dependencies` can't find `quadrat_h` in any structure
+- `MiddleEgyptianNominalGrammar` defines `gender`, `modifies`, etc. — but
+  the editor never produces expressions using those operation names
+
+This means the five engine fixes handle **rendering** correctly, but
+Verify/Sat buttons for Egyptian require an additional translation layer
+from visual composition to semantic meaning (glyph → linguistic entity →
+grammatical operation). This is the "reading" step from the paper.
+
+**Translation layer exists but is naive:** `editor_node_to_expression` in
+`server.rs` (line 1246) is the bridge between the two ASTs. Currently it does
+a 1:1 name copy — `operation.name` passes through unchanged. For math, this
+works because editor names (`plus`, `frac`) are handled by hardcoded logic in
+`type_inference.rs`. For non-math domains, this layer would need to become
+smarter — translating visual composition operations into semantic expressions
+that the grammar structures understand.
+
+**Implication for Fix 5 (@import):** Loading theory files into the registry
+is necessary but NOT sufficient for Verify/Sat. The registry would contain
+`gender`, `modifies`, etc., but `analyze_dependencies` would look for
+`quadrat_h`, `egyptian_glyph_A1` — and find nothing.
+
+**DECISION: Verify/Sat for non-math domains needs its own design phase.**
+The five rendering/palette engine fixes should proceed. Making Verify/Sat
+work for Egyptian and other non-math domains requires designing how
+`editor_node_to_expression` maps visual composition to semantic operations,
+and this is a separate effort. Fix 5 (@import) is still useful — it enables
+the registry to have the theories available — but the translation layer
+needs additional design work before Verify/Sat buttons produce meaningful
+results for non-math domains.
 
 #### Risk: top-level Typst wrapper
 

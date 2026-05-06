@@ -86,6 +86,7 @@ pub struct EditorRenderContext {
     pub html_templates: HashMap<String, String>,
     pub typst_templates: HashMap<String, String>,
     pub kleis_templates: HashMap<String, String>,
+    pub template_metadata: HashMap<String, HashMap<String, String>>,
 }
 
 impl Default for EditorRenderContext {
@@ -103,6 +104,7 @@ impl EditorRenderContext {
             html_templates: HashMap::new(),
             typst_templates: HashMap::new(),
             kleis_templates: HashMap::new(),
+            template_metadata: HashMap::new(),
         };
         ctx.load_templates();
         ctx
@@ -116,6 +118,7 @@ impl EditorRenderContext {
             html_templates: HashMap::new(),
             typst_templates: HashMap::new(),
             kleis_templates: HashMap::new(),
+            template_metadata: HashMap::new(),
         }
     }
 
@@ -177,6 +180,19 @@ impl EditorRenderContext {
         if let Some(ref kleis) = def.kleis {
             self.kleis_templates.insert(def.name.clone(), kleis.clone());
         }
+        if !def.metadata.is_empty() {
+            self.template_metadata
+                .insert(def.name.clone(), def.metadata.clone());
+        }
+    }
+
+    /// Check if a template has `mode: "content"` (non-math rendering mode).
+    /// Returns false (math mode) for unknown templates or templates without mode metadata.
+    pub fn is_content_mode(&self, template_name: &str) -> bool {
+        self.template_metadata
+            .get(template_name)
+            .and_then(|m| m.get("mode"))
+            .is_some_and(|v| v == "content")
     }
 
     fn load_templates(&mut self) {
@@ -1237,6 +1253,22 @@ fn render_internal(
 }
 
 // =============================================================================
+// UUID Wrapping
+// =============================================================================
+
+/// Wrap rendered content with a Typst label for position tracking.
+/// `is_math_mode` determines whether to re-enter math mode inside the box:
+/// - true (default): `#[#box[$content$]<id>]` — for math symbols
+/// - false: `#[#box[content]<id>]` — for content-mode output (images, etc.)
+fn uuid_wrap(rendered: &str, uuid: &str, is_math_mode: bool) -> String {
+    if is_math_mode {
+        format!("#[#box[${}$]<id{}>]", rendered, uuid)
+    } else {
+        format!("#[#box[{}]<id{}>]", rendered, uuid)
+    }
+}
+
+// =============================================================================
 // Object Rendering
 // =============================================================================
 
@@ -1250,11 +1282,11 @@ fn render_object(
     // First, try to look up the symbol in templates (e.g., "α" -> "\alpha" for LaTeX)
     let rendered = render_object_with_context(s, ctx, target);
 
-    // Add UUID label for Typst position tracking
     if matches!(target, RenderTarget::Typst)
         && let Some(uuid) = node_id_to_uuid.get(node_id)
     {
-        return format!("#[#box[${}$]<id{}>]", rendered, uuid);
+        let is_math = !ctx.is_content_mode(s);
+        return uuid_wrap(&rendered, uuid, is_math);
     }
     rendered
 }
@@ -1393,11 +1425,10 @@ fn render_const(
         _ => value.to_string(),
     };
 
-    // Add UUID label for Typst
     if matches!(target, RenderTarget::Typst)
         && let Some(uuid) = node_id_to_uuid.get(node_id)
     {
-        return format!("#[#box[${}$]<id{}>]", rendered, uuid);
+        return uuid_wrap(&rendered, uuid, true);
     }
     rendered
 }
@@ -1471,7 +1502,18 @@ fn render_operation(
     }
 
     // For all other operations: use template-based rendering
-    render_with_template(&op.name, &rendered_args, ctx, target)
+    let rendered = render_with_template(&op.name, &rendered_args, ctx, target);
+
+    // Zero-arg operations need UUID wrapping (they're leaf nodes with slots)
+    if op.args.is_empty()
+        && matches!(target, RenderTarget::Typst)
+        && let Some(uuid) = node_id_to_uuid.get(node_id)
+    {
+        let is_math = !ctx.is_content_mode(&op.name);
+        return uuid_wrap(&rendered, uuid, is_math);
+    }
+
+    rendered
 }
 
 /// Fold variadic binary operations left-to-right
@@ -1685,11 +1727,10 @@ fn render_matrix_constructor(
             };
             let rendered = render_internal(elem, ctx, target, &child_id, node_id_to_uuid);
 
-            // Wrap with UUID for Typst
             if matches!(target, RenderTarget::Typst)
                 && let Some(uuid) = node_id_to_uuid.get(&child_id)
             {
-                return format!("#[#box[${}$]<id{}>]", rendered, uuid);
+                return uuid_wrap(&rendered, uuid, true);
             }
             rendered
         })
@@ -1719,11 +1760,10 @@ fn render_fixed_matrix(
             let child_id = format!("{}.{}", node_id, i);
             let rendered = render_internal(elem, ctx, target, &child_id, node_id_to_uuid);
 
-            // Wrap with UUID for Typst
             if matches!(target, RenderTarget::Typst)
                 && let Some(uuid) = node_id_to_uuid.get(&child_id)
             {
-                return format!("#[#box[${}$]<id{}>]", rendered, uuid);
+                return uuid_wrap(&rendered, uuid, true);
             }
             rendered
         })
