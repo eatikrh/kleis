@@ -24,6 +24,7 @@
 //!
 //! **Grammar:** See docs/grammar/kleist_grammar.ebnf
 
+use std::collections::HashMap;
 use std::fmt;
 
 // =============================================================================
@@ -36,6 +37,7 @@ pub struct KleistFile {
     pub templates: Vec<TemplateDefinition>,
     pub tools: Vec<ToolDefinition>,
     pub palette: Option<PaletteDefinition>,
+    pub imports: Vec<String>,
 }
 
 /// A single @template block
@@ -54,6 +56,9 @@ pub struct TemplateDefinition {
     pub svg: Option<String>,
     /// Glyph symbol for button display (e.g., "Γ", "∫", "Σ")
     pub glyph: Option<String>,
+    /// Domain-specific metadata (e.g., mode, slot_type, accepts)
+    /// Any unrecognized `identifier: "value"` pair is collected here.
+    pub metadata: HashMap<String, String>,
 }
 
 impl TemplateDefinition {
@@ -70,6 +75,7 @@ impl TemplateDefinition {
             shortcut: None,
             svg: None,
             glyph: None,
+            metadata: HashMap::new(),
         }
     }
 }
@@ -196,6 +202,7 @@ enum Keyword {
     Template,
     Tool,
     Palette,
+    Import,
     Tab,
     Group,
     Separator,
@@ -446,6 +453,7 @@ impl<'a> Tokenizer<'a> {
         let token = match ident.as_str() {
             "template" => Token::Keyword(Keyword::Template),
             "palette" => Token::Keyword(Keyword::Palette),
+            "import" => Token::Keyword(Keyword::Import),
             "tab" => Token::Keyword(Keyword::Tab),
             "group" => Token::Keyword(Keyword::Group),
             "separator" => Token::Keyword(Keyword::Separator),
@@ -544,10 +552,15 @@ impl<'a> KleistParser<'a> {
                         let palette = self.parse_palette()?;
                         file.palette = Some(palette);
                     }
+                    Token::Keyword(Keyword::Import) => {
+                        self.advance()?;
+                        let path = self.expect_string()?;
+                        file.imports.push(path);
+                    }
                     _ => {
                         return Err(self
                             .tokenizer
-                            .error("Expected 'template', 'tool', or 'palette' after @"));
+                            .error("Expected 'template', 'tool', 'palette', or 'import' after @"));
                     }
                 }
             } else {
@@ -616,6 +629,13 @@ impl<'a> KleistParser<'a> {
                     self.advance()?;
                     self.expect(Token::Colon)?;
                     template.glyph = Some(self.expect_string()?);
+                }
+                Token::Identifier(key) => {
+                    let key = key.clone();
+                    self.advance()?;
+                    self.expect(Token::Colon)?;
+                    let value = self.expect_string()?;
+                    template.metadata.insert(key, value);
                 }
                 _ => {
                     return Err(self
@@ -828,6 +848,7 @@ pub fn load_kleist_directory(
             let file = parse_kleist_file(&path)?;
             combined.templates.extend(file.templates);
             combined.tools.extend(file.tools);
+            combined.imports.extend(file.imports);
             if file.palette.is_some() {
                 combined.palette = file.palette;
             }
@@ -1009,6 +1030,92 @@ mod tests {
         assert_eq!(tool.category.as_deref(), Some("linear_algebra"));
         assert!(tool.builtin);
         assert_eq!(tool.svg.as_deref(), Some("<svg>...</svg>"));
+    }
+
+    #[test]
+    fn test_parse_template_metadata() {
+        let input = "@template egyptian_glyph_A1 {\n\
+            typst: \"#image(A1.svg, height: 1.5em)\"\n\
+            mode: \"content\"\n\
+            slot_type: \"egyptian_glyph\"\n\
+            sign_shape: \"Tall\"\n\
+        }\n";
+        let file = parse_kleist(input).unwrap();
+        assert_eq!(file.templates.len(), 1);
+        let t = &file.templates[0];
+        assert_eq!(t.name, "egyptian_glyph_A1");
+        assert_eq!(t.metadata.get("mode").map(|s| s.as_str()), Some("content"));
+        assert_eq!(
+            t.metadata.get("slot_type").map(|s| s.as_str()),
+            Some("egyptian_glyph")
+        );
+        assert_eq!(
+            t.metadata.get("sign_shape").map(|s| s.as_str()),
+            Some("Tall")
+        );
+        assert!(t.typst.is_some());
+    }
+
+    #[test]
+    fn test_parse_import() {
+        let input = r##"
+@import "stdlib/theories/middle_egyptian_grammar.kleis"
+
+@template egyptian_glyph_A1 {
+    typst: "#image(A1.svg, height: 1.5em)"
+    mode: "content"
+}
+"##;
+        let file = parse_kleist(input).unwrap();
+        assert_eq!(file.imports.len(), 1);
+        assert_eq!(
+            file.imports[0],
+            "stdlib/theories/middle_egyptian_grammar.kleis"
+        );
+        assert_eq!(file.templates.len(), 1);
+    }
+
+    #[test]
+    fn test_parse_multiple_imports() {
+        let input = r##"
+@import "stdlib/prelude.kleis"
+@import "stdlib/theories/middle_egyptian_grammar.kleis"
+
+@template test {
+    unicode: "test"
+}
+"##;
+        let file = parse_kleist(input).unwrap();
+        assert_eq!(file.imports.len(), 2);
+        assert_eq!(file.imports[0], "stdlib/prelude.kleis");
+        assert_eq!(
+            file.imports[1],
+            "stdlib/theories/middle_egyptian_grammar.kleis"
+        );
+    }
+
+    #[test]
+    fn test_metadata_does_not_affect_known_fields() {
+        let input = r#"
+@template plus {
+    pattern: "plus(left, right)"
+    unicode: "{left} + {right}"
+    latex: "{left} + {right}"
+    typst: "{left} + {right}"
+    glyph: "+"
+    custom_field: "custom_value"
+}
+"#;
+        let file = parse_kleist(input).unwrap();
+        let t = &file.templates[0];
+        assert_eq!(t.pattern.as_deref(), Some("plus(left, right)"));
+        assert_eq!(t.unicode.as_deref(), Some("{left} + {right}"));
+        assert_eq!(t.glyph.as_deref(), Some("+"));
+        assert_eq!(
+            t.metadata.get("custom_field").map(|s| s.as_str()),
+            Some("custom_value")
+        );
+        assert!(t.metadata.get("pattern").is_none());
     }
 
     #[test]

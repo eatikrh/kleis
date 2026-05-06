@@ -93,7 +93,7 @@ fn load_imports_recursive(
 }
 
 /// Load stdlib files into a StructureRegistry for Z3 verification.
-fn load_stdlib_registry() -> kleis::structure_registry::StructureRegistry {
+fn load_stdlib_registry(extra_imports: &[String]) -> kleis::structure_registry::StructureRegistry {
     use kleis::evaluator::Evaluator;
     use kleis::kleis_parser::parse_kleis_program_with_file;
     use kleis::structure_registry::StructureRegistry;
@@ -102,13 +102,18 @@ fn load_stdlib_registry() -> kleis::structure_registry::StructureRegistry {
     let mut registry = StructureRegistry::default();
     let mut loaded_files = std::collections::HashSet::new();
 
-    let stdlib_files = [
-        "stdlib/minimal_prelude.kleis",
-        "stdlib/lists.kleis",
-        "stdlib/matrices.kleis",
+    let mut all_files: Vec<String> = vec![
+        "stdlib/minimal_prelude.kleis".to_string(),
+        "stdlib/lists.kleis".to_string(),
+        "stdlib/matrices.kleis".to_string(),
     ];
+    for import in extra_imports {
+        if !all_files.contains(import) {
+            all_files.push(import.clone());
+        }
+    }
 
-    for file_path_str in &stdlib_files {
+    for file_path_str in &all_files {
         let file_path = std::path::Path::new(file_path_str);
         match std::fs::read_to_string(file_path) {
             Ok(source) => {
@@ -180,6 +185,8 @@ struct TemplateInfo {
     category: Option<String>,
     glyph: Option<String>,
     svg: Option<String>,
+    #[serde(skip_serializing_if = "std::collections::HashMap::is_empty")]
+    metadata: std::collections::HashMap<String, String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -319,7 +326,27 @@ async fn main() {
         }
     };
 
-    let registry = load_stdlib_registry();
+    // Collect @import paths from .kleist template files
+    let kleist_imports = {
+        let dir = std::path::Path::new("std_template_lib");
+        if dir.exists() {
+            match kleis::kleist_parser::load_kleist_directory(dir) {
+                Ok(file) => file.imports,
+                Err(_) => vec![],
+            }
+        } else {
+            vec![]
+        }
+    };
+    if !kleist_imports.is_empty() {
+        println!(
+            "📦 Found {} @import(s) from .kleist templates: {:?}",
+            kleist_imports.len(),
+            kleist_imports
+        );
+    }
+
+    let registry = load_stdlib_registry(&kleist_imports);
     println!(
         "✅ StructureRegistry initialized from stdlib/ with {} structures, {} operations",
         registry.structure_count(),
@@ -345,6 +372,7 @@ async fn main() {
         .route("/api/check_sat", post(check_sat_handler))
         .route("/api/operations", get(operations_handler))
         .route("/api/templates", get(templates_handler))
+        .route("/api/palette", get(palette_handler))
         .route("/api/gallery", get(gallery_handler))
         .route("/health", get(health_handler))
         .nest_service("/static", ServeDir::new("static"))
@@ -812,6 +840,7 @@ async fn templates_handler() -> impl IntoResponse {
                     category: t.category.clone(),
                     glyph: t.glyph.clone(),
                     svg: t.svg.clone(),
+                    metadata: t.metadata.clone(),
                 })
                 .collect(),
             Err(_) => Vec::new(),
@@ -820,6 +849,207 @@ async fn templates_handler() -> impl IntoResponse {
         Vec::new()
     };
     (StatusCode::OK, Json(templates))
+}
+
+// Palette API types
+#[derive(Debug, Serialize)]
+struct PaletteResponse {
+    tabs: Vec<PaletteTab>,
+}
+
+#[derive(Debug, Serialize)]
+struct PaletteTab {
+    name: String,
+    items: Vec<PaletteTabItem>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(tag = "type")]
+enum PaletteTabItem {
+    #[serde(rename = "group")]
+    Group {
+        name: String,
+        items: Vec<PaletteEntry>,
+    },
+    #[serde(rename = "separator")]
+    Separator,
+    #[serde(rename = "template")]
+    Template(PaletteEntry),
+    #[serde(rename = "tool")]
+    Tool(PaletteTool),
+}
+
+#[derive(Debug, Serialize)]
+struct PaletteEntry {
+    name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    glyph: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    svg: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    shortcut: Option<String>,
+    ast: serde_json::Value,
+    metadata: std::collections::HashMap<String, String>,
+}
+
+#[derive(Debug, Serialize)]
+struct PaletteTool {
+    name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    glyph: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    svg: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    handler: Option<String>,
+}
+
+fn build_ast_from_pattern(pattern: &str) -> serde_json::Value {
+    // Parse "name(arg1, arg2)" into an EditorNode AST
+    if let Some(paren_pos) = pattern.find('(') {
+        let name = &pattern[..paren_pos];
+        let args_str = &pattern[paren_pos + 1..pattern.len() - 1];
+        let args: Vec<serde_json::Value> = if args_str.is_empty() {
+            vec![]
+        } else {
+            args_str
+                .split(',')
+                .enumerate()
+                .map(|(i, arg)| {
+                    let hint = arg.trim().to_string();
+                    serde_json::json!({
+                        "Placeholder": { "id": i, "hint": hint }
+                    })
+                })
+                .collect()
+        };
+        serde_json::json!({
+            "Operation": {
+                "name": name,
+                "args": args
+            }
+        })
+    } else {
+        // No parentheses = zero-arg operation
+        serde_json::json!({
+            "Operation": {
+                "name": pattern,
+                "args": []
+            }
+        })
+    }
+}
+
+async fn palette_handler() -> impl IntoResponse {
+    let dir = std::path::Path::new("std_template_lib");
+    if !dir.exists() {
+        return (StatusCode::OK, Json(PaletteResponse { tabs: vec![] }));
+    }
+
+    let kleist_file = match kleis::kleist_parser::load_kleist_directory(dir) {
+        Ok(f) => f,
+        Err(_) => {
+            return (StatusCode::OK, Json(PaletteResponse { tabs: vec![] }));
+        }
+    };
+
+    // Build lookup maps from templates and tools
+    let template_map: std::collections::HashMap<String, &kleis::kleist_parser::TemplateDefinition> =
+        kleist_file
+            .templates
+            .iter()
+            .map(|t| (t.name.clone(), t))
+            .collect();
+    let tool_map: std::collections::HashMap<String, &kleis::kleist_parser::ToolDefinition> =
+        kleist_file
+            .tools
+            .iter()
+            .map(|t| (t.name.clone(), t))
+            .collect();
+
+    let palette = match kleist_file.palette {
+        Some(p) => p,
+        None => {
+            return (StatusCode::OK, Json(PaletteResponse { tabs: vec![] }));
+        }
+    };
+
+    let tabs: Vec<PaletteTab> = palette
+        .tabs
+        .iter()
+        .map(|tab| {
+            let items: Vec<PaletteTabItem> = tab
+                .items
+                .iter()
+                .map(|item| match item {
+                    kleis::kleist_parser::TabItem::Separator => PaletteTabItem::Separator,
+                    kleis::kleist_parser::TabItem::Template(tref) => {
+                        let entry =
+                            make_palette_entry(&tref.name, tref.shortcut.as_deref(), &template_map);
+                        PaletteTabItem::Template(entry)
+                    }
+                    kleis::kleist_parser::TabItem::Tool(tref) => {
+                        let tool = tool_map.get(&tref.name);
+                        PaletteTabItem::Tool(PaletteTool {
+                            name: tref.name.clone(),
+                            glyph: tool.and_then(|t| t.glyph.clone()),
+                            svg: tool.and_then(|t| t.svg.clone()),
+                            handler: tool.and_then(|t| t.handler.clone()),
+                        })
+                    }
+                    kleis::kleist_parser::TabItem::Group(group) => {
+                        let group_items: Vec<PaletteEntry> = group
+                            .items
+                            .iter()
+                            .filter_map(|gi| match gi {
+                                kleis::kleist_parser::GroupItem::Template(tref) => {
+                                    Some(make_palette_entry(
+                                        &tref.name,
+                                        tref.shortcut.as_deref(),
+                                        &template_map,
+                                    ))
+                                }
+                                kleis::kleist_parser::GroupItem::Tool(_) => None,
+                            })
+                            .collect();
+                        PaletteTabItem::Group {
+                            name: group.name.clone(),
+                            items: group_items,
+                        }
+                    }
+                })
+                .collect();
+
+            PaletteTab {
+                name: tab.name.clone(),
+                items,
+            }
+        })
+        .collect();
+
+    (StatusCode::OK, Json(PaletteResponse { tabs }))
+}
+
+fn make_palette_entry(
+    name: &str,
+    shortcut: Option<&str>,
+    template_map: &std::collections::HashMap<String, &kleis::kleist_parser::TemplateDefinition>,
+) -> PaletteEntry {
+    let template = template_map.get(name);
+    let ast = template
+        .and_then(|t| t.pattern.as_deref())
+        .map(build_ast_from_pattern)
+        .unwrap_or_else(|| build_ast_from_pattern(name));
+
+    PaletteEntry {
+        name: name.to_string(),
+        glyph: template.and_then(|t| t.glyph.clone()),
+        svg: template.and_then(|t| t.svg.clone()),
+        shortcut: shortcut
+            .map(|s| s.to_string())
+            .or_else(|| template.and_then(|t| t.shortcut.clone())),
+        ast,
+        metadata: template.map(|t| t.metadata.clone()).unwrap_or_default(),
+    }
 }
 
 // Handler for gallery examples
@@ -1355,27 +1585,37 @@ fn collect_editor_slots_recursive(
             });
         }
         EditorNode::Operation { operation } => {
-            // Don't create slots for operations themselves - they're not editable
-            // Only their arguments (placeholders, objects, constants) are editable
+            if operation.args.is_empty() {
+                // Zero-arg operation is a leaf (e.g., glyph, symbol template).
+                // Treat like Object/Const: give it a UUID for bounding box tracking.
+                let uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
+                slots.push(ArgumentSlot {
+                    id: uuid,
+                    path: path.clone(),
+                    hint: format!("value: {}", operation.name),
+                    is_placeholder: false,
+                    role: role.clone(),
+                });
+            } else {
+                // Multi-arg operation: recurse into children
+                for (i, arg) in operation.args.iter().enumerate() {
+                    // Skip structural arguments that are not user-editable content:
+                    // - Matrix: first two args are dimensions (rows, cols)
+                    // - Piecewise: first arg is case count
+                    let is_structural = match operation.name.as_str() {
+                        "Matrix" => i < 2,
+                        "Piecewise" => i == 0,
+                        _ => false,
+                    };
+                    if is_structural {
+                        continue;
+                    }
 
-            // Recursively process each argument
-            for (i, arg) in operation.args.iter().enumerate() {
-                // Skip structural arguments that are not user-editable content:
-                // - Matrix: first two args are dimensions (rows, cols)
-                // - Piecewise: first arg is case count
-                let is_structural = match operation.name.as_str() {
-                    "Matrix" => i < 2,
-                    "Piecewise" => i == 0,
-                    _ => false,
-                };
-                if is_structural {
-                    continue;
+                    let mut child_path = path.clone();
+                    child_path.push(i);
+                    let child_role = determine_arg_role(&operation.name, i);
+                    collect_editor_slots_recursive(arg, slots, child_path, child_role);
                 }
-
-                let mut child_path = path.clone();
-                child_path.push(i);
-                let child_role = determine_arg_role(&operation.name, i);
-                collect_editor_slots_recursive(arg, slots, child_path, child_role);
             }
         }
         EditorNode::List { list } => {
