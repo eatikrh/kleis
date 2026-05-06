@@ -502,15 +502,78 @@ to avoid Z3 explosion. `MiddleEgyptianNominalGrammar` and
    - **4a: `/api/palette` endpoint** — DONE. Serves palette structure with
      ASTs and metadata from `.kleist` files.
    - **4b: Client-side `buildPaletteFromAPI()`** — DEFERRED. Currently the
-     Egyptian palette uses domain-specific JavaScript (~300 lines:
-     `showEgyptianPalette`, `filterEgyptianGlyphs`, `insertEgyptianGlyph`,
-     `validateQuadratPlacement`). This violates the "no JS for new domains"
-     goal. Needs replacement with a generic palette builder that reads from
-     `/api/palette` and constructs tabs, groups, filters, and buttons from
-     data. Any domain would get its palette automatically.
+     Egyptian palette uses domain-specific JavaScript (~300 lines in
+     `static/js/egyptian.js`). This violates the "no JS for new domains"
+     goal. Needs replacement with a generic `domainPalette.js` that reads
+     from `/api/palette` and constructs tabs, groups, filters, and buttons
+     from data. Any domain would get its palette automatically.
 5. **Theory imports from templates** — DONE. `.kleist` files declare
    `@import` for `.kleis` theories. Server loads imported theories into
    `StructureRegistry`.
+
+#### ES Module Extraction — DONE
+
+**Branch:** `refactor/es-module-extraction`
+**PRs:** eatikrh/kleis#64, engingithub/kleis#62
+
+Extracted ~3,100 lines of inline JavaScript from `static/index.html` into
+17 ES module files under `static/js/`. The HTML file is now 1,232 lines
+(markup + CSS only), loading `<script type="module" src="/static/js/main.js">`.
+
+Modules: `state.js`, `astUtils.js`, `render.js`, `undoRedo.js`,
+`inlineEdit.js`, `slotHandlers.js`, `palette.js`, `egyptian.js`,
+`matrixBuilder.js`, `piecewiseBuilder.js`, `debug.js`, `verify.js`,
+`modeConvert.js`, `jupyter.js`, `keyboard.js`, `gallery.js`, `main.js`.
+
+Manually tested: all palettes, structural mode, inline editing, piecewise
+builder, matrix builder, type checking, verify/sat, Egyptian glyphs. No
+console errors. 97 AST templates loaded.
+
+#### Next: Generic Domain Palette (Fix 4b)
+
+**Goal:** Replace `egyptian.js` with a generic `domainPalette.js` that works
+for ANY domain — no JavaScript changes needed to add new template domains.
+
+**Approach:** Add a second concrete domain first (electronics), observe what
+filter dropdowns it needs, then generalize.
+
+**Electronics `.kleist` template example:**
+```
+@template resistor
+  name: "resistor"
+  category: "electronics_passive"
+  svg: "static/svg/electronics/resistor.svg"
+  metadata:
+    component_type: "Passive"
+    package: "Through-hole"
+    symbol_standard: "IEC"
+```
+
+**Electronics filter dropdowns:**
+- Component type: Passive, Active, IC, Connector, Source
+- Package: Through-hole, SMD, Module
+- Symbol standard: IEC, ANSI
+
+**Egyptian filter dropdowns (existing):**
+- Sign shape: Tall, Flat, Small
+- Sign type: Uniliteral, Biliteral, Triliteral, Determinative
+
+**Key insight:** The pattern is identical — for each unique metadata key
+across templates in a domain, create a filter dropdown whose options are
+the distinct values for that key. The generic `domainPalette.js` would:
+
+1. Fetch templates by domain from `/api/templates`
+2. Scan metadata keys across all templates in the domain
+3. Build filter dropdowns dynamically from distinct metadata values
+4. Generate glyph/component buttons with SVG/Unicode rendering
+5. Handle composition templates (quadrats, series/parallel circuits)
+
+**Steps:**
+1. Create `std_template_lib/electronics.kleist` with ~20 basic components
+2. Implement `static/js/electronics.js` (hardcoded, like `egyptian.js`)
+3. Compare `egyptian.js` and `electronics.js` side-by-side
+4. Extract the common pattern into `domainPalette.js`
+5. Delete both domain-specific files, replace with data-driven generic
 
 #### Known issue: `apply_template_substitutions` hardcoded aliases
 
