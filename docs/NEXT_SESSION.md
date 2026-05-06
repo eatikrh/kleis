@@ -346,6 +346,181 @@ The next theorem-shaped target is to:
 
 ## Active Engineering
 
+### ADR-035: Multi-Domain Equation Editor — DEEP ANALYSIS COMPLETE
+
+**Status:** Plan finalized, ready to implement.  
+**Branch:** TBD (needs new branch off main)  
+**Plan file:** `.cursor/plans/domain-agnostic_editor_engine_f0f86c94.plan.md`
+
+#### Goal
+
+Extending the Equation Editor to new domains (Egyptian hieroglyphs, circuits,
+chemistry) must require only `.kleist` template files and `.kleis` theory
+files — no Rust, no JavaScript changes. Existing math code stays as-is.
+
+#### Deep analysis findings (discrepancies between ADR-035 and actual code)
+
+1. **`validate_quadrat` does NOT exist** in `render_editor.rs` or any Rust
+   source file. ADR-035 incorrectly claimed it needed replacement. The only
+   domain-specific code that was added during the Egyptian experiment has
+   already been reverted.
+
+2. **Egyptian-specific JS does NOT exist** in `index.html`.
+   `showEgyptianPalette`, `insertEgyptianGlyph`, `validateQuadratPlacement`
+   — all absent. ADR-035 incorrectly claimed these needed removal.
+
+3. **`kleist_parser.rs` DOES need changes.** ADR-035 claimed "no changes
+   needed" because it assumed the parser collects unknown metadata fields.
+   In fact, `TemplateDefinition` (line 42-57) has NO `metadata` field, and
+   the parser's catch-all arm (line ~620) ERRORS on unknown `identifier:
+   "value"` pairs. This is a blocker for `mode:`, `slot_type:`, `accepts:`.
+
+4. **`collect_editor_slots_recursive`** in `server.rs` (line ~1360)
+   explicitly skips `EditorNode::Operation`. Zero-arg operations get no
+   `ArgumentSlot`, no UUID, no bounding box. This is the root cause of
+   "Argument Bounding Boxes (semantic): (none)" for glyphs.
+
+5. **UUID wrapping** at 4 sites in `render_editor.rs` uses
+   `#[#box[$CONTENT$]<idUUID>]` — always math mode. Content-mode Typst
+   (like `#image(...)`) breaks inside `$...$`.
+
+#### Type inference pipeline in the Equation Editor
+
+Traced the full chain for how HM unification works in the visual editor:
+
+```
+Client: checkTypes() → POST /api/type_check (debounced 500ms)
+    ↓
+Server: type_check_handler (server.rs:1393)
+    ↓
+    Stage A: json_to_editor_node → EditorNode AST
+    Stage B: is_formatting_operation → early return for subsup/tilde/hat/etc.
+    Stage C: find_tensor_in_editor_node → early return for kind:"tensor"
+    Stage D: editor_node_to_expression → flatten to Kleis Expression
+    Stage E: TypeChecker::with_stdlib() → load matrices/tensors/quantum
+    ↓
+TypeChecker.check() → inference.infer_and_solve(expr, context_builder)
+    ↓
+infer_operation (type_inference.rs:1339):
+    - ~400 lines of hardcoded match blocks (Matrix, Complex, Rational, etc.)
+    - Arithmetic ops (plus/minus/times/divide): generic NatValue matching
+      → catches Matrix(3,3) + Matrix(2,2) at line 1670
+    - Final fallback: context_builder.infer_operation_type()
+    ↓
+TypeContextBuilder.infer_operation_type (type_context.rs:1031):
+    - Looks up operation in structure registry
+    - Delegates to SignatureInterpreter for HM unification
+    - matrix_add(Matrix(3,3,ℝ), Matrix(2,2,ℝ)) fails because
+      signature Matrix(m,n,T)→Matrix(m,n,T)→Matrix(m,n,T) forces m=3,m=2
+```
+
+**Key insight:** `EditorTypeTranslator` (src/editor_type_translator.rs) is
+already generic — reads `kind` and `metadata` from EditorNodes without
+hardcoding types. New domains work through the same pipeline.
+
+#### Middle Egyptian paper insight: "Type inference IS translation"
+
+From "The Scribe is the Skolem" (Section 6):
+
+- The 125 axioms in `stdlib/theories/middle_egyptian_grammar.kleis` are
+  structurally identical to `stdlib/matrices.kleis`
+- `MiddleEgyptianNominalGrammar` defines operations like
+  `gender : Noun → Gender`, `adjective_gender : Adjective → Gender`
+- Axiom 53 (`adjective_agreement`):
+  `modifies(a, n) → adjective_gender(a) = gender(n)`
+  — same constraint pattern as matrix dimension matching
+- The TypeChecker + SignatureInterpreter handles this through the same
+  HM unification path — no Rust changes needed for type checking
+- For the Equation Editor, Egyptian type checking means loading
+  `middle_egyptian_grammar.kleis` into the TypeChecker alongside matrices
+- Template `.kleist` files specify both rendering AND type info (`kind`,
+  `metadata`) — same template that draws a glyph tells the type system
+  what grammatical role it fills
+
+#### render_editor.rs audit
+
+Six categories of hardcoded template knowledge found:
+
+1. Matrix dispatching: `"Matrix"|"PMatrix"|"VMatrix"|"BMatrix"` + fixed-size
+2. Piecewise dispatching: `"Piecewise"|"cases2"|"cases3"|"cases"`
+3. Tensor dispatching: `kind == "tensor"` → `render_tensor`
+4. Variadic folding: hardcoded list `["times","scalar_multiply","multiply","plus","minus"]`
+5. Name-specific substitutions: `if name == "index_mixed"`, `if name == "int_bounds"`
+6. ~250 lines of fallback templates in `EditorRenderContext::new()`
+
+**Decision:** All of this is existing math infrastructure — it stays as-is.
+New domains go through the generic `render_with_template` path (line 1474),
+which already handles arbitrary templates via positional placeholder
+substitution.
+
+#### Verify/Sat button pipeline
+
+Traced how the Verify and Sat buttons work:
+
+```
+Client: verifyWithZ3() / checkSatisfiable()
+  → POST /api/verify or /api/check_sat with currentAST
+    ↓
+Server (verify_handler / check_sat_handler):
+  1. json_to_editor_node → parse AST
+  2. extract_types_from_editor_node → EditorTypeTranslator reads kind/metadata
+  3. editor_node_to_expression → flatten to Kleis Expression
+  4. AxiomVerifier.new(registry) → Z3 backend with StructureRegistry
+  5. analyze_dependencies(expr) → walks Expression, finds operation names,
+     looks up owning structures via registry.get_operation_owners()
+  6. ensure_structure_loaded(structure) → loads axioms into Z3
+  7. verify_axiom or check_satisfiability → Z3 check
+```
+
+**Key finding:** `load_stdlib_registry()` (server.rs line 96) loads from a
+hardcoded list of 3 files: `minimal_prelude.kleis`, `lists.kleis`,
+`matrices.kleis`. Theory files like `middle_egyptian_grammar.kleis` are NOT
+loaded. The `AxiomVerifier` and `analyze_dependencies` are fully generic —
+they would work for any domain IF the structures are in the registry.
+
+**Solution:** Templates should declare their theory imports. A `.kleist` file
+should have `@import "stdlib/theories/middle_egyptian_grammar.kleis"`. When
+the server loads templates for the palette, it also loads the imported
+theories into the `StructureRegistry` and `TypeChecker`. No hardcoded list
+of files. The template is the single source of truth for rendering, type
+info, palette placement, AND the theory needed for verification.
+
+**Note:** `ensure_structure_loaded` (line 361) skips parameterized structures
+to avoid Z3 explosion. `MiddleEgyptianNominalGrammar` and
+`HieroglyphicWriting` are non-parameterized, so they load correctly.
+
+#### Five engine fixes (one-time, domain-agnostic)
+
+1. **Parser metadata** — Add `metadata: HashMap<String, String>` to
+   `TemplateDefinition`, change parser catch-all to collect unknown pairs
+2. **Zero-arg slots** — Make zero-arg Operations produce ArgumentSlots in
+   `collect_editor_slots_recursive`
+3. **Mode-aware UUID wrapping** — `uuid_wrap` helper reads generic `mode`
+   property from template metadata (default: math). No template-specific refs.
+4. **Data-driven palettes** — `GET /api/palette` endpoint + client
+   `buildPaletteFromAPI()` replacing ~547 lines of hardcoded HTML/JS
+5. **Theory imports from templates** — `.kleist` files declare `@import` for
+   their `.kleis` theories. Server loads imported theories into
+   `StructureRegistry` and `TypeChecker` when loading templates. Enables
+   Verify/Sat buttons for new domains without hardcoding theory file lists.
+
+#### Additional finding: EditorRenderContext needs metadata map
+
+`EditorRenderContext` (render_editor.rs line 83) stores only per-target
+template strings (unicode, latex, html, typst, kleis). It discards all other
+template fields. For `uuid_wrap` to read `mode` from template metadata,
+`EditorRenderContext` needs a new `metadata: HashMap<String, HashMap<String,
+String>>` map keyed by template name.
+
+#### Risk: top-level Typst wrapper
+
+`typst_compiler.rs` wraps everything in `#box($ ... $)` — math mode. For
+content-mode templates, the per-template `uuid_wrap` uses `#[#box[CONTENT]<id>]`
+(no `$...$`). This relies on Typst's `#[...]` switching from math to content
+mode inside `$...$`. Needs experimental verification during implementation.
+
+---
+
 ### HACKATHON CODE REVIEW — IN PROGRESS
 
 **Last Updated:** April 19, 2026
