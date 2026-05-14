@@ -190,13 +190,9 @@ impl Evaluator {
                 name,
                 args: op_args,
                 span: None,
-            } if name == "Vector" => {
-                if op_args.len() >= 2 {
-                    if let Expression::List(items) = &op_args[1] {
-                        items.clone()
-                    } else {
-                        return Ok(None);
-                    }
+            } if name == "Vector" && op_args.len() >= 2 => {
+                if let Expression::List(items) = &op_args[1] {
+                    items.clone()
                 } else {
                     return Ok(None);
                 }
@@ -205,13 +201,9 @@ impl Evaluator {
                 name,
                 args: op_args,
                 span: None,
-            } if name == "Matrix" || name == "matrix" => {
-                if op_args.len() >= 3 {
-                    if let Expression::List(items) = &op_args[2] {
-                        items.clone()
-                    } else {
-                        return Ok(None);
-                    }
+            } if (name == "Matrix" || name == "matrix") && op_args.len() >= 3 => {
+                if let Expression::List(items) = &op_args[2] {
+                    items.clone()
                 } else {
                     return Ok(None);
                 }

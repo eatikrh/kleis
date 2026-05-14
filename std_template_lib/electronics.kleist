@@ -1,0 +1,379 @@
+// ============================================================================
+// Electronic Components - IEC Standard Symbols
+// ============================================================================
+// Part of Kleis Standard Template Library
+// File: std_template_lib/electronics.kleist
+//
+// Each component is a zero-argument template that renders as an inline SVG
+// image via Typst. Components are organized by functional category.
+//
+// Metadata fields:
+//   component_type: "Passive" | "Active" | "Source" | "Connector" | "Measurement"
+//   package:        "Through-hole" | "SMD" | "Module" | "Symbol"
+//   symbol_standard: "IEC" | "ANSI"
+//   ports:          "name:relX,relY;name:relX,relY;..." (relative 0-1 coords)
+//   graph_width:    display width on graph canvas (px)
+//   graph_height:   display height on graph canvas (px)
+
+// ============ GRAPH DOMAIN CONFIG ============
+// Tells the Graph Editor how to route wires and render edges for this domain.
+
+@template __domain_electronics {
+    pattern: "__domain_electronics()"
+    category: "__domain"
+    routing_mode: "orthogonal"
+    junction_style: "dot"
+    multi_port_strategy: "trunk_branch"
+    edge_decoration: "none"
+    edge_direction: "undirected"
+}
+
+// ============ PASSIVE COMPONENTS ============
+
+@template resistor {
+    pattern: "resistor()"
+    typst: "#box(image(\"static/svg/electronics/resistor.svg\", width: 2em, height: 1em, fit: \"contain\"))"
+    unicode: "R"
+    category: "electronics_passive"
+    glyph: "R"
+    mode: "content"
+    svg: "static/svg/electronics/resistor.svg"
+    component_type: "Passive"
+    package: "Through-hole"
+    symbol_standard: "IEC"
+    ports: "left:0,0.5;right:1,0.5"
+    graph_width: "64"
+    graph_height: "32"
+}
+
+@template capacitor {
+    pattern: "capacitor()"
+    typst: "#box(image(\"static/svg/electronics/capacitor.svg\", width: 2em, height: 1em, fit: \"contain\"))"
+    unicode: "C"
+    category: "electronics_passive"
+    glyph: "C"
+    mode: "content"
+    svg: "static/svg/electronics/capacitor.svg"
+    component_type: "Passive"
+    package: "Through-hole"
+    symbol_standard: "IEC"
+    ports: "left:0,0.5;right:1,0.5"
+    graph_width: "64"
+    graph_height: "32"
+}
+
+@template inductor {
+    pattern: "inductor()"
+    typst: "#box(image(\"static/svg/electronics/inductor.svg\", width: 2em, height: 1em, fit: \"contain\"))"
+    unicode: "L"
+    category: "electronics_passive"
+    glyph: "L"
+    mode: "content"
+    svg: "static/svg/electronics/inductor.svg"
+    component_type: "Passive"
+    package: "Through-hole"
+    symbol_standard: "IEC"
+    ports: "left:0,0.5;right:1,0.5"
+    graph_width: "64"
+    graph_height: "32"
+}
+
+@template diode {
+    pattern: "diode()"
+    typst: "#box(image(\"static/svg/electronics/diode.svg\", width: 2em, height: 1em, fit: \"contain\"))"
+    unicode: "D"
+    category: "electronics_passive"
+    glyph: "D"
+    mode: "content"
+    svg: "static/svg/electronics/diode.svg"
+    component_type: "Passive"
+    package: "Through-hole"
+    symbol_standard: "IEC"
+    ports: "anode:0,0.5;cathode:1,0.5"
+    graph_width: "64"
+    graph_height: "32"
+}
+
+@template led {
+    pattern: "led()"
+    typst: "#box(image(\"static/svg/electronics/led.svg\", width: 2em, height: 1em, fit: \"contain\"))"
+    unicode: "LED"
+    category: "electronics_passive"
+    glyph: "LED"
+    mode: "content"
+    svg: "static/svg/electronics/led.svg"
+    component_type: "Passive"
+    package: "Through-hole"
+    symbol_standard: "IEC"
+    ports: "anode:0,0.5;cathode:1,0.5"
+    graph_width: "64"
+    graph_height: "32"
+}
+
+@template zener_diode {
+    pattern: "zener_diode()"
+    typst: "#box(image(\"static/svg/electronics/zener_diode.svg\", width: 2em, height: 1em, fit: \"contain\"))"
+    unicode: "ZD"
+    category: "electronics_passive"
+    glyph: "ZD"
+    mode: "content"
+    svg: "static/svg/electronics/zener_diode.svg"
+    component_type: "Passive"
+    package: "Through-hole"
+    symbol_standard: "IEC"
+    ports: "anode:0,0.5;cathode:1,0.5"
+    graph_width: "64"
+    graph_height: "32"
+}
+
+// ============ ACTIVE COMPONENTS ============
+
+@template npn_transistor {
+    pattern: "npn_transistor()"
+    typst: "#box(image(\"static/svg/electronics/npn_transistor.svg\", width: 1.5em, height: 1.5em, fit: \"contain\"))"
+    unicode: "NPN"
+    category: "electronics_active"
+    glyph: "NPN"
+    mode: "content"
+    svg: "static/svg/electronics/npn_transistor.svg"
+    component_type: "Active"
+    package: "Through-hole"
+    symbol_standard: "IEC"
+    ports: "base:0,0.5;collector:0.5,0;emitter:0.5,1"
+    graph_width: "48"
+    graph_height: "48"
+}
+
+@template pnp_transistor {
+    pattern: "pnp_transistor()"
+    typst: "#box(image(\"static/svg/electronics/pnp_transistor.svg\", width: 1.5em, height: 1.5em, fit: \"contain\"))"
+    unicode: "PNP"
+    category: "electronics_active"
+    glyph: "PNP"
+    mode: "content"
+    svg: "static/svg/electronics/pnp_transistor.svg"
+    component_type: "Active"
+    package: "Through-hole"
+    symbol_standard: "IEC"
+    ports: "base:0,0.5;collector:0.5,1;emitter:0.5,0"
+    graph_width: "48"
+    graph_height: "48"
+}
+
+@template n_mosfet {
+    pattern: "n_mosfet()"
+    typst: "#box(image(\"static/svg/electronics/n_mosfet.svg\", width: 1.5em, height: 1.5em, fit: \"contain\"))"
+    unicode: "NMOS"
+    category: "electronics_active"
+    glyph: "NMOS"
+    mode: "content"
+    svg: "static/svg/electronics/n_mosfet.svg"
+    component_type: "Active"
+    package: "SMD"
+    symbol_standard: "IEC"
+    ports: "gate:0,0.5;drain:0.5,0;source:0.5,1"
+    graph_width: "48"
+    graph_height: "48"
+}
+
+@template p_mosfet {
+    pattern: "p_mosfet()"
+    typst: "#box(image(\"static/svg/electronics/p_mosfet.svg\", width: 1.5em, height: 1.5em, fit: \"contain\"))"
+    unicode: "PMOS"
+    category: "electronics_active"
+    glyph: "PMOS"
+    mode: "content"
+    svg: "static/svg/electronics/p_mosfet.svg"
+    component_type: "Active"
+    package: "SMD"
+    symbol_standard: "IEC"
+    ports: "gate:0,0.5;drain:0.5,1;source:0.5,0"
+    graph_width: "48"
+    graph_height: "48"
+}
+
+@template op_amp {
+    pattern: "op_amp()"
+    typst: "#box(image(\"static/svg/electronics/op_amp.svg\", width: 2em, height: 1.5em, fit: \"contain\"))"
+    unicode: "OpAmp"
+    category: "electronics_active"
+    glyph: "OpAmp"
+    mode: "content"
+    svg: "static/svg/electronics/op_amp.svg"
+    component_type: "Active"
+    package: "Module"
+    symbol_standard: "IEC"
+    ports: "inv:0,0.3;non_inv:0,0.7;out:1,0.5"
+    graph_width: "64"
+    graph_height: "48"
+}
+
+// ============ SOURCES ============
+
+@template dc_voltage {
+    pattern: "dc_voltage()"
+    typst: "#box(image(\"static/svg/electronics/dc_voltage.svg\", width: 1.5em, height: 1.5em, fit: \"contain\"))"
+    unicode: "V_DC"
+    category: "electronics_source"
+    glyph: "V+"
+    mode: "content"
+    svg: "static/svg/electronics/dc_voltage.svg"
+    component_type: "Source"
+    package: "Symbol"
+    symbol_standard: "IEC"
+    ports: "pos:0.5,0;neg:0.5,1"
+    graph_width: "48"
+    graph_height: "48"
+}
+
+@template ac_voltage {
+    pattern: "ac_voltage()"
+    typst: "#box(image(\"static/svg/electronics/ac_voltage.svg\", width: 1.5em, height: 1.5em, fit: \"contain\"))"
+    unicode: "V_AC"
+    category: "electronics_source"
+    glyph: "V~"
+    mode: "content"
+    svg: "static/svg/electronics/ac_voltage.svg"
+    component_type: "Source"
+    package: "Symbol"
+    symbol_standard: "IEC"
+    ports: "pos:0.5,0;neg:0.5,1"
+    graph_width: "48"
+    graph_height: "48"
+}
+
+@template dc_current {
+    pattern: "dc_current()"
+    typst: "#box(image(\"static/svg/electronics/dc_current.svg\", width: 1.5em, height: 1.5em, fit: \"contain\"))"
+    unicode: "I_DC"
+    category: "electronics_source"
+    glyph: "I"
+    mode: "content"
+    svg: "static/svg/electronics/dc_current.svg"
+    component_type: "Source"
+    package: "Symbol"
+    symbol_standard: "IEC"
+    ports: "pos:0.5,0;neg:0.5,1"
+    graph_width: "48"
+    graph_height: "48"
+}
+
+@template ground {
+    pattern: "ground()"
+    typst: "#box(image(\"static/svg/electronics/ground.svg\", width: 1em, height: 1em, fit: \"contain\"))"
+    unicode: "GND"
+    category: "electronics_source"
+    glyph: "GND"
+    mode: "content"
+    svg: "static/svg/electronics/ground.svg"
+    component_type: "Source"
+    package: "Symbol"
+    symbol_standard: "IEC"
+    ports: "pin:0.5,0"
+    graph_width: "32"
+    graph_height: "32"
+}
+
+// ============ CONNECTORS ============
+
+@template wire_junction {
+    pattern: "wire_junction()"
+    typst: "#box(image(\"static/svg/electronics/wire_junction.svg\", width: 0.5em, height: 0.5em, fit: \"contain\"))"
+    unicode: "●"
+    category: "electronics_connector"
+    glyph: "●"
+    mode: "content"
+    svg: "static/svg/electronics/wire_junction.svg"
+    component_type: "Connector"
+    package: "Symbol"
+    symbol_standard: "IEC"
+    ports: "pin:0.5,0.5"
+    graph_width: "16"
+    graph_height: "16"
+}
+
+@template no_connect {
+    pattern: "no_connect()"
+    typst: "#box(image(\"static/svg/electronics/no_connect.svg\", width: 0.5em, height: 0.5em, fit: \"contain\"))"
+    unicode: "✕"
+    category: "electronics_connector"
+    glyph: "✕"
+    mode: "content"
+    svg: "static/svg/electronics/no_connect.svg"
+    component_type: "Connector"
+    package: "Symbol"
+    symbol_standard: "IEC"
+    ports: "pin:0.5,0.5"
+    graph_width: "16"
+    graph_height: "16"
+}
+
+@template terminal {
+    pattern: "terminal()"
+    typst: "#box(image(\"static/svg/electronics/terminal.svg\", width: 0.5em, height: 0.5em, fit: \"contain\"))"
+    unicode: "◎"
+    category: "electronics_connector"
+    glyph: "◎"
+    mode: "content"
+    svg: "static/svg/electronics/terminal.svg"
+    component_type: "Connector"
+    package: "Symbol"
+    symbol_standard: "IEC"
+    ports: "pin:0.5,0.5"
+    graph_width: "16"
+    graph_height: "16"
+}
+
+// ============ MEASUREMENT ============
+
+@template oscilloscope {
+    pattern: "oscilloscope(signal)"
+    typst: "#grid(columns: (1.5em, 1.5em), gutter: 0.1em, align(center + horizon, [#box(image(\"static/svg/electronics/oscilloscope.svg\", width: 1.5em, height: 1.2em, fit: \"contain\"))]), align(center + horizon, [{signal}]))"
+    unicode: "OSC({signal})"
+    category: "electronics_measurement"
+    glyph: "OSC"
+    mode: "content"
+    svg: "static/svg/electronics/oscilloscope.svg"
+    component_type: "Measurement"
+    package: "Module"
+    symbol_standard: "IEC"
+    ports: "probe_pos:0,0.3;probe_neg:0,0.7"
+    graph_width: "48"
+    graph_height: "48"
+}
+
+@template multimeter {
+    pattern: "multimeter(signal)"
+    typst: "#grid(columns: (1.5em, 1.5em), gutter: 0.1em, align(center + horizon, [#box(image(\"static/svg/electronics/multimeter.svg\", width: 1.2em, height: 1.5em, fit: \"contain\"))]), align(center + horizon, [{signal}]))"
+    unicode: "DMM({signal})"
+    category: "electronics_measurement"
+    glyph: "DMM"
+    mode: "content"
+    svg: "static/svg/electronics/multimeter.svg"
+    component_type: "Measurement"
+    package: "Module"
+    symbol_standard: "IEC"
+    ports: "probe_pos:0,0.3;probe_neg:0,0.7"
+    graph_width: "48"
+    graph_height: "48"
+}
+
+// ============ COMPOSITION ============
+
+@template series {
+    pattern: "series(left, right)"
+    typst: "#box(baseline: 50%, grid(columns: (auto, 1em, auto), rows: auto, align: center + horizon, [{left}], [#line(length: 1em, stroke: 0.5pt + black)], [{right}]))"
+    unicode: "{left}—{right}"
+    category: "electronics_composition"
+    glyph: "Series"
+    mode: "content"
+}
+
+@template parallel {
+    pattern: "parallel(left, right)"
+    typst: "#box(baseline: 50%, stack(dir: ttb, spacing: 0.3em, [{left}], [{right}]))"
+    unicode: "{left}‖{right}"
+    category: "electronics_composition"
+    glyph: "Parallel"
+    mode: "content"
+}

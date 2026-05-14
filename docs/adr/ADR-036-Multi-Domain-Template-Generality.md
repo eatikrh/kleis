@@ -4,7 +4,8 @@
 **Date:** 2026-05-03  
 **Relates to:** ADR-005 (Visual Authoring), ADR-006 (Template-Grammar Duality),
 ADR-023 (Template Externalization), ADR-034 (Egyptian Hieroglyph Editor),
-ADR-035 (Multi-Domain Template Compiler)
+ADR-035 (Multi-Domain Template Compiler), ADR-037 (Graph Editor with
+Domain-Agnostic Routing)
 
 ## Context
 
@@ -131,7 +132,7 @@ Three levels of circuit support are possible:
 |-------|-------|-----------------|-------|
 | **1: Structured composition** | Pre-defined topologies with value slots | Tree (current) | This ADR |
 | 2: Netlist-based | Circuits as Kleis programs, auto-layout rendering | Tree (Kleis AST) | Future |
-| 3: Graph editor | KiCad-like 2D canvas with drag-and-drop wiring | Graph (new AST) | Out of scope |
+| 3: Graph editor | KiCad-like 2D canvas with drag-and-drop wiring | Tree (incidence matrix inside AST) | **ADR-037** |
 
 Level 1 works within our current tree AST. Topology templates are complete Zap
 circuit blocks where placeholder slots accept component labels and values:
@@ -192,8 +193,8 @@ heteroatoms only).
   schematics. This is orthogonal to the visual editor; circuits expressed in
   `.kleis` files are regular Kleis programs that happen to produce circuit
   output.
-- **Level 3 graph editing** — KiCad-like 2D canvas with arbitrary wiring.
-  Requires a graph AST. Deferred indefinitely.
+- **Level 3 graph editing** — now covered by ADR-037. Graphs are represented as
+  incidence matrices inside the existing tree AST; no separate graph AST needed.
 - **Quantum circuit templates** — a natural fifth domain (gates on qubit lines,
   inherently sequential/tree-structured). Not yet investigated.
 
@@ -237,6 +238,7 @@ heteroatoms only).
 ## References
 
 - ADR-035: Multi-Domain Template Compiler — engine fixes for multi-domain support
+- ADR-037: Graph Editor with Domain-Agnostic Routing — implements Level 3 graph editing
 - `docs/equation-editor-architecture.md` — complete Equation Editor codebase analysis
 - [Zap documentation](https://zap.grangelouis.ch/) — Typst circuit drawing (v0.6.0)
 - [alchemist on Typst Universe](https://typst.app/universe/package/alchemist/) — skeletal formulas (v0.1.9)

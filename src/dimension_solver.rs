@@ -313,11 +313,7 @@ pub fn evaluate(expr: &DimExpr) -> Option<usize> {
         DimExpr::Mul(l, r) => Some(evaluate(l)? * evaluate(r)?),
         DimExpr::Div(l, r) => {
             let rv = evaluate(r)?;
-            if rv == 0 {
-                None
-            } else {
-                Some(evaluate(l)? / rv)
-            }
+            evaluate(l)?.checked_div(rv)
         }
         DimExpr::Pow(l, r) => {
             let base = evaluate(l)?;

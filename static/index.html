@@ -958,7 +958,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         <button class="palette-tab" onclick="showPalette('logic', this)">Logic & Sets</button>
                         <button class="palette-tab" onclick="showPalette('physics', this)">Physics</button>
                         <button class="palette-tab" onclick="showPalette('pot', this)">POT</button>
-                        <button class="palette-tab" onclick="showEgyptianPalette(this)">Egyptian</button>
+                        <!-- Domain palette tabs (Egyptian, Electronics, etc.) are added dynamically by initDomainPalettes() -->
                     </div>
                     
                     <!-- Basics -->
@@ -1066,10 +1066,7 @@ Example: \frac{1}{2} \int_{0}^{\infty} e^{-x^2} \, dx"></textarea>
                         <button class="math-btn" onclick="insertTemplate('\\mathcal{H}_{□}')" data-tooltip="Hont (Hilbert Ontology)">\(\mathcal{H}_\infty\)</button>
                     </div>
 
-                    <!-- Egyptian Hieroglyphs (loaded dynamically from /api/templates) -->
-                    <div id="palette-egyptian" class="symbol-grid" style="display:none;">
-                        <div style="grid-column: 1 / -1; text-align: center; color: #888; padding: 12px;">Loading hieroglyphs...</div>
-                    </div>
+                    <!-- Domain palettes (Egyptian, Electronics, etc.) are added dynamically by initDomainPalettes() -->
                     
                     <!-- Linear Algebra & Matrices -->
                     <div id="palette-linear" class="symbol-grid" style="display:none; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));">
