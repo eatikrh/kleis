@@ -1,0 +1,57 @@
+// Petri Net Templates for Kleis Graph Editor
+//
+// Petri nets model concurrent systems using places (circles holding tokens)
+// and transitions (bars that fire when enabled). Arcs connect places to
+// transitions (input arcs) and transitions to places (output arcs).
+//
+// Based on ISO/IEC 15909-2 PNML Standard.
+// See examples/petri-nets/ for Kleis axioms (enabled, fire, reachable,
+// k-bounded, safe, deadlock, live).
+//
+// Metadata fields:
+//   component_type: "Place" | "Transition"
+//   ports: "name:relX,relY;..." (relative 0-1 coords within component bounding box)
+
+// ============ DOMAIN CONFIGURATION ============
+
+@template __domain_petri_net {
+    pattern: "__domain_petri_net()"
+    category: "__domain"
+    routing_mode: "orthogonal"
+    junction_style: "none"
+    multi_port_strategy: "star"
+    edge_decoration: "arrow"
+    edge_direction: "directed"
+}
+
+// ============ PLACES ============
+
+@template pn_place {
+    pattern: "pn_place()"
+    typst: "#box(image(\"static/svg/petri_net/place.svg\", width: 1em, height: 1em, fit: \"contain\"))"
+    unicode: "○"
+    category: "petri_place"
+    glyph: "○"
+    mode: "content"
+    svg: "static/svg/petri_net/place.svg"
+    component_type: "Place"
+    ports: "top:0.5,0;right:1,0.5;bottom:0.5,1;left:0,0.5"
+    graph_width: "48"
+    graph_height: "48"
+}
+
+// ============ TRANSITIONS ============
+
+@template pn_transition {
+    pattern: "pn_transition()"
+    typst: "#box(image(\"static/svg/petri_net/transition.svg\", width: 0.5em, height: 1em, fit: \"contain\"))"
+    unicode: "▮"
+    category: "petri_transition"
+    glyph: "▮"
+    mode: "content"
+    svg: "static/svg/petri_net/transition.svg"
+    component_type: "Transition"
+    ports: "top:0.5,0;right:1,0.5;bottom:0.5,1;left:0,0.5"
+    graph_width: "20"
+    graph_height: "48"
+}

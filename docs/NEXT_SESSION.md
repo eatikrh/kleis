@@ -762,9 +762,11 @@ data model (EditorNode AST), domain data (`.kleist`/`.kleis`), and server APIs.
 | `static/js/graphEditorMain.js` | Core editor: interaction, routing, rendering (~1644 lines) |
 | `std_template_lib/electronics.kleist` | 20 electronic components + `__domain_electronics` config |
 | `std_template_lib/bond_graph.kleist` | 9 bond graph elements + `__domain_bond_graph` config |
+| `std_template_lib/petri_net.kleist` | Place + transition templates + `__domain_petri_net` config |
 | `graph-editor-wasm/` | Rust/WASM crate (scaffold, not in active code path) |
 | `static/svg/electronics/` | SVG assets for electronic components |
 | `static/svg/bond_graph/` | SVG assets for bond graph elements |
+| `static/svg/petri_net/` | SVG assets for Petri net elements |
 
 #### Remaining phases
 
@@ -784,10 +786,12 @@ data model (EditorNode AST), domain data (`.kleist`/`.kleis`), and server APIs.
 - `causality_type` metadata on each template for future SCAP algorithm
 - Typst export includes causal bar rendering
 
-**Phase 4: Petri net templates**
-- `petri_net.kleist` with place/transition templates
-- Token state rendering inside place SVGs
-- Simulation integration with existing ODE solver
+**Phase 4: Petri net templates** — DONE
+- `std_template_lib/petri_net.kleist` with place and transition templates + `__domain_petri_net` config
+- `edge_decoration: "arrow"`, `edge_direction: "directed"`, `routing_mode: "orthogonal"`
+- SVG assets: `static/svg/petri_net/place.svg` (circle), `static/svg/petri_net/transition.svg` (filled bar)
+- Token state rendering inside places — deferred to Phase 5 (needs component parameters)
+- Simulation integration with ODE solver — deferred to Phase 6
 
 **Phase 5: Component parameters (Option A — parameterized operations)**
 - Components become parameterized operations in the AST:
