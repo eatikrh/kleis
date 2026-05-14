@@ -959,6 +959,42 @@ data model (EditorNode AST), domain data (`.kleist`/`.kleis`), and server APIs.
   **Eulerian path check** requires bounded aggregation (counting incident edges mod 2).
   Planned as a Kleis language feature — would enable `degree(c)` and parity checks.
 
+  **Short circuit detection — motivates a Kleis reachability primitive:**
+
+  A short circuit is a graph reachability question: "Can I traverse from one
+  terminal of a voltage source to the other using only connector/wire components?"
+  This is Union-Find on the connector-only subgraph of the incidence matrix. It
+  cannot be expressed in first-order logic (requires transitive closure). Writing
+  it as client-side JS would violate the domain-agnostic architecture (it's
+  electronics-specific knowledge). The correct solution is a **Kleis language
+  extension** — a `reachable(n1, n2, filter)` predicate or bounded path search
+  that the evaluator computes from `graph_inc`. This would enable:
+
+  ```kleis
+  // hypothetical future syntax
+  define wire_connected(n1, n2) = reachable(n1, n2, is_connector)
+
+  assert(∀(v : ℤ). is_voltage_source(v)
+      → ¬ wire_connected(net_pos(v), net_neg(v)))
+  ```
+
+  The same primitive generalizes to other domains: deadlock detection in Petri
+  nets (reachable markings), causality propagation in bond graphs (reachable
+  junctions), and connectivity checks in graph theory (Euler paths). This is a
+  concrete use case that motivates adding graph reachability to the Kleis
+  evaluator as a built-in, not a domain-specific workaround.
+
+  **Key insight: reachability is a matrix rank condition, not a graph traversal.**
+  A short circuit exists iff the connector-only submatrix of `graph_inc` has a
+  rank deficiency that places both terminals of a voltage source in the same
+  connected component. This is linear algebra on a filtered submatrix — and
+  Kleis already has matrix operations (rank, determinant). No new `reachable`
+  built-in may be needed; the check could be expressed as a matrix rank condition
+  on the submatrix where `is_connector(c)` holds. The same applies to the ODE
+  formulation: the state-space matrix `M · dX/dt = A·X + B·u` derived from the
+  incidence matrix becomes singular at a short circuit. The singularity is
+  visible in the matrix before the solver even runs.
+
 #### Still open
 
 - ~~**Visual style mismatch with Equation Editor**~~ — DONE. Graph Editor
