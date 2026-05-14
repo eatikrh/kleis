@@ -786,12 +786,33 @@ data model (EditorNode AST), domain data (`.kleist`/`.kleis`), and server APIs.
 - `causality_type` metadata on each template for future SCAP algorithm
 - Typst export includes causal bar rendering
 
-**Phase 4: Petri net templates** — DONE
-- `std_template_lib/petri_net.kleist` with place and transition templates + `__domain_petri_net` config
+**Phase 4: Petri net / workflow net templates** — DONE
+- `std_template_lib/petri_net.kleist` with 4 component types + `__domain_petri_net` config
+- Source place (`◉` circle with inner dot) — workflow start, carries initial token
+- Regular place (`○` empty circle) — intermediate state / condition
+- Sink place (`◎` double circle) — workflow end, proper completion target
+- Transition (`▮` filled bar) — activity / event / task
 - `edge_decoration: "arrow"`, `edge_direction: "directed"`, `routing_mode: "orthogonal"`
-- SVG assets: `static/svg/petri_net/place.svg` (circle), `static/svg/petri_net/transition.svg` (filled bar)
-- Token state rendering inside places — deferred to Phase 5 (needs component parameters)
-- Simulation integration with ODE solver — deferred to Phase 6
+- SVGs: `static/svg/petri_net/{place,source_place,sink_place,transition}.svg`
+- Template header documents workflow net = BPMN equivalence and soundness property
+- component_type metadata: `SourcePlace`, `Place`, `SinkPlace`, `Transition`
+- **Deferred items:**
+  - Token rendering inside places (needs Phase 5 component parameters: `pn_place(tokens=3)`)
+  - Inhibitor arcs (need per-arc decoration support; SVG marker already exists from Phase 2)
+  - Arc weight labels (need per-arc metadata; ties into signed incidence matrix weights)
+  - VERIFY / SAT buttons (see Phase 6)
+
+**Petri net ↔ BPMN mapping** (reference for VERIFY implementation):
+
+| BPMN Element   | Workflow Net Element           | Kleis Template       |
+|----------------|-------------------------------|----------------------|
+| Start event    | Source place (initial token)   | `pn_source_place`    |
+| End event      | Sink place                    | `pn_sink_place`      |
+| Activity/Task  | Transition                    | `pn_transition`      |
+| Condition      | Place                         | `pn_place`           |
+| XOR split      | Place with multiple out-arcs  | (topology, not type) |
+| AND split      | Transition with multiple outs | (topology, not type) |
+| Sequence flow  | Directed arc                  | (wire with arrow)    |
 
 **Phase 5: Component parameters (Option A — parameterized operations)**
 - Components become parameterized operations in the AST:
@@ -830,9 +851,18 @@ data model (EditorNode AST), domain data (`.kleist`/`.kleis`), and server APIs.
   Can a component in one graph be a graph itself? An op-amp is internally a circuit.
   A protein is a molecule. This is the "graph inside graph" problem — needs design.
 
-**Phase 6: Type inference + Z3 verification**
+**Phase 6: VERIFY / SAT buttons — Z3 verification from Graph Editor**
 - Graph/CircuitGraph structures in stdlib
 - Type checking via existing server APIs
+- **VERIFY button** workflow for Petri nets / workflow nets:
+  1. Extract incidence matrix from visual graph
+  2. Generate Kleis axioms (arc weights, initial marking, firing semantics)
+  3. Assert soundness properties (completion, proper completion, no dead transitions)
+  4. Call Z3 via server `/api/verify` endpoint
+  5. Display results: "Sound ✓", "Deadlock at marking M", "Dead transition T3", etc.
+- SAT button: satisfiability check on user-written constraints
+- Existing theory files (`examples/petri-nets/mutex_verified.kleis`) demonstrate
+  the exact axiom pattern the generator should produce
 - Kirchhoff's law axioms: `V(a) - V(b) = I * R` where R comes from component arg
 - Safety checks: "does this circuit have a short?" as SAT query
 - Connects to existing `examples/petri-nets/` pattern: net structure axioms
