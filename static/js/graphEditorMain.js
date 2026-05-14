@@ -3,24 +3,11 @@
 // Graph editor for building graph() EditorNode ASTs.
 // Component definitions are loaded from /api/templates at startup.
 // Any .kleist template with "ports" metadata becomes a graph-editable component.
-// Core computation (incidence matrix, AST) runs in Rust/WASM.
 //
 // Data model:
 //   - Components: typed entities with ports placed at (x,y) on canvas
 //   - Nets: sets of connected ports (rows in the incidence matrix)
-//   - Incidence matrix: nets x components (V x E)
-
-let wasmReady = false;
-let compute_incidence = null;
-let compute_editor_ast = null;
-
-async function loadWasm() {
-    const wasm = await import('/static/wasm/graph_editor_wasm.js');
-    await wasm.default();
-    compute_incidence = wasm.compute_incidence;
-    compute_editor_ast = wasm.compute_editor_ast;
-    wasmReady = true;
-}
+//   - Incidence matrix: signed sparse COO (nets x ports)
 
 // ---------------------------------------------------------------------------
 // Component definitions — loaded from server at init
@@ -909,7 +896,7 @@ function renderWires() {
                         dot.setAttribute('cx', jpt.x);
                         dot.setAttribute('cy', jpt.y);
                         dot.setAttribute('r', '4');
-                        dot.setAttribute('fill', isSel ? '#e94560' : '#4ecca3');
+                        dot.setAttribute('fill', isSel ? '#5568d3' : '#2c3e50');
                         wiresLayer.appendChild(dot);
                     }
                 }
@@ -1378,50 +1365,15 @@ function updateOutput() {
         }
         else if (activeTab === 'typst') outputContent.innerHTML = `<pre>${generateTypst()}</pre>`;
     } catch (e) {
-        outputContent.innerHTML = `<pre style="color:#e94560">Error: ${e.message}\n${e.stack || ''}</pre>`;
+        outputContent.innerHTML = `<pre style="color:#dc3545">Error: ${e.message}\n${e.stack || ''}</pre>`;
     }
 }
 
 // ---------------------------------------------------------------------------
-// Build the WASM-compatible graph state object
-// ---------------------------------------------------------------------------
-
-function buildWasmState() {
-    const type_defs = {};
-    for (const [name, def] of Object.entries(COMPONENT_DEFS)) {
-        type_defs[name] = {
-            name,
-            ports: Object.entries(def.ports).map(([pname, [rx, ry]]) => ({
-                name: pname, rel_x: rx, rel_y: ry,
-            })),
-        };
-    }
-    return {
-        type_defs,
-        components: graphState.components.map(c => ({
-            id: c.id, type_name: c.type, x: c.x, y: c.y,
-        })),
-        nets: graphState.nets.map(n => ({
-            id: n.id, label: n.label,
-            connections: n.connections.map(conn => ({
-                component_id: conn.componentId, port_name: conn.portName,
-            })),
-        })),
-    };
-}
-
-// ---------------------------------------------------------------------------
-// Incidence matrix generation (WASM with JS fallback)
+// Incidence matrix generation
 // ---------------------------------------------------------------------------
 
 function buildIncidenceMatrix() {
-    if (wasmReady) {
-        try {
-            return compute_incidence(buildWasmState());
-        } catch (e) {
-            console.warn('WASM incidence failed, falling back to JS:', e);
-        }
-    }
     return buildIncidenceMatrixJS();
 }
 
@@ -1498,22 +1450,15 @@ function renderMatrixHTML() {
     }
     html += '</table>';
 
-    html += `<pre style="margin-top:12px;color:#888">V=${inc.v} nets, P=${inc.p} ports, nnz=${inc.nnz}  ${wasmReady ? '[WASM]' : '[JS]'}</pre>`;
+    html += `<pre style="margin-top:12px;color:#888">V=${inc.v} nets, P=${inc.p} ports, nnz=${inc.nnz}</pre>`;
     return html;
 }
 
 // ---------------------------------------------------------------------------
-// EditorNode AST generation (WASM with JS fallback)
+// EditorNode AST generation
 // ---------------------------------------------------------------------------
 
 function buildEditorAST() {
-    if (wasmReady) {
-        try {
-            return JSON.parse(compute_editor_ast(buildWasmState()));
-        } catch (e) {
-            console.warn('WASM AST failed, falling back to JS:', e);
-        }
-    }
     return buildEditorASTJS();
 }
 
@@ -1659,14 +1604,6 @@ function copyTypstToClipboard() {
 
     const types = Object.keys(COMPONENT_DEFS);
     if (types.length > 0) selectedPaletteType = types[0];
-
-    statusBar.textContent = 'Initializing WASM module...';
-    try {
-        await loadWasm();
-        console.log('Graph Editor WASM module loaded');
-    } catch (e) {
-        console.warn('WASM init failed, using JS fallback:', e);
-    }
 
     buildPalette();
     applyViewBox();

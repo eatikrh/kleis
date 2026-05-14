@@ -728,15 +728,13 @@ data model (EditorNode AST), domain data (`.kleist`/`.kleis`), and server APIs.
 - [x] Defaults when no `__domain_` template: orthogonal, dot, trunk_branch, none, undirected
 
 **Output:**
-- [x] EditorNode AST (`graph(SparseMatrix(...), ...)`) — via Rust/WASM
+- [x] EditorNode AST (`graph(SparseMatrix(...), ...)`) — pure JS
 - [x] Typst schematic export (`#place`, `#line`, `#image` with rotation)
 - [x] Signed sparse incidence matrix display (COO stored, dense materialized for table view)
-- [x] WASM or JS fallback for both incidence matrix and AST generation
 
-**Rust/WASM integration:**
-- [x] `graph-editor-wasm/` crate: `compute_incidence()`, `compute_editor_ast()`
-- [x] `wasm-pack build --target web` → `static/wasm/` (109KB)
-- [x] JS fallback when WASM unavailable
+**Implementation:**
+- [x] Pure JS for incidence matrix and AST generation (~55 lines)
+- [x] `graph-editor-wasm/` crate kept as scaffold for future heavy computation
 
 #### Domain config fields
 
@@ -763,9 +761,8 @@ data model (EditorNode AST), domain data (`.kleist`/`.kleis`), and server APIs.
 | `static/graph_editor.html` | Graph Editor HTML + CSS |
 | `static/js/graphEditorMain.js` | Core editor: interaction, routing, rendering (~1644 lines) |
 | `std_template_lib/electronics.kleist` | 20 electronic components + `__domain_electronics` config |
-| `graph-editor-wasm/` | Rust/WASM crate for incidence matrix and AST generation |
+| `graph-editor-wasm/` | Rust/WASM crate (scaffold, not in active code path) |
 | `static/svg/electronics/` | SVG assets for electronic components |
-| `static/wasm/` | wasm-pack build output (JS glue + .wasm binary) |
 
 #### Remaining phases
 
@@ -784,13 +781,31 @@ data model (EditorNode AST), domain data (`.kleist`/`.kleis`), and server APIs.
 - Token state rendering inside place SVGs
 - Simulation integration with existing ODE solver
 
-**Phase 5: Type inference + Z3 verification**
+**Phase 5: Component parameters (Option A — parameterized operations)**
+- Components become parameterized operations in the AST:
+  `resistor(1000)` instead of `resistor()`, `dc_voltage(5)` instead of `dc_voltage()`
+- The `.kleist` template `pattern` field declares parameters:
+  `resistor(R)` tells the editor this component needs one numeric parameter
+- UI: property panel — click a component, edit its parameter values
+- Graph state stores `params` per component; AST encodes them as operation args
+- This follows the same pattern as Petri net axioms (`iw(0,0) = 1`): concrete
+  values that Z3 can reason about
+
+**Phase 6: Type inference + Z3 verification**
 - Graph/CircuitGraph structures in stdlib
 - Type checking via existing server APIs
-- Kirchhoff's laws as axioms verified by Z3
+- Kirchhoff's law axioms: `V(a) - V(b) = I * R` where R comes from component arg
+- Safety checks: "does this circuit have a short?" as SAT query
+- Connects to existing `examples/petri-nets/` pattern: net structure axioms
+  + enabling/firing semantics + invariant verification
 
 #### Still open
 
+- ~~**Visual style mismatch with Equation Editor**~~ — DONE. Graph Editor
+  restyled to match the Equation Editor's light theme: `#2c3e50` header gradient,
+  white canvas, `#f8f9fa` panels, `#e0e0e0` borders, `#5568d3` hover accent,
+  rounded container with shadow. Future: extract shared CSS variables if both
+  editors need dark mode support.
 - **Undo/redo** — not yet implemented for graph operations
 - **Rubber-band multi-select** — single selection only
 - **Copy/paste** — not implemented
@@ -802,12 +817,20 @@ data model (EditorNode AST), domain data (`.kleist`/`.kleis`), and server APIs.
   solver runs client-side; connecting to a net shows real-time waveforms. This is
   a major UX win that only works because of the Rust/WASM architecture.
 
-#### WASM learning progression
+#### WASM: removed from active code path
 
-1. **Graph Editor** — DONE. Rust/WASM for incidence matrix + AST generation.
-2. **3D Plotting** — One-way: Rust computes grid → WASM → browser renders surface.
-3. **Oscilloscope** — Bidirectional: Rust ODE solver → WASM → live waveform canvas.
-   Parameter changes → recompute → instant update.
+The WASM crate (`graph-editor-wasm/`) duplicated what JS does in ~55 lines —
+building the COO incidence matrix and the graph AST. The computation is
+O(connections), trivial for any reasonable graph. The cost was: 126KB binary,
+552 lines of generated glue, a `wasm-pack` build step, a `buildWasmState()`
+marshaling layer, and dual maintenance. WASM was removed from the active code
+path, the binary artifacts deleted from `static/wasm/`, and the build step
+removed from `scripts/build-kleis.sh`. The crate source is kept in
+`graph-editor-wasm/` as a scaffold for when heavier computation arrives:
+
+1. **Oscilloscope** — ODE solver at animation frame rate (real need for Rust speed)
+2. **3D Plotting** — grid evaluation for surface rendering
+3. **Large graph analysis** — hundreds of components, real-time constraint checking
 
 ---
 

@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "render", "kleis-test-macros", "graph-editor-wasm"]
+members = [".", "render", "kleis-test-macros"]
 
 [package]
 name = "kleis"

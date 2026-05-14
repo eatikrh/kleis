@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kleis Graph Editor — Proof of Concept</title>
+    <title>Kleis Graph Editor</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #1a1a2e;
-            color: #e0e0e0;
+            background: linear-gradient(135deg, #e0e5ec 0%, #d0d5dc 100%);
+            color: #2c3e50;
             height: 100vh;
             display: flex;
             flex-direction: column;
@@ -18,19 +18,19 @@
         }
 
         header {
-            background: #16213e;
-            padding: 8px 16px;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            padding: 10px 16px;
             display: flex;
             align-items: center;
             gap: 16px;
-            border-bottom: 1px solid #0f3460;
             flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
 
         header h1 {
             font-size: 16px;
             font-weight: 600;
-            color: #e94560;
+            color: white;
             white-space: nowrap;
         }
 
@@ -41,54 +41,59 @@
 
         .toolbar button {
             padding: 6px 14px;
-            border: 1px solid #0f3460;
-            border-radius: 4px;
-            background: #16213e;
-            color: #e0e0e0;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 6px;
+            background: rgba(255,255,255,0.1);
+            color: white;
             cursor: pointer;
             font-size: 13px;
-            transition: all 0.15s;
+            transition: all 0.2s;
         }
 
-        .toolbar button:hover { background: #1a1a4e; }
-        .toolbar button.active { background: #e94560; border-color: #e94560; color: #fff; }
+        .toolbar button:hover { background: rgba(255,255,255,0.2); }
+        .toolbar button.active { background: white; color: #2c3e50; border-color: white; }
 
         .toolbar-sep {
             width: 1px;
-            background: #0f3460;
+            background: rgba(255,255,255,0.2);
             margin: 0 6px;
         }
 
         .status-bar {
             margin-left: auto;
             font-size: 12px;
-            color: #888;
+            color: rgba(255,255,255,0.7);
         }
 
         .main-layout {
             display: flex;
             flex: 1;
             overflow: hidden;
+            margin: 10px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
         }
 
         /* Left: Component Palette */
         .palette-panel {
             width: 180px;
-            background: #16213e;
-            border-right: 1px solid #0f3460;
+            background: #f8f9fa;
+            border-right: 2px solid #e0e0e0;
             overflow-y: auto;
             flex-shrink: 0;
+            border-radius: 12px 0 0 12px;
         }
 
         .palette-section {
             padding: 8px;
-            border-bottom: 1px solid #0f3460;
+            border-bottom: 1px solid #e0e0e0;
         }
 
         .palette-section h3 {
             font-size: 11px;
             text-transform: uppercase;
-            color: #888;
+            color: #6c757d;
             margin-bottom: 6px;
             letter-spacing: 0.5px;
         }
@@ -105,24 +110,23 @@
             align-items: center;
             padding: 6px 4px;
             border: 1px solid transparent;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
             transition: all 0.15s;
         }
 
-        .palette-item:hover { background: #1a1a4e; border-color: #0f3460; }
-        .palette-item.selected { background: #2a1a3e; border-color: #e94560; }
+        .palette-item:hover { background: #e8ecf1; border-color: #d0d5dc; }
+        .palette-item.selected { background: #d6e4f0; border-color: #2c3e50; }
 
         .palette-item img {
             width: 36px;
             height: 28px;
             object-fit: contain;
-            filter: brightness(0.9);
         }
 
         .palette-item span {
             font-size: 10px;
-            color: #aaa;
+            color: #6c757d;
             margin-top: 3px;
             text-align: center;
         }
@@ -132,7 +136,7 @@
             flex: 1;
             position: relative;
             overflow: hidden;
-            background: #1a1a2e;
+            background: white;
         }
 
         #graphCanvas {
@@ -141,39 +145,39 @@
             cursor: crosshair;
         }
 
-        #graphCanvas .grid-line { stroke: #222244; stroke-width: 0.5; }
+        #graphCanvas .grid-line { stroke: #e8ecf1; stroke-width: 0.5; }
         #graphCanvas .component-group { cursor: move; }
-        #graphCanvas .component-group:hover .component-outline { stroke: #e94560; stroke-opacity: 0.5; }
-        #graphCanvas .component-group.selected .component-outline { stroke: #e94560; stroke-width: 2; }
-        #graphCanvas .port-circle { fill: #4ecca3; stroke: #1a1a2e; stroke-width: 1.5; cursor: pointer; opacity: 0; transition: opacity 0.15s; }
+        #graphCanvas .component-group:hover .component-outline { stroke: #5568d3; stroke-opacity: 0.6; }
+        #graphCanvas .component-group.selected .component-outline { stroke: #2c3e50; stroke-width: 2; }
+        #graphCanvas .port-circle { fill: #28a745; stroke: white; stroke-width: 1.5; cursor: pointer; opacity: 0; transition: opacity 0.15s; }
         #graphCanvas .component-group:hover .port-circle { opacity: 1; }
-        #graphCanvas .port-circle:hover { fill: #e94560; r: 6; }
-        #graphCanvas .port-circle.highlight { opacity: 1; fill: #e94560; }
-        #graphCanvas .wire { stroke: #4ecca3; stroke-width: 2; fill: none; cursor: pointer; stroke-linejoin: round; stroke-linecap: round; }
-        #graphCanvas .wire:hover { stroke: #e94560; stroke-width: 3; }
-        #graphCanvas .wire-selected { stroke: #e94560; stroke-width: 3; }
-        #graphCanvas .wire-preview { stroke: #e94560; stroke-width: 1.5; stroke-dasharray: 6 3; fill: none; pointer-events: none; stroke-linejoin: round; stroke-linecap: round; }
+        #graphCanvas .port-circle:hover { fill: #5568d3; r: 6; }
+        #graphCanvas .port-circle.highlight { opacity: 1; fill: #5568d3; }
+        #graphCanvas .wire { stroke: #2c3e50; stroke-width: 2; fill: none; cursor: pointer; stroke-linejoin: round; stroke-linecap: round; }
+        #graphCanvas .wire:hover { stroke: #5568d3; stroke-width: 3; }
+        #graphCanvas .wire-selected { stroke: #5568d3; stroke-width: 3; }
+        #graphCanvas .wire-preview { stroke: #5568d3; stroke-width: 1.5; stroke-dasharray: 6 3; fill: none; pointer-events: none; stroke-linejoin: round; stroke-linecap: round; }
         #graphCanvas .wire-seg { stroke: transparent; stroke-width: 12; fill: none; cursor: pointer; }
         #graphCanvas .wire-seg.draggable-h { cursor: ns-resize; }
         #graphCanvas .wire-seg.draggable-v { cursor: ew-resize; }
-        #graphCanvas .wire-bend { fill: #4ecca3; stroke: #1a1a2e; stroke-width: 1.5; opacity: 0; transition: opacity 0.15s; pointer-events: all; cursor: move; }
+        #graphCanvas .wire-bend { fill: #2c3e50; stroke: white; stroke-width: 1.5; opacity: 0; transition: opacity 0.15s; pointer-events: all; cursor: move; }
         #graphCanvas .wire-bend.visible { opacity: 1; }
-        #graphCanvas .wire-bend:hover { opacity: 1; fill: #e94560; r: 6; }
+        #graphCanvas .wire-bend:hover { opacity: 1; fill: #5568d3; r: 6; }
         #graphCanvas .wire-seg:hover ~ .wire-bend { opacity: 0.6; }
-        #graphCanvas .net-label { fill: #888; font-size: 10px; font-family: monospace; }
-        #graphCanvas .component-label { fill: #ccc; font-size: 11px; font-family: sans-serif; text-anchor: middle; }
+        #graphCanvas .net-label { fill: #6c757d; font-size: 10px; font-family: monospace; }
+        #graphCanvas .component-label { fill: #2c3e50; font-size: 11px; font-family: sans-serif; text-anchor: middle; }
 
         .zoom-indicator {
             position: absolute;
             bottom: 8px;
             right: 8px;
-            background: rgba(22, 33, 62, 0.85);
-            color: #888;
+            background: rgba(255, 255, 255, 0.9);
+            color: #6c757d;
             font-size: 11px;
             font-family: monospace;
             padding: 3px 8px;
-            border-radius: 4px;
-            border: 1px solid #0f3460;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             pointer-events: none;
             user-select: none;
         }
@@ -181,16 +185,17 @@
         /* Right: Output Panel */
         .output-panel {
             width: 320px;
-            background: #16213e;
-            border-left: 1px solid #0f3460;
+            background: #f8f9fa;
+            border-left: 2px solid #e0e0e0;
             display: flex;
             flex-direction: column;
             flex-shrink: 0;
+            border-radius: 0 12px 12px 0;
         }
 
         .output-tabs {
             display: flex;
-            border-bottom: 1px solid #0f3460;
+            border-bottom: 1px solid #e0e0e0;
         }
 
         .output-tab {
@@ -199,12 +204,13 @@
             text-align: center;
             font-size: 12px;
             cursor: pointer;
+            color: #6c757d;
             border-bottom: 2px solid transparent;
             transition: all 0.15s;
         }
 
-        .output-tab:hover { background: #1a1a4e; }
-        .output-tab.active { border-bottom-color: #e94560; color: #e94560; }
+        .output-tab:hover { background: #e8ecf1; }
+        .output-tab.active { border-bottom-color: #2c3e50; color: #2c3e50; font-weight: 600; }
 
         .output-content {
             flex: 1;
@@ -218,7 +224,7 @@
             line-height: 1.5;
             white-space: pre-wrap;
             word-break: break-all;
-            color: #ccc;
+            color: #2c3e50;
         }
 
         .matrix-table {
@@ -230,14 +236,14 @@
 
         .matrix-table th, .matrix-table td {
             padding: 3px 8px;
-            border: 1px solid #0f3460;
+            border: 1px solid #e0e0e0;
             text-align: center;
         }
 
-        .matrix-table th { background: #1a1a4e; color: #aaa; font-weight: normal; }
-        .matrix-table td.pos { color: #4ecca3; }
-        .matrix-table td.neg { color: #e94560; }
-        .matrix-table td.zero { color: #444; }
+        .matrix-table th { background: #e8ecf1; color: #6c757d; font-weight: normal; }
+        .matrix-table td.pos { color: #28a745; font-weight: 600; }
+        .matrix-table td.neg { color: #dc3545; font-weight: 600; }
+        .matrix-table td.zero { color: #ccc; }
     </style>
 </head>
 <body>
