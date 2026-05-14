@@ -498,6 +498,21 @@ function buildSvgPathD(points) {
     return d;
 }
 
+const DECORATION_MARKER_ID = {
+    arrow: 'arrowhead',
+    half_arrow: 'half_arrow',
+    inhibitor: 'inhibitor',
+    causal_bar: 'causal_bar',
+};
+
+function applyEdgeMarkers(pathEl, isSelected) {
+    const dec = domainConfig.edge_decoration;
+    if (dec === 'none') return;
+    const markerId = DECORATION_MARKER_ID[dec] || dec;
+    const suffix = isSelected ? '-selected' : '';
+    pathEl.setAttribute('marker-end', `url(#${markerId}${suffix})`);
+}
+
 function segIsHorizontal(p1, p2) {
     return Math.abs(p1.y - p2.y) <= Math.abs(p1.x - p2.x);
 }
@@ -846,6 +861,7 @@ function renderWires() {
             path.setAttribute('class', wireClass);
             path.setAttribute('d', buildSvgPathD(pts));
             path.dataset.netId = net.id;
+            applyEdgeMarkers(path, isSel);
             wiresLayer.appendChild(path);
 
             for (let i = 0; i < pts.length - 1; i++) {
@@ -888,6 +904,7 @@ function renderWires() {
                     path.setAttribute('class', wireClass);
                     path.setAttribute('d', buildSvgPathD(leg));
                     path.dataset.netId = net.id;
+                    applyEdgeMarkers(path, isSel);
                     wiresLayer.appendChild(path);
                 }
                 if (domainConfig.junction_style === 'dot') {
@@ -1117,6 +1134,7 @@ canvas.addEventListener('mousemove', (e) => {
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('class', 'wire-preview');
         path.setAttribute('d', buildSvgPathD(previewPts));
+        applyEdgeMarkers(path, false);
         previewLayer.appendChild(path);
     }
 
@@ -1556,11 +1574,30 @@ function generateTypst() {
 
     lines.push('');
 
+    function typstArrowhead(from, to) {
+        const s = (v) => `${pxToCm(v)}cm`;
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        if (len < 1) return null;
+        const ux = dx / len, uy = dy / len;
+        const headLen = 8;
+        const headW = 4;
+        const bx = to.x - ux * headLen, by = to.y - uy * headLen;
+        const p1x = bx - uy * headW, p1y = by + ux * headW;
+        const p2x = bx + uy * headW, p2y = by - ux * headW;
+        return `#polygon(fill: black, (${s(to.x)}, ${s(to.y)}), (${s(p1x)}, ${s(p1y)}), (${s(p2x)}, ${s(p2y)}))`;
+    }
+
     function typstLines(pts) {
         const s = (v) => `${pxToCm(v)}cm`;
         const result = [];
         for (let i = 0; i < pts.length - 1; i++) {
             result.push(`#line(start: (${s(pts[i].x)}, ${s(pts[i].y)}), end: (${s(pts[i + 1].x)}, ${s(pts[i + 1].y)}), stroke: 0.5pt)`);
+        }
+        if (domainConfig.edge_decoration !== 'none' && pts.length >= 2) {
+            const head = typstArrowhead(pts[pts.length - 2], pts[pts.length - 1]);
+            if (head) result.push(head);
         }
         return result;
     }

@@ -791,6 +791,33 @@ data model (EditorNode AST), domain data (`.kleist`/`.kleis`), and server APIs.
 - This follows the same pattern as Petri net axioms (`iw(0,0) = 1`): concrete
   values that Z3 can reason about
 
+  **Parameter type system (data-driven, no domain JS):**
+
+  | Type | Example | UI widget | AST encoding |
+  |------|---------|-----------|-------------|
+  | `real` | resistance=1000 | number input | operation arg |
+  | `int` | tokens=3 | integer spinner | operation arg |
+  | `enum` | element=C | dropdown | operation arg |
+  | `ref` | model=2N2222 | dropdown (from server) | operation arg (name) |
+  | edge weight | bond_order=2 | weight editor on wire | incidence matrix value |
+
+  **Separation of duties — Graph Editor never reads .kleis theory files:**
+  - Template metadata (params, ports) comes from `/api/templates` (server reads `.kleist`)
+  - Available models for `ref` params come from a new `/api/models?structure=X` endpoint
+    (server reads `.kleis` theory, returns list of `define` names matching the structure)
+  - Parameter validation via `/api/type_check` (server + Z3)
+  - Circuit correctness axioms via `/api/verify` (server + Z3)
+  - The Graph Editor only knows: "this param is type `ref`, the server gave me these
+    options." It never parses Kleis. Same pattern as the existing palette loading.
+
+  **Molecules are graphs, not components:**
+  A molecule is built by placing `atom("C")` components and drawing bonds. Bond order
+  is the incidence matrix entry magnitude. No special molecule component needed.
+
+  **Hierarchical composition (open question):**
+  Can a component in one graph be a graph itself? An op-amp is internally a circuit.
+  A protein is a molecule. This is the "graph inside graph" problem — needs design.
+
 **Phase 6: Type inference + Z3 verification**
 - Graph/CircuitGraph structures in stdlib
 - Type checking via existing server APIs
