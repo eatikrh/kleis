@@ -183,6 +183,21 @@ echo ""
 # Run build
 $BUILD_CMD
 
+# Build Graph Editor WASM module (if wasm-pack is installed)
+if command -v wasm-pack &>/dev/null; then
+    echo ""
+    echo -e "${GREEN}Building:${NC} Graph Editor WASM module"
+    (cd "$PROJECT_ROOT/graph-editor-wasm" && wasm-pack build --target web --out-dir ../static/wasm 2>&1) || {
+        echo -e "${YELLOW}⚠${NC} WASM build failed (non-fatal). Graph Editor will use JS fallback."
+    }
+    # wasm-pack generates a .gitignore that blocks serving; remove it
+    rm -f "$PROJECT_ROOT/static/wasm/.gitignore"
+else
+    echo ""
+    echo -e "${YELLOW}⚠${NC} wasm-pack not found — skipping Graph Editor WASM build."
+    echo "  Install: cargo install wasm-pack"
+fi
+
 # Report result
 if [ "$BUILD_TYPE" = "release" ]; then
     BINARY="target/release/kleis"

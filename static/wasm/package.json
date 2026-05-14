@@ -1,0 +1,16 @@
+{
+  "name": "graph-editor-wasm",
+  "type": "module",
+  "description": "Kleis Graph Editor — WASM module for graph state, incidence matrix, and AST generation",
+  "version": "0.1.0",
+  "files": [
+    "graph_editor_wasm_bg.wasm",
+    "graph_editor_wasm.js",
+    "graph_editor_wasm.d.ts"
+  ],
+  "main": "graph_editor_wasm.js",
+  "types": "graph_editor_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
