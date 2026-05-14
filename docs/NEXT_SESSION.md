@@ -761,20 +761,28 @@ data model (EditorNode AST), domain data (`.kleist`/`.kleis`), and server APIs.
 | `static/graph_editor.html` | Graph Editor HTML + CSS |
 | `static/js/graphEditorMain.js` | Core editor: interaction, routing, rendering (~1644 lines) |
 | `std_template_lib/electronics.kleist` | 20 electronic components + `__domain_electronics` config |
+| `std_template_lib/bond_graph.kleist` | 9 bond graph elements + `__domain_bond_graph` config |
 | `graph-editor-wasm/` | Rust/WASM crate (scaffold, not in active code path) |
 | `static/svg/electronics/` | SVG assets for electronic components |
+| `static/svg/bond_graph/` | SVG assets for bond graph elements |
 
 #### Remaining phases
 
-**Phase 2: Edge decorations and direction**
-- SVG marker definitions (arrowhead, half-arrow, causal bar)
+**Phase 2: Edge decorations and direction** — DONE
+- SVG marker definitions (arrowhead, half-arrow, inhibitor, causal bar)
 - `marker-start`/`marker-end` attributes based on `edge_decoration`
-- `direction` field on net connections for directed graphs
+- Typst export emits `#polygon` arrowheads for directed edges
+- `DECORATION_MARKER_ID` lookup table maps config names to marker IDs
 
-**Phase 3: Bond graph templates + direct routing**
-- `bond_graph.kleist` with 1-port/2-port/junction component templates
-- `routing_mode: "direct"` fully exercised
-- Causal stroke rendering
+**Phase 3: Bond graph templates + direct routing** — DONE
+- `std_template_lib/bond_graph.kleist` with 9 elements (Se, Sf, R, C, I, TF, GY, 0-junction, 1-junction)
+- `__domain_bond_graph` config: `routing_mode: "direct"`, `edge_decoration: "half_arrow"`, `edge_direction: "directed"`
+- 9 SVG assets under `static/svg/bond_graph/`
+- `?domain=X` URL parameter filters palette and domain config (e.g. `?domain=bond`, `?domain=electronics`)
+- Direct routing fixes: segment drag, dbl-click split, waypoint drag disabled; cursor classes corrected
+- Per-net causal stroke: `net.causal = 'start' | 'end' | null`, toggled with `K` key
+- `causality_type` metadata on each template for future SCAP algorithm
+- Typst export includes causal bar rendering
 
 **Phase 4: Petri net templates**
 - `petri_net.kleist` with place/transition templates
