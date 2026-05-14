@@ -25,6 +25,7 @@
 //
 // Metadata fields:
 //   component_type: "Place" | "SourcePlace" | "SinkPlace" | "Transition"
+//   params: "name:type:default;..." (editable component parameters)
 //   ports: "name:relX,relY;..." (relative 0-1 coords within bounding box)
 
 // ============ DOMAIN CONFIGURATION ============
@@ -37,6 +38,12 @@
     multi_port_strategy: "star"
     edge_decoration: "arrow"
     edge_direction: "directed"
+    verify_bipartite: "Place,SourcePlace,SinkPlace | Transition"
+    verify_exactly_one: "SourcePlace"
+    verify_exactly_one_sink: "SinkPlace"
+    verify_all_connected: "true"
+    verify_no_isolated: "true"
+    verify_theory: "petri_net"
 }
 
 // ============ PLACES ============
@@ -51,6 +58,7 @@
     mode: "content"
     svg: "static/svg/petri_net/source_place.svg"
     component_type: "SourcePlace"
+    params: "tokens:int:1"
     ports: "top:0.5,0;right:1,0.5;bottom:0.5,1;left:0,0.5"
     graph_width: "48"
     graph_height: "48"
@@ -66,6 +74,7 @@
     mode: "content"
     svg: "static/svg/petri_net/place.svg"
     component_type: "Place"
+    params: "tokens:int:0"
     ports: "top:0.5,0;right:1,0.5;bottom:0.5,1;left:0,0.5"
     graph_width: "48"
     graph_height: "48"
@@ -81,6 +90,7 @@
     mode: "content"
     svg: "static/svg/petri_net/sink_place.svg"
     component_type: "SinkPlace"
+    params: "tokens:int:0"
     ports: "top:0.5,0;right:1,0.5;bottom:0.5,1;left:0,0.5"
     graph_width: "48"
     graph_height: "48"
