@@ -20,7 +20,7 @@ export const state = {
     currentZoom: 1.0,
     lastRenderResponse: null,
     typeCheckTimeout: null,
-    egyptianTemplatesCache: null,
+    domainTemplatesCache: {},
     matrixBuilderState: {
         rows: 2,
         cols: 2,
@@ -287,6 +287,22 @@ export const astTemplates = {
     quadrat_v: { Operation: {
         name: 'quadrat_v',
         args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}]
+    } },
+    series: { Operation: {
+        name: 'series',
+        args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}]
+    } },
+    parallel: { Operation: {
+        name: 'parallel',
+        args: [{Placeholder:{id:0,hint:'left'}}, {Placeholder:{id:1,hint:'right'}}]
+    } },
+    oscilloscope: { Operation: {
+        name: 'oscilloscope',
+        args: [{Placeholder:{id:0,hint:'signal'}}]
+    } },
+    multimeter: { Operation: {
+        name: 'multimeter',
+        args: [{Placeholder:{id:0,hint:'signal'}}]
     } },
     default: { Placeholder: { id: 0, hint: 'expression' } }
 };

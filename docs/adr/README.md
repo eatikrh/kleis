@@ -171,6 +171,54 @@ This directory contains all Architecture Decision Records for the Kleis project.
 
 ---
 
+## Agent & MCP Architecture
+
+### ADR-030: MCP Agent Reasoning Partner
+**File:** `ADR-030-MCP-Agent-Reasoning-Partner.md`  
+**Status:** Accepted  
+**Summary:** Policy engine as an MCP-based reasoning partner for AI agents
+
+### ADR-031: Theory MCP Interactive Theory Building
+**File:** `ADR-031-Theory-MCP-Interactive-Theory-Building.md`  
+**Status:** Accepted  
+**Summary:** Interactive theory building via MCP tools
+
+### ADR-032: Intent-Aware Code Review
+**File:** `ADR-032-Intent-Aware-Code-Review.md`  
+**Status:** Accepted  
+**Summary:** MCP-based code review that understands architectural intent
+
+---
+
+## Multi-Domain Extensibility
+
+### ADR-033: Musical Score Notation
+**File:** `ADR-033-Musical-Score-Notation.md`  
+**Status:** Accepted  
+**Summary:** Music notation as a non-mathematical domain extension
+
+### ADR-034: Egyptian Hieroglyph Editor
+**File:** `ADR-034-Egyptian-Hieroglyph-Editor.md`  
+**Status:** Accepted  
+**Summary:** Egyptian hieroglyphs as a test of the multi-domain template architecture
+
+### ADR-035: Multi-Domain Template Compiler
+**File:** `ADR-035-Multi-Domain-Template-Compiler.md`  
+**Status:** Proposed  
+**Summary:** Engine fixes to make domain extension purely data-driven (no Rust/JS — only `.kleist` templates and assets)
+
+### ADR-036: Multi-Domain Template Generality
+**File:** `ADR-036-Multi-Domain-Template-Generality.md`  
+**Status:** Accepted  
+**Summary:** Validation that the atom-molecule template decomposition generalizes across mathematics, hieroglyphs, circuits, and chemistry
+
+### ADR-037: Graph Editor with Domain-Agnostic Routing
+**File:** `ADR-037-Graph-Editor-Domain-Agnostic-Routing.md`  
+**Status:** Accepted & Implemented (Phase 1)  
+**Summary:** Standalone graph editor with incidence-matrix AST representation, domain-configurable routing (trunk+branch, star), and `.kleist`-driven extensibility for electronics, bond graphs, Petri nets, and molecular graphs
+
+---
+
 ## Implementation Notes
 
 ### ADR-015 Validation Report
@@ -212,6 +260,6 @@ When creating a new ADR:
 
 ---
 
-**Total ADRs:** 30  
-**Last Updated:** January 4, 2026
+**Total ADRs:** 37  
+**Last Updated:** April 27, 2026
 

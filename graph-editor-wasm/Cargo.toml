@@ -1,0 +1,14 @@
+[package]
+name = "graph-editor-wasm"
+version = "0.1.0"
+edition = "2024"
+description = "Kleis Graph Editor — WASM module for graph state, incidence matrix, and AST generation"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde-wasm-bindgen = "0.6"

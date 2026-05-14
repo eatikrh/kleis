@@ -89,7 +89,7 @@ pub fn tensor_contract_axis(
     let lanes_in = tensor.lanes(Axis(axis));
     let lanes_out = result.lanes_mut(Axis(axis));
 
-    for (lane_in, mut lane_out) in lanes_in.into_iter().zip(lanes_out.into_iter()) {
+    for (lane_in, mut lane_out) in lanes_in.into_iter().zip(lanes_out) {
         for i in 0..mat_rows {
             let mut sum = 0.0;
             for j in 0..mat_cols {

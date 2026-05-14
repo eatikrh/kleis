@@ -660,6 +660,180 @@ mode inside `$...$`. Needs experimental verification during implementation.
 
 ---
 
+### Graph Editor — IMPLEMENTED (Phase 1)
+
+**Status:** Phase 1 complete. Domain-agnostic routing engine working.
+**ADR:** `docs/adr/ADR-037-Graph-Editor-Domain-Agnostic-Routing.md`
+**Plan file:** `.cursor/plans/domain-agnostic_multi-port_routing_83985610.plan.md`
+
+#### Architecture (settled)
+
+A graph is a **value inside the AST**, not an alternative to the AST. The
+**signed sparse port-based** incidence matrix IS the AST's way of expressing
+graph topology:
+
+```
+graph(
+  SparseMatrix(V, P, [net0, port0, val0, net1, port1, val1, ...]),
+  [components...],                // component types
+  [net_labels...],                // net names
+  [port_labels...]                // "componentIdx:portName" per column
+)
+```
+
+Columns represent individual ports, not components. A transistor (3 ports) gets
+3 columns. Port identity is the column. The port_labels list maps each column
+back to its component and port name, making the representation complete.
+
+**Storage format:** COO (Coordinate List) — only non-zero entries stored as
+`(net_index, port_index, value)` triples, flattened into a single list. Entries
+are signed integers: `+1` for the first port of a component (source / positive),
+`-1` for non-first ports (sink / negative). Higher magnitudes encode bond order
+or weight. For undirected domains the signs are algebraic bookkeeping; for
+directed domains (bond graphs, Petri nets) they encode physical flow direction.
+Dense V x P matrix is materialized from COO only when needed (display, axioms).
+
+The Graph Editor is a **standalone sibling** to the Equation Editor
+(`static/graph_editor.html` + `static/js/graphEditorMain.js`). This avoids
+shoehorning graph-type UI into tree-based equation UI. Both share the same
+data model (EditorNode AST), domain data (`.kleist`/`.kleis`), and server APIs.
+
+#### What's built (Phase 1)
+
+**Canvas & interaction:**
+- [x] SVG `viewBox`-based pan/zoom (scroll wheel, middle-click/Space+click drag)
+- [x] Grid snapping (20px), component placement from palette
+- [x] Component selection, dragging, rotation (90° increments), deletion
+- [x] Port-to-port connection by click-drag
+- [x] Interactive net selection and deletion
+
+**Wire routing (domain-agnostic):**
+- [x] Exit-direction-aware Manhattan routing for 2-port nets
+- [x] Trunk+branch routing for multi-port nets (3+ connections)
+  - Picks trunk pair by greatest distance
+  - Projects branch ports onto trunk, routes perpendicular stubs
+  - Junction dots at T-junction points
+- [x] Persistent waypoints, draggable segments/waypoints
+- [x] Waypoint add (double-click segment) / remove (double-click waypoint)
+- [x] Collinear segment merging, zero-length segment collapse
+- [x] Auto-rerouting connected nets when components are dragged
+- [x] Live preview during connection with exit-direction awareness
+
+**Domain configuration (`.kleist`-driven):**
+- [x] `@template __domain_electronics` block in `electronics.kleist`
+- [x] `domainConfig` object loaded from `__domain_` template metadata at startup
+- [x] Routing mode dispatch: `orthogonal` (Manhattan) vs `direct` (straight line)
+- [x] Multi-port strategy dispatch: `trunk_branch` vs `star` (centroid)
+- [x] Junction style: `dot` (filled circle), `none` (no marker)
+- [x] Defaults when no `__domain_` template: orthogonal, dot, trunk_branch, none, undirected
+
+**Output:**
+- [x] EditorNode AST (`graph(SparseMatrix(...), ...)`) — pure JS
+- [x] Typst schematic export (`#place`, `#line`, `#image` with rotation)
+- [x] Signed sparse incidence matrix display (COO stored, dense materialized for table view)
+
+**Implementation:**
+- [x] Pure JS for incidence matrix and AST generation (~55 lines)
+- [x] `graph-editor-wasm/` crate kept as scaffold for future heavy computation
+
+#### Domain config fields
+
+| Field | Values | Default |
+|-------|--------|---------|
+| `routing_mode` | `"orthogonal"`, `"direct"`, `"curved"` (future) | `"orthogonal"` |
+| `junction_style` | `"dot"`, `"none"`, `"bar"` | `"dot"` |
+| `multi_port_strategy` | `"trunk_branch"`, `"star"`, `"bus"` (future) | `"trunk_branch"` |
+| `edge_decoration` | `"none"`, `"arrow"`, `"half_arrow"`, `"inhibitor"` | `"none"` |
+| `edge_direction` | `"undirected"`, `"directed"` | `"undirected"` |
+
+#### To add a new graph domain
+
+1. Create `std_template_lib/<domain>.kleist` with component templates
+   (each needs `ports:`, `graph_width:`, `graph_height:` metadata and an SVG)
+2. Add `@template __domain_<name>` block with routing preferences
+3. Place SVG assets in `static/svg/<domain>/`
+4. No JavaScript, no Rust, no recompilation
+
+#### Files
+
+| File | Role |
+|------|------|
+| `static/graph_editor.html` | Graph Editor HTML + CSS |
+| `static/js/graphEditorMain.js` | Core editor: interaction, routing, rendering (~1644 lines) |
+| `std_template_lib/electronics.kleist` | 20 electronic components + `__domain_electronics` config |
+| `graph-editor-wasm/` | Rust/WASM crate (scaffold, not in active code path) |
+| `static/svg/electronics/` | SVG assets for electronic components |
+
+#### Remaining phases
+
+**Phase 2: Edge decorations and direction**
+- SVG marker definitions (arrowhead, half-arrow, causal bar)
+- `marker-start`/`marker-end` attributes based on `edge_decoration`
+- `direction` field on net connections for directed graphs
+
+**Phase 3: Bond graph templates + direct routing**
+- `bond_graph.kleist` with 1-port/2-port/junction component templates
+- `routing_mode: "direct"` fully exercised
+- Causal stroke rendering
+
+**Phase 4: Petri net templates**
+- `petri_net.kleist` with place/transition templates
+- Token state rendering inside place SVGs
+- Simulation integration with existing ODE solver
+
+**Phase 5: Component parameters (Option A — parameterized operations)**
+- Components become parameterized operations in the AST:
+  `resistor(1000)` instead of `resistor()`, `dc_voltage(5)` instead of `dc_voltage()`
+- The `.kleist` template `pattern` field declares parameters:
+  `resistor(R)` tells the editor this component needs one numeric parameter
+- UI: property panel — click a component, edit its parameter values
+- Graph state stores `params` per component; AST encodes them as operation args
+- This follows the same pattern as Petri net axioms (`iw(0,0) = 1`): concrete
+  values that Z3 can reason about
+
+**Phase 6: Type inference + Z3 verification**
+- Graph/CircuitGraph structures in stdlib
+- Type checking via existing server APIs
+- Kirchhoff's law axioms: `V(a) - V(b) = I * R` where R comes from component arg
+- Safety checks: "does this circuit have a short?" as SAT query
+- Connects to existing `examples/petri-nets/` pattern: net structure axioms
+  + enabling/firing semantics + invariant verification
+
+#### Still open
+
+- ~~**Visual style mismatch with Equation Editor**~~ — DONE. Graph Editor
+  restyled to match the Equation Editor's light theme: `#2c3e50` header gradient,
+  white canvas, `#f8f9fa` panels, `#e0e0e0` borders, `#5568d3` hover accent,
+  rounded container with shadow. Future: extract shared CSS variables if both
+  editors need dark mode support.
+- **Undo/redo** — not yet implemented for graph operations
+- **Rubber-band multi-select** — single selection only
+- **Copy/paste** — not implemented
+- **Persistent trunk waypoints for multi-port nets** — trunk is recomputed each
+  time; users can't manually adjust trunk segments
+- **Graph ↔ Equation composition** — can graphs contain equations? Can equations
+  embed graphs? Needs design work.
+- **Oscilloscope** — live WASM-powered oscilloscope as a graph component. The ODE
+  solver runs client-side; connecting to a net shows real-time waveforms. This is
+  a major UX win that only works because of the Rust/WASM architecture.
+
+#### WASM: removed from active code path
+
+The WASM crate (`graph-editor-wasm/`) duplicated what JS does in ~55 lines —
+building the COO incidence matrix and the graph AST. The computation is
+O(connections), trivial for any reasonable graph. The cost was: 126KB binary,
+552 lines of generated glue, a `wasm-pack` build step, a `buildWasmState()`
+marshaling layer, and dual maintenance. WASM was removed from the active code
+path, the binary artifacts deleted from `static/wasm/`, and the build step
+removed from `scripts/build-kleis.sh`. The crate source is kept in
+`graph-editor-wasm/` as a scaffold for when heavier computation arrives:
+
+1. **Oscilloscope** — ODE solver at animation frame rate (real need for Rust speed)
+2. **3D Plotting** — grid evaluation for surface rendering
+3. **Large graph analysis** — hundreds of components, real-time constraint checking
+
+---
+
 ### HACKATHON CODE REVIEW — IN PROGRESS
 
 **Last Updated:** April 19, 2026
@@ -798,9 +972,19 @@ Pro: Zero effort. Con: No timeline.
 - Color functions receive 9 args: (x, y, z, x-lo, x-hi, y-lo, y-hi, z-lo, z-hi)
 - Multiple surfaces in one scene is feasible via composable render functions
 
-#### Decision: Deferred
+#### Decision: Deferred, but elevated as WASM learning vehicle
 
 Options ranked: D (wait) > B (thin wrapper) > A (full mirror) > C (raw Typst).
+
+**New consideration:** 3D plotting is a natural first WASM project — smaller scope
+than the Graph Editor, mostly computation→visualization (one direction), and teaches
+the `wasm-pack` / `wasm-bindgen` / `web-sys` workflow. The Graph Editor (WASM step 2)
+adds bidirectional interaction on top of those patterns. Doing 3D plotting first
+means arriving at the Graph Editor with WASM experience already in hand.
+
+**WASM learning progression:**
+1. 3D plotting: Rust evaluates grid → WASM → browser renders surface (one-way)
+2. Graph Editor: user events → WASM graph state → SVG rendering → user events (bidirectional)
 
 ---
 

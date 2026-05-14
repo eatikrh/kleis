@@ -388,17 +388,16 @@ fn try_infer_statistics_functions(expr: &Expression) -> Option<Expression> {
 fn try_infer_curl(expr: &Expression) -> Option<Expression> {
     match expr {
         Expression::Operation { name, args, .. }
-            if name == "scalar_multiply" && args.len() == 2 =>
+            if name == "scalar_multiply"
+                && args.len() == 2
+                && matches!(&args[0], Expression::Object(s) if s == "\\nabla" || s == "∇")
+                && is_vector_like(&args[1]) =>
         {
-            if matches!(&args[0], Expression::Object(s) if s == "\\nabla" || s == "∇")
-                && is_vector_like(&args[1])
-            {
-                return Some(Expression::Operation {
-                    name: "curl".to_string(),
-                    args: vec![args[1].clone()],
-                    span: None,
-                });
-            }
+            return Some(Expression::Operation {
+                name: "curl".to_string(),
+                args: vec![args[1].clone()],
+                span: None,
+            });
         }
         _ => {}
     }

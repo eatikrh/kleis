@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kleis Graph Editor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #e0e5ec 0%, #d0d5dc 100%);
+            color: #2c3e50;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        header h1 {
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            white-space: nowrap;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 4px;
+        }
+
+        .toolbar button {
+            padding: 6px 14px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 6px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .toolbar button:hover { background: rgba(255,255,255,0.2); }
+        .toolbar button.active { background: white; color: #2c3e50; border-color: white; }
+
+        .toolbar-sep {
+            width: 1px;
+            background: rgba(255,255,255,0.2);
+            margin: 0 6px;
+        }
+
+        .status-bar {
+            margin-left: auto;
+            font-size: 12px;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .main-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            margin: 10px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        /* Left: Component Palette */
+        .palette-panel {
+            width: 180px;
+            background: #f8f9fa;
+            border-right: 2px solid #e0e0e0;
+            overflow-y: auto;
+            flex-shrink: 0;
+            border-radius: 12px 0 0 12px;
+        }
+
+        .palette-section {
+            padding: 8px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .palette-section h3 {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #6c757d;
+            margin-bottom: 6px;
+            letter-spacing: 0.5px;
+        }
+
+        .palette-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+        }
+
+        .palette-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 6px 4px;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .palette-item:hover { background: #e8ecf1; border-color: #d0d5dc; }
+        .palette-item.selected { background: #d6e4f0; border-color: #2c3e50; }
+
+        .palette-item img {
+            width: 36px;
+            height: 28px;
+            object-fit: contain;
+        }
+
+        .palette-item span {
+            font-size: 10px;
+            color: #6c757d;
+            margin-top: 3px;
+            text-align: center;
+        }
+
+        /* Center: SVG Canvas */
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: white;
+        }
+
+        #graphCanvas {
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        #graphCanvas .grid-line { stroke: #e8ecf1; stroke-width: 0.5; }
+        #graphCanvas .component-group { cursor: move; }
+        #graphCanvas .component-group:hover .component-outline { stroke: #5568d3; stroke-opacity: 0.6; }
+        #graphCanvas .component-group.selected .component-outline { stroke: #2c3e50; stroke-width: 2; }
+        #graphCanvas .port-circle { fill: #28a745; stroke: white; stroke-width: 1.5; cursor: pointer; opacity: 0; transition: opacity 0.15s; }
+        #graphCanvas .component-group:hover .port-circle { opacity: 1; }
+        #graphCanvas .port-circle:hover { fill: #5568d3; r: 6; }
+        #graphCanvas .port-circle.highlight { opacity: 1; fill: #5568d3; }
+        #graphCanvas .wire { stroke: #2c3e50; stroke-width: 2; fill: none; cursor: pointer; stroke-linejoin: round; stroke-linecap: round; }
+        #graphCanvas .wire:hover { stroke: #5568d3; stroke-width: 3; }
+        #graphCanvas .wire-selected { stroke: #5568d3; stroke-width: 3; }
+        #graphCanvas .wire-preview { stroke: #5568d3; stroke-width: 1.5; stroke-dasharray: 6 3; fill: none; pointer-events: none; stroke-linejoin: round; stroke-linecap: round; }
+        #graphCanvas .wire-seg { stroke: transparent; stroke-width: 12; fill: none; cursor: pointer; }
+        #graphCanvas .wire-seg.draggable-h { cursor: ns-resize; }
+        #graphCanvas .wire-seg.draggable-v { cursor: ew-resize; }
+        #graphCanvas .wire-bend { fill: #2c3e50; stroke: white; stroke-width: 1.5; opacity: 0; transition: opacity 0.15s; pointer-events: all; cursor: move; }
+        #graphCanvas .wire-bend.visible { opacity: 1; }
+        #graphCanvas .wire-bend:hover { opacity: 1; fill: #5568d3; r: 6; }
+        #graphCanvas .wire-seg:hover ~ .wire-bend { opacity: 0.6; }
+        #graphCanvas .net-label { fill: #6c757d; font-size: 10px; font-family: monospace; }
+        #graphCanvas .component-label { fill: #2c3e50; font-size: 11px; font-family: sans-serif; text-anchor: middle; }
+
+        .zoom-indicator {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #6c757d;
+            font-size: 11px;
+            font-family: monospace;
+            padding: 3px 8px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            pointer-events: none;
+            user-select: none;
+        }
+
+        /* Right: Output Panel */
+        .output-panel {
+            width: 320px;
+            background: #f8f9fa;
+            border-left: 2px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            border-radius: 0 12px 12px 0;
+        }
+
+        .output-tabs {
+            display: flex;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .output-tab {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            font-size: 12px;
+            cursor: pointer;
+            color: #6c757d;
+            border-bottom: 2px solid transparent;
+            transition: all 0.15s;
+        }
+
+        .output-tab:hover { background: #e8ecf1; }
+        .output-tab.active { border-bottom-color: #2c3e50; color: #2c3e50; font-weight: 600; }
+
+        .output-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .output-content pre {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 11px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #2c3e50;
+        }
+
+        .matrix-table {
+            border-collapse: collapse;
+            font-family: monospace;
+            font-size: 11px;
+            margin: 8px 0;
+        }
+
+        .matrix-table th, .matrix-table td {
+            padding: 3px 8px;
+            border: 1px solid #e0e0e0;
+            text-align: center;
+        }
+
+        .matrix-table th { background: #e8ecf1; color: #6c757d; font-weight: normal; }
+        .matrix-table td.pos { color: #28a745; font-weight: 600; }
+        .matrix-table td.neg { color: #dc3545; font-weight: 600; }
+        .matrix-table td.zero { color: #ccc; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Kleis Graph Editor</h1>
+        <div class="toolbar">
+            <button id="modePlace" class="active" title="Place component (P)">Place</button>
+            <button id="modeConnect" title="Connect ports (C)">Connect</button>
+            <button id="modeMove" title="Move component (M)">Move</button>
+            <div class="toolbar-sep"></div>
+            <button id="btnRotate" title="Rotate selected 90° (R)">Rotate</button>
+            <button id="btnDelete" title="Delete selected (Del)">Delete</button>
+            <button id="btnClear" title="Clear all">Clear</button>
+            <div class="toolbar-sep"></div>
+            <button id="btnCleanWires" title="Re-route all wires">Clean Wires</button>
+            <div class="toolbar-sep"></div>
+            <button id="btnZoomIn" title="Zoom in">+</button>
+            <button id="btnZoomOut" title="Zoom out">&minus;</button>
+            <button id="btnFit" title="Fit all components in view">Fit</button>
+            <div class="toolbar-sep"></div>
+            <button id="btnExportTypst" title="Copy Typst to clipboard">Copy Typst</button>
+        </div>
+        <div class="status-bar" id="statusBar">Mode: Place — click palette, then click canvas</div>
+    </header>
+
+    <div class="main-layout">
+        <div class="palette-panel" id="palettePanel"></div>
+
+        <div class="canvas-container" id="canvasContainer">
+            <svg id="graphCanvas" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <pattern id="gridPattern" width="20" height="20" patternUnits="userSpaceOnUse">
+                        <path d="M 20 0 L 0 0 0 20" fill="none" class="grid-line"/>
+                    </pattern>
+                </defs>
+                <rect id="gridRect" width="10000" height="10000" fill="url(#gridPattern)"/>
+                <g id="wiresLayer"></g>
+                <g id="componentsLayer"></g>
+                <g id="previewLayer"></g>
+            </svg>
+            <div id="zoomIndicator" class="zoom-indicator">100%</div>
+        </div>
+
+        <div class="output-panel">
+            <div class="output-tabs">
+                <div class="output-tab active" data-tab="matrix">Matrix</div>
+                <div class="output-tab" data-tab="ast">AST</div>
+                <div class="output-tab" data-tab="typst">Typst</div>
+            </div>
+            <div class="output-content" id="outputContent"></div>
+        </div>
+    </div>
+
+    <script type="module" src="/static/js/graphEditorMain.js"></script>
+</body>
+</html>

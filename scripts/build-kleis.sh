@@ -183,6 +183,7 @@ echo ""
 # Run build
 $BUILD_CMD
 
+
 # Report result
 if [ "$BUILD_TYPE" = "release" ]; then
     BINARY="target/release/kleis"

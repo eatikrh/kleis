@@ -6,7 +6,7 @@ import { initializeInlineEditing } from './inlineEdit.js';
 import { handleSlotClick, handleSlotKeydown, toggleBoundingBoxes, resetStructuralEditor,
          zoomIn, zoomOut, zoomReset } from './slotHandlers.js';
 import { insertSymbol, insertTemplate } from './palette.js';
-import { showEgyptianPalette, filterEgyptianGlyphs, insertEgyptianGlyph, showPalette } from './egyptian.js';
+import { showDomainPalette, filterDomainGlyphs, insertDomainGlyph, showPalette, initDomainPalettes } from './domainPalette.js';
 import { initializeMatrixBuilder, showMatrixBuilder, closeMatrixBuilder,
          createMatrixFromBuilder, insertMatrixFromPalette } from './matrixBuilder.js';
 import { showPiecewiseBuilder, closePiecewiseBuilder, updatePiecewisePreview,
@@ -32,9 +32,9 @@ window.toggleBoundingBoxes = toggleBoundingBoxes;
 window.resetStructuralEditor = resetStructuralEditor;
 window.setEditorMode = setEditorMode;
 window.showPalette = showPalette;
-window.showEgyptianPalette = showEgyptianPalette;
-window.filterEgyptianGlyphs = filterEgyptianGlyphs;
-window.insertEgyptianGlyph = insertEgyptianGlyph;
+window.showDomainPalette = showDomainPalette;
+window.filterDomainGlyphs = filterDomainGlyphs;
+window.insertDomainGlyph = insertDomainGlyph;
 window.loadExample = loadExample;
 window.loadGallery = loadGallery;
 window.clearInput = clearInput;
@@ -62,6 +62,7 @@ initPiecewiseBuilder();
 
 window.addEventListener('load', () => {
     initializeMatrixBuilder();
+    initDomainPalettes();
     loadGallery();
 
     const templateCount = Object.keys(astTemplates).length;
