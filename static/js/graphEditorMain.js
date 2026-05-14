@@ -16,6 +16,8 @@
 let COMPONENT_DEFS = {};
 let PALETTE_SECTIONS = [];
 
+const DOMAIN_FILTER = new URLSearchParams(window.location.search).get('domain');
+
 const domainConfig = {
     routing_mode: 'orthogonal',
     junction_style: 'dot',
@@ -51,6 +53,7 @@ async function loadComponentDefs() {
         const meta = t.metadata || {};
 
         if (t.name.startsWith('__domain_')) {
+            if (DOMAIN_FILTER && !t.name.includes(DOMAIN_FILTER)) continue;
             for (const key of Object.keys(domainConfig)) {
                 if (meta[key]) domainConfig[key] = meta[key];
             }
@@ -59,15 +62,17 @@ async function loadComponentDefs() {
 
         if (!meta.ports) continue;
 
+        const cat = t.category || 'other';
+        if (DOMAIN_FILTER && !cat.startsWith(DOMAIN_FILTER)) continue;
+
         COMPONENT_DEFS[t.name] = {
             label: t.glyph || t.name,
             svg: t.svg ? `/${t.svg}` : null,
-            w: parseInt(meta.graph_width, 10) || 64,
-            h: parseInt(meta.graph_height, 10) || 32,
+            w: Number.parseInt(meta.graph_width, 10) || 64,
+            h: Number.parseInt(meta.graph_height, 10) || 32,
             ports: parsePorts(meta.ports),
         };
 
-        const cat = t.category || 'other';
         if (!sectionMap[cat]) sectionMap[cat] = [];
         sectionMap[cat].push(t.name);
     }
@@ -505,12 +510,23 @@ const DECORATION_MARKER_ID = {
     causal_bar: 'causal_bar',
 };
 
-function applyEdgeMarkers(pathEl, isSelected) {
+function applyEdgeMarkers(pathEl, isSelected, net) {
     const dec = domainConfig.edge_decoration;
-    if (dec === 'none') return;
-    const markerId = DECORATION_MARKER_ID[dec] || dec;
     const suffix = isSelected ? '-selected' : '';
-    pathEl.setAttribute('marker-end', `url(#${markerId}${suffix})`);
+
+    if (dec !== 'none') {
+        const markerId = DECORATION_MARKER_ID[dec] || dec;
+        pathEl.setAttribute('marker-end', `url(#${markerId}${suffix})`);
+    }
+
+    if (net && net.causal) {
+        const barId = `causal_bar${suffix}`;
+        if (net.causal === 'start') {
+            pathEl.setAttribute('marker-start', `url(#${barId})`);
+        } else if (net.causal === 'end') {
+            pathEl.setAttribute('marker-end', `url(#causal_bar${suffix})`);
+        }
+    }
 }
 
 function segIsHorizontal(p1, p2) {
@@ -760,6 +776,23 @@ function rotateSelected() {
     updateOutput();
 }
 
+function toggleCausalStroke() {
+    if (!selectedNetId) {
+        statusBar.textContent = 'No wire selected \u2014 click a wire first, then press K';
+        setTimeout(updateStatus, 2000);
+        return;
+    }
+    const net = graphState.nets.find(n => n.id === selectedNetId);
+    if (!net) return;
+    if (!net.causal) net.causal = 'end';
+    else if (net.causal === 'end') net.causal = 'start';
+    else net.causal = null;
+    statusBar.textContent = net.causal ? `Causal stroke: ${net.causal}` : 'Causal stroke removed';
+    setTimeout(updateStatus, 2000);
+    renderAll();
+    updateOutput();
+}
+
 function clearAll() {
     graphState.components = [];
     graphState.nets = [];
@@ -861,7 +894,7 @@ function renderWires() {
             path.setAttribute('class', wireClass);
             path.setAttribute('d', buildSvgPathD(pts));
             path.dataset.netId = net.id;
-            applyEdgeMarkers(path, isSel);
+            applyEdgeMarkers(path, isSel, net);
             wiresLayer.appendChild(path);
 
             for (let i = 0; i < pts.length - 1; i++) {
@@ -871,7 +904,8 @@ function renderWires() {
                 hitLine.setAttribute('y1', pts[i].y);
                 hitLine.setAttribute('x2', pts[i + 1].x);
                 hitLine.setAttribute('y2', pts[i + 1].y);
-                hitLine.setAttribute('class', `wire-seg ${isH ? 'draggable-h' : 'draggable-v'}`);
+                const dragClass = domainConfig.routing_mode === 'direct' ? '' : (isH ? 'draggable-h' : 'draggable-v');
+                hitLine.setAttribute('class', `wire-seg ${dragClass}`);
                 hitLine.dataset.netId = net.id;
                 hitLine.dataset.segIndex = i;
                 wiresLayer.appendChild(hitLine);
@@ -904,7 +938,7 @@ function renderWires() {
                     path.setAttribute('class', wireClass);
                     path.setAttribute('d', buildSvgPathD(leg));
                     path.dataset.netId = net.id;
-                    applyEdgeMarkers(path, isSel);
+                    applyEdgeMarkers(path, isSel, net);
                     wiresLayer.appendChild(path);
                 }
                 if (domainConfig.junction_style === 'dot') {
@@ -1008,9 +1042,9 @@ canvas.addEventListener('mousedown', (e) => {
         return;
     }
 
-    // Clicking a waypoint dot: treat as dragging its outgoing segment
+    // Clicking a waypoint dot: treat as dragging its outgoing segment (orthogonal only)
     const wpHit = findWaypointAt(pt.x, pt.y);
-    if (wpHit && wpHit.net.connections.length === 2) {
+    if (wpHit && wpHit.net.connections.length === 2 && domainConfig.routing_mode !== 'direct') {
         clearSelection();
         selectedNetId = wpHit.net.id;
         const net = wpHit.net;
@@ -1034,12 +1068,12 @@ canvas.addEventListener('mousedown', (e) => {
         return;
     }
 
-    // Clicking a wire: start segment drag (all segments are draggable)
+    // Clicking a wire: start segment drag (orthogonal only)
     const seg = findSegmentAt(pt.x, pt.y);
     if (seg) {
         clearSelection();
         selectedNetId = seg.net.id;
-        if (seg.canDrag && seg.net.connections.length === 2) {
+        if (seg.canDrag && seg.net.connections.length === 2 && domainConfig.routing_mode !== 'direct') {
             const wps = seg.net.waypoints || [];
             const pts = getNetPathPoints(seg.net);
             const i = seg.segIndex;
@@ -1233,9 +1267,9 @@ canvas.addEventListener('mouseup', () => {
 canvas.addEventListener('dblclick', (e) => {
     const pt = getSVGPoint(e);
 
-    // Double-click a waypoint dot: remove it and its neighbor to merge segments
+    // Double-click a waypoint dot: remove it and its neighbor to merge segments (orthogonal only)
     const wpHit = findWaypointAt(pt.x, pt.y);
-    if (wpHit && wpHit.net.connections.length === 2) {
+    if (wpHit && wpHit.net.connections.length === 2 && domainConfig.routing_mode !== 'direct') {
         const net = wpHit.net;
         const wps = net.waypoints;
         if (wps.length <= 2) {
@@ -1257,9 +1291,9 @@ canvas.addEventListener('dblclick', (e) => {
         return;
     }
 
-    // Double-click a segment: insert a waypoint pair to split it into 3
+    // Double-click a segment: insert a waypoint pair to split it into 3 (orthogonal only)
     const seg = findSegmentAt(pt.x, pt.y);
-    if (seg && seg.net.connections.length === 2) {
+    if (seg && seg.net.connections.length === 2 && domainConfig.routing_mode !== 'direct') {
         const net = seg.net;
         const pts = getNetPathPoints(net);
         const si = seg.segIndex;
@@ -1313,6 +1347,7 @@ document.addEventListener('keydown', (e) => {
     else if (e.key === 'c' || e.key === 'C') setMode('connect');
     else if (e.key === 'm' || e.key === 'M') setMode('move');
     else if (e.key === 'r' || e.key === 'R') rotateSelected();
+    else if (e.key === 'k' || e.key === 'K') toggleCausalStroke();
     else if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected();
     else if (e.key === 'Escape') {
         connectStartPort = null;
@@ -1578,7 +1613,7 @@ function generateTypst() {
         const s = (v) => `${pxToCm(v)}cm`;
         const dx = to.x - from.x;
         const dy = to.y - from.y;
-        const len = Math.sqrt(dx * dx + dy * dy);
+        const len = Math.hypot(dx, dy);
         if (len < 1) return null;
         const ux = dx / len, uy = dy / len;
         const headLen = 8;
@@ -1589,7 +1624,20 @@ function generateTypst() {
         return `#polygon(fill: black, (${s(to.x)}, ${s(to.y)}), (${s(p1x)}, ${s(p1y)}), (${s(p2x)}, ${s(p2y)}))`;
     }
 
-    function typstLines(pts) {
+    function typstCausalBar(from, to) {
+        const s = (v) => `${pxToCm(v)}cm`;
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+        const len = Math.hypot(dx, dy);
+        if (len < 1) return null;
+        const ux = dx / len, uy = dy / len;
+        const barW = 6;
+        const p1x = to.x - uy * barW, p1y = to.y + ux * barW;
+        const p2x = to.x + uy * barW, p2y = to.y - ux * barW;
+        return `#line(start: (${s(p1x)}, ${s(p1y)}), end: (${s(p2x)}, ${s(p2y)}), stroke: 1pt)`;
+    }
+
+    function typstLines(pts, net) {
         const s = (v) => `${pxToCm(v)}cm`;
         const result = [];
         for (let i = 0; i < pts.length - 1; i++) {
@@ -1598,6 +1646,15 @@ function generateTypst() {
         if (domainConfig.edge_decoration !== 'none' && pts.length >= 2) {
             const head = typstArrowhead(pts[pts.length - 2], pts[pts.length - 1]);
             if (head) result.push(head);
+        }
+        if (net && net.causal && pts.length >= 2) {
+            if (net.causal === 'end') {
+                const bar = typstCausalBar(pts[pts.length - 2], pts[pts.length - 1]);
+                if (bar) result.push(bar);
+            } else if (net.causal === 'start') {
+                const bar = typstCausalBar(pts[1], pts[0]);
+                if (bar) result.push(bar);
+            }
         }
         return result;
     }
@@ -1608,13 +1665,13 @@ function generateTypst() {
         if (net.connections.length === 2) {
             const pts = getNetPathPoints(net);
             const shifted = pts.map(p => ({ x: p.x - offX, y: p.y - offY }));
-            lines.push(...typstLines(shifted));
+            lines.push(...typstLines(shifted, net));
         } else {
             const multiResult = getMultiNetLegs(net);
             if (multiResult && multiResult.legs) {
                 for (const leg of multiResult.legs) {
                     const shifted = leg.map(p => ({ x: p.x - offX, y: p.y - offY }));
-                    lines.push(...typstLines(shifted));
+                    lines.push(...typstLines(shifted, net));
                 }
             }
         }
@@ -1638,6 +1695,13 @@ function copyTypstToClipboard() {
 (async function initApp() {
     statusBar.textContent = 'Loading component definitions...';
     await loadComponentDefs();
+
+    if (DOMAIN_FILTER) {
+        const label = DOMAIN_FILTER.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        const h1 = document.querySelector('header h1');
+        if (h1) h1.textContent = `Kleis Graph Editor \u2014 ${label}`;
+        document.title = `Kleis Graph Editor \u2014 ${label}`;
+    }
 
     const types = Object.keys(COMPONENT_DEFS);
     if (types.length > 0) selectedPaletteType = types[0];
