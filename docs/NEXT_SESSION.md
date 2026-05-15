@@ -950,7 +950,38 @@ data model (EditorNode AST), domain data (`.kleist`/`.kleis`), and server APIs.
     `sim_halted`/`sim_halt_reason` in the companion `.kleis` theory file. No Rust
     or JS changes needed.
 
-  **Phase 9 (planned): Graph Theory Domain & Königsberg Demo — arXiv Paper**
+  **Phase 9 (planned): Buffered Trajectory Simulation for Continuous Domains**
+
+  For continuous simulation domains (bond graphs, electronics), the theory file
+  should return a **chunk of trajectory** — many timesteps at once — rather than
+  a single step. The client plays back from a buffer, exactly like video streaming.
+
+  **Why:** Discrete simulation (Petri nets) is naturally one-step-at-a-time:
+  one transition fires, one state change. But continuous simulation runs an ODE
+  solver or fixed-timestep integrator. Returning one sample per API call wastes
+  the preamble + parse + eval overhead on each microsecond of simulation time.
+
+  **Architecture:**
+  ```
+  Server: theory computes N steps in one eval_concrete call → chunk of N state vectors
+  Client: buffers chunk, drains at user's chosen playback speed (slider already exists)
+  When buffer runs low → request next chunk with last state as initial condition
+  If client is paused → stop requesting (backpressure)
+  ```
+
+  **Theory interface (sketch):**
+  ```kleis
+  define sim_step_count = 100
+  define sim_dt = 0.001
+  define sim_trajectory(state, dt, n) = ...  // returns list of n state vectors
+  ```
+
+  The preamble injects current state, the theory computes the next N steps in
+  one `eval_concrete` call, and the server returns the whole chunk. The client
+  buffers and renders. This naturally decouples compute speed from display speed
+  and reuses the existing speed slider for playback rate control.
+
+  **Phase 10 (planned): Graph Theory Domain & Königsberg Demo — arXiv Paper**
 
   The graph theory domain was added as an architecture validation — a fourth domain
   (after electronics, bond graphs, Petri nets) implemented with **zero code changes**:
