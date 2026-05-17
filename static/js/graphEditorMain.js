@@ -1790,10 +1790,41 @@ function getMultiNetLegs(net) {
     return { legs, junctions: [junction], isTrunkBranch: false };
 }
 
-function buildSvgPathD(points) {
+function buildSvgPathD(points, crossings) {
     if (points.length < 2) return '';
+    if (!crossings || crossings.length === 0) {
+        let d = `M${points[0].x},${points[0].y}`;
+        for (let i = 1; i < points.length; i++) d += ` L${points[i].x},${points[i].y}`;
+        return d;
+    }
     let d = `M${points[0].x},${points[0].y}`;
-    for (let i = 1; i < points.length; i++) d += ` L${points[i].x},${points[i].y}`;
+    for (let i = 0; i < points.length - 1; i++) {
+        const p1 = points[i], p2 = points[i + 1];
+        const segCrossings = crossings.filter(c => c.segIdx === i);
+        if (segCrossings.length === 0) {
+            d += ` L${p2.x},${p2.y}`;
+            continue;
+        }
+        const isH = Math.abs(p1.y - p2.y) < 1;
+        if (isH) {
+            segCrossings.sort((a, b) => (p2.x > p1.x ? 1 : -1) * (a.x - b.x));
+        } else {
+            segCrossings.sort((a, b) => (p2.y > p1.y ? 1 : -1) * (a.y - b.y));
+        }
+        for (const c of segCrossings) {
+            const R = 6;
+            if (isH) {
+                const dir = p2.x > p1.x ? 1 : -1;
+                d += ` L${c.x - R * dir},${c.y}`;
+                d += ` A${R},${R} 0 0 ${dir > 0 ? 1 : 0} ${c.x + R * dir},${c.y}`;
+            } else {
+                const dir = p2.y > p1.y ? 1 : -1;
+                d += ` L${c.x},${c.y - R * dir}`;
+                d += ` A${R},${R} 0 0 ${dir > 0 ? 0 : 1} ${c.x},${c.y + R * dir}`;
+            }
+        }
+        d += ` L${p2.x},${p2.y}`;
+    }
     return d;
 }
 
@@ -2178,8 +2209,80 @@ function renderComponents() {
     }
 }
 
+function collectAllWireSegments() {
+    const segments = [];
+    for (const net of graphState.nets) {
+        if (net.connections.length < 2) continue;
+        if (net.connections.length === 2) {
+            const pts = getNetPathPoints(net);
+            for (let i = 0; i < pts.length - 1; i++) {
+                segments.push({ netId: net.id, p1: pts[i], p2: pts[i + 1] });
+            }
+        } else {
+            const multiResult = getMultiNetLegs(net);
+            if (multiResult && multiResult.legs) {
+                for (const leg of multiResult.legs) {
+                    for (let i = 0; i < leg.length - 1; i++) {
+                        segments.push({ netId: net.id, p1: leg[i], p2: leg[i + 1] });
+                    }
+                }
+            }
+        }
+    }
+    return segments;
+}
+
+function findWireCrossings(allSegments) {
+    const crossMap = new Map();
+    for (let a = 0; a < allSegments.length; a++) {
+        const sa = allSegments[a];
+        const aH = Math.abs(sa.p1.y - sa.p2.y) < 1;
+        const aV = Math.abs(sa.p1.x - sa.p2.x) < 1;
+        if (!aH && !aV) continue;
+        for (let b = a + 1; b < allSegments.length; b++) {
+            const sb = allSegments[b];
+            if (sb.netId === sa.netId) continue;
+            const bH = Math.abs(sb.p1.y - sb.p2.y) < 1;
+            const bV = Math.abs(sb.p1.x - sb.p2.x) < 1;
+            if (!bH && !bV) continue;
+            if (aH === bH) continue;
+            const h = aH ? sa : sb;
+            const v = aH ? sb : sa;
+            const hy = h.p1.y;
+            const hx1 = Math.min(h.p1.x, h.p2.x);
+            const hx2 = Math.max(h.p1.x, h.p2.x);
+            const vx = v.p1.x;
+            const vy1 = Math.min(v.p1.y, v.p2.y);
+            const vy2 = Math.max(v.p1.y, v.p2.y);
+            if (vx > hx1 + 2 && vx < hx2 - 2 && hy > vy1 + 2 && hy < vy2 - 2) {
+                const pt = { x: vx, y: hy };
+                const hKey = `${h.netId}:${h.p1.x},${h.p1.y}-${h.p2.x},${h.p2.y}`;
+                if (!crossMap.has(hKey)) crossMap.set(hKey, []);
+                crossMap.get(hKey).push(pt);
+            }
+        }
+    }
+    return crossMap;
+}
+
+function getCrossingsForPath(points, netId, crossMap) {
+    const result = [];
+    for (let i = 0; i < points.length - 1; i++) {
+        const segKey = `${netId}:${points[i].x},${points[i].y}-${points[i + 1].x},${points[i + 1].y}`;
+        const hits = crossMap.get(segKey);
+        if (hits) {
+            for (const pt of hits) result.push({ segIdx: i, x: pt.x, y: pt.y });
+        }
+    }
+    return result;
+}
+
 function renderWires() {
     wiresLayer.innerHTML = '';
+
+    const allSegs = collectAllWireSegments();
+    const crossMap = findWireCrossings(allSegs);
+
     for (const net of graphState.nets) {
         if (net.connections.length < 2) continue;
 
@@ -2189,10 +2292,11 @@ function renderWires() {
         if (net.connections.length === 2) {
             const pts = getNetPathPoints(net);
             if (pts.length < 2) continue;
+            const crossings = getCrossingsForPath(pts, net.id, crossMap);
 
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             path.setAttribute('class', wireClass);
-            path.setAttribute('d', buildSvgPathD(pts));
+            path.setAttribute('d', buildSvgPathD(pts, crossings));
             path.dataset.netId = net.id;
             applyEdgeMarkers(path, isSel, net);
             wiresLayer.appendChild(path);
@@ -2234,9 +2338,10 @@ function renderWires() {
             const multiResult = getMultiNetLegs(net);
             if (multiResult && multiResult.legs) {
                 for (const leg of multiResult.legs) {
+                    const legCrossings = getCrossingsForPath(leg, net.id, crossMap);
                     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                     path.setAttribute('class', wireClass);
-                    path.setAttribute('d', buildSvgPathD(leg));
+                    path.setAttribute('d', buildSvgPathD(leg, legCrossings));
                     path.dataset.netId = net.id;
                     applyEdgeMarkers(path, isSel, net);
                     wiresLayer.appendChild(path);
