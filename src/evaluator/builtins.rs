@@ -2324,8 +2324,8 @@ impl Evaluator {
                         Expression::List(t) if t.len() == 3 => t,
                         _ => {
                             return Err(
-                                "assemble_matrix: each entry must be [row, col, value]".to_string(),
-                            )
+                                "assemble_matrix: each entry must be [row, col, value]".to_string()
+                            );
                         }
                     };
                     let r = self
@@ -2381,8 +2381,8 @@ impl Evaluator {
                         Expression::List(t) if t.len() == 2 => t,
                         _ => {
                             return Err(
-                                "assemble_vector: each entry must be [index, value]".to_string(),
-                            )
+                                "assemble_vector: each entry must be [index, value]".to_string()
+                            );
                         }
                     };
                     let idx = self

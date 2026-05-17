@@ -3517,8 +3517,8 @@ fn simulate_graph_core(req: SimulateGraphRequest) -> SimulateGraphResponse {
                 "{}{}{}{}",
                 state_line, structural_preamble, continuous_preamble, theory_source
             );
-            let program = parse_kleis_program(&full_source)
-                .map_err(|e| format!("Parse error: {}", e))?;
+            let program =
+                parse_kleis_program(&full_source).map_err(|e| format!("Parse error: {}", e))?;
             let mut ev = Evaluator::new();
             ev.load_program(&program)?;
             Ok(ev)
@@ -3934,10 +3934,7 @@ fn synthesize_kleis_graph(req: &SaveGraphRequest) -> Result<String, String> {
         req.domain,
     ));
 
-    out.push_str(&format!(
-        "define graph_domain = \"{}\"\n\n",
-        req.domain
-    ));
+    out.push_str(&format!("define graph_domain = \"{}\"\n\n", req.domain));
 
     out.push_str("define graph_components = [\n");
     for (i, comp) in req.components.iter().enumerate() {
@@ -3962,14 +3959,15 @@ fn synthesize_kleis_graph(req: &SaveGraphRequest) -> Result<String, String> {
                 vec![]
             }
         } else {
-            comp.params
-                .values()
-                .map(|v| format_json_value(v))
-                .collect()
+            comp.params.values().map(|v| format_json_value(v)).collect()
         };
 
         let params_list = format!("[{}]", param_values.join(", "));
-        let trailing = if i + 1 < req.components.len() { "," } else { "" };
+        let trailing = if i + 1 < req.components.len() {
+            ","
+        } else {
+            ""
+        };
         out.push_str(&format!(
             "    [\"{}\", \"{}\", \"{}\", {}, {}, {}, {}]{}\n",
             comp.id,
@@ -4012,11 +4010,7 @@ fn synthesize_kleis_graph(req: &SaveGraphRequest) -> Result<String, String> {
         let entries: Vec<String> = req
             .nets
             .iter()
-            .filter_map(|n| {
-                n.causal
-                    .as_ref()
-                    .map(|c| format!("\"{}:{}\"", n.id, c))
-            })
+            .filter_map(|n| n.causal.as_ref().map(|c| format!("\"{}:{}\"", n.id, c)))
             .collect();
         out.push_str(&format!(
             "\ndefine graph_net_causal = [{}]\n",
@@ -4148,8 +4142,7 @@ fn load_graph_core(path: &str) -> LoadGraphResponse {
     evaluator.load_program(&program);
 
     let eval_var = |name: &str| -> Result<Expression, String> {
-        let expr =
-            parse_kleis(name).map_err(|e| format!("Parse '{}': {}", name, e))?;
+        let expr = parse_kleis(name).map_err(|e| format!("Parse '{}': {}", name, e))?;
         evaluator
             .eval_concrete(&expr)
             .map_err(|e| format!("Eval '{}': {}", name, e))
@@ -4194,25 +4187,24 @@ fn load_graph_core(path: &str) -> LoadGraphResponse {
             .map(|t| (t.name.clone(), t))
             .collect();
 
-    let causal_map: std::collections::HashMap<String, String> =
-        match eval_var("graph_net_causal") {
-            Ok(Expression::List(items)) => items
-                .iter()
-                .filter_map(|item| {
-                    if let Expression::String(s) = item {
-                        let parts: Vec<&str> = s.splitn(2, ':').collect();
-                        if parts.len() == 2 {
-                            Some((parts[0].to_string(), parts[1].to_string()))
-                        } else {
-                            None
-                        }
+    let causal_map: std::collections::HashMap<String, String> = match eval_var("graph_net_causal") {
+        Ok(Expression::List(items)) => items
+            .iter()
+            .filter_map(|item| {
+                if let Expression::String(s) = item {
+                    let parts: Vec<&str> = s.splitn(2, ':').collect();
+                    if parts.len() == 2 {
+                        Some((parts[0].to_string(), parts[1].to_string()))
                     } else {
                         None
                     }
-                })
-                .collect(),
-            _ => std::collections::HashMap::new(),
-        };
+                } else {
+                    None
+                }
+            })
+            .collect(),
+        _ => std::collections::HashMap::new(),
+    };
 
     let components = match eval_var("graph_components") {
         Ok(Expression::List(items)) => {
@@ -4230,10 +4222,7 @@ fn load_graph_core(path: &str) -> LoadGraphResponse {
                 domain: Some(domain),
                 components: None,
                 nets: None,
-                error: Some(format!(
-                    "graph_components is not a list: {:?}",
-                    other
-                )),
+                error: Some(format!("graph_components is not a list: {:?}", other)),
             };
         }
         Err(e) => {
@@ -4319,10 +4308,7 @@ fn expr_to_json(expr: &kleis::ast::Expression) -> serde_json::Value {
 
 fn parse_component_entry(
     fields: &[kleis::ast::Expression],
-    template_map: &std::collections::HashMap<
-        String,
-        &kleis::kleist_parser::TemplateDefinition,
-    >,
+    template_map: &std::collections::HashMap<String, &kleis::kleist_parser::TemplateDefinition>,
 ) -> serde_json::Value {
     if fields.len() < 7 {
         return serde_json::json!({"error": "component entry too short"});
@@ -4402,27 +4388,26 @@ fn parse_net_entry(
             vec![]
         };
 
-    let waypoints: Vec<serde_json::Value> =
-        if let kleis::ast::Expression::List(wps) = &fields[2] {
-            wps.iter()
-                .filter_map(|wp| {
-                    if let kleis::ast::Expression::List(coords) = wp {
-                        if coords.len() >= 2 {
-                            Some(serde_json::json!({
-                                "x": expr_to_f64(&coords[0]),
-                                "y": expr_to_f64(&coords[1]),
-                            }))
-                        } else {
-                            None
-                        }
+    let waypoints: Vec<serde_json::Value> = if let kleis::ast::Expression::List(wps) = &fields[2] {
+        wps.iter()
+            .filter_map(|wp| {
+                if let kleis::ast::Expression::List(coords) = wp {
+                    if coords.len() >= 2 {
+                        Some(serde_json::json!({
+                            "x": expr_to_f64(&coords[0]),
+                            "y": expr_to_f64(&coords[1]),
+                        }))
                     } else {
                         None
                     }
-                })
-                .collect()
-        } else {
-            vec![]
-        };
+                } else {
+                    None
+                }
+            })
+            .collect()
+    } else {
+        vec![]
+    };
 
     let causal = causal_map.get(&id).cloned();
 
@@ -6603,7 +6588,11 @@ mod continuous_sim_tests {
             domain: "electronics".to_string(),
             components: vec![
                 elec_comp("dc_voltage", "VoltageSource", &[("V", 5.0)]),
-                elec_comp("diode", "Diode", &[("Is", 1e-12), ("n", 1.0), ("Vt", 0.02585)]),
+                elec_comp(
+                    "diode",
+                    "Diode",
+                    &[("Is", 1e-12), ("n", 1.0), ("Vt", 0.02585)],
+                ),
                 elec_comp("resistor", "Resistor", &[("R", 1000.0)]),
                 elec_comp("capacitor", "Capacitor", &[("C", 1e-6), ("initial", 0.0)]),
                 elec_comp("ground", "Ground", &[]),
@@ -6613,25 +6602,65 @@ mod continuous_sim_tests {
                 p: 10,
                 entries: vec![
                     // net 0: dc_voltage:pos(+1), diode:anode(-1)
-                    VerifyGraphEntry { net: 0, port: 0, value: 1 },   // 0:pos
-                    VerifyGraphEntry { net: 0, port: 2, value: -1 },  // 1:anode
+                    VerifyGraphEntry {
+                        net: 0,
+                        port: 0,
+                        value: 1,
+                    }, // 0:pos
+                    VerifyGraphEntry {
+                        net: 0,
+                        port: 2,
+                        value: -1,
+                    }, // 1:anode
                     // net 1: diode:cathode(+1), resistor:left(-1), capacitor:left(-1)
-                    VerifyGraphEntry { net: 1, port: 3, value: 1 },   // 1:cathode
-                    VerifyGraphEntry { net: 1, port: 4, value: -1 },  // 2:left
-                    VerifyGraphEntry { net: 1, port: 6, value: -1 },  // 3:left
+                    VerifyGraphEntry {
+                        net: 1,
+                        port: 3,
+                        value: 1,
+                    }, // 1:cathode
+                    VerifyGraphEntry {
+                        net: 1,
+                        port: 4,
+                        value: -1,
+                    }, // 2:left
+                    VerifyGraphEntry {
+                        net: 1,
+                        port: 6,
+                        value: -1,
+                    }, // 3:left
                     // net 2: dc_voltage:neg(-1), resistor:right(+1), capacitor:right(+1), ground:pin(-1)
-                    VerifyGraphEntry { net: 2, port: 1, value: -1 },  // 0:neg
-                    VerifyGraphEntry { net: 2, port: 5, value: 1 },   // 2:right
-                    VerifyGraphEntry { net: 2, port: 7, value: 1 },   // 3:right
-                    VerifyGraphEntry { net: 2, port: 8, value: -1 },  // 4:pin
+                    VerifyGraphEntry {
+                        net: 2,
+                        port: 1,
+                        value: -1,
+                    }, // 0:neg
+                    VerifyGraphEntry {
+                        net: 2,
+                        port: 5,
+                        value: 1,
+                    }, // 2:right
+                    VerifyGraphEntry {
+                        net: 2,
+                        port: 7,
+                        value: 1,
+                    }, // 3:right
+                    VerifyGraphEntry {
+                        net: 2,
+                        port: 8,
+                        value: -1,
+                    }, // 4:pin
                 ],
             },
             port_labels: vec![
-                "0:pos".into(), "0:neg".into(),       // dc_voltage
-                "1:anode".into(), "1:cathode".into(),  // diode
-                "2:left".into(), "2:right".into(),     // resistor
-                "3:left".into(), "3:right".into(),     // capacitor
-                "4:pin".into(),                        // ground
+                "0:pos".into(),
+                "0:neg".into(), // dc_voltage
+                "1:anode".into(),
+                "1:cathode".into(), // diode
+                "2:left".into(),
+                "2:right".into(), // resistor
+                "3:left".into(),
+                "3:right".into(), // capacitor
+                "4:pin".into(),   // ground
             ],
         }
     }
@@ -6659,7 +6688,11 @@ mod continuous_sim_tests {
             domain: "electronics".to_string(),
             components: vec![
                 elec_comp("dc_voltage", "VoltageSource", &[("V", 5.0)]),
-                elec_comp("diode", "Diode", &[("Is", 1e-12), ("n", 1.0), ("Vt", 0.02585)]),
+                elec_comp(
+                    "diode",
+                    "Diode",
+                    &[("Is", 1e-12), ("n", 1.0), ("Vt", 0.02585)],
+                ),
                 elec_comp("resistor", "Resistor", &[("R", 1000.0)]),
                 elec_comp("capacitor", "Capacitor", &[("C", 1e-6), ("initial", 0.0)]),
                 elec_comp("ground", "Ground", &[]),
@@ -6668,22 +6701,62 @@ mod continuous_sim_tests {
                 v: 3,
                 p: 10,
                 entries: vec![
-                    VerifyGraphEntry { net: 0, port: 0, value: 1 },
-                    VerifyGraphEntry { net: 0, port: 2, value: -1 },
-                    VerifyGraphEntry { net: 1, port: 3, value: 1 },
-                    VerifyGraphEntry { net: 1, port: 4, value: -1 },
-                    VerifyGraphEntry { net: 1, port: 6, value: -1 },
-                    VerifyGraphEntry { net: 2, port: 1, value: -1 },
-                    VerifyGraphEntry { net: 2, port: 5, value: 1 },
-                    VerifyGraphEntry { net: 2, port: 7, value: 1 },
-                    VerifyGraphEntry { net: 2, port: 8, value: -1 },
+                    VerifyGraphEntry {
+                        net: 0,
+                        port: 0,
+                        value: 1,
+                    },
+                    VerifyGraphEntry {
+                        net: 0,
+                        port: 2,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 1,
+                        port: 3,
+                        value: 1,
+                    },
+                    VerifyGraphEntry {
+                        net: 1,
+                        port: 4,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 1,
+                        port: 6,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 2,
+                        port: 1,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 2,
+                        port: 5,
+                        value: 1,
+                    },
+                    VerifyGraphEntry {
+                        net: 2,
+                        port: 7,
+                        value: 1,
+                    },
+                    VerifyGraphEntry {
+                        net: 2,
+                        port: 8,
+                        value: -1,
+                    },
                 ],
             },
             port_labels: vec![
-                "0:pos".into(), "0:neg".into(),
-                "1:anode".into(), "1:cathode".into(),
-                "2:left".into(), "2:right".into(),
-                "3:left".into(), "3:right".into(),
+                "0:pos".into(),
+                "0:neg".into(),
+                "1:anode".into(),
+                "1:cathode".into(),
+                "2:left".into(),
+                "2:right".into(),
+                "3:left".into(),
+                "3:right".into(),
                 "4:pin".into(),
             ],
             state: setup.initial_state.clone(),
@@ -6768,8 +6841,16 @@ mod continuous_sim_tests {
                 elec_comp("r4", "Resistor", &[("R", 10000.0)]),
                 elec_comp("c1", "Capacitor", &[("C", 10e-6), ("initial", 0.1)]),
                 elec_comp("c2", "Capacitor", &[("C", 10e-6), ("initial", 0.0)]),
-                elec_comp("q1", "NPN", &[("beta_f", 100.0), ("Is", 1e-14), ("Vt", 0.02585)]),
-                elec_comp("q2", "NPN", &[("beta_f", 100.0), ("Is", 1e-14), ("Vt", 0.02585)]),
+                elec_comp(
+                    "q1",
+                    "NPN",
+                    &[("beta_f", 100.0), ("Is", 1e-14), ("Vt", 0.02585)],
+                ),
+                elec_comp(
+                    "q2",
+                    "NPN",
+                    &[("beta_f", 100.0), ("Is", 1e-14), ("Vt", 0.02585)],
+                ),
                 elec_comp("gnd", "Ground", &[]),
             ],
             incidence: VerifyGraphIncidence {
@@ -6777,45 +6858,140 @@ mod continuous_sim_tests {
                 p: 21,
                 entries: vec![
                     // net0 (Vcc): Vcc:pos, R1:left, R2:left, R3:left, R4:left
-                    VerifyGraphEntry { net: 0, port: 0, value: 1 },
-                    VerifyGraphEntry { net: 0, port: 2, value: 1 },
-                    VerifyGraphEntry { net: 0, port: 4, value: 1 },
-                    VerifyGraphEntry { net: 0, port: 6, value: 1 },
-                    VerifyGraphEntry { net: 0, port: 8, value: 1 },
+                    VerifyGraphEntry {
+                        net: 0,
+                        port: 0,
+                        value: 1,
+                    },
+                    VerifyGraphEntry {
+                        net: 0,
+                        port: 2,
+                        value: 1,
+                    },
+                    VerifyGraphEntry {
+                        net: 0,
+                        port: 4,
+                        value: 1,
+                    },
+                    VerifyGraphEntry {
+                        net: 0,
+                        port: 6,
+                        value: 1,
+                    },
+                    VerifyGraphEntry {
+                        net: 0,
+                        port: 8,
+                        value: 1,
+                    },
                     // net1 (Q1_C): R1:right, C1:left, Q1:coll
-                    VerifyGraphEntry { net: 1, port: 3, value: -1 },
-                    VerifyGraphEntry { net: 1, port: 10, value: 1 },
-                    VerifyGraphEntry { net: 1, port: 15, value: -1 },
+                    VerifyGraphEntry {
+                        net: 1,
+                        port: 3,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 1,
+                        port: 10,
+                        value: 1,
+                    },
+                    VerifyGraphEntry {
+                        net: 1,
+                        port: 15,
+                        value: -1,
+                    },
                     // net2 (Q2_C): R2:right, C2:left, Q2:coll
-                    VerifyGraphEntry { net: 2, port: 5, value: -1 },
-                    VerifyGraphEntry { net: 2, port: 12, value: 1 },
-                    VerifyGraphEntry { net: 2, port: 18, value: -1 },
+                    VerifyGraphEntry {
+                        net: 2,
+                        port: 5,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 2,
+                        port: 12,
+                        value: 1,
+                    },
+                    VerifyGraphEntry {
+                        net: 2,
+                        port: 18,
+                        value: -1,
+                    },
                     // net3 (Q1_B): R3:right, C1:right, Q1:base
-                    VerifyGraphEntry { net: 3, port: 7, value: -1 },
-                    VerifyGraphEntry { net: 3, port: 11, value: -1 },
-                    VerifyGraphEntry { net: 3, port: 14, value: 1 },
+                    VerifyGraphEntry {
+                        net: 3,
+                        port: 7,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 3,
+                        port: 11,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 3,
+                        port: 14,
+                        value: 1,
+                    },
                     // net4 (Q2_B): R4:right, C2:right, Q2:base
-                    VerifyGraphEntry { net: 4, port: 9, value: -1 },
-                    VerifyGraphEntry { net: 4, port: 13, value: -1 },
-                    VerifyGraphEntry { net: 4, port: 17, value: 1 },
+                    VerifyGraphEntry {
+                        net: 4,
+                        port: 9,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 4,
+                        port: 13,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 4,
+                        port: 17,
+                        value: 1,
+                    },
                     // net5 (GND): Vcc:neg, Q1:emit, Q2:emit, GND:pin
-                    VerifyGraphEntry { net: 5, port: 1, value: -1 },
-                    VerifyGraphEntry { net: 5, port: 16, value: -1 },
-                    VerifyGraphEntry { net: 5, port: 19, value: -1 },
-                    VerifyGraphEntry { net: 5, port: 20, value: -1 },
+                    VerifyGraphEntry {
+                        net: 5,
+                        port: 1,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 5,
+                        port: 16,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 5,
+                        port: 19,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 5,
+                        port: 20,
+                        value: -1,
+                    },
                 ],
             },
             port_labels: vec![
-                "0:pos".into(), "0:neg".into(),           // Vcc (c0): p0, p1
-                "1:left".into(), "1:right".into(),         // R1 (c1): p2, p3
-                "2:left".into(), "2:right".into(),         // R2 (c2): p4, p5
-                "3:left".into(), "3:right".into(),         // R3 (c3): p6, p7
-                "4:left".into(), "4:right".into(),         // R4 (c4): p8, p9
-                "5:left".into(), "5:right".into(),         // C1 (c5): p10, p11
-                "6:left".into(), "6:right".into(),         // C2 (c6): p12, p13
-                "7:base".into(), "7:coll".into(), "7:emit".into(),  // Q1 (c7): p14, p15, p16
-                "8:base".into(), "8:coll".into(), "8:emit".into(),  // Q2 (c8): p17, p18, p19
-                "9:pin".into(),                            // GND (c9): p20
+                "0:pos".into(),
+                "0:neg".into(), // Vcc (c0): p0, p1
+                "1:left".into(),
+                "1:right".into(), // R1 (c1): p2, p3
+                "2:left".into(),
+                "2:right".into(), // R2 (c2): p4, p5
+                "3:left".into(),
+                "3:right".into(), // R3 (c3): p6, p7
+                "4:left".into(),
+                "4:right".into(), // R4 (c4): p8, p9
+                "5:left".into(),
+                "5:right".into(), // C1 (c5): p10, p11
+                "6:left".into(),
+                "6:right".into(), // C2 (c6): p12, p13
+                "7:base".into(),
+                "7:coll".into(),
+                "7:emit".into(), // Q1 (c7): p14, p15, p16
+                "8:base".into(),
+                "8:coll".into(),
+                "8:emit".into(), // Q2 (c8): p17, p18, p19
+                "9:pin".into(),  // GND (c9): p20
             ],
         }
     }
@@ -6851,47 +7027,150 @@ mod continuous_sim_tests {
                 elec_comp("r4", "Resistor", &[("R", 10000.0)]),
                 elec_comp("c1", "Capacitor", &[("C", 10e-6), ("initial", 0.1)]),
                 elec_comp("c2", "Capacitor", &[("C", 10e-6), ("initial", 0.0)]),
-                elec_comp("q1", "NPN", &[("beta_f", 100.0), ("Is", 1e-14), ("Vt", 0.02585)]),
-                elec_comp("q2", "NPN", &[("beta_f", 100.0), ("Is", 1e-14), ("Vt", 0.02585)]),
+                elec_comp(
+                    "q1",
+                    "NPN",
+                    &[("beta_f", 100.0), ("Is", 1e-14), ("Vt", 0.02585)],
+                ),
+                elec_comp(
+                    "q2",
+                    "NPN",
+                    &[("beta_f", 100.0), ("Is", 1e-14), ("Vt", 0.02585)],
+                ),
                 elec_comp("gnd", "Ground", &[]),
             ],
             incidence: VerifyGraphIncidence {
                 v: 6,
                 p: 21,
                 entries: vec![
-                    VerifyGraphEntry { net: 0, port: 0, value: 1 },
-                    VerifyGraphEntry { net: 0, port: 2, value: 1 },
-                    VerifyGraphEntry { net: 0, port: 4, value: 1 },
-                    VerifyGraphEntry { net: 0, port: 6, value: 1 },
-                    VerifyGraphEntry { net: 0, port: 8, value: 1 },
-                    VerifyGraphEntry { net: 1, port: 3, value: -1 },
-                    VerifyGraphEntry { net: 1, port: 10, value: 1 },
-                    VerifyGraphEntry { net: 1, port: 15, value: -1 },
-                    VerifyGraphEntry { net: 2, port: 5, value: -1 },
-                    VerifyGraphEntry { net: 2, port: 12, value: 1 },
-                    VerifyGraphEntry { net: 2, port: 18, value: -1 },
-                    VerifyGraphEntry { net: 3, port: 7, value: -1 },
-                    VerifyGraphEntry { net: 3, port: 11, value: -1 },
-                    VerifyGraphEntry { net: 3, port: 14, value: 1 },
-                    VerifyGraphEntry { net: 4, port: 9, value: -1 },
-                    VerifyGraphEntry { net: 4, port: 13, value: -1 },
-                    VerifyGraphEntry { net: 4, port: 17, value: 1 },
-                    VerifyGraphEntry { net: 5, port: 1, value: -1 },
-                    VerifyGraphEntry { net: 5, port: 16, value: -1 },
-                    VerifyGraphEntry { net: 5, port: 19, value: -1 },
-                    VerifyGraphEntry { net: 5, port: 20, value: -1 },
+                    VerifyGraphEntry {
+                        net: 0,
+                        port: 0,
+                        value: 1,
+                    },
+                    VerifyGraphEntry {
+                        net: 0,
+                        port: 2,
+                        value: 1,
+                    },
+                    VerifyGraphEntry {
+                        net: 0,
+                        port: 4,
+                        value: 1,
+                    },
+                    VerifyGraphEntry {
+                        net: 0,
+                        port: 6,
+                        value: 1,
+                    },
+                    VerifyGraphEntry {
+                        net: 0,
+                        port: 8,
+                        value: 1,
+                    },
+                    VerifyGraphEntry {
+                        net: 1,
+                        port: 3,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 1,
+                        port: 10,
+                        value: 1,
+                    },
+                    VerifyGraphEntry {
+                        net: 1,
+                        port: 15,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 2,
+                        port: 5,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 2,
+                        port: 12,
+                        value: 1,
+                    },
+                    VerifyGraphEntry {
+                        net: 2,
+                        port: 18,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 3,
+                        port: 7,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 3,
+                        port: 11,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 3,
+                        port: 14,
+                        value: 1,
+                    },
+                    VerifyGraphEntry {
+                        net: 4,
+                        port: 9,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 4,
+                        port: 13,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 4,
+                        port: 17,
+                        value: 1,
+                    },
+                    VerifyGraphEntry {
+                        net: 5,
+                        port: 1,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 5,
+                        port: 16,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 5,
+                        port: 19,
+                        value: -1,
+                    },
+                    VerifyGraphEntry {
+                        net: 5,
+                        port: 20,
+                        value: -1,
+                    },
                 ],
             },
             port_labels: vec![
-                "0:pos".into(), "0:neg".into(),
-                "1:left".into(), "1:right".into(),
-                "2:left".into(), "2:right".into(),
-                "3:left".into(), "3:right".into(),
-                "4:left".into(), "4:right".into(),
-                "5:left".into(), "5:right".into(),
-                "6:left".into(), "6:right".into(),
-                "7:base".into(), "7:coll".into(), "7:emit".into(),
-                "8:base".into(), "8:coll".into(), "8:emit".into(),
+                "0:pos".into(),
+                "0:neg".into(),
+                "1:left".into(),
+                "1:right".into(),
+                "2:left".into(),
+                "2:right".into(),
+                "3:left".into(),
+                "3:right".into(),
+                "4:left".into(),
+                "4:right".into(),
+                "5:left".into(),
+                "5:right".into(),
+                "6:left".into(),
+                "6:right".into(),
+                "7:base".into(),
+                "7:coll".into(),
+                "7:emit".into(),
+                "8:base".into(),
+                "8:coll".into(),
+                "8:emit".into(),
                 "9:pin".into(),
             ],
             state,
@@ -6916,14 +7195,21 @@ mod continuous_sim_tests {
         println!("  final state: {:?}", resp.state);
         for (i, sv) in ts.iter().enumerate() {
             if i % 10 == 0 || i == ts.len() - 1 {
-                println!("  step {:>4} (t={:.4}s): C1={:.6}V  C2={:.6}V",
-                         i, (i + 1) as f64 * setup.dt,
-                         sv.state[0], sv.state[1]);
+                println!(
+                    "  step {:>4} (t={:.4}s): C1={:.6}V  C2={:.6}V",
+                    i,
+                    (i + 1) as f64 * setup.dt,
+                    sv.state[0],
+                    sv.state[1]
+                );
             }
         }
 
         assert!(!ts.is_empty(), "should produce time series");
         let any_nonzero = ts.iter().any(|sv| sv.state.iter().any(|&v| v.abs() > 1e-6));
-        assert!(any_nonzero, "state should evolve from zero initial conditions");
+        assert!(
+            any_nonzero,
+            "state should evolve from zero initial conditions"
+        );
     }
 }
