@@ -610,7 +610,7 @@ The combination is definitive: GU's central mechanism is impossible, and even a 
 - *Missing detailed computations*: Euler-Lagrange derivation, Yang-Mills recovery, generation mechanism, quantum number chain (4 gaps)
 - *Other*: Sign convention, Lorentzian issue, free parameters (3 gaps)
 
-The theory is more specified than commonly claimed — it has explicit formulas for most of its central objects. But specification is not correctness. The Shiab operator is a machine-verified mathematical impossibility (Layer 2), and the predictions (GAP-09, GAP-10, GAP-11) are formally independent of the stated axioms (Layer 3). The theory's arena is a valid mathematical object; its claims about what that arena accomplishes are false.
+The theory is more specified than commonly claimed — it has explicit formulas for most of its central objects. But specification is not correctness. The Shiab operator is a machine-verified mathematical impossibility (Layer 2), and the predictions (GAP-09, GAP-10, GAP-11) are formally independent of the stated axioms (Layer 3). The theory's arena is a valid mathematical object; its claimed derivation chain — from observerse geometry to Standard Model content — is not established by the published framework.
 
 = Conclusion
 
