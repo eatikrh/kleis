@@ -126,6 +126,8 @@ EXTRA_ENTRIES = [
      "/docs/papers/pot_ising_admissibility_paper.pdf", 1.0),
     ("docs/papers/geometric_unity_audit.pdf",
      "/docs/papers/geometric_unity_audit.pdf", 1.0),
+    ("docs/papers/geometric_unity_epilogue.pdf",
+     "/docs/papers/geometric_unity_epilogue.pdf", 1.0),
 ]
 
 
